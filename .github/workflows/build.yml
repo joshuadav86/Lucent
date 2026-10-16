@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish app
+        run: >
+          dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -o publish
+
+      - name: Zip app
+        shell: pwsh
+        run: Compress-Archive -Path publish/* -DestinationPath WinampInspiredVisualizer-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WinampInspiredVisualizer-win-x64
+          path: WinampInspiredVisualizer-win-x64.zip
+
+      - name: Update "latest" download
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest WinampInspiredVisualizer-win-x64.zip \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Latest build" \
+            --notes "Automatic build of the newest version on main. Download the zip, unzip it, and run WinampInspiredVisualizer.exe."

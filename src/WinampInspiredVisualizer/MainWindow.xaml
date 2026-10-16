@@ -1,0 +1,35 @@
+<Window x:Class="WinampInspiredVisualizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Winamp-Inspired Visualizer"
+        Width="900" Height="560" MinWidth="480" MinHeight="320"
+        Background="{StaticResource BackgroundBrush}"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Winamp-Inspired Visualizer"
+                   FontSize="22" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextBrush}" />
+
+        <Border Grid.Row="1" Margin="0,20" CornerRadius="12"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Visualizations will appear here"
+                           FontSize="18" HorizontalAlignment="Center"
+                           Foreground="{StaticResource TextBrush}" />
+                <TextBlock Text="Music playback is coming in the next step."
+                           Margin="0,8,0,0" HorizontalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Grid.Row="2" x:Name="VersionText"
+                   Foreground="{StaticResource MutedTextBrush}" />
+    </Grid>
+</Window>
