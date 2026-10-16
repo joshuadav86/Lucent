@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
@@ -19,6 +21,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _positionTimer;
     private readonly VisualizerHost _visualizer;
     private IReadOnlyList<string> _presetNames = Array.Empty<string>();
+    private DateTime _presetPopupClosedAt;
     private bool _isFullscreen;
     private bool _queueVisible = true;
     private WindowState _windowStateBeforeFullscreen;
@@ -54,6 +57,7 @@ public partial class MainWindow : Window
         _visualizer.PresetsLoaded += (_, names) =>
         {
             _presetNames = names;
+            PresetList.ItemsSource = names;
             ShowPreset();
         };
         _visualizer.ProblemReported += (_, message) =>
@@ -116,7 +120,7 @@ public partial class MainWindow : Window
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
         var maximized = WindowState == WindowState.Maximized;
-        MaximizeButton.Content = maximized ? "\uE923" : "\uE922";
+        MaximizeIcon.Data = (Geometry)FindResource(maximized ? "RestoreIcon" : "MaximizeIcon");
         MaximizeButton.ToolTip = maximized ? "Restore" : "Maximize";
 
         // A maximized borderless window hangs slightly off-screen; pad it back in.
@@ -136,9 +140,67 @@ public partial class MainWindow : Window
 
     private void ShowPreset()
     {
-        PresetName.Text = _presetNames.Count == 0
-            ? "No visuals found"
-            : _presetNames[Math.Clamp(_visualizer.PresetIndex, 0, _presetNames.Count - 1)];
+        if (_presetNames.Count == 0)
+        {
+            PresetName.Text = "No visuals found";
+            return;
+        }
+
+        var index = Math.Clamp(_visualizer.PresetIndex, 0, _presetNames.Count - 1);
+        PresetName.Text = _presetNames[index];
+        PresetList.SelectedIndex = index;
+    }
+
+    private void OnTogglePresetPicker(object sender, RoutedEventArgs e) => TogglePresetPicker();
+
+    private void TogglePresetPicker()
+    {
+        // Clicking the name while the picker is open closes it (the click outside already did),
+        // so don't immediately reopen it.
+        if (PresetPopup.IsOpen || DateTime.UtcNow - _presetPopupClosedAt < TimeSpan.FromMilliseconds(250))
+        {
+            PresetPopup.IsOpen = false;
+            return;
+        }
+
+        if (_presetNames.Count == 0)
+        {
+            return;
+        }
+
+        PresetPopup.IsOpen = true;
+        PresetList.ScrollIntoView(PresetList.SelectedItem);
+        PresetList.Focus();
+    }
+
+    private void OnPresetPopupClosed(object? sender, EventArgs e) => _presetPopupClosedAt = DateTime.UtcNow;
+
+    private void OnPresetListClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ItemsControl.ContainerFromElement(PresetList, (DependencyObject)e.OriginalSource) is ListBoxItem item)
+        {
+            PickPreset(PresetList.ItemContainerGenerator.IndexFromContainer(item));
+        }
+    }
+
+    private void OnPresetListKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            PickPreset(PresetList.SelectedIndex);
+            e.Handled = true;
+        }
+    }
+
+    private void PickPreset(int index)
+    {
+        if (index >= 0 && index < _presetNames.Count)
+        {
+            _visualizer.PresetIndex = index;
+            ShowPreset();
+        }
+
+        PresetPopup.IsOpen = false;
     }
 
     /// <summary>Fills the screen with the visuals, hiding everything else (Esc or double-click to leave).</summary>
@@ -443,6 +505,9 @@ public partial class MainWindow : Window
             case Key.Q:
                 ToggleQueue();
                 break;
+            case Key.V:
+                TogglePresetPicker();
+                break;
             case Key.A:
                 OnToggleAutoCycle(this, new RoutedEventArgs());
                 break;
@@ -503,8 +568,13 @@ public partial class MainWindow : Window
         DurationText.Text = TimeFormat.Format(duration);
     }
 
-    private void UpdatePlayPauseButton() =>
-        PlayPauseButton.Content = _player.IsPlaying ? "\uE769" : "\uE768";
+    private void UpdatePlayPauseButton()
+    {
+        var playing = _player.IsPlaying;
+        PlayPauseIcon.Data = (Geometry)FindResource(playing ? "PauseIcon" : "PlayIcon");
+        // The play triangle looks centred when nudged slightly right.
+        PlayPauseIcon.Margin = playing ? new Thickness(0) : new Thickness(2, 0, 0, 0);
+    }
 
     private void ShowNowPlaying(Track? track)
     {
