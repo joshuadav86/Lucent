@@ -19,6 +19,36 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Check shaders compile
+        shell: pwsh
+        run: |
+          $fxc = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\fxc.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $fxc) { throw "fxc.exe not found" }
+          $root = "src/WinampInspiredVisualizer"
+          $common = Get-Content "$root/Shaders/Common.hlsli" -Raw
+          $main = Get-Content "$root/Shaders/PresetMain.hlsli" -Raw
+          $out = Join-Path $env:RUNNER_TEMP "shader.cso"
+          $failed = $false
+
+          function Test-Shader($name, $source, $entry, $target) {
+            $file = Join-Path $env:RUNNER_TEMP "$name-$entry.hlsl"
+            Set-Content -Path $file -Value $source -NoNewline
+            & $fxc.FullName /nologo /T $target /E $entry /Fo $out $file | Out-Host
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::$name ($entry) failed to compile"; return $false }
+            return $true
+          }
+
+          $engine = $common + "`n" + (Get-Content "$root/Shaders/Engine.hlsl" -Raw)
+          if (-not (Test-Shader "Engine" $engine "VSMain" "vs_5_0")) { $failed = $true }
+          if (-not (Test-Shader "Engine" $engine "PSPresent" "ps_5_0")) { $failed = $true }
+          foreach ($preset in Get-ChildItem "$root/Presets/*.hlsl") {
+            # Same assembly as Renderer.CompileShaders does at runtime.
+            $source = $common + "`n#line 1`n" + (Get-Content $preset.FullName -Raw) + "`n" + $main
+            if (-not (Test-Shader $preset.BaseName $source "PSMain" "ps_5_0")) { $failed = $true }
+          }
+          if ($failed) { exit 1 }
+
       - name: Publish app
         run: >
           dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj

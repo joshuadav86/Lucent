@@ -7,6 +7,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Playlist;
+using WinampInspiredVisualizer.Visualizer;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace WinampInspiredVisualizer;
@@ -16,6 +17,10 @@ public partial class MainWindow : Window
     private readonly AudioPlayer _player = new();
     private readonly ObservableCollection<PlaylistEntry> _playlist = new();
     private readonly DispatcherTimer _positionTimer;
+    private readonly VisualizerHost _visualizer;
+    private IReadOnlyList<string> _presetNames = Array.Empty<string>();
+    private bool _isFullscreen;
+    private WindowState _windowStateBeforeFullscreen;
     private PlaylistEntry? _current;
     private bool _isDraggingSeek;
     private bool _updatingSeekBar;
@@ -35,6 +40,77 @@ public partial class MainWindow : Window
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _positionTimer.Tick += (_, _) => UpdatePosition();
         _positionTimer.Start();
+
+        _visualizer = new VisualizerHost(_player.Capture);
+        _visualizer.PresetsLoaded += (_, names) =>
+        {
+            _presetNames = names;
+            ShowPreset();
+        };
+        _visualizer.ProblemReported += (_, message) =>
+        {
+            VisualizerStatus.Text = message;
+            VisualizerStatus.ToolTip = message;
+        };
+        _visualizer.DoubleClicked += (_, _) => ToggleFullscreen();
+        VisualizerFrame.Child = _visualizer;
+    }
+
+    // ---- Visuals ----
+
+    private void OnNextPreset(object sender, RoutedEventArgs e) => ChangePreset(+1);
+
+    private void OnPreviousPreset(object sender, RoutedEventArgs e) => ChangePreset(-1);
+
+    private void OnToggleFullscreen(object sender, RoutedEventArgs e) => ToggleFullscreen();
+
+    private void ChangePreset(int step)
+    {
+        if (_presetNames.Count == 0)
+        {
+            return;
+        }
+
+        _visualizer.PresetIndex = ((_visualizer.PresetIndex + step) % _presetNames.Count + _presetNames.Count) % _presetNames.Count;
+        ShowPreset();
+    }
+
+    private void ShowPreset()
+    {
+        PresetName.Text = _presetNames.Count == 0
+            ? "No visuals found"
+            : _presetNames[Math.Clamp(_visualizer.PresetIndex, 0, _presetNames.Count - 1)];
+    }
+
+    /// <summary>Fills the screen with the visuals, hiding everything else (Esc or double-click to leave).</summary>
+    private void ToggleFullscreen()
+    {
+        _isFullscreen = !_isFullscreen;
+        var chrome = _isFullscreen ? Visibility.Collapsed : Visibility.Visible;
+        HeaderPanel.Visibility = chrome;
+        VisualBar.Visibility = chrome;
+        PlaylistPanel.Visibility = chrome;
+        TransportPanel.Visibility = chrome;
+        PlaylistRow.Height = _isFullscreen ? new GridLength(0) : new GridLength(230);
+        RootGrid.Margin = _isFullscreen ? new Thickness(0) : new Thickness(20);
+        VisualizerFrame.Margin = _isFullscreen ? new Thickness(0) : new Thickness(0, 16, 0, 0);
+        VisualizerFrame.BorderThickness = _isFullscreen ? new Thickness(0) : new Thickness(1);
+
+        if (_isFullscreen)
+        {
+            _windowStateBeforeFullscreen = WindowState;
+            // Leave Maximized first so Windows recalculates the size without the title bar.
+            WindowState = WindowState.Normal;
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Maximized;
+        }
+        else
+        {
+            WindowStyle = WindowStyle.SingleBorderWindow;
+            ResizeMode = ResizeMode.CanResize;
+            WindowState = _windowStateBeforeFullscreen;
+        }
     }
 
     // ---- Adding music ----
@@ -291,11 +367,28 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Space)
+        switch (e.Key)
         {
-            TogglePlayPause();
-            e.Handled = true;
+            case Key.Space:
+                TogglePlayPause();
+                break;
+            case Key.F11:
+                ToggleFullscreen();
+                break;
+            case Key.Escape when _isFullscreen:
+                ToggleFullscreen();
+                break;
+            case Key.N:
+                ChangePreset(+1);
+                break;
+            case Key.B:
+                ChangePreset(-1);
+                break;
+            default:
+                return;
         }
+
+        e.Handled = true;
     }
 
     private void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e) =>
@@ -376,6 +469,7 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _positionTimer.Stop();
+        _visualizer.Dispose();
         _player.Dispose();
     }
 }

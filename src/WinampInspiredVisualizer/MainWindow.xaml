@@ -2,22 +2,23 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Winamp-Inspired Visualizer"
-        Width="960" Height="640" MinWidth="560" MinHeight="420"
+        Width="1040" Height="780" MinWidth="600" MinHeight="520"
         Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver"
         PreviewKeyDown="OnPreviewKeyDown"
         Closed="OnClosed">
-    <Grid Margin="20">
+    <Grid x:Name="RootGrid" Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="140" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*" MinHeight="180" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition x:Name="PlaylistRow" Height="230" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Now playing -->
-        <DockPanel Grid.Row="0" LastChildFill="True">
+        <DockPanel x:Name="HeaderPanel" Grid.Row="0" LastChildFill="True">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Content="Add files" Click="OnAddFiles" />
                 <Button Content="Add folder" Click="OnAddFolder" />
@@ -33,17 +34,27 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- Visualizer placeholder (step 3) -->
-        <Border Grid.Row="1" Margin="0,16,0,12" CornerRadius="12"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource AccentDimBrush}" BorderThickness="1">
-            <TextBlock Text="Visualizations will appear here"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Foreground="{StaticResource MutedTextBrush}" />
-        </Border>
+        <!-- Visualizer: a Direct3D surface is placed in here from code -->
+        <Border x:Name="VisualizerFrame" Grid.Row="1" Margin="0,16,0,0"
+                Background="Black" BorderBrush="{StaticResource AccentDimBrush}" BorderThickness="1" />
+
+        <!-- Visual controls -->
+        <DockPanel x:Name="VisualBar" Grid.Row="2" Margin="0,8,0,12">
+            <Button DockPanel.Dock="Right" Content="⛶ Fullscreen" ToolTip="Fullscreen visuals (F11, Esc to exit)"
+                    Click="OnToggleFullscreen" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="◀" ToolTip="Previous visual (B)" Click="OnPreviousPreset" />
+                <TextBlock x:Name="PresetName" Text="Loading visuals…" MinWidth="180" TextAlignment="Center"
+                           VerticalAlignment="Center" Margin="8,0" FontSize="14"
+                           Foreground="{StaticResource TextBrush}" />
+                <Button Content="▶" ToolTip="Next visual (N)" Click="OnNextPreset" />
+                <TextBlock x:Name="VisualizerStatus" Margin="16,0,0,0" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Foreground="{StaticResource MutedTextBrush}" />
+            </StackPanel>
+        </DockPanel>
 
         <!-- Playlist -->
-        <Border Grid.Row="2" CornerRadius="12" Background="{StaticResource PanelBrush}" Padding="6">
+        <Border x:Name="PlaylistPanel" Grid.Row="3" CornerRadius="12" Background="{StaticResource PanelBrush}" Padding="6">
             <Grid>
                 <ListBox x:Name="PlaylistView" Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -80,7 +91,7 @@
         </Border>
 
         <!-- Transport -->
-        <Grid Grid.Row="3" Margin="0,16,0,0">
+        <Grid x:Name="TransportPanel" Grid.Row="4" Margin="0,16,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
