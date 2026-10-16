@@ -1,14 +1,18 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
+using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Visualizer;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
@@ -20,10 +24,13 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<PlaylistEntry> _playlist = new();
     private readonly DispatcherTimer _positionTimer;
     private readonly VisualizerHost _visualizer;
+    private readonly AppSettings _settings = AppSettings.Load();
+    private readonly MusicLibrary _library = new();
+    private readonly HashSet<string> _collapsedFolders;
+    private ListCollectionView? _libraryView;
     private IReadOnlyList<string> _presetNames = Array.Empty<string>();
     private DateTime _presetPopupClosedAt;
     private bool _isFullscreen;
-    private bool _queueVisible = true;
     private WindowState _windowStateBeforeFullscreen;
     private PlaylistEntry? _current;
     private bool _isDraggingSeek;
@@ -68,6 +75,23 @@ public partial class MainWindow : Window
         _visualizer.DoubleClicked += (_, _) => ToggleFullscreen();
         _visualizer.PresetChanged += (_, _) => ShowPreset();
         VisualizerFrame.Child = _visualizer;
+
+        _collapsedFolders = new HashSet<string>(_settings.CollapsedLibraryFolders, StringComparer.OrdinalIgnoreCase);
+        _library.ItemsChanged += (_, _) => RebuildLibraryView();
+        _library.TagsLoaded += (_, _) =>
+        {
+            // Titles and artists only become known once tags are read, so re-sort by them now.
+            if (_settings.LibrarySort is LibrarySort.Title or LibrarySort.Artist)
+            {
+                _libraryView?.Refresh();
+            }
+        };
+        _library.ScanningChanged += (_, _) => UpdateLibraryStatus();
+        SortLabel.Text = LibrarySorts.Label(_settings.LibrarySort);
+        UpdateGroupFoldersButton();
+        ApplyPanels();
+        _library.SetFolders(_settings.LibraryFolders);
+        UpdateLibraryStatus();
     }
 
     // ---- Visuals ----
@@ -89,14 +113,27 @@ public partial class MainWindow : Window
 
     private void ToggleQueue()
     {
-        _queueVisible = !_queueVisible;
-        if (!_isFullscreen)
-        {
-            PlaylistPanel.Visibility = _queueVisible ? Visibility.Visible : Visibility.Collapsed;
-        }
+        _settings.ShowQueue = !_settings.ShowQueue;
+        ApplyPanels();
+        _settings.Save();
+    }
 
-        QueueButton.Foreground = (System.Windows.Media.Brush)FindResource(
-            _queueVisible ? "MutedTextBrush" : "FaintTextBrush");
+    private void OnToggleLibrary(object sender, RoutedEventArgs e) => ToggleLibrary();
+
+    private void ToggleLibrary()
+    {
+        _settings.ShowLibrary = !_settings.ShowLibrary;
+        ApplyPanels();
+        _settings.Save();
+    }
+
+    /// <summary>Shows the library and queue drawers the user has open, unless the visuals are fullscreen.</summary>
+    private void ApplyPanels()
+    {
+        LibraryPanel.Visibility = !_isFullscreen && _settings.ShowLibrary ? Visibility.Visible : Visibility.Collapsed;
+        PlaylistPanel.Visibility = !_isFullscreen && _settings.ShowQueue ? Visibility.Visible : Visibility.Collapsed;
+        LibraryButton.Foreground = (Brush)FindResource(_settings.ShowLibrary ? "MutedTextBrush" : "FaintTextBrush");
+        QueueButton.Foreground = (Brush)FindResource(_settings.ShowQueue ? "MutedTextBrush" : "FaintTextBrush");
     }
 
     // ---- Window chrome ----
@@ -210,7 +247,7 @@ public partial class MainWindow : Window
         var chrome = _isFullscreen ? Visibility.Collapsed : Visibility.Visible;
         TitleBar.Visibility = chrome;
         BottomBar.Visibility = chrome;
-        PlaylistPanel.Visibility = _isFullscreen || !_queueVisible ? Visibility.Collapsed : Visibility.Visible;
+        ApplyPanels();
 
         if (_isFullscreen)
         {
@@ -258,7 +295,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnClearPlaylist(object sender, RoutedEventArgs e)
+    private void OnClearPlaylist(object sender, RoutedEventArgs e) => ClearQueue();
+
+    private void ClearQueue()
     {
         _player.Close();
         _current = null;
@@ -286,7 +325,11 @@ public partial class MainWindow : Window
     {
         var input = paths.ToList();
         var tracks = await Task.Run(() => ExpandPaths(input).Select(Track.FromFile).ToList());
+        AddToQueue(tracks);
+    }
 
+    private void AddToQueue(IReadOnlyList<Track> tracks)
+    {
         var wasEmpty = _playlist.Count == 0;
         foreach (var track in tracks)
         {
@@ -330,6 +373,270 @@ public partial class MainWindow : Window
                 yield return path;
             }
         }
+    }
+
+    // ---- Library ----
+
+    private void RebuildLibraryView()
+    {
+        var view = new ListCollectionView(_library.Items.ToList())
+        {
+            CustomSort = new LibraryItemComparer(_settings.LibrarySort),
+        };
+        if (_settings.GroupLibraryByFolder)
+        {
+            view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LibraryItem.Folder)));
+        }
+
+        _libraryView = view;
+        LibraryView.ItemsSource = view;
+        UpdateLibraryStatus();
+    }
+
+    private void UpdateLibraryStatus()
+    {
+        var count = _library.Items.Count;
+        var linked = _library.Folders.Count > 0;
+        LibraryCount.Text = !linked
+            ? "No folder linked"
+            : _library.IsScanning && count == 0
+                ? "Looking for music…"
+                : $"{count:N0} {(count == 1 ? "track" : "tracks")}{(_library.IsScanning ? "  ·  updating" : string.Empty)}";
+
+        EmptyLibraryHint.Visibility = count == 0 && !_library.IsScanning ? Visibility.Visible : Visibility.Collapsed;
+        EmptyLibraryTitle.Text = linked ? "No music found" : "Link a music folder";
+        EmptyLibraryText.Text = linked
+            ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
+            : "Every song inside it shows up here, newest first, and new files appear on their own.";
+    }
+
+    private void OnLinkLibraryFolder(object sender, RoutedEventArgs e) => LinkLibraryFolder();
+
+    private void LinkLibraryFolder()
+    {
+        var dialog = new OpenFolderDialog { Title = "Choose a music folder for your library", Multiselect = true };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        foreach (var folder in dialog.FolderNames)
+        {
+            if (!_settings.LibraryFolders.Contains(folder, StringComparer.OrdinalIgnoreCase))
+            {
+                _settings.LibraryFolders.Add(folder);
+            }
+        }
+
+        _settings.ShowLibrary = true;
+        _settings.Save();
+        ApplyPanels();
+        _library.SetFolders(_settings.LibraryFolders);
+        UpdateLibraryStatus();
+    }
+
+    private void OnLibraryFolders(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = LibraryFoldersButton, Placement = PlacementMode.Bottom };
+        foreach (var folder in _settings.LibraryFolders.ToList())
+        {
+            var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
+            var remove = new MenuItem { Header = $"Remove {(string.IsNullOrEmpty(name) ? folder : name)}", ToolTip = folder };
+            remove.Click += (_, _) =>
+            {
+                _settings.LibraryFolders.RemoveAll(f => string.Equals(f, folder, StringComparison.OrdinalIgnoreCase));
+                _settings.Save();
+                _library.SetFolders(_settings.LibraryFolders);
+                UpdateLibraryStatus();
+            };
+            menu.Items.Add(remove);
+        }
+
+        if (menu.Items.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+        }
+
+        var add = new MenuItem { Header = _settings.LibraryFolders.Count == 0 ? "Link a music folder…" : "Link another folder…" };
+        add.Click += (_, _) => LinkLibraryFolder();
+        menu.Items.Add(add);
+        menu.IsOpen = true;
+    }
+
+    private async void OnRefreshLibrary(object sender, RoutedEventArgs e) => await _library.RescanAsync();
+
+    private void OnSortMenu(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = SortButton, Placement = PlacementMode.Bottom };
+        foreach (var sort in LibrarySorts.All)
+        {
+            var item = new MenuItem { Header = LibrarySorts.Label(sort), IsChecked = sort == _settings.LibrarySort };
+            item.Click += (_, _) =>
+            {
+                _settings.LibrarySort = sort;
+                _settings.Save();
+                SortLabel.Text = LibrarySorts.Label(sort);
+                RebuildLibraryView();
+            };
+            menu.Items.Add(item);
+        }
+
+        menu.IsOpen = true;
+    }
+
+    private void OnToggleGroupFolders(object sender, RoutedEventArgs e)
+    {
+        _settings.GroupLibraryByFolder = !_settings.GroupLibraryByFolder;
+        _settings.Save();
+        UpdateGroupFoldersButton();
+        RebuildLibraryView();
+    }
+
+    private void UpdateGroupFoldersButton() =>
+        GroupFoldersButton.Foreground = (Brush)FindResource(_settings.GroupLibraryByFolder ? "AccentBrush" : "FaintTextBrush");
+
+    // Folder headings remember whether they were left open or closed.
+    private void OnFolderGroupLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is Expander { DataContext: CollectionViewGroup group } expander)
+        {
+            expander.IsExpanded = !_collapsedFolders.Contains(group.Name?.ToString() ?? string.Empty);
+        }
+    }
+
+    private void OnFolderGroupExpanded(object sender, RoutedEventArgs e)
+    {
+        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
+        {
+            _collapsedFolders.Remove(group.Name?.ToString() ?? string.Empty);
+        }
+    }
+
+    private void OnFolderGroupCollapsed(object sender, RoutedEventArgs e)
+    {
+        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
+        {
+            _collapsedFolders.Add(group.Name?.ToString() ?? string.Empty);
+        }
+    }
+
+    /// <summary>The library as it's listed on screen: folder by folder when grouped.</summary>
+    private List<LibraryItem> LibraryInViewOrder()
+    {
+        if (_libraryView is null)
+        {
+            return new List<LibraryItem>();
+        }
+
+        if (_libraryView.Groups is { Count: > 0 } groups)
+        {
+            return groups.Cast<CollectionViewGroup>().SelectMany(group => group.Items.Cast<LibraryItem>()).ToList();
+        }
+
+        return _libraryView.Cast<LibraryItem>().ToList();
+    }
+
+    private List<LibraryItem> SelectedLibraryItems()
+    {
+        var selected = new HashSet<LibraryItem>(LibraryView.SelectedItems.Cast<LibraryItem>());
+        return LibraryInViewOrder().Where(selected.Contains).ToList();
+    }
+
+    private void OnLibraryDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        // Only rows count; double-clicking a folder heading or the scroll bar does nothing.
+        if (e.OriginalSource is DependencyObject source
+            && ItemsControl.ContainerFromElement(LibraryView, source) is ListBoxItem { DataContext: LibraryItem item })
+        {
+            PlayFromLibrary(item);
+        }
+    }
+
+    private void OnLibraryKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && SelectedLibraryItems().FirstOrDefault() is { } item)
+        {
+            PlayFromLibrary(item);
+            e.Handled = true;
+        }
+    }
+
+    private void OnLibraryPlayNow(object sender, RoutedEventArgs e)
+    {
+        if (SelectedLibraryItems().FirstOrDefault() is { } item)
+        {
+            PlayFromLibrary(item);
+        }
+    }
+
+    private async void OnLibraryAddToQueue(object sender, RoutedEventArgs e)
+    {
+        var items = SelectedLibraryItems();
+        AddToQueue(await Task.Run(() => items.Select(item => item.ToTrack()).ToList()));
+    }
+
+    private async void OnLibraryPlayFolder(object sender, RoutedEventArgs e)
+    {
+        if (SelectedLibraryItems().FirstOrDefault() is not { } chosen)
+        {
+            return;
+        }
+
+        var folder = LibraryInViewOrder().Where(item => item.Folder == chosen.Folder).ToList();
+        var tracks = await Task.Run(() => folder.Select(item => item.ToTrack()).ToList());
+        ReplaceQueue(tracks, folder.IndexOf(chosen));
+    }
+
+    private async void OnPlayLibrary(object sender, RoutedEventArgs e)
+    {
+        var items = LibraryInViewOrder();
+        var tracks = await Task.Run(() => items.Select(item => item.ToTrack()).ToList());
+        ReplaceQueue(tracks, 0);
+    }
+
+    private void OnLibraryShowInExplorer(object sender, RoutedEventArgs e)
+    {
+        if (SelectedLibraryItems().FirstOrDefault() is { } item)
+        {
+            try
+            {
+                Process.Start("explorer.exe", $"/select,\"{item.Path}\"");
+            }
+            catch (Exception ex)
+            {
+                ShowError("Couldn't open File Explorer.", ex);
+            }
+        }
+    }
+
+    /// <summary>Plays a library track now, queueing it right after the current track if it isn't queued yet.</summary>
+    private void PlayFromLibrary(LibraryItem item)
+    {
+        var entry = _playlist.FirstOrDefault(e => string.Equals(e.Track.Path, item.Path, StringComparison.OrdinalIgnoreCase));
+        if (entry is null)
+        {
+            entry = new PlaylistEntry(item.ToTrack());
+            var index = _current is null ? _playlist.Count : _playlist.IndexOf(_current) + 1;
+            _playlist.Insert(index, entry);
+        }
+
+        PlayEntry(entry);
+    }
+
+    private void ReplaceQueue(IReadOnlyList<Track> tracks, int startIndex)
+    {
+        if (tracks.Count == 0)
+        {
+            return;
+        }
+
+        ClearQueue();
+        foreach (var track in tracks)
+        {
+            _playlist.Add(new PlaylistEntry(track));
+        }
+
+        PlayEntry(_playlist[Math.Clamp(startIndex, 0, _playlist.Count - 1)]);
     }
 
     // ---- Playlist ----
@@ -505,6 +812,9 @@ public partial class MainWindow : Window
             case Key.Q:
                 ToggleQueue();
                 break;
+            case Key.L:
+                ToggleLibrary();
+                break;
             case Key.V:
                 TogglePresetPicker();
                 break;
@@ -600,6 +910,9 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _settings.CollapsedLibraryFolders = _collapsedFolders.ToList();
+        _settings.Save();
+        _library.Dispose();
         _positionTimer.Stop();
         _visualizer.Dispose();
         _player.Dispose();

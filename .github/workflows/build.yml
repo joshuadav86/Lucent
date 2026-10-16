@@ -42,6 +42,7 @@ jobs:
           $engine = $common + "`n" + (Get-Content "$root/Shaders/Engine.hlsl" -Raw)
           if (-not (Test-Shader "Engine" $engine "VSMain" "vs_5_0")) { $failed = $true }
           if (-not (Test-Shader "Engine" $engine "PSPresent" "ps_5_0")) { $failed = $true }
+          if (-not (Test-Shader "Engine" $engine "PSBlend" "ps_5_0")) { $failed = $true }
           foreach ($preset in Get-ChildItem "$root/Presets/*.hlsl") {
             # Same assembly as Renderer.CompileShaders does at runtime.
             $source = $common + "`n#line 1`n" + (Get-Content $preset.FullName -Raw) + "`n" + $main

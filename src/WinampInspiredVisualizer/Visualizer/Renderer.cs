@@ -19,9 +19,12 @@ public sealed class Renderer : IDisposable
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format BackBufferFormat = Format.B8G8R8A8_UNorm;
     private const int ConstantCount = 16;
-    private const double TransitionSeconds = 2.5;
+    private const double TransitionSeconds = 3.0;
     private const double AutoCycleSeconds = 25.0;
-    private const int TransitionStyleCount = 4;
+
+    // Transition styles the engine's blend shader knows (see Engine.hlsl). The morphs (4-7)
+    // look the most natural, so they come up twice as often as the reveals (1-3) and the crossfade (0).
+    private static readonly int[] TransitionStyles = { 0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7 };
 
     private readonly IntPtr _hwnd;
     private readonly AudioAnalyzer _analyzer;
@@ -411,7 +414,7 @@ public sealed class Renderer : IDisposable
         _activePreset = presetIndex;
         _transitionStart = now;
         _lastSwitch = now;
-        _transitionStyle = _random.Next(TransitionStyleCount);
+        _transitionStyle = TransitionStyles[_random.Next(TransitionStyles.Length)];
     }
 
     private void Resize(int width, int height)
