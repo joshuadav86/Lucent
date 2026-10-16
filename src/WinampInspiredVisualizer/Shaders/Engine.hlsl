@@ -14,24 +14,33 @@ VSOut VSMain(uint id : SV_VertexID)
 float4 PSPresent(VSOut input) : SV_Target
 {
     float2 uv = input.uv;
+    float2 pixel = 1.0 / Resolution;
     float3 colour = previous(uv);
 
-    // A cheap bloom: average a ring of nearby samples and add it back on top.
+    // Sharpen: push each pixel away from its neighbours' average. This undoes
+    // the slight blur that builds up as the feedback buffer is re-sampled.
+    float3 neighbours = (previous(uv + float2(pixel.x, 0.0)) + previous(uv - float2(pixel.x, 0.0))
+                       + previous(uv + float2(0.0, pixel.y)) + previous(uv - float2(0.0, pixel.y))) * 0.25;
+    colour = max(colour + (colour - neighbours) * 0.6, 0.0);
+
+    // Bloom only the brightest parts, so highlights glow but dark areas stay crisp and black.
     float3 bloom = 0.0;
-    float2 pixel = 1.0 / Resolution;
     for (int i = 0; i < 12; i++)
     {
         float angle = i * (2.0 * PI / 12.0);
-        float2 offset = float2(cos(angle), sin(angle)) * pixel * 9.0;
-        bloom += previous(uv + offset) + previous(uv + offset * 2.5);
+        float2 offset = float2(cos(angle), sin(angle)) * pixel * 6.0;
+        bloom += max(previous(uv + offset) - 0.6, 0.0) + max(previous(uv + offset * 2.5) - 0.6, 0.0);
     }
-    colour += bloom / 24.0 * 0.45;
+    colour += bloom / 24.0 * 0.6;
 
-    // Soft tone-mapping so bright trails roll off instead of clipping.
-    colour = 1.0 - exp(-colour * 1.2);
+    // Filmic tone-mapping: deep blacks, punchy midtones, highlights that roll off.
+    colour = saturate((colour * (2.51 * colour + 0.03)) / (colour * (2.43 * colour + 0.59) + 0.14));
 
+    // A little extra saturation, and a light vignette.
+    float luminance = dot(colour, float3(0.2126, 0.7152, 0.0722));
+    colour = saturate(lerp(luminance.xxx, colour, 1.15));
     float2 fromCentre = uv - 0.5;
-    colour *= 1.0 - dot(fromCentre, fromCentre) * 0.7;
+    colour *= 1.0 - dot(fromCentre, fromCentre) * 0.35;
     return float4(colour, 1.0);
 }
 
