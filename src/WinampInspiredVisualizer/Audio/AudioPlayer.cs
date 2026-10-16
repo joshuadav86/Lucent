@@ -6,6 +6,9 @@ namespace WinampInspiredVisualizer.Audio;
 /// <summary>Plays one track at a time and reports when it finishes.</summary>
 public sealed class AudioPlayer : IDisposable
 {
+    /// <summary>How far ahead of the speakers the audio is decoded, in milliseconds.</summary>
+    public const int OutputLatencyMs = 150;
+
     private WaveOutEvent? _output;
     private WaveStream? _reader;
     private VolumeSampleProvider? _volumeProvider;
@@ -17,6 +20,9 @@ public sealed class AudioPlayer : IDisposable
 
     /// <summary>Raised on the UI thread when the audio device reports an error.</summary>
     public event EventHandler<Exception>? PlaybackFailed;
+
+    /// <summary>The audio being played, for the visualizer to analyze.</summary>
+    public AudioCapture Capture { get; } = new();
 
     public bool HasTrack => _reader is not null;
 
@@ -61,8 +67,10 @@ public sealed class AudioPlayer : IDisposable
         var reader = AudioReaderFactory.Open(path);
         try
         {
-            _volumeProvider = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = _volume };
-            _output = new WaveOutEvent { DesiredLatency = 150 };
+            // Capture before the volume control so visuals don't shrink when the music is turned down.
+            var captured = new CapturingSampleProvider(reader.ToSampleProvider(), Capture);
+            _volumeProvider = new VolumeSampleProvider(captured) { Volume = _volume };
+            _output = new WaveOutEvent { DesiredLatency = OutputLatencyMs };
             _output.PlaybackStopped += OnPlaybackStopped;
             _output.Init(_volumeProvider);
             _reader = reader;
