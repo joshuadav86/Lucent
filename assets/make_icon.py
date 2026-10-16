@@ -1,61 +1,132 @@
+"""Builds Lucid's "Lens" icon: a lens whose outline is a standing wave, with the live wave running through it.
+
+    python make_icon.py <output folder>
+
+Writes lucid-icon.svg (the 1024 x 1024 master), lucid-icon.png (README logo), Lucid.ico (app and window icon,
+16 to 256 px) and Lucid-64.png (the title bar). Below 40 px the mark is drawn bolder and the inner wave gets
+flatter crests, so it still reads as a wave in Explorer and the taskbar. Needs Pillow, NumPy and CairoSVG.
+"""
+import io
+import math
+import struct
 import sys
+
+import cairosvg
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageChops
-
-S = 1024
-out_dir = sys.argv[1]
-
-def gradient(c1, c2, diagonal=True):
-    y, x = np.mgrid[0:S, 0:S] / (S - 1)
-    t = (x + y) / 2 if diagonal else y
-    t = t[..., None]
-    rgb = np.array(c1) * (1 - t) + np.array(c2) * t
-    return Image.fromarray(rgb.astype(np.uint8), "RGB")
-
-# Background: a dark rounded square with a faint violet lift at the top.
-bg = gradient((24, 19, 38), (6, 6, 9), diagonal=False).convert("RGBA")
-mask = Image.new("L", (S, S), 0)
-ImageDraw.Draw(mask).rounded_rectangle((24, 24, S - 24, S - 24), radius=230, fill=255)
+from PIL import Image
 
 
-# A tunnel of rings shrinking towards a vanishing point: the "flying inward" look.
-# Each ring shifts from violet on the outside to cyan deep inside.
-colours = [(168, 85, 247), (139, 92, 246), (99, 102, 241), (59, 130, 246), (14, 165, 233), (34, 211, 238), (103, 232, 249)]
-rings = Image.new("L", (S, S), 0)
-coloured = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-cx, cy = S / 2, S / 2
-radius, width, alpha = 330.0, 44.0, 255.0
-for k in range(7):
-    ox, oy = cx + k * 9, cy - k * 13
-    ring = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(ring).ellipse((ox - radius, oy - radius, ox + radius, oy + radius), outline=int(alpha), width=max(int(width), 3))
-    coloured = Image.composite(Image.new("RGBA", (S, S), colours[k] + (255,)), coloured, ring)
-    rings = ImageChops.lighter(rings, ring)
-    radius *= 0.70
-    width *= 0.74
-    alpha *= 0.93
-accent = coloured
+def num(v):
+    s = f"{v:.2f}".rstrip("0").rstrip(".")
+    return "0" if s in ("-0", "") else s
 
-# The bright point at the end of the tunnel.
-end = Image.new("L", (S, S), 0)
-ex, ey = cx + 7 * 9, cy - 7 * 13
-ImageDraw.Draw(end).ellipse((ex - 26, ey - 26, ex + 26, ey + 26), fill=255)
 
-# Soft coloured light around the rings, added on top of the background.
-lit = Image.new("RGB", (S, S), (0, 0, 0))
-lit = Image.composite(coloured.convert("RGB"), lit, rings)
-halo = ImageChops.add(lit.filter(ImageFilter.GaussianBlur(22)).point(lambda v: int(v * 0.45)),
-                     lit.filter(ImageFilter.GaussianBlur(80)).point(lambda v: int(v * 0.35)))
-icon = ImageChops.add(bg.convert("RGB"), halo)
-icon = Image.composite(coloured.convert("RGB"), icon, rings)
-white = Image.new("RGB", (S, S), (255, 255, 255))
-cyan = Image.new("RGB", (S, S), (165, 243, 252))
-icon = Image.composite(cyan, icon, end.filter(ImageFilter.GaussianBlur(40)).point(lambda v: min(255, int(v * 1.6))))
-icon = Image.composite(white, icon, end)
-icon = icon.convert("RGBA")
+def curve(f, n):
+    """A smooth path through f(0)..f(1), as n cubic Beziers built from points and tangents."""
+    ts = np.linspace(0.0, 1.0, n + 1)
+    h = 1e-6
+    pts = [np.array(f(t)) for t in ts]
+    tangents = [(np.array(f(t + h)) - np.array(f(t - h))) / (2 * h) / n for t in ts]
+    d = [f"M{num(pts[0][0])} {num(pts[0][1])}"]
+    for i in range(n):
+        c1 = pts[i] + tangents[i] / 3
+        c2 = pts[i + 1] - tangents[i + 1] / 3
+        d.append(f"C{num(c1[0])} {num(c1[1])} {num(c2[0])} {num(c2[1])} {num(pts[i + 1][0])} {num(pts[i + 1][1])}")
+    return " ".join(d)
 
-final = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-final.paste(icon, (0, 0), mask)
-final.save(f"{out_dir}/Lucid.png")
-final.resize((256, 256), Image.LANCZOS).save(f"{out_dir}/Lucid.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-final.resize((512, 512), Image.LANCZOS).save(f"{out_dir}/preview.png")
+
+def squircle(half, n=5.0):
+    def f(t):
+        c, s = math.cos(2 * math.pi * t), math.sin(2 * math.pi * t)
+        r = half / (abs(c) ** n + abs(s) ** n) ** (1 / n)
+        return (512 + r * c, 512 + r * s)
+    return curve(f, 48) + " Z"
+
+
+def icon_svg(stroke=56, width=640, height=236, wave=0.47, flatten=0.0):
+    """The icon in a 1024 frame. stroke, width and height size the lens; wave is the inner wave's height
+    relative to the lens; flatten > 0 gives the inner wave flatter crests and a steeper middle."""
+    x0 = 512 - width / 2
+
+    def inner(u):
+        s = math.sin(2 * math.pi * u)
+        shaped = s if flatten == 0 else math.tanh(flatten * s) / math.tanh(flatten)
+        return (x0 + width * u, 512 - wave * height * shaped)
+
+    upper = curve(lambda u: (x0 + width * u, 512 - height * math.sin(math.pi * u)), 16)
+    lower = curve(lambda u: (x0 + width * u, 512 + height * math.sin(math.pi * u)), 16)
+    middle = curve(inner, 24 if flatten == 0 else 48)
+    tile = squircle(496)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="tileFill" gradientUnits="userSpaceOnUse" x1="150" y1="40" x2="870" y2="990"><stop offset="0" stop-color="#13214D"/><stop offset="1" stop-color="#060A19"/></linearGradient>
+<radialGradient id="tileGlow" gradientUnits="userSpaceOnUse" cx="512" cy="470" r="520"><stop offset="0" stop-color="#2A55FF" stop-opacity="0.22"/><stop offset="1" stop-color="#2A55FF" stop-opacity="0"/></radialGradient>
+<linearGradient id="tileEdge" gradientUnits="userSpaceOnUse" x1="0" y1="16" x2="0" y2="1008"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.04"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.07"/></linearGradient>
+<linearGradient id="markPaint" gradientUnits="userSpaceOnUse" x1="{num(x0)}" y1="{num(512 - height)}" x2="{num(x0 + width)}" y2="{num(512 + height)}"><stop offset="0" stop-color="#4775FF"/><stop offset="1" stop-color="#2BD9F6"/></linearGradient>
+</defs>
+<path d="{tile}" fill="url(#tileFill)"/>
+<path d="{tile}" fill="url(#tileGlow)"/>
+<path d="{squircle(494)}" fill="none" stroke="url(#tileEdge)" stroke-width="3"/>
+<g fill="none" stroke="url(#markPaint)" stroke-width="{num(stroke)}" stroke-linecap="round" stroke-linejoin="round">
+<path d="{upper}"/>
+<path d="{lower}"/>
+<path d="{middle}"/>
+</g>
+</svg>
+"""
+
+
+def design_for(size):
+    if size <= 24:
+        return dict(stroke=92, width=840, height=316, wave=0.42, flatten=3.0)
+    if size <= 32:
+        return dict(stroke=70, width=720, height=266, wave=0.46, flatten=1.5)
+    if size <= 40:
+        return dict(stroke=60, width=680, height=250, wave=0.48)
+    return {}
+
+
+def render(svg, size):
+    """Renders 16x larger and averages down in linear light, so thin bright lines keep their brightness."""
+    scale = 16 if size <= 64 else 4
+    png = cairosvg.svg2png(bytestring=svg.encode("utf-8"), output_width=size * scale, output_height=size * scale)
+    a = np.asarray(Image.open(io.BytesIO(png)).convert("RGBA")).astype(np.float64) / 255.0
+    rgb, alpha = a[..., :3], a[..., 3:4]
+    light = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4) * alpha
+
+    def shrink(x):
+        return x.reshape(size, scale, size, scale, x.shape[-1]).mean(axis=(1, 3))
+
+    light, alpha = shrink(light), shrink(alpha)
+    rgb = np.clip(np.where(alpha > 0, light / np.maximum(alpha, 1e-9), 0.0), 0.0, 1.0)
+    rgb = np.where(rgb <= 0.0031308, rgb * 12.92, 1.055 * rgb ** (1 / 2.4) - 0.055)
+    out = np.concatenate([rgb, alpha], axis=-1)
+    return Image.fromarray((np.clip(out, 0.0, 1.0) * 255 + 0.5).astype(np.uint8), "RGBA")
+
+
+def write_ico(path, images):
+    """An .ico with one PNG per size (read by Windows Vista and later at every size)."""
+    blobs = []
+    for image in images:
+        buffer = io.BytesIO()
+        image.save(buffer, "PNG", optimize=True)
+        blobs.append(buffer.getvalue())
+    offset = 6 + 16 * len(images)
+    entries = b""
+    for image, blob in zip(images, blobs):
+        width, height = image.size
+        entries += struct.pack("<BBBBHHII", width % 256, height % 256, 0, 0, 1, 32, len(blob), offset)
+        offset += len(blob)
+    with open(path, "wb") as f:
+        f.write(struct.pack("<HHH", 0, 1, len(images)) + entries + b"".join(blobs))
+
+
+if __name__ == "__main__":
+    out = sys.argv[1]
+    with open(f"{out}/lucid-icon.svg", "w", encoding="utf-8") as f:
+        f.write(icon_svg())
+    render(icon_svg(), 512).save(f"{out}/lucid-icon.png", optimize=True)
+    sizes = [256, 128, 64, 48, 40, 32, 24, 20, 16]
+    write_ico(f"{out}/Lucid.ico", [render(icon_svg(**design_for(s)), s) for s in sizes])
+    # The title bar shows this at 16 px (more on high-DPI screens), so it uses the bold small-size design.
+    render(icon_svg(**design_for(24)), 64).save(f"{out}/Lucid-64.png", optimize=True)
