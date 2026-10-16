@@ -2,128 +2,193 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Winamp-Inspired Visualizer"
-        Width="1040" Height="780" MinWidth="600" MinHeight="520"
+        Width="1180" Height="760" MinWidth="720" MinHeight="460"
         Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver"
         PreviewKeyDown="OnPreviewKeyDown"
+        StateChanged="OnWindowStateChanged"
         Closed="OnClosed">
-    <Grid x:Name="RootGrid" Margin="20">
+
+    <!-- Our own title bar: the window keeps native resizing and snapping. -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Grid x:Name="WindowRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" MinHeight="180" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition x:Name="PlaylistRow" Height="230" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Now playing -->
-        <DockPanel x:Name="HeaderPanel" Grid.Row="0" LastChildFill="True">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Add files" Click="OnAddFiles" />
-                <Button Content="Add folder" Click="OnAddFolder" />
-                <Button Content="Clear" Click="OnClearPlaylist" />
+        <!-- Title bar -->
+        <Grid x:Name="TitleBar" Grid.Row="0" Height="40">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                <Ellipse Width="8" Height="8" Fill="{StaticResource AccentGradientBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="VISUALIZER" Margin="10,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="VisualizerStatus" Margin="18,0,0,0" FontSize="11" MaxWidth="520"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Foreground="#E0A84F" />
             </StackPanel>
-            <StackPanel>
-                <TextBlock x:Name="NowPlayingTitle" Text="Nothing playing"
-                           FontSize="22" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                           Foreground="{StaticResource TextBrush}" />
-                <TextBlock x:Name="NowPlayingArtist" Text="Add files or drag music here"
-                           Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
-                           Foreground="{StaticResource MutedTextBrush}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimize"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMinimize" />
+                <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="Maximize"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMaximizeRestore" />
+                <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;" ToolTip="Close"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseWindow" />
             </StackPanel>
-        </DockPanel>
+        </Grid>
 
-        <!-- Visualizer: a Direct3D surface is placed in here from code -->
-        <Border x:Name="VisualizerFrame" Grid.Row="1" Margin="0,16,0,0"
-                Background="Black" BorderBrush="{StaticResource AccentDimBrush}" BorderThickness="1" />
+        <!-- Visuals and the queue drawer -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-        <!-- Visual controls -->
-        <DockPanel x:Name="VisualBar" Grid.Row="2" Margin="0,8,0,12">
-            <Button DockPanel.Dock="Right" Content="⛶ Fullscreen" ToolTip="Fullscreen visuals (F11, Esc to exit)"
-                    Click="OnToggleFullscreen" />
-            <Button x:Name="AutoCycleButton" DockPanel.Dock="Right" Content="Auto: On"
-                    ToolTip="Switch to a new visual every 25 seconds or so, on the beat (A)"
-                    Click="OnToggleAutoCycle" />
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="◀" ToolTip="Previous visual (B)" Click="OnPreviousPreset" />
-                <TextBlock x:Name="PresetName" Text="Loading visuals…" MinWidth="180" TextAlignment="Center"
-                           VerticalAlignment="Center" Margin="8,0" FontSize="14"
-                           Foreground="{StaticResource TextBrush}" />
-                <Button Content="▶" ToolTip="Next visual (N)" Click="OnNextPreset" />
-                <TextBlock x:Name="VisualizerStatus" Margin="16,0,0,0" VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis" Foreground="{StaticResource MutedTextBrush}" />
-            </StackPanel>
-        </DockPanel>
+            <!-- A Direct3D surface is placed in here from code. -->
+            <Border x:Name="VisualizerFrame" Grid.Column="0" Background="Black" />
 
-        <!-- Playlist -->
-        <Border x:Name="PlaylistPanel" Grid.Row="3" CornerRadius="12" Background="{StaticResource PanelBrush}" Padding="6">
-            <Grid>
-                <ListBox x:Name="PlaylistView" Background="Transparent" BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         SelectionMode="Extended"
-                         MouseDoubleClick="OnPlaylistDoubleClick"
-                         KeyDown="OnPlaylistKeyDown">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="24" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Indicator}"
-                                           Foreground="{StaticResource AccentBrush}" />
-                                <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis">
-                                    <Run Text="{Binding Track.Title, Mode=OneWay}" />
-                                    <Run Text="{Binding ArtistSuffix, Mode=OneWay}"
-                                         Foreground="{StaticResource MutedTextBrush}" />
-                                </TextBlock>
-                                <TextBlock Grid.Column="2" Margin="12,0,0,0"
-                                           Text="{Binding Track.DurationText}"
-                                           Foreground="{StaticResource MutedTextBrush}" />
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <TextBlock x:Name="EmptyPlaylistHint" IsHitTestVisible="False"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           Text="Drag music files or folders here&#x0a;MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG, Opus, AIFF" />
+            <Border x:Name="PlaylistPanel" Grid.Column="1" Width="330"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0">
+                <Grid Margin="10,14,6,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="8,0,0,10">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Style="{StaticResource IconButton}" Content="&#xE710;" ToolTip="Add files" Click="OnAddFiles" />
+                            <Button Style="{StaticResource IconButton}" Content="&#xE8B7;" ToolTip="Add a folder" Click="OnAddFolder" />
+                            <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Clear the queue" Click="OnClearPlaylist" />
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Queue" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                            <TextBlock x:Name="QueueCount" Text="Empty" FontSize="11" Margin="0,1,0,0"
+                                       Foreground="{StaticResource MutedTextBrush}" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ListBox x:Name="PlaylistView" Grid.Row="1" Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             SelectionMode="Extended"
+                             MouseDoubleClick="OnPlaylistDoubleClick"
+                             KeyDown="OnPlaylistKeyDown">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="3" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
+                                            Background="{StaticResource AccentGradientBrush}"
+                                            Visibility="{Binding IsCurrent, Converter={StaticResource VisibleWhenTrue}}" />
+                                    <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                                        <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource MutedTextBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                                               VerticalAlignment="Center" Foreground="{StaticResource FaintTextBrush}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="1" IsHitTestVisible="False"
+                                VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="28"
+                                   HorizontalAlignment="Center" Foreground="{StaticResource FaintTextBrush}" />
+                        <TextBlock Text="Drop music here" Margin="0,12,0,0" FontSize="13" HorizontalAlignment="Center"
+                                   Foreground="{StaticResource MutedTextBrush}" />
+                        <TextBlock Text="MP3 · FLAC · WAV · M4A · ALAC · WMA · OGG · Opus · AIFF" Margin="0,4,0,0"
+                                   FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource FaintTextBrush}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Player bar -->
+        <Border x:Name="BottomBar" Grid.Row="2" Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0">
+            <Grid Margin="18,6,14,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0">
+                    <TextBlock x:Name="ElapsedText" DockPanel.Dock="Left" Text="0:00" Width="44" FontSize="11"
+                               Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="DurationText" DockPanel.Dock="Right" Text="0:00" Width="44" FontSize="11"
+                               TextAlignment="Right" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <Slider x:Name="SeekBar" Minimum="0" Maximum="1" IsEnabled="False" Margin="6,0"
+                            Thumb.DragStarted="OnSeekDragStarted"
+                            Thumb.DragCompleted="OnSeekDragCompleted"
+                            ValueChanged="OnSeekValueChanged" />
+                </DockPanel>
+
+                <Grid Grid.Row="1" Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Now playing -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock x:Name="NowPlayingTitle" Text="Nothing playing" FontSize="14" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="NowPlayingArtist" Text="Add music to the queue to begin" FontSize="12"
+                                   Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                   Foreground="{StaticResource MutedTextBrush}" />
+                    </StackPanel>
+
+                    <!-- Transport -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource IconButton}" Content="&#xE71A;" ToolTip="Stop" Click="OnStop" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE892;" ToolTip="Previous" Click="OnPrevious"
+                                Margin="6,0" />
+                        <Button x:Name="PlayPauseButton" Style="{StaticResource PlayButton}" Content="&#xE768;"
+                                ToolTip="Play / Pause (Space)" Click="OnPlayPause" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE893;" ToolTip="Next" Click="OnNext"
+                                Margin="6,0" />
+                        <Button x:Name="QueueButton" Style="{StaticResource IconButton}" Content="&#xE8FD;"
+                                ToolTip="Show or hide the queue (Q)" Click="OnToggleQueue" />
+                    </StackPanel>
+
+                    <!-- Visuals and volume -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Style="{StaticResource IconButton}" Content="&#xE76B;" FontSize="11" Width="28"
+                                ToolTip="Previous visual (B)" Click="OnPreviousPreset" />
+                        <TextBlock x:Name="PresetName" Text="Loading visuals…" Width="150" FontSize="12"
+                                   TextAlignment="Center" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextBrush}" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE76C;" FontSize="11" Width="28"
+                                ToolTip="Next visual (N)" Click="OnNextPreset" />
+                        <Button x:Name="AutoCycleButton" Style="{StaticResource PillButton}" Content="AUTO"
+                                Margin="6,0,14,0" Foreground="{StaticResource AccentBrush}"
+                                ToolTip="Move to a new visual on the beat every 25 seconds or so (A)"
+                                Click="OnToggleAutoCycle" />
+                        <TextBlock Text="&#xE767;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                   VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" />
+                        <Slider x:Name="VolumeSlider" Width="96" Minimum="0" Maximum="1" Value="0.8" Margin="8,0,10,0"
+                                ValueChanged="OnVolumeChanged" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE740;"
+                                ToolTip="Fullscreen visuals (F11, Esc to exit)" Click="OnToggleFullscreen" />
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
-
-        <!-- Transport -->
-        <Grid x:Name="TransportPanel" Grid.Row="4" Margin="0,16,0,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <DockPanel Grid.Row="0">
-                <TextBlock x:Name="ElapsedText" DockPanel.Dock="Left" Text="0:00" Width="56"
-                           Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
-                <TextBlock x:Name="DurationText" DockPanel.Dock="Right" Text="0:00" Width="56" TextAlignment="Right"
-                           Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" />
-                <Slider x:Name="SeekBar" Minimum="0" Maximum="1" IsEnabled="False"
-                        Thumb.DragStarted="OnSeekDragStarted"
-                        Thumb.DragCompleted="OnSeekDragCompleted"
-                        ValueChanged="OnSeekValueChanged" />
-            </DockPanel>
-            <DockPanel Grid.Row="1" Margin="0,12,0,0">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Volume" Margin="0,0,8,0" VerticalAlignment="Center"
-                               Foreground="{StaticResource MutedTextBrush}" />
-                    <Slider x:Name="VolumeSlider" Width="140" Minimum="0" Maximum="1" Value="0.8"
-                            ValueChanged="OnVolumeChanged" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="⏮" ToolTip="Previous" Click="OnPrevious" />
-                    <Button x:Name="PlayPauseButton" Style="{StaticResource PrimaryButton}"
-                            Content="▶ Play" ToolTip="Play / Pause (Space)" Click="OnPlayPause" />
-                    <Button Content="⏹" ToolTip="Stop" Click="OnStop" />
-                    <Button Content="⏭" ToolTip="Next" Click="OnNext" />
-                </StackPanel>
-            </DockPanel>
-        </Grid>
     </Grid>
 </Window>

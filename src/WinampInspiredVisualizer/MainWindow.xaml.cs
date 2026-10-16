@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private readonly VisualizerHost _visualizer;
     private IReadOnlyList<string> _presetNames = Array.Empty<string>();
     private bool _isFullscreen;
+    private bool _queueVisible = true;
     private WindowState _windowStateBeforeFullscreen;
     private PlaylistEntry? _current;
     private bool _isDraggingSeek;
@@ -31,7 +32,15 @@ public partial class MainWindow : Window
 
         PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>
+        {
             EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            QueueCount.Text = _playlist.Count switch
+            {
+                0 => "Empty",
+                1 => "1 track",
+                var count => $"{count} tracks",
+            };
+        };
 
         _player.Volume = (float)VolumeSlider.Value;
         _player.TrackEnded += (_, _) => PlayNext(wrap: false);
@@ -68,7 +77,50 @@ public partial class MainWindow : Window
     private void OnToggleAutoCycle(object sender, RoutedEventArgs e)
     {
         _visualizer.AutoCycle = !_visualizer.AutoCycle;
-        AutoCycleButton.Content = _visualizer.AutoCycle ? "Auto: On" : "Auto: Off";
+        AutoCycleButton.Foreground = (System.Windows.Media.Brush)FindResource(
+            _visualizer.AutoCycle ? "AccentBrush" : "FaintTextBrush");
+    }
+
+    private void OnToggleQueue(object sender, RoutedEventArgs e) => ToggleQueue();
+
+    private void ToggleQueue()
+    {
+        _queueVisible = !_queueVisible;
+        if (!_isFullscreen)
+        {
+            PlaylistPanel.Visibility = _queueVisible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        QueueButton.Foreground = (System.Windows.Media.Brush)FindResource(
+            _queueVisible ? "MutedTextBrush" : "FaintTextBrush");
+    }
+
+    // ---- Window chrome ----
+
+    private void OnMinimize(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    private void OnMaximizeRestore(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            SystemCommands.RestoreWindow(this);
+        }
+        else
+        {
+            SystemCommands.MaximizeWindow(this);
+        }
+    }
+
+    private void OnCloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
+
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        var maximized = WindowState == WindowState.Maximized;
+        MaximizeButton.Content = maximized ? "\uE923" : "\uE922";
+        MaximizeButton.ToolTip = maximized ? "Restore" : "Maximize";
+
+        // A maximized borderless window hangs slightly off-screen; pad it back in.
+        WindowRoot.Margin = maximized && !_isFullscreen ? new Thickness(7) : new Thickness(0);
     }
 
     private void ChangePreset(int step)
@@ -94,14 +146,9 @@ public partial class MainWindow : Window
     {
         _isFullscreen = !_isFullscreen;
         var chrome = _isFullscreen ? Visibility.Collapsed : Visibility.Visible;
-        HeaderPanel.Visibility = chrome;
-        VisualBar.Visibility = chrome;
-        PlaylistPanel.Visibility = chrome;
-        TransportPanel.Visibility = chrome;
-        PlaylistRow.Height = _isFullscreen ? new GridLength(0) : new GridLength(230);
-        RootGrid.Margin = _isFullscreen ? new Thickness(0) : new Thickness(20);
-        VisualizerFrame.Margin = _isFullscreen ? new Thickness(0) : new Thickness(0, 16, 0, 0);
-        VisualizerFrame.BorderThickness = _isFullscreen ? new Thickness(0) : new Thickness(1);
+        TitleBar.Visibility = chrome;
+        BottomBar.Visibility = chrome;
+        PlaylistPanel.Visibility = _isFullscreen || !_queueVisible ? Visibility.Collapsed : Visibility.Visible;
 
         if (_isFullscreen)
         {
@@ -118,6 +165,8 @@ public partial class MainWindow : Window
             ResizeMode = ResizeMode.CanResize;
             WindowState = _windowStateBeforeFullscreen;
         }
+
+        OnWindowStateChanged(this, EventArgs.Empty);
     }
 
     // ---- Adding music ----
@@ -391,6 +440,9 @@ public partial class MainWindow : Window
             case Key.B:
                 ChangePreset(-1);
                 break;
+            case Key.Q:
+                ToggleQueue();
+                break;
             case Key.A:
                 OnToggleAutoCycle(this, new RoutedEventArgs());
                 break;
@@ -452,14 +504,14 @@ public partial class MainWindow : Window
     }
 
     private void UpdatePlayPauseButton() =>
-        PlayPauseButton.Content = _player.IsPlaying ? "⏸ Pause" : "▶ Play";
+        PlayPauseButton.Content = _player.IsPlaying ? "\uE769" : "\uE768";
 
     private void ShowNowPlaying(Track? track)
     {
         if (track is null)
         {
             NowPlayingTitle.Text = "Nothing playing";
-            NowPlayingArtist.Text = "Add files or drag music here";
+            NowPlayingArtist.Text = "Add music to the queue to begin";
             Title = "Winamp-Inspired Visualizer";
             return;
         }
