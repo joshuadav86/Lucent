@@ -4,7 +4,7 @@
 
 A modern, open-source music player for Windows with GPU-powered visualizations inspired by the classic Winamp era.
 
-> Early days: the music player and GPU visualizer work. Themes and more visuals are next.
+> Early days: the music player, GPU visualizer, options and themes work. More visuals are next.
 
 ## Features
 
@@ -18,9 +18,18 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - 18 visuals, including fractals like Crystal Kaleidoscope, Julia Kaleidoscope, Apollonian Lace and Sacred Geometry, and fly-through worlds like Menger Voyage, Kaleido Cathedral, Gyroid Caverns, Hyperspace Rings, Neon Lattice and Sierpinski Dive
 - A visual picker: click the visual's name in the player bar (or press V) to choose any visual from a list
 - Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so
+- Options (the gear in the title bar, or O):
+  - **Resolution:** draw visuals at the window's size, or at 1080p, 1440p or 4K. Above the window's size they're drawn bigger and shrunk to fit (supersampling), for smoother, finer detail
+  - **Detail:** Low to Ultra, for more ray-marching steps and deeper fractals in the 3D and fractal visuals
+  - **Glow:** how strongly bright parts bloom, from off to strong
+  - **HDR:** on screens with HDR turned on in Windows, highlights shine brighter than normal white
+  - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout
+- Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
+- Remembers the last visual, your options and your theme
+- Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, L and Q show or hide the library and queue, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
+**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, L and Q show or hide the library and queue, O opens options, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
 
 ## Download and run
 
@@ -51,7 +60,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
 
 ## Building from source
 
