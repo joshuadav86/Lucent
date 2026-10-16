@@ -44,10 +44,21 @@ jobs:
           if (-not (Test-Shader "Engine" $engine "PSPresent" "ps_5_0")) { $failed = $true }
           if (-not (Test-Shader "Engine" $engine "PSBlend" "ps_5_0")) { $failed = $true }
           if (-not (Test-Shader "Engine" $engine "PSDownsample" "ps_5_0")) { $failed = $true }
+          $particles = Get-Content "$root/Shaders/Particles.hlsli" -Raw
+          $particleMain = Get-Content "$root/Shaders/ParticleMain.hlsli" -Raw
+          if (-not (Test-Shader "Particles" ($common + "`n" + $particles) "PSSprite" "ps_5_0")) { $failed = $true }
           foreach ($preset in Get-ChildItem "$root/Presets/*.hlsl") {
-            # Same assembly as Renderer.CompileShaders does at runtime.
-            $source = $common + "`n#line 1`n" + (Get-Content $preset.FullName -Raw) + "`n" + $main
-            if (-not (Test-Shader $preset.BaseName $source "PSMain" "ps_5_0")) { $failed = $true }
+            # Same assembly as Renderer.CompileLoop does at runtime. Particle visuals (they define
+            # Simulate) also get the particle API, a compute shader and a vertex shader.
+            $code = Get-Content $preset.FullName -Raw
+            $isParticles = $code -match '\bvoid\s+Simulate\s*\('
+            $api = if ($isParticles) { $common + "`n" + $particles } else { $common }
+            $source = $api + "`n#line 1`n" + $code + "`n"
+            if (-not (Test-Shader $preset.BaseName ($source + $main) "PSMain" "ps_5_0")) { $failed = $true }
+            if ($isParticles) {
+              if (-not (Test-Shader $preset.BaseName ($source + $particleMain) "CSMain" "cs_5_0")) { $failed = $true }
+              if (-not (Test-Shader $preset.BaseName ($source + $particleMain) "VSParticle" "vs_5_0")) { $failed = $true }
+            }
           }
           if ($failed) { exit 1 }
 
