@@ -57,6 +57,9 @@
         <Geometry x:Key="MaximizeIcon">M0.5,0.5 H9.5 V9.5 H0.5 Z</Geometry>
         <Geometry x:Key="RestoreIcon">M2.5,0.5 H9.5 V7.5 M0.5,2.5 H7.5 V9.5 H0.5 Z</Geometry>
         <Geometry x:Key="CloseIcon">M0.5,0.5 L9.5,9.5 M9.5,0.5 L0.5,9.5</Geometry>
+        <!-- The visual picker's glyph on a 20 x 20 grid: a screen drawn as a line, with a spark filled in. -->
+        <Geometry x:Key="VisualsScreenIcon">M4.75,3.75 H15.25 A3,3 0 0 1 18.25,6.75 V13.25 A3,3 0 0 1 15.25,16.25 H4.75 A3,3 0 0 1 1.75,13.25 V6.75 A3,3 0 0 1 4.75,3.75 Z</Geometry>
+        <Geometry x:Key="VisualsSparkIcon">M9.1,6.2 Q9.98,9.72 13.5,10.6 Q9.98,11.48 9.1,15 Q8.22,11.48 4.7,10.6 Q8.22,9.72 9.1,6.2 Z M14.4,5.1 Q14.86,6.54 16.3,7 Q14.86,7.46 14.4,8.9 Q13.94,7.46 12.5,7 Q13.94,6.54 14.4,5.1 Z</Geometry>
         <GeometryGroup x:Key="MusicIcon">
             <EllipseGeometry Center="6,21" RadiusX="4.5" RadiusY="3.5" />
             <EllipseGeometry Center="22,18" RadiusX="4.5" RadiusY="3.5" />
