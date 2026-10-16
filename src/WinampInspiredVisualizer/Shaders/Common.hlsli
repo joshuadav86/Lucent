@@ -112,3 +112,47 @@ float fbm(float2 p)
     }
     return total;
 }
+
+// Vivid colour gradients. t wraps around every 1.0.
+float3 palette(float t)
+{
+    return 0.5 + 0.5 * cos(2.0 * PI * (t + float3(0.0, 0.33, 0.67)));
+}
+
+// Neon gradient: magentas, cyans and electric blues.
+float3 neon(float t)
+{
+    return 0.5 + 0.5 * cos(2.0 * PI * (float3(1.0, 1.0, 0.5) * t + float3(0.8, 0.9, 0.3)));
+}
+
+// Floored modulo that also works for negative numbers (fmod keeps the sign).
+float wrap(float x, float m)
+{
+    return x - m * floor(x / m);
+}
+
+float2 wrap(float2 x, float m)
+{
+    return x - m * floor(x / m);
+}
+
+float3 wrap(float3 x, float m)
+{
+    return x - m * floor(x / m);
+}
+
+// Mirrors the plane into a number of identical wedges, like a kaleidoscope.
+float2 kaleidoscope(float2 p, float segments)
+{
+    float wedge = 2.0 * PI / segments;
+    float angle = abs(wrap(atan2(p.y, p.x), wedge) - wedge * 0.5);
+    return float2(cos(angle), sin(angle)) * length(p);
+}
+
+// Distance from p to the outline of a regular polygon with the given number of sides.
+float polygon(float2 p, float sides, float radius)
+{
+    float segment = 2.0 * PI / sides;
+    float angle = atan2(p.y, p.x);
+    return cos(floor(0.5 + angle / segment) * segment - angle) * length(p) - radius;
+}

@@ -11,7 +11,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Playlist with play, pause, stop, previous, next, seek and volume
 - Shows track title, artist and length from the file's tags
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- Ten visuals, including Synthwave Horizon, Starfield Warp, Liquid Chrome, Kaleidoscope Bloom, Fractal Echo and Aurora Veil
+- 14 visuals, including fractals like Crystal Kaleidoscope, Julia Kaleidoscope, Apollonian Lace, Sacred Geometry and the ray-marched Menger Voyage
 - Smooth transitions between visuals (crossfade, expanding ring, cloudy dissolve or spiral sweep), and an Auto mode that moves to a new visual on the beat every 25 seconds or so
 - Fullscreen visuals: double-click the visualizer or press F11
 
@@ -46,7 +46,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `hsv2rgb`, `glow` and `fbm` are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow` and `fbm` are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
 
 ## Building from source
 

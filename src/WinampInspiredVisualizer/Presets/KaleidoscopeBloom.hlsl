@@ -1,14 +1,6 @@
 // Name: Kaleidoscope Bloom
 // Mirrored petals that fold the last frame back into itself and open wider with the bass.
 
-float2 kaleidoscope(float2 p, float segments)
-{
-    float wedge = 2.0 * PI / segments;
-    float angle = atan2(p.y, p.x) + 100.0 * wedge;   // keep it positive for fmod
-    angle = abs(fmod(angle, wedge) - wedge * 0.5);
-    return float2(cos(angle), sin(angle)) * length(p);
-}
-
 float3 Render(float2 uv, float2 p)
 {
     float2 folded = kaleidoscope(rotate(p, Time * 0.1), 8.0);
