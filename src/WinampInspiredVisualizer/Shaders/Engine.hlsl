@@ -11,17 +11,48 @@ VSOut VSMain(uint id : SV_VertexID)
     return output;
 }
 
+// Shrinks the drawn image to the window when drawing above window resolution (supersampling):
+// each screen pixel becomes the average of every drawn pixel under it, for smooth edges and
+// fine detail without shimmer. Each bilinear tap already averages 2 x 2 drawn pixels.
+float4 PSDownsample(VSOut input) : SV_Target
+{
+    float scale = max(RenderScale, 1.0);
+    int taps = clamp((int)ceil(scale * 0.5), 1, 4);
+    float2 footprint = scale / Resolution;  // one screen pixel, in uv
+    float3 total = 0.0;
+    [loop]
+    for (int y = 0; y < taps; y++)
+    {
+        [loop]
+        for (int x = 0; x < taps; x++)
+        {
+            float2 offset = ((float2(x, y) + 0.5) / taps - 0.5) * footprint;
+            total += previous(input.uv + offset);
+        }
+    }
+
+    return float4(total / (taps * taps), 1.0);
+}
+
+// Filmic tone-mapping: deep blacks, punchy midtones, highlights that roll off.
+float3 toneMap(float3 colour)
+{
+    return saturate((colour * (2.51 * colour + 0.03)) / (colour * (2.43 * colour + 0.59) + 0.14));
+}
+
 float4 PSPresent(VSOut input) : SV_Target
 {
     float2 uv = input.uv;
-    float2 pixel = 1.0 / Resolution;
+    float2 pixel = RenderScale / Resolution;            // one screen pixel, in uv units
+    float2 texel = max(RenderScale, 1.0) / Resolution;  // one pixel of the image being shown
     float3 colour = previous(uv);
 
-    // Sharpen: push each pixel away from its neighbours' average. This undoes
-    // the slight blur that builds up as the feedback buffer is re-sampled.
-    float3 neighbours = (previous(uv + float2(pixel.x, 0.0)) + previous(uv - float2(pixel.x, 0.0))
-                       + previous(uv + float2(0.0, pixel.y)) + previous(uv - float2(0.0, pixel.y))) * 0.25;
-    colour = max(colour + (colour - neighbours) * 0.6, 0.0);
+    // Sharpen: push each pixel away from its neighbours' average. This undoes the slight blur
+    // that builds up as the feedback buffer is re-sampled; supersampled images need less.
+    float3 neighbours = (previous(uv + float2(texel.x, 0.0)) + previous(uv - float2(texel.x, 0.0))
+                       + previous(uv + float2(0.0, texel.y)) + previous(uv - float2(0.0, texel.y))) * 0.25;
+    float sharpen = 0.6 * saturate(1.5 - 0.5 * RenderScale);
+    colour = max(colour + (colour - neighbours) * sharpen, 0.0);
 
     // Bloom only the brightest parts, so highlights glow but dark areas stay crisp and black.
     float3 bloom = 0.0;
@@ -31,17 +62,26 @@ float4 PSPresent(VSOut input) : SV_Target
         float2 offset = float2(cos(angle), sin(angle)) * pixel * 6.0;
         bloom += max(previous(uv + offset) - 0.6, 0.0) + max(previous(uv + offset * 2.5) - 0.6, 0.0);
     }
-    colour += bloom / 24.0 * 0.6;
-
-    // Filmic tone-mapping: deep blacks, punchy midtones, highlights that roll off.
-    colour = saturate((colour * (2.51 * colour + 0.03)) / (colour * (2.43 * colour + 0.59) + 0.14));
+    colour += bloom / 24.0 * 0.6 * BloomStrength;
 
     // A little extra saturation, and a light vignette.
-    float luminance = dot(colour, float3(0.2126, 0.7152, 0.0722));
-    colour = saturate(lerp(luminance.xxx, colour, 1.15));
+    float3 display = toneMap(colour);
+    float luminance = dot(display, float3(0.2126, 0.7152, 0.0722));
+    display = saturate(lerp(luminance.xxx, display, 1.15));
     float2 fromCentre = uv - 0.5;
-    colour *= 1.0 - dot(fromCentre, fromCentre) * 0.35;
-    return float4(colour, 1.0);
+    display *= 1.0 - dot(fromCentre, fromCentre) * 0.35;
+
+    if (HdrOutput < 0.5)
+    {
+        return float4(display, 1.0);
+    }
+
+    // HDR screens: the same picture at the screen's normal white, but the brightest parts of the
+    // scene (beyond what a normal screen can show) climb towards the screen's peak brightness.
+    float3 shown = pow(display, 2.2) * HdrWhite;
+    float overWhite = max(max(colour.r, max(colour.g, colour.b)) - 1.0, 0.0);
+    float boost = lerp(1.0, max(HdrPeak / HdrWhite, 1.0), 1.0 - exp(-overWhite * 0.7));
+    return float4(shown * boost, 1.0);
 }
 
 // While switching presets, the old preset's output is in PreviousFrame and the

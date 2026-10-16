@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using Vortice.D3DCompiler;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
@@ -10,33 +9,50 @@ using Vortice.Mathematics;
 namespace WinampInspiredVisualizer.Visualizer;
 
 /// <summary>
-/// Draws the visualizer with Direct3D 11 on its own thread. Each frame the
-/// current preset reads the previous frame (feedback), draws on top of it,
-/// and the result is bloomed and tone-mapped onto the window.
+/// Draws the visualizer with Direct3D 11 on its own thread. Each frame the current preset reads
+/// the previous frame (feedback) and draws on top of it. When drawing above window resolution the
+/// result is shrunk to the window (supersampling), then it's bloomed and tone-mapped onto the
+/// window, in HDR on HDR screens. Visuals compile in the background (and are cached on disk),
+/// so the first one appears straight away.
 /// </summary>
 public sealed class Renderer : IDisposable
 {
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
-    private const Format BackBufferFormat = Format.B8G8R8A8_UNorm;
-    private const int ConstantCount = 16;
-    private const double TransitionSeconds = 3.0;
-    private const double AutoCycleSeconds = 25.0;
+    private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
+    private const Format HdrBackBufferFormat = Format.R16G16B16A16_Float;
+    private const int ConstantCount = 20;
+    private const double MaxRenderScale = 4.0;
+    private const double MinRenderScale = 0.25;
+    private const int MaxTextureSize = 16384;
+    private const int MaxDeviceResets = 3;
 
     // Transition styles the engine's blend shader knows (see Engine.hlsl). The morphs (4-7)
     // look the most natural, so they come up twice as often as the reveals (1-3) and the crossfade (0).
-    private static readonly int[] TransitionStyles = { 0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7 };
+    private static readonly int[] AllTransitionStyles = { 0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7 };
+    private static readonly int[] MorphTransitionStyles = { 4, 5, 6, 7 };
 
     private readonly IntPtr _hwnd;
     private readonly AudioAnalyzer _analyzer;
-    private readonly IReadOnlyList<PresetSource> _presetSources;
+    private readonly PresetSlot[] _slots;
+    private readonly ShaderCache _shaderCache = new();
     private readonly Thread _thread;
+    private readonly List<Thread> _compileThreads = new();
     private readonly float[] _constants = new float[ConstantCount];
-    private readonly List<(string Name, ID3D11PixelShader Shader)> _presets = new();
     private readonly Random _random = new();
     private volatile bool _running;
+    private volatile bool _stopCompiling;
+    private volatile bool _compileInterrupted;
     private volatile int _requestedPreset;
     private volatile bool _autoCycle = true;
-    private int _activePreset;
+    private volatile int _targetPixels;
+    private volatile float _quality = 1f;
+    private volatile float _bloomStrength = 1f;
+    private volatile float _transitionSeconds = 3f;
+    private volatile float _autoCycleSeconds = 25f;
+    private volatile bool _morphsOnly;
+    private volatile bool _hdrRequested;
+    private int _compilersRunning;
+    private int _activePreset = -1;
     private int _fromPreset = -1;
     private double _transitionStart;
     private double _lastSwitch;
@@ -47,8 +63,9 @@ public sealed class Renderer : IDisposable
     private ID3D11DeviceContext? _context;
     private IDXGISwapChain1? _swapChain;
     private ID3D11RenderTargetView? _backBufferView;
-    private readonly FeedbackTarget?[] _feedback = new FeedbackTarget?[2];
-    private readonly FeedbackTarget?[] _transitionTargets = new FeedbackTarget?[2];
+    private RenderTarget? _windowTarget;
+    private readonly RenderTarget?[] _feedback = new RenderTarget?[2];
+    private readonly RenderTarget?[] _transitionTargets = new RenderTarget?[2];
     private ID3D11Texture2D? _audioTexture;
     private ID3D11ShaderResourceView? _audioView;
     private ID3D11Buffer? _constantBuffer;
@@ -56,41 +73,110 @@ public sealed class Renderer : IDisposable
     private ID3D11VertexShader? _vertexShader;
     private ID3D11PixelShader? _presentShader;
     private ID3D11PixelShader? _blendShader;
-    private int _width;
-    private int _height;
+    private ID3D11PixelShader? _downsampleShader;
+    private int _windowWidth;
+    private int _windowHeight;
+    private int _renderWidth;
+    private int _renderHeight;
+    private bool _hdrActive;
+    private bool _hdrRefused;
+    private DisplayInfo _display = DisplayInfo.Standard;
+    private Task<DisplayInfo?>? _displayCheck;
 
     public Renderer(IntPtr hwnd, AudioAnalyzer analyzer)
     {
         _hwnd = hwnd;
         _analyzer = analyzer;
-        _presetSources = PresetLibrary.LoadPresets();
+        _slots = PresetLibrary.LoadPresets().Select(source => new PresetSlot(source)).ToArray();
+        PresetNames = _slots.Select(slot => slot.Source.Name).ToList();
         _thread = new Thread(Run) { IsBackground = true, Name = "Visualizer renderer" };
     }
 
-    /// <summary>Raised (on the render thread) once the presets are compiled, with their names.</summary>
+    /// <summary>Raised (on the render thread) as soon as it starts, with every visual's name.</summary>
     public event Action<IReadOnlyList<string>>? PresetsReady;
 
-    /// <summary>Raised (on the render thread) when a preset fails to compile; it is skipped.</summary>
+    /// <summary>Raised (on a compile thread) when a visual fails to compile; it is skipped.</summary>
     public event Action<string>? PresetFailed;
 
-    /// <summary>Raised (on the render thread) when auto-cycle moves to a new preset.</summary>
+    /// <summary>Raised (on the render thread) when the renderer moves to another visual by itself.</summary>
     public event Action<int>? PresetChanged;
 
     /// <summary>Raised (on the render thread) if the GPU can't be used at all.</summary>
     public event Action<string>? Failed;
 
-    /// <summary>Index into the list given by <see cref="PresetsReady"/>.</summary>
+    /// <summary>Raised (on the render thread) when the graphics card reset and the visuals restarted.</summary>
+    public event Action? DeviceReset;
+
+    /// <summary>Raised (on the render thread) about once a second with the frame rate and drawing size.</summary>
+    public event Action<FrameStats>? FrameRateMeasured;
+
+    /// <summary>Raised (on the render thread) when the screen's HDR support is found or changes.</summary>
+    public event Action<DisplayInfo>? DisplayChanged;
+
+    /// <summary>Every visual, in the order <see cref="PresetIndex"/> counts them.</summary>
+    public IReadOnlyList<string> PresetNames { get; }
+
     public int PresetIndex
     {
         get => _requestedPreset;
         set => _requestedPreset = value;
     }
 
-    /// <summary>When on, moves to a random preset every so often, on a beat.</summary>
+    /// <summary>When on, moves to a random visual every so often, on a beat.</summary>
     public bool AutoCycle
     {
         get => _autoCycle;
         set => _autoCycle = value;
+    }
+
+    /// <summary>
+    /// How many pixels to draw, e.g. 3840 x 2160 for 4K, or 0 to match the window. Above the
+    /// window's size the image is drawn bigger and shrunk to fit, which smooths edges and adds detail.
+    /// </summary>
+    public int TargetPixels
+    {
+        get => _targetPixels;
+        set => _targetPixels = Math.Max(0, value);
+    }
+
+    /// <summary>Detail level for visuals: 0 low, 1 normal, 2 high, 3 ultra.</summary>
+    public float Quality
+    {
+        get => _quality;
+        set => _quality = Math.Clamp(value, 0f, 3f);
+    }
+
+    /// <summary>How strongly highlights glow: 0 off, 1 normal.</summary>
+    public float BloomStrength
+    {
+        get => _bloomStrength;
+        set => _bloomStrength = Math.Clamp(value, 0f, 3f);
+    }
+
+    public float TransitionSeconds
+    {
+        get => _transitionSeconds;
+        set => _transitionSeconds = Math.Clamp(value, 0.25f, 30f);
+    }
+
+    public float AutoCycleSeconds
+    {
+        get => _autoCycleSeconds;
+        set => _autoCycleSeconds = Math.Clamp(value, 5f, 3600f);
+    }
+
+    /// <summary>When on, only the morphing transitions are used.</summary>
+    public bool MorphTransitionsOnly
+    {
+        get => _morphsOnly;
+        set => _morphsOnly = value;
+    }
+
+    /// <summary>Draw in HDR when the screen has HDR turned on in Windows.</summary>
+    public bool Hdr
+    {
+        get => _hdrRequested;
+        set => _hdrRequested = value;
     }
 
     public void Start()
@@ -110,20 +196,49 @@ public sealed class Renderer : IDisposable
 
     private void Run()
     {
-        try
+        PresetsReady?.Invoke(PresetNames);
+        var resets = 0;
+        var attempt = new Stopwatch();
+        while (_running)
         {
-            CreateDevice();
-            CreateResources();
-            CompileShaders();
-            RenderLoop();
-        }
-        catch (Exception ex)
-        {
-            Failed?.Invoke(ex.Message);
-        }
-        finally
-        {
-            ReleaseAll();
+            attempt.Restart();
+            try
+            {
+                if (_slots.Length == 0)
+                {
+                    throw new InvalidOperationException("No visual presets were found.");
+                }
+
+                CreateDevice();
+                CreateResources();
+                CompileEngineShaders();
+                StartCompiling();
+                RenderLoop();
+                return;
+            }
+            catch (Exception ex) when (_running && IsDeviceLost(ex))
+            {
+                // The graphics card reset (a driver update, or a frame that took too long).
+                // Everything is rebuilt on the next pass round the loop. A card that ran fine
+                // for a while since the last reset gets its retries back.
+                resets = attempt.Elapsed.TotalMinutes > 1 ? 1 : resets + 1;
+                if (resets > MaxDeviceResets)
+                {
+                    Failed?.Invoke(ex.Message);
+                    return;
+                }
+
+                DeviceReset?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Failed?.Invoke(ex.Message);
+                return;
+            }
+            finally
+            {
+                ReleaseAll();
+            }
         }
     }
 
@@ -158,14 +273,20 @@ public sealed class Renderer : IDisposable
                 .CheckError();
         }
 
+        // The swap chain starts at the window's size in standard range; the first frame
+        // creates the views and switches to HDR if it's wanted.
         var (width, height) = GetClientSize();
-        _width = width;
-        _height = height;
         var description = new SwapChainDescription1(
-            (uint)_width, (uint)_height, BackBufferFormat, false, Usage.RenderTargetOutput, 2,
+            (uint)width, (uint)height, SdrBackBufferFormat, false, Usage.RenderTargetOutput, 2,
             Scaling.Stretch, SwapEffect.FlipDiscard, AlphaMode.Ignore, SwapChainFlags.None);
         _swapChain = _factory.CreateSwapChainForHwnd(_device!, _hwnd, description, null, null);
         _factory.MakeWindowAssociation(_hwnd, WindowAssociationFlags.IgnoreAll);
+        _windowWidth = 0;
+        _windowHeight = 0;
+        _renderWidth = 0;
+        _renderHeight = 0;
+        _hdrActive = false;
+        _hdrRefused = false;
     }
 
     private void CreateResources()
@@ -182,90 +303,140 @@ public sealed class Renderer : IDisposable
         _audioView = device.CreateShaderResourceView(_audioTexture, null);
 
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
-
-        CreateSizeDependentResources();
     }
 
-    private void CreateSizeDependentResources()
+    private void CompileEngineShaders()
     {
         var device = _device!;
-        using (var backBuffer = _swapChain!.GetBuffer<ID3D11Texture2D>(0))
-        {
-            _backBufferView = device.CreateRenderTargetView(backBuffer, null);
-        }
+        var engine = PresetLibrary.ReadShader("Common.hlsli") + "\n" + PresetLibrary.ReadShader("Engine.hlsl");
+        _vertexShader = device.CreateVertexShader(_shaderCache.GetOrCompile(engine, "VSMain", "Engine.hlsl", "vs_5_0"), null);
+        _presentShader = CreatePixelShader(device, engine, "PSPresent", "Engine.hlsl");
+        _blendShader = CreatePixelShader(device, engine, "PSBlend", "Engine.hlsl");
+        _downsampleShader = CreatePixelShader(device, engine, "PSDownsample", "Engine.hlsl");
+    }
 
-        for (var i = 0; i < _feedback.Length; i++)
+    private ID3D11PixelShader CreatePixelShader(ID3D11Device device, string source, string entryPoint, string sourceName)
+    {
+        var bytecode = _shaderCache.GetOrCompile(source, entryPoint, sourceName, "ps_5_0");
+        try
         {
-            _feedback[i] = new FeedbackTarget(device, _context!, _width, _height);
-            _transitionTargets[i] = new FeedbackTarget(device, _context!, _width, _height);
+            return device.CreatePixelShader(bytecode, null);
+        }
+        catch (Exception)
+        {
+            // A damaged cache file: compile it again from scratch.
+            bytecode = _shaderCache.GetOrCompile(source, entryPoint, sourceName, "ps_5_0", useCache: false);
+            return device.CreatePixelShader(bytecode, null);
         }
     }
 
-    private void ReleaseSizeDependentResources()
-    {
-        _context?.ClearState();
-        _backBufferView?.Dispose();
-        _backBufferView = null;
-        for (var i = 0; i < _feedback.Length; i++)
-        {
-            _feedback[i]?.Dispose();
-            _feedback[i] = null;
-            _transitionTargets[i]?.Dispose();
-            _transitionTargets[i] = null;
-        }
+    // ---- Compiling visuals in the background ----
 
-        _context?.Flush();
-    }
-
-    private void CompileShaders()
+    private void StartCompiling()
     {
+        _stopCompiling = false;
+        _compileInterrupted = false;
         var device = _device!;
         var common = PresetLibrary.ReadShader("Common.hlsli");
-        var engine = common + "\n" + PresetLibrary.ReadShader("Engine.hlsl");
-        _vertexShader = device.CreateVertexShader(Compile(engine, "VSMain", "Engine.hlsl", "vs_5_0"), null);
-        _presentShader = device.CreatePixelShader(Compile(engine, "PSPresent", "Engine.hlsl", "ps_5_0"), null);
-        _blendShader = device.CreatePixelShader(Compile(engine, "PSBlend", "Engine.hlsl", "ps_5_0"), null);
-
         var presetMain = PresetLibrary.ReadShader("PresetMain.hlsli");
-        foreach (var preset in _presetSources)
+        var count = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
+        _compilersRunning = count;
+        for (var i = 0; i < count; i++)
         {
+            var thread = new Thread(() => CompileLoop(device, common, presetMain))
+            {
+                IsBackground = true,
+                Name = "Visual compiler",
+                Priority = ThreadPriority.BelowNormal,
+            };
+            _compileThreads.Add(thread);
+            thread.Start();
+        }
+    }
+
+    private void CompileLoop(ID3D11Device device, string common, string presetMain)
+    {
+        while (!_stopCompiling)
+        {
+            var index = ClaimNextPreset();
+            if (index < 0)
+            {
+                break;
+            }
+
+            var slot = _slots[index];
             try
             {
-                var source = common + "\n#line 1\n" + preset.Code + "\n" + presetMain;
-                var bytecode = Compile(source, "PSMain", Path.GetFileName(preset.FilePath), "ps_5_0");
-                _presets.Add((preset.Name, device.CreatePixelShader(bytecode, null)));
+                var source = common + "\n#line 1\n" + slot.Source.Code + "\n" + presetMain;
+                slot.Shader = CreatePixelShader(device, source, "PSMain", Path.GetFileName(slot.Source.FilePath));
+                Volatile.Write(ref slot.State, PresetSlot.Ready);
+            }
+            catch (Exception ex) when (IsDeviceLost(ex))
+            {
+                // The graphics card reset: the render thread starts over, and this visual compiles again then.
+                Volatile.Write(ref slot.State, PresetSlot.Pending);
+                _compileInterrupted = true;
+                break;
             }
             catch (Exception ex)
             {
-                PresetFailed?.Invoke($"{preset.Name}: {ex.Message}");
+                Volatile.Write(ref slot.State, PresetSlot.Failed);
+                PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
             }
         }
 
-        PresetsReady?.Invoke(_presets.Select(p => p.Name).ToList());
-        if (_presets.Count == 0)
+        // The last compiler to finish a full pass tidies away cache files for visuals that changed or went.
+        if (Interlocked.Decrement(ref _compilersRunning) == 0 && !_stopCompiling && !_compileInterrupted)
         {
-            throw new InvalidOperationException("No visual presets could be loaded.");
+            _shaderCache.RemoveUnused();
         }
     }
 
-    private static byte[] Compile(string source, string entryPoint, string sourceName, string profile)
+    /// <summary>Picks the visual that's been asked for first, then its neighbours, then the rest in order.</summary>
+    private int ClaimNextPreset()
     {
-        var result = Compiler.Compile(source, entryPoint, sourceName, profile, out Blob blob, out Blob errors);
-        try
+        var count = _slots.Length;
+        var requested = Math.Clamp(_requestedPreset, 0, count - 1);
+        foreach (var offset in new[] { 0, 1, -1 })
         {
-            if (result.Failure || blob is null)
+            var index = (requested + offset + count) % count;
+            if (TryClaim(index))
             {
-                throw new InvalidOperationException(errors?.AsString()?.Trim() ?? $"Shader compile failed ({result.Code:X8}).");
+                return index;
             }
+        }
 
-            return blob.AsBytes();
-        }
-        finally
+        for (var index = 0; index < count; index++)
         {
-            blob?.Dispose();
-            errors?.Dispose();
+            if (TryClaim(index))
+            {
+                return index;
+            }
         }
+
+        return -1;
     }
+
+    private bool TryClaim(int index) =>
+        Interlocked.CompareExchange(ref _slots[index].State, PresetSlot.Compiling, PresetSlot.Pending) == PresetSlot.Pending;
+
+    private bool IsReady(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Ready;
+
+    private bool HasFailed(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Failed;
+
+    /// <summary>Stops the compile threads, once each has finished the visual it's compiling.</summary>
+    private void StopCompiling()
+    {
+        _stopCompiling = true;
+        foreach (var thread in _compileThreads)
+        {
+            thread.Join();
+        }
+
+        _compileThreads.Clear();
+    }
+
+    // ---- Drawing ----
 
     private void RenderLoop()
     {
@@ -273,6 +444,11 @@ public sealed class Renderer : IDisposable
         var clock = Stopwatch.StartNew();
         var lastTime = 0.0;
         var current = 0;
+        var frames = 0;
+        var frameCount = 0;
+        var frameRateStart = 0.0;
+        var nextDisplayCheck = 1.0;
+        UseDisplay(ReadDisplay(_hwnd));
 
         while (_running)
         {
@@ -288,16 +464,45 @@ public sealed class Renderer : IDisposable
                 continue;
             }
 
-            if (width != _width || height != _height)
+            // Once a second, check in the background whether the screen under the window has HDR on
+            // (it can be switched, or the window moved to another screen).
+            if (_displayCheck is { IsCompleted: true } check)
             {
-                Resize(width, height);
+                _displayCheck = null;
+                nextDisplayCheck = now + 1.0;
+                UseDisplay(check.Result);
+            }
+            else if (_displayCheck is null && now >= nextDisplayCheck)
+            {
+                var hwnd = _hwnd;
+                _displayCheck = Task.Run(() => ReadDisplay(hwnd));
+            }
+
+            var wantHdr = _hdrRequested && _display.HdrOn && !_hdrRefused;
+            if (width != _windowWidth || height != _windowHeight || wantHdr != _hdrActive)
+            {
+                ResizeWindow(width, height, wantHdr);
+            }
+
+            var (renderWidth, renderHeight) = RenderSizeFor(width, height);
+            if (renderWidth != _renderWidth || renderHeight != _renderHeight)
+            {
+                ResizeRenderTargets(renderWidth, renderHeight);
             }
 
             _analyzer.Update(deltaTime);
             var progress = UpdatePresetChoice(now);
+            if (_activePreset < 0)
+            {
+                // Nothing compiled yet: show black until the first visual is ready.
+                context.ClearRenderTargetView(_backBufferView!, new Color4(0f, 0f, 0f, 1f));
+                Present();
+                continue;
+            }
 
-            _constants[0] = _width;
-            _constants[1] = _height;
+            var supersampling = _renderWidth > _windowWidth;
+            _constants[0] = _renderWidth;
+            _constants[1] = _renderHeight;
             _constants[2] = (float)now;
             _constants[3] = deltaTime;
             _constants[4] = _analyzer.Bass;
@@ -306,9 +511,16 @@ public sealed class Renderer : IDisposable
             _constants[7] = _analyzer.Beat;
             _constants[8] = _analyzer.Level;
             _constants[9] = _analyzer.BeatCount;
-            _constants[10] = (float)_width / _height;
+            _constants[10] = (float)_renderWidth / _renderHeight;
+            _constants[11] = _quality;
             _constants[12] = progress;
             _constants[13] = _transitionStyle;
+            _constants[14] = _bloomStrength;
+            _constants[15] = (float)_renderWidth / _windowWidth;
+            _constants[16] = _hdrActive ? 1f : 0f;
+            _constants[17] = _display.SdrWhiteNits / 80f;
+            _constants[18] = _display.PeakNits / 80f;
+            _constants[19] = frameCount++;
             context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
             context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
 
@@ -316,8 +528,8 @@ public sealed class Renderer : IDisposable
             context.VSSetShader(_vertexShader);
             context.PSSetConstantBuffer(0, _constantBuffer);
             context.PSSetSampler(0, _sampler);
-            context.PSSetShaderResource(1, _audioView);
-            context.RSSetViewport(0, 0, _width, _height, 0, 1);
+            context.PSSetShaderResource(1, _audioView!);
+            context.RSSetViewport(0, 0, _renderWidth, _renderHeight, 0, 1);
 
             var target = _feedback[current]!;
             var previous = _feedback[1 - current]!;
@@ -332,64 +544,127 @@ public sealed class Renderer : IDisposable
                 // Mid-transition: run both presets from the same last frame, then blend them.
                 DrawPreset(_transitionTargets[0]!, previous, _fromPreset);
                 DrawPreset(_transitionTargets[1]!, previous, _activePreset);
-                context.PSSetShaderResource(0, null!);
-                context.OMSetRenderTargets(target.RenderTarget, null);
-                context.PSSetShaderResource(0, _transitionTargets[0]!.ShaderResource);
-                context.PSSetShaderResource(2, _transitionTargets[1]!.ShaderResource);
-                context.PSSetShader(_blendShader);
-                context.Draw(3, 0);
-                context.PSSetShaderResource(2, null!);
+                DrawPass(target.RenderTargetView, _transitionTargets[0]!.ShaderResource, _blendShader!, _transitionTargets[1]!.ShaderResource);
             }
 
-            // Pass 2: bloom and tone-map the result onto the window.
-            context.PSSetShaderResource(0, null!);
-            context.OMSetRenderTargets(_backBufferView!, null);
-            context.PSSetShaderResource(0, target.ShaderResource);
-            context.PSSetShader(_presentShader);
-            context.Draw(3, 0);
-            context.PSSetShaderResource(0, null!);
+            // Pass 2 (only above window resolution): shrink the image to the window.
+            context.RSSetViewport(0, 0, _windowWidth, _windowHeight, 0, 1);
+            var shown = target;
+            if (supersampling)
+            {
+                DrawPass(_windowTarget!.RenderTargetView, target.ShaderResource, _downsampleShader!, null);
+                shown = _windowTarget;
+            }
 
-            _swapChain!.Present(1, PresentFlags.None).CheckError();
+            // Pass 3: bloom and tone-map the result onto the window.
+            DrawPass(_backBufferView!, shown.ShaderResource, _presentShader!, null);
+            Present();
             current = 1 - current;
+
+            frames++;
+            if (now - frameRateStart >= 1.0)
+            {
+                FrameRateMeasured?.Invoke(new FrameStats(frames / (now - frameRateStart), _renderWidth, _renderHeight, _hdrActive));
+                frames = 0;
+                frameRateStart = now;
+            }
         }
     }
 
-    private void DrawPreset(FeedbackTarget destination, FeedbackTarget source, int presetIndex)
+    private void DrawPreset(RenderTarget destination, RenderTarget source, int presetIndex)
+    {
+        DrawPass(destination.RenderTargetView, source.ShaderResource, _slots[presetIndex].Shader!, null);
+    }
+
+    private void DrawPass(ID3D11RenderTargetView destination, ID3D11ShaderResourceView source, ID3D11PixelShader shader, ID3D11ShaderResourceView? extra)
     {
         var context = _context!;
         context.PSSetShaderResource(0, null!);
-        context.OMSetRenderTargets(destination.RenderTarget, null);
-        context.PSSetShaderResource(0, source.ShaderResource);
-        context.PSSetShader(_presets[presetIndex].Shader);
+        context.PSSetShaderResource(2, null!);
+        context.OMSetRenderTargets(destination, null);
+        context.PSSetShaderResource(0, source);
+        if (extra is not null)
+        {
+            context.PSSetShaderResource(2, extra);
+        }
+
+        context.PSSetShader(shader);
         context.Draw(3, 0);
+        context.PSSetShaderResource(0, null!);
+        context.PSSetShaderResource(2, null!);
     }
 
+    private void Present()
+    {
+        var result = _swapChain!.Present(1, PresentFlags.None);
+        if (IsDeviceLost(result))
+        {
+            throw new DeviceLostException();
+        }
+
+        result.CheckError();
+    }
+
+    private static bool IsDeviceLost(SharpGen.Runtime.Result result) =>
+        result == Vortice.DXGI.ResultCode.DeviceRemoved || result == Vortice.DXGI.ResultCode.DeviceReset
+        || result == Vortice.DXGI.ResultCode.DeviceHung;
+
+    private static bool IsDeviceLost(Exception ex) =>
+        ex is DeviceLostException || (ex is SharpGen.Runtime.SharpGenException sharpGen && IsDeviceLost(sharpGen.ResultCode));
+
     /// <summary>
-    /// Starts transitions for preset changes (from the UI or auto-cycle) and
-    /// returns how far through the current transition we are, 0..1.
+    /// Starts transitions for visual changes (from the UI or auto-cycle) and returns how far
+    /// through the current transition we are, 0..1. Visuals that haven't compiled yet are
+    /// waited for; ones that failed are skipped.
     /// </summary>
     private float UpdatePresetChoice(double now)
     {
-        var requested = Math.Clamp(_requestedPreset, 0, _presets.Count - 1);
+        var requested = Math.Clamp(_requestedPreset, 0, _slots.Length - 1);
+        if (HasFailed(requested))
+        {
+            // That visual doesn't work: stay on (or move to) one that does, and tell the UI.
+            var fallback = _activePreset >= 0 ? _activePreset : NextUsable(requested);
+            if (fallback >= 0 && fallback != requested)
+            {
+                _requestedPreset = fallback;
+                requested = fallback;
+                PresetChanged?.Invoke(fallback);
+            }
+        }
+
+        if (_activePreset < 0)
+        {
+            if (IsReady(requested))
+            {
+                // The very first visual appears without a transition.
+                _activePreset = requested;
+                _lastSwitch = now;
+            }
+
+            return 1f;
+        }
+
         if (requested != _activePreset)
         {
-            StartTransition(requested, now);
+            if (IsReady(requested))
+            {
+                StartTransition(requested, now);
+            }
         }
-        else if (_autoCycle && _fromPreset < 0 && _presets.Count > 1)
+        else if (_autoCycle && _fromPreset < 0)
         {
             // Switch on a beat once enough time has passed, or regardless a little later.
             var waited = now - _lastSwitch;
-            if ((waited > AutoCycleSeconds && _analyzer.Beat > 0.9f) || waited > AutoCycleSeconds + 8)
+            var interval = _autoCycleSeconds;
+            if ((waited > interval && _analyzer.Beat > 0.9f) || waited > interval + 8)
             {
-                var next = _random.Next(_presets.Count - 1);
-                if (next >= _activePreset)
+                var next = RandomReadyPreset();
+                if (next >= 0)
                 {
-                    next++;
+                    _requestedPreset = next;
+                    StartTransition(next, now);
+                    PresetChanged?.Invoke(next);
                 }
-
-                _requestedPreset = next;
-                StartTransition(next, now);
-                PresetChanged?.Invoke(next);
             }
         }
 
@@ -398,7 +673,7 @@ public sealed class Renderer : IDisposable
             return 1f;
         }
 
-        var t = Math.Clamp((now - _transitionStart) / TransitionSeconds, 0.0, 1.0);
+        var t = Math.Clamp((now - _transitionStart) / _transitionSeconds, 0.0, 1.0);
         if (t >= 1.0)
         {
             _fromPreset = -1;
@@ -408,22 +683,188 @@ public sealed class Renderer : IDisposable
         return (float)(t * t * (3 - 2 * t));
     }
 
+    private int NextUsable(int start)
+    {
+        for (var offset = 1; offset < _slots.Length; offset++)
+        {
+            var index = (start + offset) % _slots.Length;
+            if (!HasFailed(index))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private int RandomReadyPreset()
+    {
+        var ready = new List<int>();
+        for (var index = 0; index < _slots.Length; index++)
+        {
+            if (index != _activePreset && IsReady(index))
+            {
+                ready.Add(index);
+            }
+        }
+
+        return ready.Count == 0 ? -1 : ready[_random.Next(ready.Count)];
+    }
+
     private void StartTransition(int presetIndex, double now)
     {
         _fromPreset = _activePreset;
         _activePreset = presetIndex;
         _transitionStart = now;
         _lastSwitch = now;
-        _transitionStyle = TransitionStyles[_random.Next(TransitionStyles.Length)];
+        var styles = _morphsOnly ? MorphTransitionStyles : AllTransitionStyles;
+        _transitionStyle = styles[_random.Next(styles.Length)];
     }
 
-    private void Resize(int width, int height)
+    // ---- Sizes, supersampling and HDR ----
+
+    /// <summary>The size to draw at: the window's own, or about <see cref="TargetPixels"/> pixels in the window's shape.</summary>
+    private (int Width, int Height) RenderSizeFor(int windowWidth, int windowHeight)
     {
-        ReleaseSizeDependentResources();
-        _width = width;
-        _height = height;
-        _swapChain!.ResizeBuffers(2, (uint)width, (uint)height, BackBufferFormat, SwapChainFlags.None).CheckError();
-        CreateSizeDependentResources();
+        var target = _targetPixels;
+        if (target <= 0)
+        {
+            return (windowWidth, windowHeight);
+        }
+
+        var scale = Math.Clamp(Math.Sqrt(target / ((double)windowWidth * windowHeight)), MinRenderScale, MaxRenderScale);
+        if (Math.Abs(scale - 1.0) < 0.05)
+        {
+            return (windowWidth, windowHeight);
+        }
+
+        var width = windowWidth * scale;
+        var height = windowHeight * scale;
+        var fit = Math.Min(1.0, MaxTextureSize / Math.Max(width, height));
+        return (Math.Max(1, (int)Math.Round(width * fit)), Math.Max(1, (int)Math.Round(height * fit)));
+    }
+
+    private void ResizeWindow(int width, int height, bool hdr)
+    {
+        var context = _context!;
+        context.ClearState();
+        _backBufferView?.Dispose();
+        _backBufferView = null;
+        _windowTarget?.Dispose();
+        _windowTarget = null;
+        context.Flush();
+
+        _hdrActive = false;
+        if (hdr)
+        {
+            _swapChain!.ResizeBuffers(2, (uint)width, (uint)height, HdrBackBufferFormat, SwapChainFlags.None).CheckError();
+            _hdrActive = TrySetColorSpace(ColorSpaceType.RgbFullG10NoneP709);
+            if (!_hdrActive)
+            {
+                // The screen or driver turned it down: stay in standard range until something changes.
+                _hdrRefused = true;
+            }
+        }
+
+        if (!_hdrActive)
+        {
+            _swapChain!.ResizeBuffers(2, (uint)width, (uint)height, SdrBackBufferFormat, SwapChainFlags.None).CheckError();
+            TrySetColorSpace(ColorSpaceType.RgbFullG22NoneP709);
+        }
+
+        _windowWidth = width;
+        _windowHeight = height;
+        using (var backBuffer = _swapChain!.GetBuffer<ID3D11Texture2D>(0))
+        {
+            _backBufferView = _device!.CreateRenderTargetView(backBuffer, null);
+        }
+
+        // Force the drawing size to be worked out again against the new window.
+        _renderWidth = 0;
+        _renderHeight = 0;
+    }
+
+    private bool TrySetColorSpace(ColorSpaceType colorSpace)
+    {
+        using var swapChain3 = _swapChain!.QueryInterfaceOrNull<IDXGISwapChain3>();
+        if (swapChain3 is null)
+        {
+            return colorSpace == ColorSpaceType.RgbFullG22NoneP709;
+        }
+
+        try
+        {
+            if ((swapChain3.CheckColorSpaceSupport(colorSpace) & SwapChainColorSpaceSupportFlags.Present) == 0)
+            {
+                return false;
+            }
+
+            swapChain3.SetColorSpace1(colorSpace);
+            return true;
+        }
+        catch (SharpGen.Runtime.SharpGenException)
+        {
+            return false;
+        }
+    }
+
+    private void ResizeRenderTargets(int width, int height)
+    {
+        var device = _device!;
+        _context!.ClearState();
+        ReleaseRenderTargets();
+
+        for (var i = 0; i < _feedback.Length; i++)
+        {
+            _feedback[i] = new RenderTarget(device, _context, width, height);
+            _transitionTargets[i] = new RenderTarget(device, _context, width, height);
+        }
+
+        if (width > _windowWidth)
+        {
+            _windowTarget = new RenderTarget(device, _context, _windowWidth, _windowHeight);
+        }
+
+        _renderWidth = width;
+        _renderHeight = height;
+    }
+
+    private void ReleaseRenderTargets()
+    {
+        for (var i = 0; i < _feedback.Length; i++)
+        {
+            _feedback[i]?.Dispose();
+            _feedback[i] = null;
+            _transitionTargets[i]?.Dispose();
+            _transitionTargets[i] = null;
+        }
+
+        _windowTarget?.Dispose();
+        _windowTarget = null;
+    }
+
+    /// <summary>What the screen under the window can do, or null if Windows couldn't say this time.</summary>
+    private static DisplayInfo? ReadDisplay(IntPtr hwnd)
+    {
+        try
+        {
+            return DisplayInfo.ForWindow(hwnd);
+        }
+        catch (Exception)
+        {
+            // Asked again in a second.
+            return null;
+        }
+    }
+
+    private void UseDisplay(DisplayInfo? display)
+    {
+        if (display is { } found && found != _display)
+        {
+            _display = found;
+            _hdrRefused = false;
+            DisplayChanged?.Invoke(found);
+        }
     }
 
     private (int Width, int Height) GetClientSize()
@@ -435,24 +876,50 @@ public sealed class Renderer : IDisposable
 
     private void ReleaseAll()
     {
-        ReleaseSizeDependentResources();
-        foreach (var (_, shader) in _presets)
+        // Compile threads use the device, so it can only go once they've stopped.
+        StopCompiling();
+
+        _context?.ClearState();
+        _context?.Flush();
+        ReleaseRenderTargets();
+        _backBufferView?.Dispose();
+        _backBufferView = null;
+        foreach (var slot in _slots)
         {
-            shader.Dispose();
+            slot.Shader?.Dispose();
+            slot.Shader = null;
+            if (Volatile.Read(ref slot.State) != PresetSlot.Failed)
+            {
+                Volatile.Write(ref slot.State, PresetSlot.Pending);
+            }
         }
 
-        _presets.Clear();
+        _activePreset = -1;
+        _fromPreset = -1;
         _presentShader?.Dispose();
+        _presentShader = null;
         _blendShader?.Dispose();
+        _blendShader = null;
+        _downsampleShader?.Dispose();
+        _downsampleShader = null;
         _vertexShader?.Dispose();
+        _vertexShader = null;
         _sampler?.Dispose();
+        _sampler = null;
         _constantBuffer?.Dispose();
+        _constantBuffer = null;
         _audioView?.Dispose();
+        _audioView = null;
         _audioTexture?.Dispose();
+        _audioTexture = null;
         _swapChain?.Dispose();
+        _swapChain = null;
         _context?.Dispose();
         _device?.Dispose();
+        _context = null;
+        _device = null;
         _factory?.Dispose();
+        _factory = null;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -468,30 +935,54 @@ public sealed class Renderer : IDisposable
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
 
-    /// <summary>One of the two ping-pong buffers the feedback effect reads from and writes to.</summary>
-    private sealed class FeedbackTarget : IDisposable
+    private sealed class DeviceLostException : Exception
     {
-        public FeedbackTarget(ID3D11Device device, ID3D11DeviceContext context, int width, int height)
+        public DeviceLostException()
+            : base("The graphics card stopped responding.")
+        {
+        }
+    }
+
+    /// <summary>A visual and its compiled shader, which arrives from a compile thread.</summary>
+    private sealed class PresetSlot
+    {
+        public const int Pending = 0;
+        public const int Compiling = 1;
+        public const int Ready = 2;
+        public const int Failed = 3;
+
+        public int State;
+        public ID3D11PixelShader? Shader;
+
+        public PresetSlot(PresetSource source) => Source = source;
+
+        public PresetSource Source { get; }
+    }
+
+    /// <summary>A texture the visualizer draws into and reads back from (feedback, transitions, supersampling).</summary>
+    private sealed class RenderTarget : IDisposable
+    {
+        public RenderTarget(ID3D11Device device, ID3D11DeviceContext context, int width, int height)
         {
             Texture = device.CreateTexture2D(
                 FeedbackFormat, (uint)width, (uint)height, 1, 1, null,
                 BindFlags.RenderTarget | BindFlags.ShaderResource, ResourceOptionFlags.None,
                 ResourceUsage.Default, CpuAccessFlags.None);
-            RenderTarget = device.CreateRenderTargetView(Texture, null);
+            RenderTargetView = device.CreateRenderTargetView(Texture, null);
             ShaderResource = device.CreateShaderResourceView(Texture, null);
-            context.ClearRenderTargetView(RenderTarget, new Color4(0f, 0f, 0f, 1f));
+            context.ClearRenderTargetView(RenderTargetView, new Color4(0f, 0f, 0f, 1f));
         }
 
         public ID3D11Texture2D Texture { get; }
 
-        public ID3D11RenderTargetView RenderTarget { get; }
+        public ID3D11RenderTargetView RenderTargetView { get; }
 
         public ID3D11ShaderResourceView ShaderResource { get; }
 
         public void Dispose()
         {
             ShaderResource.Dispose();
-            RenderTarget.Dispose();
+            RenderTargetView.Dispose();
             Texture.Dispose();
         }
     }

@@ -7,8 +7,9 @@ float pyramid(float3 position)
     float3 p = wrap(position, spacing) - spacing * 0.5;
 
     float scale = 1.0;
-    [unroll]
-    for (int i = 0; i < 7; i++)
+    int depth = fractalDepth(7);
+    [loop]
+    for (int i = 0; i < depth; i++)
     {
         // Fold across the tetrahedron's symmetry planes, then shrink towards a corner.
         if (p.x + p.y < 0.0) p.xy = -p.yx;
@@ -22,7 +23,7 @@ float pyramid(float3 position)
 
 float3 pyramidNormal(float3 p)
 {
-    const float2 e = float2(0.0015, -0.0015);
+    float2 e = float2(0.0015, -0.0015) * surfacePrecision();
     return normalize(e.xyy * pyramid(p + e.xyy) + e.yyx * pyramid(p + e.yyx)
                    + e.yxy * pyramid(p + e.yxy) + e.xxx * pyramid(p + e.xxx));
 }
@@ -39,14 +40,18 @@ float3 Render(float2 uv, float2 p)
     float3 eye = float3(divePath(z), z);
     float3 direction = cameraRay(eye, float3(divePath(z + 2.0), z + 2.0), p, 0.95 - Beat * 0.1, sin(Time * 0.13) * 0.6);
 
+    // Detail allows more steps and a closer approach to the crystal; shading stays scaled to Normal's 100.
+    const float normalSteps = 100.0;
+    int maxSteps = qualitySteps(100);
+    float hitPrecision = 0.0005 * surfacePrecision();
     const float farPlane = 16.0;
     float travelled = 0.0;
     float steps = 0.0;
     [loop]
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < maxSteps; i++)
     {
         float d = pyramid(eye + direction * travelled);
-        if (d < 0.0005 * travelled || travelled > farPlane)
+        if (d < hitPrecision * travelled || travelled > farPlane)
         {
             break;
         }
@@ -63,7 +68,7 @@ float3 Render(float2 uv, float2 p)
         float diffuse = saturate(dot(normal, light));
         float specular = pow(saturate(dot(reflect(direction, normal), light)), 24.0);
         float rim = pow(1.0 - saturate(dot(normal, -direction)), 3.0);
-        float occlusion = 1.0 - steps / 100.0;
+        float occlusion = saturate(1.0 - steps / normalSteps);
 
         float3 crystal = palette(dot(normal, float3(0.3, 0.5, 0.2)) + hit.z * 0.04 + Time * 0.03);
         colour = crystal * (0.1 + diffuse * 0.9) * occlusion
@@ -72,6 +77,6 @@ float3 Render(float2 uv, float2 p)
         colour *= exp(-travelled * 0.15);
     }
 
-    colour += float3(0.3, 0.6, 1.0) * (steps / 100.0) * 0.15 * (0.5 + Bass * 1.5);
+    colour += float3(0.3, 0.6, 1.0) * min(steps / normalSteps, 1.0) * 0.15 * (0.5 + Bass * 1.5);
     return colour + previous(uv) * 0.12;
 }

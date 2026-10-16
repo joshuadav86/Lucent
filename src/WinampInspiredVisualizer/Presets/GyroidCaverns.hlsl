@@ -32,8 +32,9 @@ float3 Render(float2 uv, float2 p)
     const float farPlane = 16.0;
     float travelled = 0.0;
     float haze = 0.0;
+    int maxSteps = qualitySteps(100);
     [loop]
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < maxSteps; i++)
     {
         float d = cave(eye + direction * travelled);
         haze += exp(-d * 40.0) * 0.012;

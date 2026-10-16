@@ -22,7 +22,8 @@ float3 Render(float2 uv, float2 p)
         colour += hsv2rgb(0.33 + index * 0.12 + level * 0.1, 0.8, 1.0) * curtain * shimmer * (0.05 + level * 0.25);
     }
 
-    float2 starCell = floor(uv * Resolution / 2.0);
+    // Stars two screen pixels across, whatever the resolution setting.
+    float2 starCell = floor(uv * Resolution / (2.0 * max(RenderScale, 1.0)));
     float twinkle = 0.5 + 0.5 * sin(Time * 3.0 + hash(starCell + 1.7) * 20.0);
     float stars = step(0.997, hash(starCell)) * twinkle * 0.03;
 

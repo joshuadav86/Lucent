@@ -26,6 +26,13 @@ public sealed class VisualizerHost : HwndHost
     private Renderer? _renderer;
     private int _presetIndex;
     private bool _autoCycle = true;
+    private int _targetPixels;
+    private float _quality = 1f;
+    private float _bloomStrength = 1f;
+    private float _transitionSeconds = 3f;
+    private float _autoCycleSeconds = 25f;
+    private bool _morphTransitionsOnly;
+    private bool _hdr;
 
     public VisualizerHost(AudioCapture capture)
     {
@@ -42,6 +49,109 @@ public sealed class VisualizerHost : HwndHost
 
     /// <summary>Raised on the UI thread when auto-cycle switches to another preset.</summary>
     public event EventHandler<int>? PresetChanged;
+
+    /// <summary>Raised on the UI thread about once a second with the frame rate and drawing size.</summary>
+    public event EventHandler<FrameStats>? FrameRateMeasured;
+
+    /// <summary>Raised on the UI thread when the screen's HDR support is found or changes.</summary>
+    public event EventHandler<DisplayInfo>? DisplayChanged;
+
+    /// <summary>The visual to start with (by name), usually the one showing when the app last closed.</summary>
+    public string? StartPresetName { get; set; }
+
+    /// <summary>How many pixels to draw, e.g. 3840 x 2160 for 4K; 0 matches the window.</summary>
+    public int TargetPixels
+    {
+        get => _targetPixels;
+        set
+        {
+            _targetPixels = value;
+            if (_renderer is not null)
+            {
+                _renderer.TargetPixels = value;
+            }
+        }
+    }
+
+    /// <summary>Detail level for visuals: 0 low, 1 normal, 2 high, 3 ultra.</summary>
+    public float Quality
+    {
+        get => _quality;
+        set
+        {
+            _quality = value;
+            if (_renderer is not null)
+            {
+                _renderer.Quality = value;
+            }
+        }
+    }
+
+    public float BloomStrength
+    {
+        get => _bloomStrength;
+        set
+        {
+            _bloomStrength = value;
+            if (_renderer is not null)
+            {
+                _renderer.BloomStrength = value;
+            }
+        }
+    }
+
+    public float TransitionSeconds
+    {
+        get => _transitionSeconds;
+        set
+        {
+            _transitionSeconds = value;
+            if (_renderer is not null)
+            {
+                _renderer.TransitionSeconds = value;
+            }
+        }
+    }
+
+    public float AutoCycleSeconds
+    {
+        get => _autoCycleSeconds;
+        set
+        {
+            _autoCycleSeconds = value;
+            if (_renderer is not null)
+            {
+                _renderer.AutoCycleSeconds = value;
+            }
+        }
+    }
+
+    public bool MorphTransitionsOnly
+    {
+        get => _morphTransitionsOnly;
+        set
+        {
+            _morphTransitionsOnly = value;
+            if (_renderer is not null)
+            {
+                _renderer.MorphTransitionsOnly = value;
+            }
+        }
+    }
+
+    /// <summary>Draw in HDR when the screen has HDR turned on in Windows.</summary>
+    public bool Hdr
+    {
+        get => _hdr;
+        set
+        {
+            _hdr = value;
+            if (_renderer is not null)
+            {
+                _renderer.Hdr = value;
+            }
+        }
+    }
 
     public bool AutoCycle
     {
@@ -82,7 +192,22 @@ public sealed class VisualizerHost : HwndHost
         }
 
         var dispatcher = Dispatcher;
-        _renderer = new Renderer(hwnd, _analyzer) { PresetIndex = _presetIndex, AutoCycle = _autoCycle };
+        _renderer = new Renderer(hwnd, _analyzer);
+        var startIndex = StartPresetName is null ? -1 : IndexOfName(_renderer.PresetNames, StartPresetName);
+        if (startIndex >= 0)
+        {
+            _presetIndex = startIndex;
+        }
+
+        _renderer.PresetIndex = _presetIndex;
+        _renderer.AutoCycle = _autoCycle;
+        _renderer.TargetPixels = _targetPixels;
+        _renderer.Quality = _quality;
+        _renderer.BloomStrength = _bloomStrength;
+        _renderer.TransitionSeconds = _transitionSeconds;
+        _renderer.AutoCycleSeconds = _autoCycleSeconds;
+        _renderer.MorphTransitionsOnly = _morphTransitionsOnly;
+        _renderer.Hdr = _hdr;
         _renderer.PresetChanged += index => dispatcher.InvokeAsync(() =>
         {
             _presetIndex = index;
@@ -91,9 +216,26 @@ public sealed class VisualizerHost : HwndHost
         _renderer.PresetsReady += names => dispatcher.InvokeAsync(() => PresetsLoaded?.Invoke(this, names));
         _renderer.PresetFailed += message => dispatcher.InvokeAsync(() => ProblemReported?.Invoke(this, $"A visual didn't load. {message}"));
         _renderer.Failed += message => dispatcher.InvokeAsync(() => ProblemReported?.Invoke(this, $"The GPU visualizer stopped: {message}"));
+        _renderer.DeviceReset += () => dispatcher.InvokeAsync(() => ProblemReported?.Invoke(this,
+            "The graphics card reset, so the visuals restarted. If it keeps happening, lower the resolution or detail in Options."));
+        _renderer.FrameRateMeasured += stats => dispatcher.InvokeAsync(() => FrameRateMeasured?.Invoke(this, stats));
+        _renderer.DisplayChanged += display => dispatcher.InvokeAsync(() => DisplayChanged?.Invoke(this, display));
         _renderer.Start();
 
         return new HandleRef(this, hwnd);
+    }
+
+    private static int IndexOfName(IReadOnlyList<string> names, string name)
+    {
+        for (var i = 0; i < names.Count; i++)
+        {
+            if (string.Equals(names[i], name, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     protected override void DestroyWindowCore(HandleRef hwnd)
