@@ -7,6 +7,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Playlist;
+using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace WinampInspiredVisualizer;
 
