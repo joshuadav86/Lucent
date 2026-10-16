@@ -1,4 +1,6 @@
-# Winamp-Inspired Visualizer
+<p align="center"><img src="assets/lucid-icon.png" width="128" alt="Lucid icon"></p>
+
+# Lucid
 
 A modern, open-source music player for Windows with GPU-powered visualizations inspired by the classic Winamp era.
 
@@ -21,8 +23,8 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 ## Download and run
 
 1. Go to the [Latest build](../../releases/tag/latest) release.
-2. Download `WinampInspiredVisualizer-win-x64.zip` and unzip it.
-3. Double-click `WinampInspiredVisualizer.exe`.
+2. Download `Lucid-win-x64.zip` and unzip it.
+3. Double-click `Lucid.exe`.
 
 Nothing needs installing. If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
 
