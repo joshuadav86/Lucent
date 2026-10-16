@@ -25,6 +25,7 @@ public sealed class VisualizerHost : HwndHost
     private readonly AudioAnalyzer _analyzer;
     private Renderer? _renderer;
     private int _presetIndex;
+    private bool _autoCycle = true;
 
     public VisualizerHost(AudioCapture capture)
     {
@@ -38,6 +39,22 @@ public sealed class VisualizerHost : HwndHost
     public event EventHandler<string>? ProblemReported;
 
     public event EventHandler? DoubleClicked;
+
+    /// <summary>Raised on the UI thread when auto-cycle switches to another preset.</summary>
+    public event EventHandler<int>? PresetChanged;
+
+    public bool AutoCycle
+    {
+        get => _autoCycle;
+        set
+        {
+            _autoCycle = value;
+            if (_renderer is not null)
+            {
+                _renderer.AutoCycle = value;
+            }
+        }
+    }
 
     public int PresetIndex
     {
@@ -65,7 +82,12 @@ public sealed class VisualizerHost : HwndHost
         }
 
         var dispatcher = Dispatcher;
-        _renderer = new Renderer(hwnd, _analyzer) { PresetIndex = _presetIndex };
+        _renderer = new Renderer(hwnd, _analyzer) { PresetIndex = _presetIndex, AutoCycle = _autoCycle };
+        _renderer.PresetChanged += index => dispatcher.InvokeAsync(() =>
+        {
+            _presetIndex = index;
+            PresetChanged?.Invoke(this, index);
+        });
         _renderer.PresetsReady += names => dispatcher.InvokeAsync(() => PresetsLoaded?.Invoke(this, names));
         _renderer.PresetFailed += message => dispatcher.InvokeAsync(() => ProblemReported?.Invoke(this, $"A visual didn't load. {message}"));
         _renderer.Failed += message => dispatcher.InvokeAsync(() => ProblemReported?.Invoke(this, $"The GPU visualizer stopped: {message}"));

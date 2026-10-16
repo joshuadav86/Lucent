@@ -19,6 +19,9 @@ public sealed class Renderer : IDisposable
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format BackBufferFormat = Format.B8G8R8A8_UNorm;
     private const int ConstantCount = 16;
+    private const double TransitionSeconds = 2.5;
+    private const double AutoCycleSeconds = 25.0;
+    private const int TransitionStyleCount = 4;
 
     private readonly IntPtr _hwnd;
     private readonly AudioAnalyzer _analyzer;
@@ -26,8 +29,15 @@ public sealed class Renderer : IDisposable
     private readonly Thread _thread;
     private readonly float[] _constants = new float[ConstantCount];
     private readonly List<(string Name, ID3D11PixelShader Shader)> _presets = new();
+    private readonly Random _random = new();
     private volatile bool _running;
     private volatile int _requestedPreset;
+    private volatile bool _autoCycle = true;
+    private int _activePreset;
+    private int _fromPreset = -1;
+    private double _transitionStart;
+    private double _lastSwitch;
+    private int _transitionStyle;
 
     private IDXGIFactory2? _factory;
     private ID3D11Device? _device;
@@ -35,12 +45,14 @@ public sealed class Renderer : IDisposable
     private IDXGISwapChain1? _swapChain;
     private ID3D11RenderTargetView? _backBufferView;
     private readonly FeedbackTarget?[] _feedback = new FeedbackTarget?[2];
+    private readonly FeedbackTarget?[] _transitionTargets = new FeedbackTarget?[2];
     private ID3D11Texture2D? _audioTexture;
     private ID3D11ShaderResourceView? _audioView;
     private ID3D11Buffer? _constantBuffer;
     private ID3D11SamplerState? _sampler;
     private ID3D11VertexShader? _vertexShader;
     private ID3D11PixelShader? _presentShader;
+    private ID3D11PixelShader? _blendShader;
     private int _width;
     private int _height;
 
@@ -58,6 +70,9 @@ public sealed class Renderer : IDisposable
     /// <summary>Raised (on the render thread) when a preset fails to compile; it is skipped.</summary>
     public event Action<string>? PresetFailed;
 
+    /// <summary>Raised (on the render thread) when auto-cycle moves to a new preset.</summary>
+    public event Action<int>? PresetChanged;
+
     /// <summary>Raised (on the render thread) if the GPU can't be used at all.</summary>
     public event Action<string>? Failed;
 
@@ -66,6 +81,13 @@ public sealed class Renderer : IDisposable
     {
         get => _requestedPreset;
         set => _requestedPreset = value;
+    }
+
+    /// <summary>When on, moves to a random preset every so often, on a beat.</summary>
+    public bool AutoCycle
+    {
+        get => _autoCycle;
+        set => _autoCycle = value;
     }
 
     public void Start()
@@ -172,6 +194,7 @@ public sealed class Renderer : IDisposable
         for (var i = 0; i < _feedback.Length; i++)
         {
             _feedback[i] = new FeedbackTarget(device, _context!, _width, _height);
+            _transitionTargets[i] = new FeedbackTarget(device, _context!, _width, _height);
         }
     }
 
@@ -184,6 +207,8 @@ public sealed class Renderer : IDisposable
         {
             _feedback[i]?.Dispose();
             _feedback[i] = null;
+            _transitionTargets[i]?.Dispose();
+            _transitionTargets[i] = null;
         }
 
         _context?.Flush();
@@ -196,6 +221,7 @@ public sealed class Renderer : IDisposable
         var engine = common + "\n" + PresetLibrary.ReadShader("Engine.hlsl");
         _vertexShader = device.CreateVertexShader(Compile(engine, "VSMain", "Engine.hlsl", "vs_5_0"), null);
         _presentShader = device.CreatePixelShader(Compile(engine, "PSPresent", "Engine.hlsl", "ps_5_0"), null);
+        _blendShader = device.CreatePixelShader(Compile(engine, "PSBlend", "Engine.hlsl", "ps_5_0"), null);
 
         var presetMain = PresetLibrary.ReadShader("PresetMain.hlsli");
         foreach (var preset in _presetSources)
@@ -265,7 +291,7 @@ public sealed class Renderer : IDisposable
             }
 
             _analyzer.Update(deltaTime);
-            var presetIndex = Math.Clamp(_requestedPreset, 0, _presets.Count - 1);
+            var progress = UpdatePresetChoice(now);
 
             _constants[0] = _width;
             _constants[1] = _height;
@@ -278,6 +304,8 @@ public sealed class Renderer : IDisposable
             _constants[8] = _analyzer.Level;
             _constants[9] = _analyzer.BeatCount;
             _constants[10] = (float)_width / _height;
+            _constants[12] = progress;
+            _constants[13] = _transitionStyle;
             context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
             context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
 
@@ -291,12 +319,24 @@ public sealed class Renderer : IDisposable
             var target = _feedback[current]!;
             var previous = _feedback[1 - current]!;
 
-            // Pass 1: the preset draws into the feedback buffer, reading last frame's.
-            context.PSSetShaderResource(0, null!);
-            context.OMSetRenderTargets(target.RenderTarget, null);
-            context.PSSetShaderResource(0, previous.ShaderResource);
-            context.PSSetShader(_presets[presetIndex].Shader);
-            context.Draw(3, 0);
+            if (_fromPreset < 0)
+            {
+                // Pass 1: the preset draws into the feedback buffer, reading last frame's.
+                DrawPreset(target, previous, _activePreset);
+            }
+            else
+            {
+                // Mid-transition: run both presets from the same last frame, then blend them.
+                DrawPreset(_transitionTargets[0]!, previous, _fromPreset);
+                DrawPreset(_transitionTargets[1]!, previous, _activePreset);
+                context.PSSetShaderResource(0, null!);
+                context.OMSetRenderTargets(target.RenderTarget, null);
+                context.PSSetShaderResource(0, _transitionTargets[0]!.ShaderResource);
+                context.PSSetShaderResource(2, _transitionTargets[1]!.ShaderResource);
+                context.PSSetShader(_blendShader);
+                context.Draw(3, 0);
+                context.PSSetShaderResource(2, null!);
+            }
 
             // Pass 2: bloom and tone-map the result onto the window.
             context.PSSetShaderResource(0, null!);
@@ -309,6 +349,69 @@ public sealed class Renderer : IDisposable
             _swapChain!.Present(1, PresentFlags.None).CheckError();
             current = 1 - current;
         }
+    }
+
+    private void DrawPreset(FeedbackTarget destination, FeedbackTarget source, int presetIndex)
+    {
+        var context = _context!;
+        context.PSSetShaderResource(0, null!);
+        context.OMSetRenderTargets(destination.RenderTarget, null);
+        context.PSSetShaderResource(0, source.ShaderResource);
+        context.PSSetShader(_presets[presetIndex].Shader);
+        context.Draw(3, 0);
+    }
+
+    /// <summary>
+    /// Starts transitions for preset changes (from the UI or auto-cycle) and
+    /// returns how far through the current transition we are, 0..1.
+    /// </summary>
+    private float UpdatePresetChoice(double now)
+    {
+        var requested = Math.Clamp(_requestedPreset, 0, _presets.Count - 1);
+        if (requested != _activePreset)
+        {
+            StartTransition(requested, now);
+        }
+        else if (_autoCycle && _fromPreset < 0 && _presets.Count > 1)
+        {
+            // Switch on a beat once enough time has passed, or regardless a little later.
+            var waited = now - _lastSwitch;
+            if ((waited > AutoCycleSeconds && _analyzer.Beat > 0.9f) || waited > AutoCycleSeconds + 8)
+            {
+                var next = _random.Next(_presets.Count - 1);
+                if (next >= _activePreset)
+                {
+                    next++;
+                }
+
+                _requestedPreset = next;
+                StartTransition(next, now);
+                PresetChanged?.Invoke(next);
+            }
+        }
+
+        if (_fromPreset < 0)
+        {
+            return 1f;
+        }
+
+        var t = Math.Clamp((now - _transitionStart) / TransitionSeconds, 0.0, 1.0);
+        if (t >= 1.0)
+        {
+            _fromPreset = -1;
+            return 1f;
+        }
+
+        return (float)(t * t * (3 - 2 * t));
+    }
+
+    private void StartTransition(int presetIndex, double now)
+    {
+        _fromPreset = _activePreset;
+        _activePreset = presetIndex;
+        _transitionStart = now;
+        _lastSwitch = now;
+        _transitionStyle = _random.Next(TransitionStyleCount);
     }
 
     private void Resize(int width, int height)
@@ -337,6 +440,7 @@ public sealed class Renderer : IDisposable
 
         _presets.Clear();
         _presentShader?.Dispose();
+        _blendShader?.Dispose();
         _vertexShader?.Dispose();
         _sampler?.Dispose();
         _constantBuffer?.Dispose();
