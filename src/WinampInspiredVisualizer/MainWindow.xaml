@@ -42,8 +42,6 @@
             </StackPanel>
             <!-- Switches that show or hide the side panels (lit while open), and the options. -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                <TextBlock x:Name="FrameRateText" Margin="0,0,14,0" FontSize="11" VerticalAlignment="Center"
-                           Foreground="{DynamicResource FaintTextBrush}" Visibility="Collapsed" />
                 <ToggleButton x:Name="LibraryToggle" Style="{StaticResource PanelToggle}"
                               ToolTip="Show or hide the library (L)" Click="OnToggleLibrary"
                               WindowChrome.IsHitTestVisibleInChrome="True">
@@ -135,12 +133,16 @@
                                 <TextBlock Style="{StaticResource OptionLabel}" Text="Change about every" />
                                 <Border Style="{StaticResource SegmentBar}">
                                     <UniformGrid Rows="1">
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="10" Content="10 s" Click="OnOptionChosen" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="15" Content="15 s" Click="OnOptionChosen" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="25" Content="25 s" Click="OnOptionChosen" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="45" Content="45 s" Click="OnOptionChosen" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="90" Content="90 s" Click="OnOptionChosen" />
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="180" Content="3 min" Click="OnOptionChosen" />
                                     </UniformGrid>
                                 </Border>
+                                <TextBlock Style="{StaticResource OptionHint}"
+                                           Text="Also in the player bar: click the arrow next to AUTO." />
 
                                 <TextBlock Style="{StaticResource OptionLabel}" Text="Transition length" />
                                 <Border Style="{StaticResource SegmentBar}">
@@ -417,10 +419,12 @@
                 </DockPanel>
 
                 <Grid Grid.Row="1" Margin="0,4,0,0">
+                    <!-- The transport stays centred, unless the window is too narrow for the visuals controls:
+                         then it moves left rather than the controls on the right being cut off. -->
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" MinWidth="{Binding ActualWidth, ElementName=VisualsControls}" />
                     </Grid.ColumnDefinitions>
 
                     <!-- Now playing -->
@@ -451,13 +455,25 @@
                     </StackPanel>
 
                     <!-- Visuals and volume -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel x:Name="VisualsControls" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        <!-- Frame rate readout, shown when "Show frame rate" is on in Options. -->
+                        <TextBlock x:Name="FrameRateText" Text="– fps" Margin="0,0,12,0" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed"
+                                   ToolTip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
                         <Button Style="{StaticResource IconButton}" ToolTip="Previous visual (B)" Click="OnPreviousPreset">
                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ArrowLeftIcon}" />
                         </Button>
-                        <Button x:Name="PresetPickerButton" Style="{StaticResource PickerButton}" Width="190" Margin="4,0"
-                                ToolTip="Choose a visual (V)" Click="OnTogglePresetPicker">
+                        <Button x:Name="PresetPickerButton" Style="{StaticResource PickerButton}" Width="200" Margin="4,0"
+                                Padding="10,0,12,0" ToolTip="Choose a visual (V)" Click="OnTogglePresetPicker">
                             <DockPanel>
+                                <!-- A screen with a spark in it: marks this as the place to pick the visuals. -->
+                                <Grid DockPanel.Dock="Left" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <Path Style="{StaticResource LineIcon}" Data="{StaticResource VisualsScreenIcon}"
+                                          Stroke="{DynamicResource MutedTextBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                                    <Path Data="{StaticResource VisualsSparkIcon}" Fill="{DynamicResource AccentBrush}"
+                                          HorizontalAlignment="Left" VerticalAlignment="Top" />
+                                </Grid>
                                 <Path DockPanel.Dock="Right" Style="{StaticResource LineIcon}" Data="{StaticResource ChevronUpIcon}"
                                       Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                                 <TextBlock x:Name="PresetName" Text="Loading visuals…" FontSize="12"
@@ -501,10 +517,14 @@
                                 </StackPanel>
                             </Border>
                         </Popup>
-                        <Button x:Name="AutoCycleButton" Style="{StaticResource PillButton}" Content="AUTO"
-                                Margin="6,0,14,0" Foreground="{DynamicResource AccentBrush}"
-                                ToolTip="Move to a new visual on the beat every 25 seconds or so (A)"
-                                Click="OnToggleAutoCycle" />
+                        <!-- Auto mode: the pill turns it on or off (right-click it, or use the arrow, to choose how often it changes). -->
+                        <Button x:Name="AutoCycleButton" Style="{StaticResource PillButton}" Content="AUTO · 25s"
+                                Margin="6,0,0,0" Foreground="{DynamicResource AccentBrush}"
+                                Click="OnToggleAutoCycle" MouseRightButtonUp="OnAutoCycleRightClick" />
+                        <Button x:Name="AutoCycleIntervalButton" Style="{StaticResource IconButton}" Width="22" Height="26"
+                                Margin="1,0,12,0" ToolTip="How often Auto changes the visual" Click="OnAutoCycleIntervalMenu">
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronUpIcon}" />
+                        </Button>
                         <Grid VerticalAlignment="Center">
                             <Path Data="{StaticResource SpeakerIcon}" Fill="{DynamicResource MutedTextBrush}" />
                             <Path Data="{StaticResource SpeakerWavesIcon}" Stroke="{DynamicResource MutedTextBrush}"
