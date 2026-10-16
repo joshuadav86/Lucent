@@ -156,3 +156,14 @@ float polygon(float2 p, float sides, float radius)
     float angle = atan2(p.y, p.x);
     return cos(floor(0.5 + angle / segment) * segment - angle) * length(p) - radius;
 }
+
+// Ray direction for a camera at eye looking towards target, for fly-through presets.
+// zoom above 1 narrows the view; roll tilts the horizon.
+float3 cameraRay(float3 eye, float3 target, float2 p, float zoom, float roll)
+{
+    float3 forward = normalize(target - eye);
+    float3 side = normalize(float3(forward.z, 0.0, -forward.x));
+    float3 up = cross(forward, side);
+    p = rotate(p, roll);
+    return normalize(forward * zoom + p.x * side + p.y * up);
+}

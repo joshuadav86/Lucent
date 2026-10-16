@@ -11,11 +11,12 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Playlist with play, pause, stop, previous, next, seek and volume
 - Shows track title, artist and length from the file's tags
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- 14 visuals, including fractals like Crystal Kaleidoscope, Julia Kaleidoscope, Apollonian Lace, Sacred Geometry and the ray-marched Menger Voyage
+- 19 visuals, including fractals like Crystal Kaleidoscope, Julia Kaleidoscope, Apollonian Lace and Sacred Geometry, and fly-through worlds like Menger Voyage, Kaleido Cathedral, Gyroid Caverns, Hyperspace Rings, Neon Lattice and Sierpinski Dive
+- A visual picker: click the visual's name in the player bar (or press V) to choose any visual from a list
 - Smooth transitions between visuals (crossfade, expanding ring, cloudy dissolve or spiral sweep), and an Auto mode that moves to a new visual on the beat every 25 seconds or so
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
+**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
 
 ## Download and run
 
@@ -46,7 +47,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow` and `fbm` are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
 
 ## Building from source
 
