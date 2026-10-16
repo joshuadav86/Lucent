@@ -582,19 +582,19 @@ public partial class MainWindow : Window
         {
             NowPlayingTitle.Text = "Nothing playing";
             NowPlayingArtist.Text = "Add music to the queue to begin";
-            Title = "Winamp-Inspired Visualizer";
+            Title = "Lucid";
             return;
         }
 
         NowPlayingTitle.Text = track.Title;
         NowPlayingArtist.Text = string.IsNullOrEmpty(track.Artist) ? Path.GetFileName(track.Path) : track.Artist;
-        Title = $"{track.Title} - Winamp-Inspired Visualizer";
+        Title = $"{track.Title} - Lucid";
     }
 
     private void ShowError(string message, Exception ex)
     {
         UpdatePlayPauseButton();
-        MessageBox.Show(this, $"{message}\n\nDetails: {ex.Message}", "Winamp-Inspired Visualizer",
+        MessageBox.Show(this, $"{message}\n\nDetails: {ex.Message}", "Lucid",
             MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
