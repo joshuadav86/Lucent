@@ -2,7 +2,16 @@
 
 A modern, open-source music player for Windows with GPU-powered visualizations inspired by the classic Winamp era.
 
-> Early days: right now the app opens a window. Music playback comes next, then the visualizer.
+> Early days: the music player works. The GPU visualizer is coming next.
+
+## Features
+
+- Plays MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
+- Add files or whole folders, or drag them onto the window
+- Playlist with play, pause, stop, previous, next, seek and volume
+- Shows track title, artist and length from the file's tags
+
+**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist.
 
 ## Download and run
 
