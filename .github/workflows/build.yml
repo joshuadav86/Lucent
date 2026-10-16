@@ -58,12 +58,12 @@ jobs:
 
       - name: Zip app
         shell: pwsh
-        run: Compress-Archive -Path publish/* -DestinationPath WinampInspiredVisualizer-win-x64.zip
+        run: Compress-Archive -Path publish/* -DestinationPath Lucid-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: WinampInspiredVisualizer-win-x64
-          path: WinampInspiredVisualizer-win-x64.zip
+          name: Lucid-win-x64
+          path: Lucid-win-x64.zip
 
       - name: Update "latest" download
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -72,7 +72,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --cleanup-tag --yes || true
-          gh release create latest WinampInspiredVisualizer-win-x64.zip \
+          gh release create latest Lucid-win-x64.zip \
             --target "$GITHUB_SHA" --prerelease \
             --title "Latest build" \
-            --notes "Automatic build of the newest version on main. Download the zip, unzip it, and run WinampInspiredVisualizer.exe."
+            --notes "Automatic build of the newest version on main. Download the zip, unzip it, and run Lucid.exe."

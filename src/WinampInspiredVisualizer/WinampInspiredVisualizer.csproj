@@ -7,7 +7,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <AssemblyName>WinampInspiredVisualizer</AssemblyName>
+    <AssemblyName>Lucid</AssemblyName>
+    <Product>Lucid</Product>
+    <ApplicationIcon>Assets\Lucid.ico</ApplicationIcon>
     <RootNamespace>WinampInspiredVisualizer</RootNamespace>
     <Version>0.1.0</Version>
   </PropertyGroup>
@@ -20,6 +22,11 @@
     <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\Lucid.ico" />
+    <Resource Include="Assets\Lucid-64.png" />
   </ItemGroup>
 
   <ItemGroup>
