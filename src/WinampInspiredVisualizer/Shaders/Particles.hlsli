@@ -26,14 +26,24 @@ struct Particle
     float4 data;      // free to use: anything else a particle needs to remember
 };
 
+// Start each one from (Sprite)0 so any field left alone is zero.
 struct Sprite
 {
     float2 position;  // centre on screen, in p units (like Render's p)
-    float size;       // radius in screen pixels (up to 32); 0 hides the particle
+    float size;       // radius in pixels of a 1080-line screen (up to 32); 0 hides the particle
     float3 colour;    // linear colour; above 1 glows
+    float2 streak;    // optional: stretches the dot into a streak this long, in p units, centred on
+                      // position (e.g. velocity * 0.03 for motion blur); same total light either way
 };
 
 Texture2D ParticleLayer : register(t3);
+
+// The size of one Sprite.size unit in p units: a pixel of a 1080-line screen. Sprites scale with
+// the window, so a visual looks the same at every resolution.
+float spritePixel()
+{
+    return 2.0 / 1080.0;
+}
 
 // This frame's particles, as drawn. For Render.
 float3 particles(float2 uv)
@@ -98,7 +108,7 @@ float3 project(float3 position, float3 eye, float3 target, float zoom, float rol
 // (try 0.02). The dot dims as it grows, so it keeps the same total light.
 void focus(inout Sprite sprite, float depth, float focusDepth, float blur)
 {
-    float spread = min(blur * abs(1.0 / max(depth, 1e-3) - 1.0 / focusDepth), 0.03) / pixelSize();
+    float spread = min(blur * abs(1.0 / max(depth, 1e-3) - 1.0 / focusDepth), 0.03) / spritePixel();
     float grown = sqrt(sprite.size * sprite.size + spread * spread);
     sprite.colour *= sprite.size * sprite.size / max(grown * grown, 1e-6);
     sprite.size = grown;
@@ -161,13 +171,16 @@ float2 curlNoise2(float2 p, float t)
 struct SpriteVertex
 {
     float4 position : SV_Position;
-    float2 corner : TEXCOORD0;  // -1..1 across the dot's square, which is 4 radii wide
+    float2 corner : TEXCOORD0;  // across the dot's square, which is 4 radii wide: -1..1, plus the
+                                // streak's half length along x
     float3 colour : TEXCOORD1;
+    float reach : TEXCOORD2;    // the streak's half length, in the same units as corner
 };
 
-// Each particle is a soft round glow, added onto everything drawn before it.
+// Each particle is a soft round glow (or a streak of one), added onto everything drawn before it.
 float4 PSSprite(SpriteVertex input) : SV_Target
 {
-    float fade = exp(-dot(input.corner, input.corner) * 8.0);
+    float2 offset = float2(max(abs(input.corner.x) - input.reach, 0.0), input.corner.y);
+    float fade = exp(-dot(offset, offset) * 8.0);
     return float4(input.colour * fade, 1.0);
 }

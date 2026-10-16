@@ -143,10 +143,10 @@ Sprite Show(Particle particle, uint id)
     float brightness = saturate(1.0 - fade) * particle.data.w * smoothstep(0.0, 0.45, t);
     float crackle = fade > 0.6 ? step(0.45, random(spark, 12.0)) * 1.6 : 1.0;
 
-    Sprite sprite;
+    Sprite sprite = (Sprite)0;
     sprite.position = position;
     sprite.size = launch < 0 || fade >= 1.0 ? 0.0 : lerp(1.4, 0.8, saturate(fade));
-    sprite.colour = colour * brightness * crackle * 0.12 * (1.0 + Beat * 0.3);
+    sprite.colour = colour * brightness * crackle * 1.9 * (1.0 + Beat * 0.3);
     return sprite;
 }
 

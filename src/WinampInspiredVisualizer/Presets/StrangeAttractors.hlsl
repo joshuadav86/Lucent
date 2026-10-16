@@ -136,12 +136,12 @@ Sprite Show(Particle particle, uint id)
     float hue = baseHue + Time * 0.01 + fixedRandom(id, 3.0) * 0.06 + saturate(speed * 0.5) * 0.22;
     float3 colour = hsv2rgb(hue, 0.9 - saturate(speed - 1.5) * 0.35, 1.0);
     float gain = index == 3 ? 0.4 : 1.0;  // the butterfly packs its light tighter
-    colour *= 0.013 * gain * (1.0 + Beat * 0.6);
+    colour *= 0.2 * gain * (1.0 + Beat * 0.6);
 
     // A few in every thousand catch the treble and sparkle.
     colour *= 1.0 + step(0.997, fixedRandom(id, 5.0)) * Treble * 30.0;
 
-    Sprite sprite;
+    Sprite sprite = (Sprite)0;
     sprite.position = seen.xy;
     sprite.size = seen.z > 0.1 ? 0.9 : 0.0;
     sprite.colour = colour;
