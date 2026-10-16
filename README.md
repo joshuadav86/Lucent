@@ -11,10 +11,11 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Playlist with play, pause, stop, previous, next, seek and volume
 - Shows track title, artist and length from the file's tags
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- Four starter visuals: Spectrum Tunnel, Neon Oscilloscope, Bass Nebula and Neo Bars
+- Ten visuals, including Synthwave Horizon, Starfield Warp, Liquid Chrome, Kaleidoscope Bloom, Fractal Echo and Aurora Veil
+- Smooth transitions between visuals (crossfade, expanding ring, cloudy dissolve or spiral sweep), and an Auto mode that moves to a new visual on the beat every 25 seconds or so
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, F11 toggles fullscreen and Esc leaves it.
+**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
 
 ## Download and run
 

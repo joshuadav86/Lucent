@@ -42,6 +42,9 @@
         <DockPanel x:Name="VisualBar" Grid.Row="2" Margin="0,8,0,12">
             <Button DockPanel.Dock="Right" Content="⛶ Fullscreen" ToolTip="Fullscreen visuals (F11, Esc to exit)"
                     Click="OnToggleFullscreen" />
+            <Button x:Name="AutoCycleButton" DockPanel.Dock="Right" Content="Auto: On"
+                    ToolTip="Switch to a new visual every 25 seconds or so, on the beat (A)"
+                    Click="OnToggleAutoCycle" />
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Content="◀" ToolTip="Previous visual (B)" Click="OnPreviousPreset" />
                 <TextBlock x:Name="PresetName" Text="Loading visuals…" MinWidth="180" TextAlignment="Center"

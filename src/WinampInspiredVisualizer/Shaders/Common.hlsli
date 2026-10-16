@@ -21,7 +21,9 @@ cbuffer Params : register(b0)
     float BeatCount;    // number of beats so far
     float Aspect;       // width / height
     float ParamsPad0;
-    float4 ParamsPad1;
+    float TransitionProgress;  // 0..1 while blending between two presets (used by the engine)
+    float TransitionStyle;     // which blend pattern the engine is using
+    float2 ParamsPad1;
 };
 
 Texture2D PreviousFrame : register(t0);

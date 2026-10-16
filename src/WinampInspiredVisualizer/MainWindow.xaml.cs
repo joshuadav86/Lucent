@@ -53,6 +53,7 @@ public partial class MainWindow : Window
             VisualizerStatus.ToolTip = message;
         };
         _visualizer.DoubleClicked += (_, _) => ToggleFullscreen();
+        _visualizer.PresetChanged += (_, _) => ShowPreset();
         VisualizerFrame.Child = _visualizer;
     }
 
@@ -63,6 +64,12 @@ public partial class MainWindow : Window
     private void OnPreviousPreset(object sender, RoutedEventArgs e) => ChangePreset(-1);
 
     private void OnToggleFullscreen(object sender, RoutedEventArgs e) => ToggleFullscreen();
+
+    private void OnToggleAutoCycle(object sender, RoutedEventArgs e)
+    {
+        _visualizer.AutoCycle = !_visualizer.AutoCycle;
+        AutoCycleButton.Content = _visualizer.AutoCycle ? "Auto: On" : "Auto: Off";
+    }
 
     private void ChangePreset(int step)
     {
@@ -383,6 +390,9 @@ public partial class MainWindow : Window
                 break;
             case Key.B:
                 ChangePreset(-1);
+                break;
+            case Key.A:
+                OnToggleAutoCycle(this, new RoutedEventArgs());
                 break;
             default:
                 return;
