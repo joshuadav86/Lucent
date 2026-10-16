@@ -132,8 +132,8 @@ public partial class MainWindow : Window
     {
         LibraryPanel.Visibility = !_isFullscreen && _settings.ShowLibrary ? Visibility.Visible : Visibility.Collapsed;
         PlaylistPanel.Visibility = !_isFullscreen && _settings.ShowQueue ? Visibility.Visible : Visibility.Collapsed;
-        LibraryButton.Foreground = (Brush)FindResource(_settings.ShowLibrary ? "MutedTextBrush" : "FaintTextBrush");
-        QueueButton.Foreground = (Brush)FindResource(_settings.ShowQueue ? "MutedTextBrush" : "FaintTextBrush");
+        LibraryToggle.IsChecked = _settings.ShowLibrary;
+        QueueToggle.IsChecked = _settings.ShowQueue;
     }
 
     // ---- Window chrome ----

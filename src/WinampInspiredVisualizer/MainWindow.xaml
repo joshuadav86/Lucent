@@ -26,7 +26,12 @@
 
         <!-- Title bar -->
         <Grid x:Name="TitleBar" Grid.Row="0" Height="40">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
                 <Image Source="Assets/Lucid-64.png" Width="16" Height="16" VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality" />
                 <TextBlock Text="LUCID" Margin="10,0,0,0" FontSize="11" FontWeight="SemiBold"
@@ -35,7 +40,26 @@
                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                            Foreground="#E0A84F" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+            <!-- Switches that show or hide the side panels; lit while the panel is open. -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                <ToggleButton x:Name="LibraryToggle" Style="{StaticResource PanelToggle}"
+                              ToolTip="Show or hide the library (L)" Click="OnToggleLibrary"
+                              WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource PanelLeftIcon}" />
+                        <TextBlock Text="Library" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </ToggleButton>
+                <ToggleButton x:Name="QueueToggle" Style="{StaticResource PanelToggle}" Margin="2,0,0,0"
+                              ToolTip="Show or hide the queue (Q)" Click="OnToggleQueue"
+                              WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource PanelRightIcon}" />
+                        <TextBlock Text="Queue" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </ToggleButton>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                 <Button Style="{StaticResource CaptionButton}" ToolTip="Minimize"
                         WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMinimize">
                     <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource MinimizeIcon}" />
@@ -81,6 +105,9 @@
                             <Button x:Name="LibraryFoldersButton" Style="{StaticResource IconButton}"
                                     ToolTip="Choose which folders are in the library" Click="OnLibraryFolders">
                                 <Path Style="{StaticResource LineIcon}" Data="{StaticResource FolderIcon}" />
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Hide the library (L)" Click="OnToggleLibrary">
+                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource CollapseLeftIcon}" />
                             </Button>
                         </StackPanel>
                         <StackPanel VerticalAlignment="Center">
@@ -210,6 +237,9 @@
                             <Button Style="{StaticResource IconButton}" ToolTip="Clear the queue" Click="OnClearPlaylist">
                                 <Path Style="{StaticResource LineIcon}" Data="{StaticResource ClearIcon}" />
                             </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Hide the queue (Q)" Click="OnToggleQueue">
+                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource CollapseRightIcon}" />
+                            </Button>
                         </StackPanel>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Queue" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
@@ -298,10 +328,6 @@
 
                     <!-- Transport -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="LibraryButton" Style="{StaticResource IconButton}"
-                                ToolTip="Show or hide the library (L)" Click="OnToggleLibrary">
-                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource LibraryIcon}" />
-                        </Button>
                         <Button Style="{StaticResource IconButton}" ToolTip="Stop" Click="OnStop">
                             <Path Style="{StaticResource SolidIcon}" Data="{StaticResource StopIcon}" />
                         </Button>
@@ -315,10 +341,6 @@
                         </Button>
                         <Button Style="{StaticResource IconButton}" ToolTip="Next track" Click="OnNext" Margin="6,0">
                             <Path Style="{StaticResource SolidIcon}" Data="{StaticResource NextTrackIcon}" />
-                        </Button>
-                        <Button x:Name="QueueButton" Style="{StaticResource IconButton}"
-                                ToolTip="Show or hide the queue (Q)" Click="OnToggleQueue">
-                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource QueueIcon}" />
                         </Button>
                     </StackPanel>
 
