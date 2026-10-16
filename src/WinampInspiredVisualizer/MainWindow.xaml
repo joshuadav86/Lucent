@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Lucid"
         Icon="Assets/Lucid.ico"
-        Width="1180" Height="760" MinWidth="720" MinHeight="460"
+        Width="1320" Height="800" MinWidth="720" MinHeight="460"
         Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver"
@@ -51,17 +51,146 @@
             </StackPanel>
         </Grid>
 
-        <!-- Visuals and the queue drawer -->
+        <!-- The library drawer, the visuals and the queue drawer -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <!-- A Direct3D surface is placed in here from code. -->
-            <Border x:Name="VisualizerFrame" Grid.Column="0" Background="Black" />
+            <Border x:Name="LibraryPanel" Grid.Column="0" Width="310"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,1,0">
+                <Grid Margin="6,14,6,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
 
-            <Border x:Name="PlaylistPanel" Grid.Column="1" Width="330"
+                    <DockPanel Grid.Row="0" Margin="8,0,0,8">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Style="{StaticResource IconButton}" ToolTip="Play the whole library in this order"
+                                    Click="OnPlayLibrary">
+                                <Path Style="{StaticResource SolidIcon}" Data="{StaticResource PlaySmallIcon}" />
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Look for new music now" Click="OnRefreshLibrary">
+                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource RefreshIcon}" />
+                            </Button>
+                            <Button x:Name="LibraryFoldersButton" Style="{StaticResource IconButton}"
+                                    ToolTip="Choose which folders are in the library" Click="OnLibraryFolders">
+                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource FolderIcon}" />
+                            </Button>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Library" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                            <TextBlock x:Name="LibraryCount" Text="No folder linked" FontSize="11" Margin="0,1,0,0"
+                                       Foreground="{StaticResource MutedTextBrush}" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <DockPanel Grid.Row="1" Margin="8,0,4,8">
+                        <Button x:Name="GroupFoldersButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}"
+                                Content="FOLDERS" ToolTip="Show or hide folder headings" Click="OnToggleGroupFolders" />
+                        <Button x:Name="SortButton" Style="{StaticResource PickerButton}" Height="28" Padding="10,0"
+                                HorizontalAlignment="Left" ToolTip="Change the order" Click="OnSortMenu">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
+                                      Stroke="{StaticResource MutedTextBrush}" Margin="0,0,8,0" />
+                                <TextBlock x:Name="SortLabel" Text="Newest first" FontSize="12" VerticalAlignment="Center" />
+                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                      Stroke="{StaticResource MutedTextBrush}" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Button>
+                    </DockPanel>
+
+                    <ListBox x:Name="LibraryView" Grid.Row="2" Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                             VirtualizingPanel.ScrollUnit="Pixel"
+                             SelectionMode="Extended"
+                             MouseDoubleClick="OnLibraryDoubleClick"
+                             KeyDown="OnLibraryKeyDown">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Play now" Click="OnLibraryPlayNow" />
+                                <MenuItem Header="Add to queue" Click="OnLibraryAddToQueue" />
+                                <MenuItem Header="Play this folder" Click="OnLibraryPlayFolder" />
+                                <Separator />
+                                <MenuItem Header="Show in File Explorer" Click="OnLibraryShowInExplorer" />
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
+                        <ListBox.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.ContainerStyle>
+                                    <Style TargetType="GroupItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GroupItem">
+                                                    <Expander Style="{StaticResource FolderExpander}" IsExpanded="True"
+                                                              Loaded="OnFolderGroupLoaded"
+                                                              Expanded="OnFolderGroupExpanded"
+                                                              Collapsed="OnFolderGroupCollapsed">
+                                                        <Expander.Header>
+                                                            <DockPanel>
+                                                                <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
+                                                                           Margin="8,0,2,0" VerticalAlignment="Center"
+                                                                           Foreground="{StaticResource FaintTextBrush}" />
+                                                                <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                                           Foreground="{StaticResource MutedTextBrush}" />
+                                                            </DockPanel>
+                                                        </Expander.Header>
+                                                        <ItemsPresenter />
+                                                    </Expander>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </GroupStyle.ContainerStyle>
+                            </GroupStyle>
+                        </ListBox.GroupStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="2,0,8,0">
+                                        <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBlock Text="{Binding Details}" FontSize="11" Margin="0,2,0,0"
+                                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource MutedTextBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding DurationText}" FontSize="11"
+                                               VerticalAlignment="Center" Foreground="{StaticResource FaintTextBrush}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel x:Name="EmptyLibraryHint" Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <Path Data="{StaticResource MusicIcon}" Fill="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="EmptyLibraryTitle" Text="Link a music folder" Margin="0,12,0,0" FontSize="13"
+                                   HorizontalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" />
+                        <TextBlock x:Name="EmptyLibraryText" Margin="0,4,0,0" FontSize="11" MaxWidth="220"
+                                   TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource FaintTextBrush}"
+                                   Text="Every song inside it shows up here, newest first, and new files appear on their own." />
+                        <Button Style="{StaticResource PickerButton}" Margin="0,14,0,0" HorizontalAlignment="Center"
+                                Click="OnLinkLibraryFolder">
+                            <TextBlock Text="Choose a folder" FontSize="12" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- A Direct3D surface is placed in here from code. -->
+            <Border x:Name="VisualizerFrame" Grid.Column="1" Background="Black" />
+
+            <Border x:Name="PlaylistPanel" Grid.Column="2" Width="310"
                     Background="{StaticResource SurfaceBrush}"
                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0">
                 <Grid Margin="10,14,6,10">
@@ -169,6 +298,10 @@
 
                     <!-- Transport -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="LibraryButton" Style="{StaticResource IconButton}"
+                                ToolTip="Show or hide the library (L)" Click="OnToggleLibrary">
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource LibraryIcon}" />
+                        </Button>
                         <Button Style="{StaticResource IconButton}" ToolTip="Stop" Click="OnStop">
                             <Path Style="{StaticResource SolidIcon}" Data="{StaticResource StopIcon}" />
                         </Button>

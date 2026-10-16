@@ -45,18 +45,79 @@ float4 PSPresent(VSOut input) : SV_Target
 }
 
 // While switching presets, the old preset's output is in PreviousFrame and the
-// new one's in NextFrame. This reveals the new one with one of a few patterns.
+// new one's in NextFrame. Styles 0-3 reveal the new one with a moving pattern;
+// styles 4-7 morph one into the other by warping both pictures as they blend.
 Texture2D NextFrame : register(t2);
+
+float3 fromFrame(float2 uv)
+{
+    return PreviousFrame.SampleLevel(LinearClamp, uv, 0).rgb;
+}
+
+float3 toFrame(float2 uv)
+{
+    return NextFrame.SampleLevel(LinearClamp, uv, 0).rgb;
+}
+
+float brightnessOf(float3 colour)
+{
+    return dot(colour, float3(0.2126, 0.7152, 0.0722));
+}
 
 float4 PSBlend(VSOut input) : SV_Target
 {
     float2 uv = input.uv;
-    float3 from = PreviousFrame.SampleLevel(LinearClamp, uv, 0).rgb;
-    float3 to = NextFrame.SampleLevel(LinearClamp, uv, 0).rgb;
     float t = TransitionProgress;
     float2 p = (uv - 0.5) * float2(Aspect, 1.0) * 2.0;
     int style = (int)TransitionStyle;
 
+    if (style == 4)
+    {
+        // Liquid: both pictures melt along a swirling flow while one dissolves into the other.
+        float2 flow = float2(fbm(p * 1.5 + Time * 0.2), fbm(p * 1.5 + 7.3 - Time * 0.2)) - 0.5;
+        float2 offset = flow * 0.35 * sin(PI * t);
+        float n = fbm(p * 2.0 + 11.0);
+        float mask = smoothstep(n - 0.25, n + 0.25, t * 1.5 - 0.25);
+        return float4(lerp(fromFrame(uv + offset), toFrame(uv - offset), mask), 1.0);
+    }
+
+    if (style == 5)
+    {
+        // Light: the brightest parts of the new visual shine through first, then the rest follows.
+        float3 from = fromFrame(uv);
+        float3 to = toFrame(uv);
+        float key = brightnessOf(to) - brightnessOf(from) * 0.5;
+        float threshold = lerp(1.2, -0.6, t);
+        float mask = max(smoothstep(threshold, threshold + 0.35, key), smoothstep(0.75, 1.0, t));
+        return float4(lerp(from, to, mask), 1.0);
+    }
+
+    if (style == 6)
+    {
+        // Fly-through: the old visual rushes past as a portal to the new one opens in the centre.
+        float2 c = uv - 0.5;
+        float reach = length(float2(Aspect, 1.0));
+        float radius = max(t * t * reach * 1.15, 0.001);
+        float3 from = fromFrame(0.5 + c / (1.0 + t * 2.0)) * (1.0 - t * 0.5);
+        float3 to = toFrame(uv);
+        float r = length(p);
+        float mask = 1.0 - smoothstep(radius * 0.8, radius, r);
+        float rim = glow(r - radius * 0.9, 18.0) * sin(PI * t) * 0.5;
+        return float4(lerp(from, to, mask) + hsv2rgb(Time * 0.1, 0.5, rim), 1.0);
+    }
+
+    if (style == 7)
+    {
+        // Kaleidoscope: the picture folds into a kaleidoscope halfway through, and unfolds as the new visual.
+        float amount = sin(PI * t);
+        float2 folded = toUv(rotate(kaleidoscope(p, 6.0), t * PI * 0.5));
+        float2 warped = lerp(uv, folded, amount);
+        float mask = smoothstep(0.3, 0.7, t);
+        return float4(lerp(fromFrame(warped), toFrame(warped), mask), 1.0);
+    }
+
+    float3 from = fromFrame(uv);
+    float3 to = toFrame(uv);
     float mask;
     if (style == 1)
     {
