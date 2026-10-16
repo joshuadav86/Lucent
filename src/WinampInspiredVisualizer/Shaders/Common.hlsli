@@ -10,7 +10,7 @@
 
 cbuffer Params : register(b0)
 {
-    float2 Resolution;  // output size in pixels
+    float2 Resolution;  // size of the image being drawn, in pixels (larger than the window when supersampling)
     float Time;         // seconds since the visualizer started
     float DeltaTime;    // seconds since the last frame
     float Bass;         // 0..1, smoothed
@@ -20,10 +20,15 @@ cbuffer Params : register(b0)
     float Level;        // overall loudness, 0..1
     float BeatCount;    // number of beats so far
     float Aspect;       // width / height
-    float ParamsPad0;
+    float Quality;      // detail setting from the options menu: 0 low, 1 normal, 2 high, 3 ultra
     float TransitionProgress;  // 0..1 while blending between two presets (used by the engine)
     float TransitionStyle;     // which blend pattern the engine is using
-    float2 ParamsPad1;
+    float BloomStrength;       // glow amount from the options menu (used by the engine)
+    float RenderScale;         // drawn size / window size: above 1 when supersampling (used by the engine)
+    float HdrOutput;           // 1 when drawing for an HDR screen (used by the engine)
+    float HdrWhite;            // that screen's normal white, where 1 = 80 nits (used by the engine)
+    float HdrPeak;             // that screen's brightest white, same units (used by the engine)
+    float FrameCount;          // frames drawn so far
 };
 
 Texture2D PreviousFrame : register(t0);
@@ -166,4 +171,38 @@ float3 cameraRay(float3 eye, float3 target, float2 p, float zoom, float roll)
     float3 up = cross(forward, side);
     p = rotate(p, roll);
     return normalize(forward * zoom + p.x * side + p.y * up);
+}
+
+// How much extra work the Detail setting asks for: 0.6 on Low, 1 on Normal, 1.5 on High, 2 on Ultra.
+float detailScale()
+{
+    return 0.6 + Quality * 0.4 + max(Quality - 1.0, 0.0) * 0.1;
+}
+
+// Scales a loop count (ray-march steps, fractal iterations) by the Detail setting.
+// Only use it for [loop] loops.
+int qualitySteps(int normalSteps)
+{
+    return max((int)(normalSteps * detailScale()), 1);
+}
+
+// How close a ray must get to count as touching a surface, relative to Normal: 1.67x on Low
+// down to 0.5x on Ultra, so finer surface detail shows up at higher settings.
+float surfacePrecision()
+{
+    return 1.0 / detailScale();
+}
+
+// Fractal depth for the Detail setting: one level fewer on Low, one more on Ultra.
+// Only use it for [loop] loops.
+int fractalDepth(int normalDepth)
+{
+    return max(normalDepth + (Quality > 2.5 ? 1 : 0) - (Quality < 0.5 ? 1 : 0), 1);
+}
+
+// The size of one screen pixel in p units. Lines drawn this many pixels wide look the same
+// at every resolution setting; drawing above window resolution just makes them smoother.
+float pixelSize()
+{
+    return 2.0 * max(RenderScale, 1.0) / Resolution.y;
 }

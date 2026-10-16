@@ -5,7 +5,8 @@
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
 
-        <!-- Palette -->
+        <!-- Palette: these are the Midnight theme's colours. Themes/ThemeManager.cs swaps them at runtime,
+             so anything coloured from here uses DynamicResource. -->
         <SolidColorBrush x:Key="BackgroundBrush" Color="#09090C" />
         <SolidColorBrush x:Key="SurfaceBrush" Color="#101015" />
         <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#16161D" />
@@ -20,6 +21,8 @@
             <GradientStop Color="#8B5CF6" Offset="0" />
             <GradientStop Color="#22D3EE" Offset="1" />
         </LinearGradientBrush>
+        <!-- Glyphs drawn on top of the accent gradient (the play button). -->
+        <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFF" />
 
         <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
 
@@ -46,6 +49,7 @@
         <Geometry x:Key="PanelRightIcon">M3,2 H13 Q15,2 15,4 V12 Q15,14 13,14 H3 Q1,14 1,12 V4 Q1,2 3,2 Z M10,2 V14 M11.5,5 H13.5 M11.5,8 H13.5</Geometry>
         <Geometry x:Key="CollapseLeftIcon">M7.5,3 L2.5,8 L7.5,13 M13.5,3 L8.5,8 L13.5,13</Geometry>
         <Geometry x:Key="CollapseRightIcon">M2.5,3 L7.5,8 L2.5,13 M8.5,3 L13.5,8 L8.5,13</Geometry>
+        <Geometry x:Key="OptionsIcon">M13.31,6.58 L15.23,6.98 L15.23,9.02 L13.31,9.42 L12.76,10.75 L13.83,12.39 L12.39,13.83 L10.75,12.76 L9.42,13.31 L9.02,15.23 L6.98,15.23 L6.58,13.31 L5.25,12.76 L3.61,13.83 L2.17,12.39 L3.24,10.75 L2.69,9.42 L0.77,9.02 L0.77,6.98 L2.69,6.58 L3.24,5.25 L2.17,3.61 L3.61,2.17 L5.25,3.24 L6.58,2.69 L6.98,0.77 L9.02,0.77 L9.42,2.69 L10.75,3.24 L12.39,2.17 L13.83,3.61 L12.76,5.25 Z M10.4,8 A2.4,2.4 0 1 1 5.6,8 A2.4,2.4 0 1 1 10.4,8 Z</Geometry>
         <Geometry x:Key="FullscreenIcon">M1,5 V1 H5 M11,1 H15 V5 M15,11 V15 H11 M5,15 H1 V11</Geometry>
         <Geometry x:Key="SpeakerIcon">M1,5 H4 L8,1 V15 L4,11 H1 Z</Geometry>
         <Geometry x:Key="SpeakerWavesIcon">M11,5 Q13,8 11,11 M13.5,2.5 Q17,8 13.5,13.5</Geometry>
@@ -91,7 +95,7 @@
 
         <!-- Borderless icon button: just a glyph that brightens on hover. -->
         <Style x:Key="IconButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="FontSize" Value="15" />
             <Setter Property="Width" Value="36" />
@@ -106,8 +110,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource HoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="Opacity" Value="0.7" />
@@ -120,7 +124,7 @@
 
         <!-- The big round play button. -->
         <Style x:Key="PlayButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
             <Setter Property="FontSize" Value="16" />
             <Setter Property="Width" Value="46" />
             <Setter Property="Height" Value="46" />
@@ -128,12 +132,12 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Ellipse x:Name="Glow" Fill="{StaticResource AccentGradientBrush}" Opacity="0">
+                            <Ellipse x:Name="Glow" Fill="{DynamicResource AccentGradientBrush}" Opacity="0">
                                 <Ellipse.Effect>
                                     <BlurEffect Radius="14" />
                                 </Ellipse.Effect>
                             </Ellipse>
-                            <Ellipse Fill="{StaticResource AccentGradientBrush}" />
+                            <Ellipse Fill="{DynamicResource AccentGradientBrush}" />
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -162,13 +166,13 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Chrome" CornerRadius="13" Padding="{TemplateBinding Padding}"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource HoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -178,7 +182,7 @@
 
         <!-- Title bar switch for a side panel: lit in the accent colour while the panel is open. -->
         <Style x:Key="PanelToggle" TargetType="ToggleButton">
-            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
             <Setter Property="FontSize" Value="12" />
@@ -195,11 +199,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource HoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="Opacity" Value="0.7" />
@@ -210,9 +214,121 @@
             </Setter>
         </Style>
 
+        <!-- Text inside the options panel: a label above each setting, and a quieter hint below some. -->
+        <Style x:Key="OptionLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="Margin" Value="2,14,0,6" />
+        </Style>
+        <Style x:Key="OptionHint" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="2,6,0,0" />
+        </Style>
+
+        <!-- A row of choices where exactly one is picked: SegmentButtons inside a SegmentBar. -->
+        <Style x:Key="SegmentBar" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="2" />
+        </Style>
+        <Style x:Key="SegmentButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Chrome" CornerRadius="7" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- An on/off switch with its label on the left. -->
+        <Style x:Key="SwitchToggle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter VerticalAlignment="Center" Margin="2,0,12,0" />
+                            <Border x:Name="Track" Grid.Column="1" Width="36" Height="20" CornerRadius="10"
+                                    Background="{DynamicResource FaintTextBrush}">
+                                <Ellipse x:Name="Thumb" Width="14" Height="14" Margin="3,0" HorizontalAlignment="Left"
+                                         Fill="{DynamicResource TextBrush}" />
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource AccentForegroundBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Track" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- One theme in the theme picker: a small preview in that theme's own colours, ringed when chosen. -->
+        <Style x:Key="ThemeSwatch" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Ring" CornerRadius="12" BorderThickness="2" BorderBrush="Transparent" Padding="2">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- The visual name in the player bar: a quiet button that opens the visual picker. -->
         <Style x:Key="PickerButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="Width" Value="NaN" />
             <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="12,0" />
@@ -221,12 +337,12 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Chrome" CornerRadius="8" Padding="{TemplateBinding Padding}"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource HoverBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -247,8 +363,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource HoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -298,17 +414,17 @@
                         <Track x:Name="PART_Track" VerticalAlignment="Center">
                             <Track.DecreaseRepeatButton>
                                 <RepeatButton Style="{StaticResource SliderEdgeButton}" Command="Slider.DecreaseLarge"
-                                              Background="{StaticResource AccentGradientBrush}" />
+                                              Background="{DynamicResource AccentGradientBrush}" />
                             </Track.DecreaseRepeatButton>
                             <Track.IncreaseRepeatButton>
                                 <RepeatButton Style="{StaticResource SliderEdgeButton}" Command="Slider.IncreaseLarge"
-                                              Background="{StaticResource HairlineBrush}" />
+                                              Background="{DynamicResource HairlineBrush}" />
                             </Track.IncreaseRepeatButton>
                             <Track.Thumb>
                                 <Thumb x:Name="Knob" Opacity="0">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Ellipse Width="12" Height="12" Fill="White" />
+                                            <Ellipse Width="12" Height="12" Fill="{DynamicResource TextBrush}" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -339,7 +455,7 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Border CornerRadius="3" Background="{StaticResource HoverBrush}" />
+                                            <Border CornerRadius="3" Background="{DynamicResource HoverBrush}" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -356,7 +472,7 @@
         </Style>
 
         <Style TargetType="ListBoxItem">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -365,10 +481,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="{StaticResource HoverBrush}" />
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource HoverBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -380,13 +496,13 @@
         <Style TargetType="ContextMenu">
             <Setter Property="OverridesDefaultStyle" Value="True" />
             <Setter Property="HasDropShadow" Value="False" />
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
                         <Border MinWidth="190" Padding="4" CornerRadius="10"
-                                Background="{StaticResource SurfaceRaisedBrush}"
-                                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
+                                Background="{DynamicResource SurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                         </Border>
                     </ControlTemplate>
@@ -395,14 +511,14 @@
         </Style>
         <Style TargetType="MenuItem">
             <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
                         <Border x:Name="Row" Padding="10,7" CornerRadius="6" Background="Transparent">
                             <DockPanel>
                                 <Path x:Name="Check" DockPanel.Dock="Left" Width="14" Margin="0,0,8,0"
-                                      Data="{StaticResource CheckIcon}" Stroke="{StaticResource AccentBrush}"
+                                      Data="{StaticResource CheckIcon}" Stroke="{DynamicResource AccentBrush}"
                                       StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                       StrokeLineJoin="Round" VerticalAlignment="Center" Visibility="Hidden" />
                                 <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
@@ -411,7 +527,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="{StaticResource HoverBrush}" />
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource HoverBrush}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Check" Property="Visibility" Value="Visible" />
@@ -428,7 +544,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Separator">
-                        <Border Height="1" Margin="8,4" Background="{StaticResource HairlineBrush}" />
+                        <Border Height="1" Margin="8,4" Background="{DynamicResource HairlineBrush}" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -444,7 +560,7 @@
                         <Border x:Name="Chrome" Padding="8,8,8,6" CornerRadius="6" Background="Transparent">
                             <DockPanel>
                                 <Path x:Name="Chevron" DockPanel.Dock="Left" Margin="2,0,10,0" VerticalAlignment="Center"
-                                      Data="{StaticResource ChevronRightIcon}" Stroke="{StaticResource MutedTextBrush}"
+                                      Data="{StaticResource ChevronRightIcon}" Stroke="{DynamicResource MutedTextBrush}"
                                       StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                       StrokeLineJoin="Round" RenderTransformOrigin="0.5,0.5" />
                                 <ContentPresenter VerticalAlignment="Center" />
@@ -459,7 +575,7 @@
                                 </Setter>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -486,9 +602,9 @@
         </Style>
 
         <Style TargetType="ToolTip">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-            <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
             <Setter Property="Padding" Value="8,4" />
         </Style>

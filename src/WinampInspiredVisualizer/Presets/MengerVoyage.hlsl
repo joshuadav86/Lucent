@@ -16,8 +16,9 @@ float sponge(float3 position)
 
     float dist = box(p, float3(1.0, 1.0, 1.0));
     float scale = 1.0;
-    [unroll]
-    for (int level = 0; level < 4; level++)
+    int depth = fractalDepth(4);
+    [loop]
+    for (int level = 0; level < depth; level++)
     {
         float3 a = wrap(p * scale, 2.0) - 1.0;
         scale *= 3.0;
@@ -30,7 +31,7 @@ float sponge(float3 position)
 
 float3 spongeNormal(float3 p)
 {
-    const float2 e = float2(0.0015, -0.0015);
+    float2 e = float2(0.0015, -0.0015) * surfacePrecision();
     return normalize(e.xyy * sponge(p + e.xyy) + e.yyx * sponge(p + e.yyx)
                    + e.yxy * sponge(p + e.yxy) + e.xxx * sponge(p + e.xxx));
 }
@@ -41,7 +42,10 @@ float3 Render(float2 uv, float2 p)
     float3 direction = normalize(float3(p * (0.75 + Beat * 0.12), 1.0));
     direction.xy = rotate(direction.xy, sin(Time * 0.1) * 0.4);
 
-    const int maxSteps = 96;
+    // Detail allows more steps and a closer approach to the walls; shading stays scaled to Normal's 96.
+    const float normalSteps = 96.0;
+    int maxSteps = qualitySteps(96);
+    float hitPrecision = 0.0004 * surfacePrecision();
     const float farPlane = 14.0;
     float travelled = 0.0;
     float steps = 0.0;
@@ -49,7 +53,7 @@ float3 Render(float2 uv, float2 p)
     for (int i = 0; i < maxSteps; i++)
     {
         float d = sponge(origin + direction * travelled);
-        if (d < 0.0004 * travelled || travelled > farPlane)
+        if (d < hitPrecision * travelled || travelled > farPlane)
         {
             break;
         }
@@ -65,7 +69,7 @@ float3 Render(float2 uv, float2 p)
         float3 light = normalize(float3(0.4, 0.6, -0.7));
         float diffuse = saturate(dot(normal, light));
         float rim = pow(1.0 - saturate(dot(normal, -direction)), 3.0);
-        float occlusion = 1.0 - steps / maxSteps;
+        float occlusion = saturate(1.0 - steps / normalSteps);
         float3 surface = palette(hit.z * 0.08 + Time * 0.03 + spectrum(frac(hit.z * 0.1)) * 0.3);
         colour = surface * (0.12 + diffuse * 0.95) * occlusion
                + neon(0.6 + hit.z * 0.05) * rim * (0.4 + Treble * 1.5);
@@ -73,6 +77,6 @@ float3 Render(float2 uv, float2 p)
     }
 
     // Rays that skimmed close to the walls glow, brighter with the bass.
-    colour += float3(0.6, 0.3, 1.0) * (steps / maxSteps) * 0.18 * (0.5 + Bass * 1.5);
+    colour += float3(0.6, 0.3, 1.0) * min(steps / normalSteps, 1.0) * 0.18 * (0.5 + Bass * 1.5);
     return colour + previous(uv) * 0.15;
 }

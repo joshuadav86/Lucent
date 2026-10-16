@@ -9,7 +9,9 @@ float3 Render(float2 uv, float2 p)
         + 0.045 * float2(cos(Time * 0.21), sin(Time * 0.17))
         + float2(Mid, Treble) * 0.02;
 
-    const int maxIterations = 110;
+    // Higher Detail settings iterate longer, revealing finer filaments; colours stay scaled to Normal's 110.
+    const float normalIterations = 110.0;
+    int maxIterations = qualitySteps(110);
     float iterations = 0.0;
     float trap = 1000.0;
     float ringRadius = 0.5 + Beat * 0.25;
@@ -30,7 +32,7 @@ float3 Render(float2 uv, float2 p)
     {
         // Smooth colouring: no visible bands between iteration counts.
         float smoothed = iterations - log2(log2(dot(z, z))) + 4.0;
-        float t = smoothed / maxIterations;
+        float t = smoothed / normalIterations;
         colour = palette(t * 4.0 + Time * 0.04) * pow(saturate(t * 2.2), 0.7);
     }
 

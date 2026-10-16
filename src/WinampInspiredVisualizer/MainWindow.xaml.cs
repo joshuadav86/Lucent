@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +14,7 @@ using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Themes;
 using WinampInspiredVisualizer.Visualizer;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
@@ -30,6 +32,8 @@ public partial class MainWindow : Window
     private ListCollectionView? _libraryView;
     private IReadOnlyList<string> _presetNames = Array.Empty<string>();
     private DateTime _presetPopupClosedAt;
+    private DateTime _optionsClosedAt;
+    private DisplayInfo _display = DisplayInfo.Standard;
     private bool _isFullscreen;
     private WindowState _windowStateBeforeFullscreen;
     private PlaylistEntry? _current;
@@ -74,7 +78,19 @@ public partial class MainWindow : Window
         };
         _visualizer.DoubleClicked += (_, _) => ToggleFullscreen();
         _visualizer.PresetChanged += (_, _) => ShowPreset();
+        _visualizer.FrameRateMeasured += (_, stats) => ShowFrameRate(stats);
+        _visualizer.DisplayChanged += (_, display) =>
+        {
+            _display = display;
+            UpdateHdrHint();
+        };
+        _visualizer.StartPresetName = _settings.LastVisual;
+        ApplyVisualizerSettings();
         VisualizerFrame.Child = _visualizer;
+
+        ThemeManager.Apply(ThemeManager.Find(_settings.Theme));
+        BuildThemeSwatches();
+        UpdateAutoCycleButton();
 
         _collapsedFolders = new HashSet<string>(_settings.CollapsedLibraryFolders, StringComparer.OrdinalIgnoreCase);
         _library.ItemsChanged += (_, _) => RebuildLibraryView();
@@ -104,9 +120,17 @@ public partial class MainWindow : Window
 
     private void OnToggleAutoCycle(object sender, RoutedEventArgs e)
     {
-        _visualizer.AutoCycle = !_visualizer.AutoCycle;
-        AutoCycleButton.Foreground = (System.Windows.Media.Brush)FindResource(
-            _visualizer.AutoCycle ? "AccentBrush" : "FaintTextBrush");
+        _settings.AutoCycle = !_settings.AutoCycle;
+        ApplyVisualizerSettings();
+        UpdateAutoCycleButton();
+        _settings.Save();
+    }
+
+    private void UpdateAutoCycleButton()
+    {
+        AutoCycleSwitch.IsChecked = _settings.AutoCycle;
+        AutoCycleButton.SetResourceReference(ForegroundProperty, _settings.AutoCycle ? "AccentBrush" : "FaintTextBrush");
+        AutoCycleButton.ToolTip = $"Move to a new visual on the beat every {_settings.AutoCycleSeconds} seconds or so (A)";
     }
 
     private void OnToggleQueue(object sender, RoutedEventArgs e) => ToggleQueue();
@@ -134,6 +158,202 @@ public partial class MainWindow : Window
         PlaylistPanel.Visibility = !_isFullscreen && _settings.ShowQueue ? Visibility.Visible : Visibility.Collapsed;
         LibraryToggle.IsChecked = _settings.ShowLibrary;
         QueueToggle.IsChecked = _settings.ShowQueue;
+    }
+
+    // ---- Options ----
+
+    /// <summary>Hands the graphics and visual-change settings to the visualizer.</summary>
+    private void ApplyVisualizerSettings()
+    {
+        _visualizer.TargetPixels = GraphicsOptions.Pixels(_settings.Resolution);
+        _visualizer.Quality = GraphicsOptions.Quality(_settings.Detail);
+        _visualizer.BloomStrength = GraphicsOptions.BloomStrength(_settings.Glow);
+        _visualizer.Hdr = _settings.Hdr;
+        _visualizer.AutoCycle = _settings.AutoCycle;
+        _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
+        _visualizer.TransitionSeconds = GraphicsOptions.Seconds(_settings.TransitionSpeed);
+        _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
+        FrameRateText.Visibility = _settings.ShowFrameRate ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnToggleOptions(object sender, RoutedEventArgs e) => ToggleOptions();
+
+    private void ToggleOptions()
+    {
+        if (OptionsPopup.IsOpen)
+        {
+            OptionsPopup.IsOpen = false;
+            return;
+        }
+
+        // The click that closed the panel (by clicking outside it, on this button) shouldn't reopen it.
+        if (_isFullscreen || (DateTime.UtcNow - _optionsClosedAt).TotalMilliseconds < 250)
+        {
+            OptionsButton.IsChecked = false;
+            return;
+        }
+
+        ShowOptionValues();
+        UpdateHdrHint();
+
+        // Line the panel's right edge up with the button's (the panel has a 16px margin for its shadow).
+        OptionsPopup.HorizontalOffset = OptionsButton.ActualWidth - 356;
+        OptionsPopup.IsOpen = true;
+    }
+
+    private void OnOptionsOpened(object? sender, EventArgs e) => OptionsButton.IsChecked = true;
+
+    private void OnOptionsClosed(object? sender, EventArgs e)
+    {
+        OptionsButton.IsChecked = false;
+        _optionsClosedAt = DateTime.UtcNow;
+    }
+
+    private void OnOptionsTab(object sender, RoutedEventArgs e)
+    {
+        var tab = (sender as RadioButton)?.Tag as string;
+        GraphicsTab.Visibility = tab == "Graphics" ? Visibility.Visible : Visibility.Collapsed;
+        VisualsTab.Visibility = tab == "Visuals" ? Visibility.Visible : Visibility.Collapsed;
+        ThemeTab.Visibility = tab == "Theme" ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>A choice in one of the option rows (resolution, detail, glow, timing, theme).</summary>
+    private void OnOptionChosen(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton { GroupName: var group, Tag: string value })
+        {
+            return;
+        }
+
+        switch (group)
+        {
+            case "Resolution" when Enum.TryParse<RenderResolution>(value, out var resolution):
+                _settings.Resolution = resolution;
+                break;
+            case "Detail" when Enum.TryParse<DetailLevel>(value, out var detail):
+                _settings.Detail = detail;
+                break;
+            case "Glow" when Enum.TryParse<GlowLevel>(value, out var glow):
+                _settings.Glow = glow;
+                break;
+            case "AutoCycleSeconds" when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds):
+                _settings.AutoCycleSeconds = seconds;
+                UpdateAutoCycleButton();
+                break;
+            case "TransitionSpeed" when Enum.TryParse<TransitionSpeed>(value, out var speed):
+                _settings.TransitionSpeed = speed;
+                break;
+            case "Theme":
+                _settings.Theme = value;
+                ThemeManager.Apply(ThemeManager.Find(value));
+                break;
+            default:
+                return;
+        }
+
+        ApplyVisualizerSettings();
+        _settings.Save();
+    }
+
+    /// <summary>One of the on/off switches in the options panel.</summary>
+    private void OnOptionSwitched(object sender, RoutedEventArgs e)
+    {
+        var on = (sender as CheckBox)?.IsChecked == true;
+        if (sender == HdrSwitch)
+        {
+            _settings.Hdr = on;
+        }
+        else if (sender == FrameRateSwitch)
+        {
+            _settings.ShowFrameRate = on;
+        }
+        else if (sender == AutoCycleSwitch)
+        {
+            _settings.AutoCycle = on;
+        }
+        else if (sender == MorphsOnlySwitch)
+        {
+            _settings.MorphTransitionsOnly = on;
+        }
+
+        ApplyVisualizerSettings();
+        UpdateAutoCycleButton();
+        UpdateHdrHint();
+        _settings.Save();
+    }
+
+    /// <summary>Marks the current settings in the options panel.</summary>
+    private void ShowOptionValues()
+    {
+        foreach (var choice in LogicalDescendants<RadioButton>(OptionsPanel))
+        {
+            var current = choice.GroupName switch
+            {
+                "Resolution" => _settings.Resolution.ToString(),
+                "Detail" => _settings.Detail.ToString(),
+                "Glow" => _settings.Glow.ToString(),
+                "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
+                "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
+                "Theme" => ThemeManager.Find(_settings.Theme).Name,
+                _ => null,
+            };
+            if (current is not null)
+            {
+                choice.IsChecked = string.Equals(choice.Tag as string, current, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        HdrSwitch.IsChecked = _settings.Hdr;
+        FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
+        AutoCycleSwitch.IsChecked = _settings.AutoCycle;
+        MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
+    }
+
+    private void BuildThemeSwatches()
+    {
+        foreach (var theme in ThemeManager.Themes)
+        {
+            var swatch = new RadioButton
+            {
+                Style = (Style)FindResource("ThemeSwatch"),
+                GroupName = "Theme",
+                Tag = theme.Name,
+                Content = ThemeManager.CreatePreview(theme),
+            };
+            swatch.Click += OnOptionChosen;
+            ThemeSwatches.Children.Add(swatch);
+        }
+    }
+
+    private void UpdateHdrHint()
+    {
+        HdrHint.Text = !_display.HdrOn
+            ? "Your screen isn't in HDR mode. Turn on \"Use HDR\" in Windows display settings to use this."
+            : _settings.Hdr
+                ? $"On. Highlights can reach about {_display.PeakNits:0} nits on this screen."
+                : "Your screen is in HDR mode, so highlights can shine far brighter than normal white.";
+    }
+
+    private void ShowFrameRate(FrameStats stats)
+    {
+        FrameRateText.Text = $"{stats.FramesPerSecond:0} fps · {stats.Width} × {stats.Height}" + (stats.Hdr ? " · HDR" : string.Empty);
+    }
+
+    private static IEnumerable<T> LogicalDescendants<T>(DependencyObject root)
+        where T : DependencyObject
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        {
+            if (child is T match)
+            {
+                yield return match;
+            }
+
+            foreach (var descendant in LogicalDescendants<T>(child))
+            {
+                yield return descendant;
+            }
+        }
     }
 
     // ---- Window chrome ----
@@ -186,6 +406,7 @@ public partial class MainWindow : Window
         var index = Math.Clamp(_visualizer.PresetIndex, 0, _presetNames.Count - 1);
         PresetName.Text = _presetNames[index];
         PresetList.SelectedIndex = index;
+        _settings.LastVisual = _presetNames[index];
     }
 
     private void OnTogglePresetPicker(object sender, RoutedEventArgs e) => TogglePresetPicker();
@@ -493,7 +714,7 @@ public partial class MainWindow : Window
     }
 
     private void UpdateGroupFoldersButton() =>
-        GroupFoldersButton.Foreground = (Brush)FindResource(_settings.GroupLibraryByFolder ? "AccentBrush" : "FaintTextBrush");
+        GroupFoldersButton.SetResourceReference(ForegroundProperty, _settings.GroupLibraryByFolder ? "AccentBrush" : "FaintTextBrush");
 
     // Folder headings remember whether they were left open or closed.
     private void OnFolderGroupLoaded(object sender, RoutedEventArgs e)
@@ -820,6 +1041,9 @@ public partial class MainWindow : Window
                 break;
             case Key.A:
                 OnToggleAutoCycle(this, new RoutedEventArgs());
+                break;
+            case Key.O:
+                ToggleOptions();
                 break;
             default:
                 return;

@@ -28,6 +28,36 @@ public sealed class AppSettings
 
     public bool ShowQueue { get; set; } = true;
 
+    // ---- Graphics ----
+
+    public RenderResolution Resolution { get; set; } = RenderResolution.Window;
+
+    public DetailLevel Detail { get; set; } = DetailLevel.Normal;
+
+    public GlowLevel Glow { get; set; } = GlowLevel.Normal;
+
+    /// <summary>Draw in HDR when the screen has HDR turned on in Windows.</summary>
+    public bool Hdr { get; set; }
+
+    public bool ShowFrameRate { get; set; }
+
+    // ---- Visual changes ----
+
+    public bool AutoCycle { get; set; } = true;
+
+    public int AutoCycleSeconds { get; set; } = 25;
+
+    public TransitionSpeed TransitionSpeed { get; set; } = TransitionSpeed.Smooth;
+
+    public bool MorphTransitionsOnly { get; set; }
+
+    /// <summary>The visual showing when the app last closed.</summary>
+    public string? LastVisual { get; set; }
+
+    // ---- Look ----
+
+    public string Theme { get; set; } = "Midnight";
+
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "settings.json");
 
