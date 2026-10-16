@@ -11,14 +11,16 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Plays MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
 - Add files or whole folders, or drag them onto the window
 - Playlist with play, pause, stop, previous, next, seek and volume
+- A music library: link a folder and every song inside it is listed, newest first, with other sort orders and folder headings you can open or close
+- Library and Queue switches in the title bar show or hide each side panel, for a bigger view of the visuals
 - Shows track title, artist and length from the file's tags
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- 19 visuals, including fractals like Crystal Kaleidoscope, Julia Kaleidoscope, Apollonian Lace and Sacred Geometry, and fly-through worlds like Menger Voyage, Kaleido Cathedral, Gyroid Caverns, Hyperspace Rings, Neon Lattice and Sierpinski Dive
+- 18 visuals, including fractals like Crystal Kaleidoscope, Julia Kaleidoscope, Apollonian Lace and Sacred Geometry, and fly-through worlds like Menger Voyage, Kaleido Cathedral, Gyroid Caverns, Hyperspace Rings, Neon Lattice and Sierpinski Dive
 - A visual picker: click the visual's name in the player bar (or press V) to choose any visual from a list
-- Smooth transitions between visuals (crossfade, expanding ring, cloudy dissolve or spiral sweep), and an Auto mode that moves to a new visual on the beat every 25 seconds or so
+- Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
+**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, L and Q show or hide the library and queue, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
 
 ## Download and run
 
