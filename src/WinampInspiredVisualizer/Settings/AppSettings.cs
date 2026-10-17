@@ -117,6 +117,9 @@ public sealed class AppSettings
 
     public string Theme { get; set; } = "Midnight";
 
+    /// <summary>The skin: shapes, type and finish, laid over the theme's colours.</summary>
+    public string Skin { get; set; } = "Lucid";
+
     // ---- Track info and artwork ----
 
     /// <summary>

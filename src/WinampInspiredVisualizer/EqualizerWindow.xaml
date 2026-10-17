@@ -6,7 +6,7 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{DynamicResource SurfaceBrush}"
-        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+        BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
         UseLayoutRounding="True"
         PreviewKeyDown="OnPreviewKeyDown"
         Closed="OnClosed">
@@ -85,7 +85,7 @@
 
         <!-- The label under each slider. -->
         <Style x:Key="BandLabel" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
             <Setter Property="FontSize" Value="10" />
             <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
             <Setter Property="HorizontalAlignment" Value="Center" />
@@ -94,7 +94,7 @@
 
         <!-- Small dB marks beside the sliders. -->
         <Style x:Key="ScaleLabel" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
             <Setter Property="FontSize" Value="9" />
             <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
             <Setter Property="HorizontalAlignment" Value="Right" />
@@ -102,7 +102,7 @@
 
         <!-- The box for naming a saved preset. -->
         <Style x:Key="NameBox" TargetType="TextBox">
-            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
@@ -113,7 +113,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Chrome" CornerRadius="8" Padding="8,0"
+                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="8,0"
                                 Background="{DynamicResource BackgroundBrush}"
                                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
@@ -193,7 +193,7 @@
 
             <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Response" FontSize="10"
                        Foreground="{DynamicResource FaintTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <Border x:Name="CurveFrame" Grid.Row="0" Grid.Column="2" Height="84" CornerRadius="8" ClipToBounds="True"
+            <Border x:Name="CurveFrame" Grid.Row="0" Grid.Column="2" Height="84" CornerRadius="{DynamicResource ControlCorner}" ClipToBounds="True"
                     Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                 <Canvas x:Name="CurveCanvas">
                     <Path x:Name="ZeroLine" Stroke="{DynamicResource HairlineBrush}" StrokeThickness="1" StrokeDashArray="3 3" />

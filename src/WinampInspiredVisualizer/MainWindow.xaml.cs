@@ -112,7 +112,7 @@ public partial class MainWindow : Window
         _visuals.Attach(_visualizer, _settings);
         ApplyVisualizerSettings();
 
-        ThemeManager.Apply(ThemeManager.Find(_settings.Theme));
+        ApplyLook();
         BuildThemeSwatches();
 
         _libraryWindow.Attach(_library, _settings);
@@ -1039,7 +1039,7 @@ public partial class MainWindow : Window
         ThemeTab.Visibility = tab == "Theme" ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>A choice in one of the option rows (resolution, detail, glow, timing, theme).</summary>
+    /// <summary>A choice in one of the option rows (resolution, detail, glow, timing, skin, theme).</summary>
     private void OnOptionChosen(object sender, RoutedEventArgs e)
     {
         if (sender is not RadioButton { GroupName: var group, Tag: string value })
@@ -1066,7 +1066,14 @@ public partial class MainWindow : Window
                 break;
             case "Theme":
                 _settings.Theme = value;
-                ThemeManager.Apply(ThemeManager.Find(value));
+                ApplyLook();
+                break;
+            case "Skin":
+                // A skin brings the theme it was made for; another theme can be picked after it.
+                _settings.Skin = value;
+                _settings.Theme = SkinManager.Find(value).Theme;
+                ApplyLook();
+                ShowOptionValues();
                 break;
             default:
                 return;
@@ -1115,6 +1122,7 @@ public partial class MainWindow : Window
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
                 "Theme" => ThemeManager.Find(_settings.Theme).Name,
+                "Skin" => SkinManager.Find(_settings.Skin).Name,
                 _ => null,
             };
             if (current is not null)
@@ -1127,6 +1135,36 @@ public partial class MainWindow : Window
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
+    }
+
+    /// <summary>Applies the chosen theme and skin to every window.</summary>
+    private void ApplyLook()
+    {
+        var theme = ThemeManager.Find(_settings.Theme);
+        SkinManager.Apply(SkinManager.Find(_settings.Skin), theme);
+        // Rebuilt afterwards rather than now, as this can run from a click on one of the skin previews.
+        Dispatcher.BeginInvoke(() => BuildSkinSwatches(theme), DispatcherPriority.Input);
+        // The skin may have changed the title's font, so its width (and whether it scrolls) may have changed too.
+        Dispatcher.BeginInvoke(UpdateMarquee, DispatcherPriority.Loaded);
+    }
+
+    /// <summary>The skin picker. Each skin is previewed in the current theme's colours, so it's rebuilt when the theme changes.</summary>
+    private void BuildSkinSwatches(Theme theme)
+    {
+        SkinSwatches.Children.Clear();
+        foreach (var skin in SkinManager.Skins)
+        {
+            var swatch = new RadioButton
+            {
+                Style = (Style)FindResource("ThemeSwatch"),
+                GroupName = "Skin",
+                Tag = skin.Name,
+                Content = SkinManager.CreatePreview(skin, theme),
+                IsChecked = string.Equals(skin.Name, SkinManager.Find(_settings.Skin).Name, StringComparison.Ordinal),
+            };
+            swatch.Click += OnOptionChosen;
+            SkinSwatches.Children.Add(swatch);
+        }
     }
 
     private void BuildThemeSwatches()
