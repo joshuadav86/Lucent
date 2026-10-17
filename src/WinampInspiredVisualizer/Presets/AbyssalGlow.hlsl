@@ -74,8 +74,8 @@ void Simulate(inout Particle particle, uint id)
         }
         float radius = (Time - particle.data.y) * 1.8;
         float distance = length(particle.position - waveOrigin(particle.data.x, particle.data.y));
-        float front = 1.0 - saturate(abs(distance - radius) / 0.2);
-        particle.data.z = max(particle.data.z * exp(-dt * 1.0), front * particle.data.w * exp(-radius * 0.25));
+        float front = 1.0 - saturate(abs(distance - radius) / 0.14);
+        particle.data.z = max(particle.data.z * exp(-dt * 2.6), front * particle.data.w * exp(-radius * 0.25));
     }
 }
 
@@ -172,7 +172,7 @@ Sprite Show(Particle particle, uint id)
             float glowAmount = particle.data.z;
             float3 colour = lerp(float3(0.1, 0.5, 1.0), float3(0.2, 1.0, 0.75), fixedRandom(id, 12.0));
             sprite.size = 1.5;
-            sprite.colour = colour * (0.003 + glowAmount * 2.5) * murk;
+            sprite.colour = colour * (0.003 + glowAmount * 3.5 * (0.5 + random(id, 13.0))) * murk;
         }
         focus(sprite, seen.z, 3.5, 0.05);
         return sprite;
@@ -212,5 +212,5 @@ float3 Render(float2 uv, float2 p)
 {
     // The faintest blue from far above, fading to black below.
     float3 water = float3(0.0, 0.012, 0.03) * saturate(0.6 - p.y * 0.5);
-    return water + particles(uv) + previous(uv) * 0.6;
+    return water + particles(uv) + previous(uv) * 0.5;
 }

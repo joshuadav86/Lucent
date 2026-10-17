@@ -323,11 +323,11 @@ Sprite Show(Particle particle, uint id)
         float3 scatter = (float3(fixedRandom(id, 13.0), fixedRandom(id, 14.0), fixedRandom(id, 15.0)) - 0.5) * (0.004 + s * (ion ? 0.03 : 0.08) * tailLength);
         // A few in every hundred make the fuzzy head.
         bool coma = fixedRandom(id, 21.0) < 0.03;
-        float3 position = coma ? head + normalize(scatter + 1e-5) * 0.018 * fixedRandom(id, 22.0) : head + direction * s * tailLength + scatter;
+        float3 position = coma ? head + normalize(scatter + 1e-5) * 0.03 * fixedRandom(id, 22.0) : head + direction * s * tailLength + scatter;
         float3 seen = project(position, eye, 0.0, Zoom, 0.0);
         float3 colour = ion ? float3(0.4, 0.7, 1.0) : float3(1.0, 0.85, 0.6);
         // The tail's light is spread along it, so a short tail is dimmer.
-        float brightness = (coma ? 0.1 : 0.05 * (1.0 - s) * tailLength) * saturate(1.2 / distance) * (1.0 + Beat * 0.5);
+        float brightness = (coma ? 0.025 : 0.05 * (1.0 - s) * tailLength) * saturate(1.2 / distance) * (1.0 + Beat * 0.5);
         colour = coma ? float3(0.9, 0.95, 1.0) : colour;
         sprite.position = seen.xy;
         sprite.size = seen.z > 0.1 ? 1.1 : 0.0;

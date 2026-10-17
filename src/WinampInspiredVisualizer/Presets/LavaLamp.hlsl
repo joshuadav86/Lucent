@@ -2,7 +2,7 @@
 // Glowing blobs of wax swell, stretch and drift up and down through warm liquid, melting into each other as the bass heats them, while bubbles fizz up with the treble.
 // Family: Particles
 // Tags: Calm, Colourful, Retro
-// Particles: 262144
+// Particles: 131072
 
 // The wax is a cloud of particles drawn into a hidden density layer (the red channel); Render
 // smooths that density and turns it into solid-looking blobs, so neighbours melt together like wax.
@@ -106,9 +106,9 @@ Sprite Show(Particle particle, uint id)
     offset += float2(noise3(swirl), noise3(swirl + float3(5.2, 1.3, 7.7))) * (0.35 + Mid * 0.15);
 
     sprite.position = centre + offset * radius;
-    sprite.size = 10.0;
+    sprite.size = 7.0;
     // The same peak density for every blob, however big it is.
-    sprite.colour = float3(radius.x * radius.y / blobShare * 0.09, 0.0, 0.0);
+    sprite.colour = float3(radius.x * radius.y / blobShare * 0.36, 0.0, 0.0);
     return sprite;
 }
 
