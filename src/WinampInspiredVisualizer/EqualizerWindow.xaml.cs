@@ -105,7 +105,15 @@ public partial class EqualizerWindow : Window
         }
 
         var window = new EqualizerWindow(player, settings) { Owner = owner };
-        window.PlaceOnScreen(owner);
+        if (owner is MainWindow main)
+        {
+            main.DockNewWindow(window);
+        }
+        else
+        {
+            window.PlaceOnScreen(owner);
+        }
+
         window.Closed += (_, _) => openChanged?.Invoke(false);
         _open = window;
         window.Show();

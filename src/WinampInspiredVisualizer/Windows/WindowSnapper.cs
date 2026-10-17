@@ -74,6 +74,7 @@ public sealed class WindowSnapper
     public void Add(Window window)
     {
         _windows.Add(window);
+        window.Closed += (_, _) => _windows.Remove(window);
         if (PresentationSource.FromVisual(window) is HwndSource source)
         {
             source.AddHook(WndProc);
