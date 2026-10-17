@@ -35,6 +35,10 @@ public sealed class Spectrogram : FrameworkElement
     private const int MaxRows = 400;
 
     private const double WaveformHeight = 56;
+    // The strip down the left edge that holds the frequency scale, clear of the heatmap so it stays readable.
+    private const double AxisWidth = 42;
+    private const double LabelSize = 11.5;
+    private const double LabelSpacing = 16;
     private const double Gap = 6;
     private const double MarkSeconds = 5;
 
@@ -46,6 +50,14 @@ public sealed class Spectrogram : FrameworkElement
     public static readonly DependencyProperty WaveBrushProperty = DependencyProperty.Register(
         nameof(WaveBrush), typeof(Brush), typeof(Spectrogram),
         new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty LabelBrushProperty = DependencyProperty.Register(
+        nameof(LabelBrush), typeof(Brush), typeof(Spectrogram),
+        new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty AxisBrushProperty = DependencyProperty.Register(
+        nameof(AxisBrush), typeof(Brush), typeof(Spectrogram),
+        new FrameworkPropertyMetadata(Brushes.Black, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty GridBrushProperty = DependencyProperty.Register(
         nameof(GridBrush), typeof(Brush), typeof(Spectrogram),
@@ -99,6 +111,8 @@ public sealed class Spectrogram : FrameworkElement
         SetResourceReference(ThemePeakBrushProperty, "TextBrush");
         SetResourceReference(WaveBrushProperty, "AccentGradientBrush");
         SetResourceReference(GridBrushProperty, "FaintTextBrush");
+        SetResourceReference(LabelBrushProperty, "TextBrush");
+        SetResourceReference(AxisBrushProperty, "SurfaceBrush");
         BuildPalette();
 
         Loaded += (_, _) => Start();
@@ -144,6 +158,18 @@ public sealed class Spectrogram : FrameworkElement
     {
         get => (Brush)GetValue(WaveBrushProperty);
         set => SetValue(WaveBrushProperty, value);
+    }
+
+    public Brush LabelBrush
+    {
+        get => (Brush)GetValue(LabelBrushProperty);
+        set => SetValue(LabelBrushProperty, value);
+    }
+
+    public Brush AxisBrush
+    {
+        get => (Brush)GetValue(AxisBrushProperty);
+        set => SetValue(AxisBrushProperty, value);
     }
 
     public Brush GridBrush
@@ -217,7 +243,7 @@ public sealed class Spectrogram : FrameworkElement
     /// <summary>One column per pixel across, one row per pixel down (up to a point), keeping what fits.</summary>
     private void Resize()
     {
-        var columns = Math.Max(1, (int)Math.Ceiling(ActualWidth));
+        var columns = Math.Max(1, (int)Math.Ceiling(ActualWidth - AxisWidth));
         var rows = Math.Clamp((int)Math.Ceiling(HeatmapHeight), 1, MaxRows);
         if (columns == _columns && rows == _rows)
         {
@@ -426,45 +452,53 @@ public sealed class Spectrogram : FrameworkElement
             return;
         }
 
-        dc.DrawImage(_bitmap, new Rect(0, 0, _columns, heatHeight));
+        dc.DrawImage(_bitmap, new Rect(AxisWidth, 0, _columns, heatHeight));
 
-        // Faint lines every few seconds, moving with the music, and at 100 Hz, 1 kHz and 10 kHz.
+        // Faint lines every few seconds, moving with the music.
         var grid = new Pen(GridBrush, 1) { DashStyle = DashStyles.Dot };
         var waveTop = heatHeight + Gap;
         for (var column = 0; column < _columns; column++)
         {
             if (_marks[column])
             {
-                var x = column + 0.5;
+                var x = AxisWidth + column + 0.5;
                 dc.DrawLine(grid, new Point(x, 0), new Point(x, heatHeight));
                 dc.DrawLine(grid, new Point(x, waveTop), new Point(x, ActualHeight));
             }
         }
 
+        // The frequency scale, in its own strip so the numbers never sit on top of the colours:
+        // larger, bolder type in the theme's text colour, with a tick and a faint line across.
+        dc.DrawRectangle(AxisBrush, null, new Rect(0, 0, AxisWidth, ActualHeight));
+        var tick = new Pen(LabelBrush, 1);
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var typeface = new Typeface(TryFindResource("UiFont") as FontFamily ?? new FontFamily("Segoe UI"),
-            FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-        foreach (var (hertz, label) in new[] { (100.0, "100"), (1000.0, "1k"), (10000.0, "10k") })
+            FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var lastLabel = double.PositiveInfinity;
+        foreach (var (hertz, label) in ScaleStops)
         {
-            if (hertz >= TopHz)
+            var y = Math.Round(heatHeight * (1 - Math.Log(hertz / LowestHz) / Math.Log(TopHz / LowestHz))) + 0.5;
+            // Labels are placed from the bottom up, skipping any that would crowd the one below.
+            if (hertz >= TopHz || y < LabelSize / 2 + 1 || y > heatHeight - LabelSize / 2 - 1 || lastLabel - y < LabelSpacing)
             {
                 continue;
             }
 
-            var y = Math.Round(heatHeight * (1 - Math.Log(hertz / LowestHz) / Math.Log(TopHz / LowestHz))) + 0.5;
-            dc.DrawLine(grid, new Point(0, y), new Point(width, y));
-            var text = new FormattedText(label, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 10,
-                GridBrush, pixelsPerDip);
-            dc.DrawText(text, new Point(4, y - text.Height - 1));
+            lastLabel = y;
+            dc.DrawLine(grid, new Point(AxisWidth, y), new Point(width, y));
+            dc.DrawLine(tick, new Point(AxisWidth - 5, y), new Point(AxisWidth, y));
+            var text = new FormattedText(label, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, LabelSize,
+                LabelBrush, pixelsPerDip);
+            dc.DrawText(text, new Point(AxisWidth - 8 - text.Width, y - text.Height / 2));
         }
 
         // The waveform: the swing of each column's audio, centred on a line.
         var middle = waveTop + WaveformHeight / 2;
-        dc.DrawLine(grid, new Point(0, middle), new Point(width, middle));
+        dc.DrawLine(grid, new Point(AxisWidth, middle), new Point(width, middle));
         var points = new Point[_columns * 2];
         for (var column = 0; column < _columns; column++)
         {
-            var x = column + 0.5;
+            var x = AxisWidth + column + 0.5;
             // At least a hairline, so quiet passages still show.
             var high = Math.Max(_waveHigh[column], 0.01f);
             var low = Math.Min(_waveLow[column], -0.01f);
@@ -482,6 +516,13 @@ public sealed class Spectrogram : FrameworkElement
         wave.Freeze();
         dc.DrawGeometry(WaveBrush, null, wave);
     }
+
+    // The frequencies marked on the scale, lowest first; ones too close together on a short window are skipped.
+    private static readonly (double Hertz, string Label)[] ScaleStops =
+    {
+        (50, "50"), (100, "100"), (200, "200"), (500, "500"), (1000, "1k"),
+        (2000, "2k"), (5000, "5k"), (10000, "10k"), (20000, "20k"),
+    };
 
     // ---- Colours ----
 
