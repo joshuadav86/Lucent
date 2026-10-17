@@ -289,13 +289,14 @@ jobs:
           done < <(find artifacts/metal-shaders -name '*.metal' -print0)
           exit $failed
 
-      # ---- Editor: native helpers for the Mac (owned by the editor port) ----------------------------
-      # Build the editor's native pieces here, before "Publish the Mac app" so the publish copies them
-      # next to the Lucent executable: libmp3lame (MP3 export) and the VST3 plugin helper (src/PluginHost).
-      # Build each for this job's chip, which matrix.cpu names the way CMake and clang do (arm64 or x86_64):
-      # -DCMAKE_OSX_ARCHITECTURES=<that> and -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 (macOS 12 or later).
-      # package-mac.sh signs them along with the app.
-      # ---- end of the editor's native helpers -------------------------------------------------------
+      # The editor's native pieces, built before publishing so the publish copies them next to the Lucent
+      # executable: libmp3lame (MP3 saving) and the VST3 plugin helper (src/PluginHost). Both are universal.
+      - name: Build LAME for MP3 saving
+        run: tools/build-lame-mac.sh
+
+      - name: Build the VST3 plugin helper
+        run: tools/build-pluginhost-mac.sh
+
 
       - name: Publish the Mac app
         run: >

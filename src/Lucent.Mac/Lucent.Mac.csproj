@@ -5,6 +5,9 @@
     Audio. It shares Lucent.Core with the Windows app. The visuals' Metal shaders are made from the
     same HLSL files by tools/MetalShaders (it needs DXC, so it runs on Windows or Linux); point
     MetalShadersFolder at its output, or put it in artifacts/metal-shaders.
+    The audio editor's native helpers are built on a Mac into artifacts/mac-native (or MacNativeFolder):
+    libmp3lame.dylib (MP3 saving, tools/build-lame-mac.sh) and LucentPluginHost (VST3 plugins,
+    tools/build-pluginhost-mac.sh). Without them the app still builds and runs, minus those two features.
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -20,6 +23,7 @@
     <MetalShadersFolder Condition="'$(MetalShadersFolder)' == ''">$(MSBuildThisFileDirectory)../../artifacts/metal-shaders</MetalShadersFolder>
     <!-- DXC's library for macOS (libdxcompiler.dylib, built in CI), which translates the user's own visuals as the app runs. -->
     <DxcLibraryFolder Condition="'$(DxcLibraryFolder)' == ''">$(MSBuildThisFileDirectory)../../artifacts/dxc-mac</DxcLibraryFolder>
+    <MacNativeFolder Condition="'$(MacNativeFolder)' == ''">$(MSBuildThisFileDirectory)../../artifacts/mac-native</MacNativeFolder>
   </PropertyGroup>
 
   <ItemGroup>
@@ -47,6 +51,10 @@
     <!-- Their Metal translations, from tools/MetalShaders. -->
     <None Include="$(MetalShadersFolder)\**\*.metal" Link="Shaders\Metal\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\WinampInspiredVisualizer\Assets\Lucent-64.png" Link="Assets\Lucent-64.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The editor's native helpers, next to Lucent (Mp3Writer and PluginHost look for them there). -->
+    <None Include="$(MacNativeFolder)\libmp3lame.dylib" Condition="Exists('$(MacNativeFolder)\libmp3lame.dylib')" Link="libmp3lame.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(MacNativeFolder)\LucentPluginHost" Condition="Exists('$(MacNativeFolder)\LucentPluginHost')" Link="LucentPluginHost" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(MacNativeFolder)/LICENSE-*.txt" Link="Licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup Condition="Exists('$(DxcLibraryFolder)/libdxcompiler.dylib')">
