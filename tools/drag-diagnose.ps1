@@ -68,12 +68,12 @@ $script:log = ""
 function Find($t) { [W]::Of([uint32]$script:proc.Id) | Where-Object { [W]::Title($_) -eq $t } | Select-Object -First 1 }
 function TestDrag($tag) {
   $pl = Find 'Lucid'
-  if (-not $pl) { $script:log += " || $tag: no player"; return }
+  if (-not $pl) { $script:log += " || ${tag}: no player"; return }
   $p = [W]::Box($pl)
   [void][W]::SetForegroundWindow($pl); Start-Sleep 1
   [W]::Drag($p.L + 60, $p.T + 12, 60, 40)
   $p2 = [W]::Box($pl)
-  $script:log += " || $tag: player $($p.L),$($p.T) moved $($p2.L - $p.L),$($p2.T - $p.T)"
+  $script:log += " || ${tag}: player $($p.L),$($p.T) moved $($p2.L - $p.L),$($p2.T - $p.T)"
 }
 function Press($k) { [void][W]::SetForegroundWindow((Find 'Lucid')); Start-Sleep 1; [W]::Key($k); Start-Sleep 2 }
 function Run($label, [scriptblock]$steps) {
