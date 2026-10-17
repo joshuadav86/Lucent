@@ -1,6 +1,8 @@
 // Name: Flower of Life
 // Nested Flower of Life medallions in fine line work over glowing enamel, each sitting inside the heart of the
 // next, zooming forever inward as they counter-rotate; rings of circles light with the spectrum and beats ripple out.
+// Family: Kaleidoscope
+// Tags: Calm, Geometric
 
 float flStroke(float d, float halfWidth, float px)
 {

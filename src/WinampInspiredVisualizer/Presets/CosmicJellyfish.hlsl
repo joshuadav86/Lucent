@@ -1,5 +1,7 @@
 // Name: Cosmic Jellyfish
 // Glass-clear jellyfish with galaxies swirling inside their bells drift up through deep space, pulsing on every beat and trailing tentacles that ripple with the music.
+// Family: Cosmic
+// Tags: Calm, Space
 
 static const int JellyCount = 5;
 

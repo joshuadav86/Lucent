@@ -1,5 +1,7 @@
 // Name: Starfield Warp
 // Flying through a field of stars that streak into hyperspace when the bass hits.
+// Family: Cosmic
+// Tags: Intense, Space
 
 float3 starLayer(float2 p, float depth, float seed)
 {

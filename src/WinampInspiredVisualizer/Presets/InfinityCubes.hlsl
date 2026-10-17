@@ -1,5 +1,7 @@
 // Name: Infinity Cubes
 // Falling forever into nested, counter-rotating cube frames whose edges stream with light like an infinity mirror.
+// Family: Fly-through
+// Tags: Neon, Geometric, 3D
 
 static const float BeamWidth = 0.03;      // edge thickness relative to the frame's size
 static const float NodeRadius = 0.075;    // corner nodes, relative to the frame's size

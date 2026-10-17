@@ -1,5 +1,7 @@
 // Name: Gyroid Caverns
 // Gliding down a winding tunnel through endlessly curving neon walls.
+// Family: Fly-through
+// Tags: Colourful, 3D
 
 float2 cavePath(float z)
 {

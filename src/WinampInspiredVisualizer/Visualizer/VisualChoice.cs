@@ -7,10 +7,12 @@ public sealed class VisualChoice : INotifyPropertyChanged
 {
     private bool _isFavorite;
 
-    public VisualChoice(string name, int index)
+    public VisualChoice(string name, int index, string family, IReadOnlyList<string> tags)
     {
         Name = name;
         Index = index;
+        Family = family;
+        Tags = tags;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -19,6 +21,15 @@ public sealed class VisualChoice : INotifyPropertyChanged
 
     /// <summary>Its position among all the visuals, as the visualizer numbers them.</summary>
     public int Index { get; }
+
+    /// <summary>The folder it's listed in, such as "Fractal".</summary>
+    public string Family { get; }
+
+    /// <summary>Its tags, such as "Calm" and "Space", in the order the picker lists tags.</summary>
+    public IReadOnlyList<string> Tags { get; }
+
+    /// <summary>"Fractal · Calm, Geometric", shown when the mouse rests on the visual in the picker.</summary>
+    public string StyleText => Tags.Count == 0 ? Family : $"{Family} · {string.Join(", ", Tags)}";
 
     public bool IsFavorite
     {

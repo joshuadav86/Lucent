@@ -1,5 +1,7 @@
 // Name: Galaxy Collision
 // Two spiral galaxies swing past each other again and again, tearing out glowing tidal tails and bridges of stars that the music sets shimmering.
+// Family: Particles
+// Tags: Dark, Space
 // Particles: 262144
 
 // Each galaxy's core weighs the same; this is its pull.

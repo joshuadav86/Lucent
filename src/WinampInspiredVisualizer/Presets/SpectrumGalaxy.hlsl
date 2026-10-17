@@ -1,5 +1,7 @@
 // Name: Spectrum Galaxy
 // A spiral galaxy swirls in the dark, lit ring by ring by the spectrum: bass glows in its heart, treble sparkles at its rim, and every beat sends a wave of starlight outward.
+// Family: Music-shaped
+// Tags: Calm, Space
 
 float galaxyHash(float2 cell)
 {

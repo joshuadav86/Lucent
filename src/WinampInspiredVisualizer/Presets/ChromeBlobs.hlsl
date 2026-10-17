@@ -1,5 +1,7 @@
 // Name: Chrome Blobs
 // Drops of liquid chrome with an oil-slick rainbow sheen merge and split in the dark, each swelling with its own part of the spectrum.
+// Family: Ray traced
+// Tags: Colourful, Dark, 3D
 
 static const int BlobCount = 9;
 

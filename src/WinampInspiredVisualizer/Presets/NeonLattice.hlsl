@@ -1,5 +1,7 @@
 // Name: Neon Lattice
 // Streaking through an endless grid of glowing beams that light up with the music.
+// Family: Cyberpunk
+// Tags: Intense, Neon, 3D
 
 float lattice(float3 p, out float3 cell)
 {

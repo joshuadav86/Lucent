@@ -1,5 +1,7 @@
 // Name: Menger Voyage
 // Flying through the endless corridors of a 3D fractal sponge, ray-marched on the GPU.
+// Family: Fly-through
+// Tags: Colourful, Geometric, 3D
 
 float box(float3 p, float3 size)
 {

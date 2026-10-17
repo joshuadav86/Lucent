@@ -1,5 +1,7 @@
 // Name: Sierpinski Dive
 // Weaving between floating towers of crystal pyramids that branch forever into smaller copies.
+// Family: Fly-through
+// Tags: Dark, Geometric, 3D
 
 float pyramid(float3 position)
 {

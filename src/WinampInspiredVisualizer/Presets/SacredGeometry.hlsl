@@ -1,6 +1,8 @@
 // Name: Sacred Geometry
 // Nested polygons and a flower of circles, each spinning its own way and
 // breathing with a different part of the spectrum, echoing back into a tunnel.
+// Family: Kaleidoscope
+// Tags: Neon, Geometric
 
 float3 Render(float2 uv, float2 p)
 {
