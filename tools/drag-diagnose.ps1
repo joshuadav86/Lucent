@@ -90,13 +90,14 @@ function Run($label, [scriptblock]$steps) {
   $crash = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = '.NET Runtime'; StartTime = $script:started } -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($crash) { Write-Host "::warning::CRASH $label :: $(($crash.Message -replace "`r?`n", ' | ').Substring(0, [Math]::Min(3500, $crash.Message.Length)))" }
 }
-foreach ($pct in 150, 175) {
+foreach ($pct in 150) {
   Write-Host "::notice::dpi $pct -> $([W]::SetDpi($pct))"; Start-Sleep 4
   Run "dpi $pct" {
     TestDrag 'fresh'; TestDrag 'again'; TestDrag 'again'
     Press 0x4C; Press 0x4C; TestDrag 'L twice'
     Press 0x51; Press 0x51; TestDrag 'Q twice'
-    Press 0x45; Press 0x45; TestDrag 'E twice'
+    Press 0x45; Start-Sleep 1; [W]::Shot("$out/$pct-e1.png"); $script:log += " || after E [$(Windows)]"
+    Press 0x45; Start-Sleep 1; [W]::Shot("$out/$pct-e2.png"); $script:log += " || after E again [$(Windows)]"; TestDrag 'E twice'
     Press 0x57; Press 0x57; TestDrag 'W twice'
     Press 0x44; TestDrag 'D'; TestDrag 'again'; [W]::Shot("$out/$pct-after.png")
   }
