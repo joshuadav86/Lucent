@@ -13,6 +13,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
@@ -135,6 +136,8 @@ public partial class MainWindow : Window
         UpdateShuffleRepeatButtons();
         TrackInfoWindow.TagsSaved += OnTagsSaved;
         ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
+        AudioTools.MainPlayerChanged += (_, _) => UpdatePlayPauseButton();
+        AudioTools.FilesReplaced += OnTagsSaved;
         UpdatePlayPauseButton();
         ShowNowPlaying(null);
     }
