@@ -61,17 +61,21 @@
             <DockPanel Grid.Row="2" Margin="8,0,4,8">
                 <Button x:Name="GroupFoldersButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}"
                         Content="FOLDERS" ToolTip="Show or hide folder headings" Click="OnToggleGroupFolders" />
+                <Button x:Name="PlaylistsButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="0,0,6,0"
+                        Content="PLAYLISTS" ToolTip="Show your saved playlists, or go back to your library folders" Click="OnTogglePlaylists" />
                 <Button x:Name="FavoritesOnlyButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="0,0,6,0"
                         Content="FAVORITES" ToolTip="Show only your favorite sounds, or everything" Click="OnToggleFavoritesOnly" />
                 <Button x:Name="SortButton" Style="{StaticResource PickerButton}" Height="28" Padding="10,0"
                         HorizontalAlignment="Left" ToolTip="Change the order" Click="OnSortMenu">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
+                    <!-- A DockPanel, so the label shortens with an ellipsis when the window is narrow. -->
+                    <DockPanel>
+                        <Path DockPanel.Dock="Left" Style="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
                               Stroke="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
-                        <TextBlock x:Name="SortLabel" Text="Newest first" FontSize="12" VerticalAlignment="Center" />
-                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                        <Path DockPanel.Dock="Right" Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
                               Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
-                    </StackPanel>
+                        <TextBlock x:Name="SortLabel" Text="Newest first" FontSize="12" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
                 </Button>
             </DockPanel>
 
