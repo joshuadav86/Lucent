@@ -221,6 +221,12 @@ public partial class MainWindow : Window
         var stackHeight = playerHeight + queueHeight;
         var libraryWidth = _settings.ShowLibrary ? 360.0 : 0.0;
         var visualsWidth = Math.Clamp(work.Width - playerWidth - libraryWidth - 40, 420, 860);
+        if (libraryWidth + playerWidth + visualsWidth > work.Width)
+        {
+            // A small screen (or a large scaling): narrower visuals, so the group still fits on it.
+            visualsWidth = Math.Max(_visuals.MinWidth, work.Width - playerWidth - libraryWidth);
+        }
+
         var groupWidth = libraryWidth + playerWidth + visualsWidth;
         var left = work.Left + Math.Max(0, (work.Width - groupWidth) / 2);
         var top = work.Top + Math.Max(0, (work.Height - stackHeight) / 2);
