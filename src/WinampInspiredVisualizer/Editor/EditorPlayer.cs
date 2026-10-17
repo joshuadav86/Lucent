@@ -34,18 +34,22 @@ public sealed class EditorPlayer : IDisposable
         }
     }
 
-    /// <summary>Plays frames <paramref name="from"/> up to <paramref name="to"/>, replacing anything already playing.</summary>
-    public void Play(AudioBuffer audio, int from, int to, float volume)
+    /// <summary>
+    /// Plays frames <paramref name="from"/> up to <paramref name="to"/>, replacing anything already playing.
+    /// <paramref name="through"/>, if given, wraps the audio in something that changes it (a plugin preview),
+    /// and is passed the volume to apply after its own processing.
+    /// </summary>
+    public void Play(AudioBuffer audio, int from, int to, float volume, Func<ISampleProvider, float, ISampleProvider>? through = null)
     {
         Stop();
         from = Math.Clamp(from, 0, audio.Frames);
         to = Math.Clamp(to, from, audio.Frames);
         _startFrame = from;
         _channels = audio.ChannelCount;
-        _provider = new RangeSampleProvider(audio, from, to) { Volume = volume };
+        _provider = new RangeSampleProvider(audio, from, to) { Volume = through is null ? volume : 1f };
         _output = new WaveOutEvent { DesiredLatency = 120 };
         _output.PlaybackStopped += OnPlaybackStopped;
-        _output.Init(_provider);
+        _output.Init(through is null ? _provider : through(_provider, volume));
         _output.Play();
     }
 

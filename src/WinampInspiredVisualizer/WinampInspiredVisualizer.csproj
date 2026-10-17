@@ -48,6 +48,15 @@
   </ItemGroup>
 
   <!--
+    The plugin helper that runs VST3 effects for the editor (src/PluginHost), when it has been built (see the
+    README; CI always builds it). It's a program of its own, so it ships beside Lucent.exe.
+  -->
+  <ItemGroup Condition="Exists('..\..\build\PluginHost\Release\LucentPluginHost.exe')">
+    <None Include="..\..\build\PluginHost\Release\LucentPluginHost.exe" Link="LucentPluginHost.exe"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!--
     The MP3 encoder (LAME, from NAudio.Lame) is a native DLL that NAudio.Lame loads from the app's folder.
     Keep it out of the single-file bundle so it ships beside Lucent.exe, where it can be found (and,
     as its LGPL licence asks, swapped for another build).
