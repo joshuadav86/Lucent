@@ -26,6 +26,19 @@ public static class W {
     int r2 = DisplayConfigSetDeviceInfo(ref s);
     return "query=" + q + " get=" + r1 + " min=" + g.min + " cur=" + g.cur + " max=" + g.max + " set=" + r2;
   }
+  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)] public struct DEVMODE {
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmDeviceName;
+    public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra; public int dmFields;
+    public int dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput;
+    public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmFormName;
+    public short dmLogPixels; public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency;
+    public int dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight; }
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern bool EnumDisplaySettings(string d, int m, ref DEVMODE dm);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int ChangeDisplaySettings(ref DEVMODE dm, int f);
+  public static int SetRes(int w, int h) { var dm = new DEVMODE(); dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE)); EnumDisplaySettings(null, -1, ref dm); dm.dmPelsWidth = w; dm.dmPelsHeight = h; dm.dmFields = 0x80000 | 0x100000; return ChangeDisplaySettings(ref dm, 1); }
+  [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, uint f, IntPtr e);
+  public static void Key(byte k) { keybd_event(k, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(60); keybd_event(k, 0, 2, IntPtr.Zero); System.Threading.Thread.Sleep(600); }
   public delegate bool EnumProc(IntPtr h, IntPtr p);
   [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc f, IntPtr p);
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
@@ -47,21 +60,37 @@ public static class W {
   }
 }
 "@
-foreach ($pct in 150, 125, 175) {
+Write-Host "::notice::res $([W]::SetRes(2560, 1600)) / $([W]::SetRes(1920, 1080))"; Start-Sleep 3
+function Rects($tag) {
+  $all = [W]::Of([uint32]$script:proc.Id)
+  $script:player = $all | Where-Object { [W]::Title($_) -eq 'Lucid' } | Select-Object -First 1
+  $script:lib = $all | Where-Object { [W]::Title($_) -eq 'Lucid library' } | Select-Object -First 1
+}
+function TestDrag($tag) {
+  Rects
+  $p = [W]::Box($script:player); $l = [W]::Box($script:lib)
+  $line = "$tag windowDpi=$([W]::GetDpiForWindow($script:player)) player=$($p.L),$($p.T),$($p.Ri),$($p.B) library=$($l.L),$($l.T),$($l.Ri),$($l.B) gapX=$($p.L - $l.Ri)"
+  [void][W]::SetForegroundWindow($script:player); Start-Sleep 1
+  [W]::Drag($p.L + 60, $p.T + 12, 60, 40)
+  $p2 = [W]::Box($script:player); $l2 = [W]::Box($script:lib)
+  Write-Host "::notice::$line | player moved $($p2.L - $p.L),$($p2.T - $p.T) library moved $($l2.L - $l.L),$($l2.T - $l.T)"
+}
+foreach ($pct in 150, 175, 200) {
   Write-Host "::notice::dpi $pct -> $([W]::SetDpi($pct))"; Start-Sleep 4
   foreach ($tol in 2, 6) {
     $env:LUCID_TOLERANCE = "$tol"
     Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucid') -ErrorAction SilentlyContinue
-    $proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
+    $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
     Start-Sleep 35
-    $all = [W]::Of([uint32]$proc.Id); $player = $all | Where-Object { [W]::Title($_) -eq 'Lucid' } | Select-Object -First 1
-    $lib = $all | Where-Object { [W]::Title($_) -eq 'Lucid library' } | Select-Object -First 1
-    $p = [W]::Box($player); $l = [W]::Box($lib)
-    $line = "dpi=$pct tol=$tol windowDpi=$([W]::GetDpiForWindow($player)) player.L=$($p.L) library.R=$($l.Ri) gap=$($p.L - $l.Ri)"
-    [void][W]::SetForegroundWindow($player)
-    [W]::Drag($p.L + 60, $p.T + 12, 80, 60)
-    $p2 = [W]::Box($player); $l2 = [W]::Box($lib)
-    Write-Host "::notice::$line | after drag player moved $($p2.L - $p.L),$($p2.T - $p.T) library moved $($l2.L - $l.L),$($l2.T - $l.T)"
-    Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
+    TestDrag "dpi=$pct tol=$tol fresh"
+    Rects; [void][W]::SetForegroundWindow($script:player); [W]::Key(0x4C); Start-Sleep 1; [W]::Key(0x4C); Start-Sleep 2
+    TestDrag "dpi=$pct tol=$tol L-toggled"
+    [void][W]::SetForegroundWindow($script:player); [W]::Key(0x44); Start-Sleep 2
+    TestDrag "dpi=$pct tol=$tol D-docked"
+    [void]$script:proc.CloseMainWindow(); Start-Sleep 5
+    $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
+    Start-Sleep 30
+    TestDrag "dpi=$pct tol=$tol relaunched"
+    Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
   }
 }
