@@ -131,4 +131,3 @@ function PlayFirst() {
 Get-PnpDevice -Class AudioEndpoint -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "::notice::endpoint $($_.FriendlyName) $($_.Status)" }
 RunMusic "spectrum 16" 16 { PlayFirst; [W]::Shot("$out/spectrum-16a.png"); Start-Sleep 2; [W]::Shot("$out/spectrum-16b.png") }
 RunMusic "spectrum 32" 32 { PlayFirst; [W]::Shot("$out/spectrum-32.png") }
-RunMusic "spectrum 4" 4 { PlayFirst; [W]::Shot("$out/spectrum-4.png") }

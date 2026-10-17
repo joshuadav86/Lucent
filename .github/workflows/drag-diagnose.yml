@@ -14,6 +14,8 @@ jobs:
           dotnet-version: 8.0.x
       - name: Build
         run: dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - name: Add a virtual sound card
+        uses: LABSN/sound-ci-helpers@v1
       - name: Drag the player
         shell: powershell
         run: ./tools/drag-diagnose.ps1
