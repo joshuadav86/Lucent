@@ -12,7 +12,7 @@ public static class VisualStyles
     /// <summary>The families, in the order their folders are listed.</summary>
     public static IReadOnlyList<string> Families { get; } = new[]
     {
-        "Fly-through", "Kaleidoscope", "Fractal", "Music-shaped", "Cosmic", "Organic", "Particles", "Ray traced", "Cyberpunk",
+        "Fly-through", "Kaleidoscope", "Geometric", "Minimal", "Fractal", "Music-shaped", "Cosmic", "Organic", "Particles", "Ray traced", "Cyberpunk",
     };
 
     /// <summary>The tag every particle visual gets, whether or not its header lists it.</summary>
@@ -21,7 +21,7 @@ public static class VisualStyles
     /// <summary>The tags, in the order their tick boxes are listed.</summary>
     public static IReadOnlyList<string> Tags { get; } = new[]
     {
-        "Calm", "Intense", "Colourful", "Dark", "Neon", "Space", "Water", "Fire", "Geometric", "Retro", "3D", ParticlesTag,
+        "Calm", "Intense", "Colourful", "Dark", "Neon", "Space", "Water", "Fire", "Geometric", "Minimal", "Retro", "3D", ParticlesTag,
     };
 
     // Other spellings that mean the same thing, so "Colorful" or "Raytraced" still land in the right place.
