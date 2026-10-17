@@ -127,7 +127,7 @@ function RunWith($label, $settings, [scriptblock]$steps) {
   Write-Host "::notice::$label $($script:log)"; $script:log = ""
 }
 function Boxes() { ([W]::Of([uint32]$script:proc.Id) | ForEach-Object { $b = [W]::Box($_); "'$([W]::Title($_))' $($b.L),$($b.T),$($b.Ri),$($b.B)" }) -join '; ' }
-function Move($title, $dx, $dy, $tag) {
+function DragWin($title, $dx, $dy, $tag) {
   $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
   $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
   $t = [W]::Track($h, $b.L + 150, $b.T + 14, $dx, $dy, 40, 25)
@@ -135,7 +135,7 @@ function Move($title, $dx, $dy, $tag) {
   Write-Host "::notice::$tag $t"
   $script:log += " || ${tag}: [$(Boxes)]"
 }
-function Size($title, $dx, $tag) {
+function SizeWin($title, $dx, $tag) {
   $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
   $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
   $t = [W]::Track($h, $b.Ri - 2, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
@@ -148,16 +148,16 @@ foreach ($dpi in 100, 150) {
   Write-Host "::notice::dpi $dpi -> $([W]::SetDpi($dpi))"; Start-Sleep 4
   RunWith "rest $dpi" $lib { [W]::Shot("$out/rest-$dpi.png"); $script:log += " [$(Boxes)]" }
   RunWith "visuals $dpi" $lib {
-    Move 'Lucid visuals' 120 0 "v-away-$dpi"
-    Move 'Lucid visuals' -114 0 "v-gap6-$dpi"
-    Move 'Lucid visuals' 120 0 "v-away2-$dpi"
-    Move 'Lucid visuals' -130 0 "v-over10-$dpi"
-    Move 'Lucid visuals' 120 0 "v-away3-$dpi"
-    Move 'Lucid visuals' -150 0 "v-over30-$dpi"
+    DragWin 'Lucid visuals' 120 0 "v-away-$dpi"
+    DragWin 'Lucid visuals' -114 0 "v-gap6-$dpi"
+    DragWin 'Lucid visuals' 120 0 "v-away2-$dpi"
+    DragWin 'Lucid visuals' -130 0 "v-over10-$dpi"
+    DragWin 'Lucid visuals' 120 0 "v-away3-$dpi"
+    DragWin 'Lucid visuals' -150 0 "v-over30-$dpi"
   }
   RunWith "library $dpi" $lib {
-    Move 'Lucid library' -120 0 "l-away-$dpi"
-    Move 'Lucid library' 130 0 "l-over10-$dpi"
-    Size 'Lucid visuals' -150 "v-size-$dpi"
+    DragWin 'Lucid library' -120 0 "l-away-$dpi"
+    DragWin 'Lucid library' 130 0 "l-over10-$dpi"
+    SizeWin 'Lucid visuals' -150 "v-size-$dpi"
   }
 }
