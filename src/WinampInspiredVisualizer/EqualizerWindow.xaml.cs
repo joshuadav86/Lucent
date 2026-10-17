@@ -27,7 +27,9 @@ public partial class EqualizerWindow : Window
     private readonly List<Slider> _bandSliders = new();
     private EqualizerBands _bands;
     private double _columnWidth;
-    private bool _updating;
+    // True while the sliders are being set from code (and during start-up), so their change
+    // handlers stay quiet.
+    private bool _updating = true;
 
     private EqualizerWindow(AudioPlayer player, AppSettings settings)
     {
