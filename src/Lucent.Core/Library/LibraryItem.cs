@@ -21,7 +21,13 @@ public sealed class LibraryItem : INotifyPropertyChanged
         _title = FileName;
     }
 
+    /// <summary>A row standing in for an empty playlist, so its heading still shows. It isn't a file.</summary>
+    public static LibraryItem Placeholder(string folder, string text) =>
+        new(string.Empty, folder, string.Empty, DateTime.MinValue) { _title = text };
+
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public bool IsPlaceholder => Path.Length == 0;
 
     public string Path { get; }
 
@@ -44,7 +50,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public string DurationText => _durationText;
 
-    public string Details => string.IsNullOrEmpty(_artist)
+    public string Details => IsPlaceholder ? string.Empty : string.IsNullOrEmpty(_artist)
         ? Added.ToString("d")
         : $"{_artist}  ·  {Added:d}";
 

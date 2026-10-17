@@ -231,6 +231,15 @@ public partial class MainWindow
         menu.Items.Add(open);
     }
 
+    /// <summary>Makes a new, empty playlist, to fill later with Add to playlist.</summary>
+    public void CreatePlaylist(Window owner)
+    {
+        if (AskForPlaylistName(owner, "New playlist", "It starts empty. Right-click sounds and choose Add to playlist to fill it.", "Create") is { } name)
+        {
+            SavePlaylist(() => SavedPlaylists.Write(name, Array.Empty<Track>()));
+        }
+    }
+
     public void RenamePlaylist(Window owner, string name)
     {
         if (AskForPlaylistName(owner, "Rename playlist", "Choose a new name.", "Rename", name) is { } newName && newName != name)
