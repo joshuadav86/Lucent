@@ -22,6 +22,13 @@ public static class Program
             return SelfTest.Run(args[1..]);
         }
 
+        if (args.Length > 0 && args[0] == "--screenshots")
+        {
+            return Screenshots.Run(args[1..]);
+        }
+
+        ErrorLog.Watch();
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         return 0;
     }

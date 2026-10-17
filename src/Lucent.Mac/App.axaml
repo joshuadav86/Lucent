@@ -1,0 +1,716 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lucent.Mac.App"
+             Name="Lucent"
+             RequestedThemeVariant="Dark">
+
+    <!-- The Mac app's look, ported from the Windows app's App.xaml. Every resource keeps its Windows
+         key, and every keyed WPF Style is a ControlTheme with the same key, so a window ports by turning
+         Style="{StaticResource X}" into Theme="{StaticResource X}". Themes/ThemeManager.cs and
+         Themes/SkinManager.cs swap the colours and shapes at runtime, as on Windows. -->
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+        </Style>
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+        </Style>
+
+        <!-- Menus: the right-click menus and the drop-down menus built in code. -->
+        <Style Selector="ContextMenu, MenuFlyoutPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{DynamicResource PanelCorner}" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="MinWidth" Value="190" />
+        </Style>
+        <Style Selector="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="CornerRadius" Value="{DynamicResource TinyCorner}" />
+            <Setter Property="Padding" Value="10,6" />
+        </Style>
+        <Style Selector="MenuItem:pointerover /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+        </Style>
+        <Style Selector="MenuItem /template/ Popup > Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource PanelCorner}" />
+        </Style>
+        <Style Selector="Separator">
+            <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="Margin" Value="8,4" />
+        </Style>
+
+        <Style Selector="ToolTip">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+
+        <!-- Thin, unobtrusive scroll bars. -->
+        <Style Selector="ScrollBar">
+            <Setter Property="AllowAutoHide" Value="True" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+        </Style>
+
+        <!-- List rows: rounded, lit on hover, filled when picked. -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCorner}" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+        </Style>
+    </Application.Styles>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Palette: Midnight's colours. ThemeManager swaps them at runtime. -->
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#09090C" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#101015" />
+            <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#16161D" />
+            <SolidColorBrush x:Key="HoverBrush" Color="#1D1D26" />
+            <SolidColorBrush x:Key="HairlineBrush" Color="#1E1E28" />
+            <SolidColorBrush x:Key="TextBrush" Color="#ECECF1" />
+            <SolidColorBrush x:Key="MutedTextBrush" Color="#7D7D8C" />
+            <SolidColorBrush x:Key="FaintTextBrush" Color="#4A4A57" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#8B7CFF" />
+            <SolidColorBrush x:Key="AccentSoftBrush" Color="#2A2550" />
+            <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#8B5CF6" Offset="0" />
+                <GradientStop Color="#22D3EE" Offset="1" />
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFF" />
+
+            <!-- Skin: the Lucent skin's shapes, type and finish. SkinManager swaps these at runtime. -->
+            <FontFamily x:Key="UiFont">Helvetica Neue</FontFamily>
+            <FontFamily x:Key="DisplayFont">Helvetica Neue</FontFamily>
+            <FontWeight x:Key="DisplayWeight">SemiBold</FontWeight>
+            <CornerRadius x:Key="TinyCorner">6</CornerRadius>
+            <CornerRadius x:Key="SegmentCorner">7</CornerRadius>
+            <CornerRadius x:Key="ControlCorner">8</CornerRadius>
+            <CornerRadius x:Key="BarCorner">9</CornerRadius>
+            <CornerRadius x:Key="PanelCorner">10</CornerRadius>
+            <CornerRadius x:Key="CardCorner">12</CornerRadius>
+            <CornerRadius x:Key="TrackCorner">3</CornerRadius>
+            <CornerRadius x:Key="RoundCorner">999</CornerRadius>
+            <SolidColorBrush x:Key="WindowFrameBrush" Color="#1E1E28" />
+            <SolidColorBrush x:Key="PanelSheenBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="TitleBarBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="DisplayBrush" Color="#09090C" />
+            <SolidColorBrush x:Key="DisplayEdgeBrush" Color="#1E1E28" />
+            <SolidColorBrush x:Key="DisplayInsetBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="DisplayLinesBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="DisplayTimeBrush" Color="#ECECF1" />
+            <SolidColorBrush x:Key="DisplayTitleBrush" Color="#ECECF1" />
+            <SolidColorBrush x:Key="ButtonFaceBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="ButtonLightEdgeBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="ButtonDarkEdgeBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="ButtonGlyphBrush" Color="#7D7D8C" />
+            <SolidColorBrush x:Key="PlayGlossBrush" Color="Transparent" />
+            <x:Double x:Key="PlayGlowRest">0</x:Double>
+            <!-- A glow round the display, which only the Neon skin turns on (a fully see-through glow otherwise). -->
+            <DropShadowEffect x:Key="DisplayGlowEffect" BlurRadius="22" OffsetX="0" OffsetY="0" Color="Transparent" Opacity="0" />
+
+            <!-- Icons, drawn as vector shapes. -->
+            <StreamGeometry x:Key="PlayIcon">M1,0 L13,7 L1,14 Z</StreamGeometry>
+            <StreamGeometry x:Key="PauseIcon">M0,0 H4 V14 H0 Z M8,0 H12 V14 H8 Z</StreamGeometry>
+            <StreamGeometry x:Key="StopIcon">M2,0 H10 A2,2 0 0 1 12,2 V10 A2,2 0 0 1 10,12 H2 A2,2 0 0 1 0,10 V2 A2,2 0 0 1 2,0 Z</StreamGeometry>
+            <StreamGeometry x:Key="PreviousTrackIcon">M0,0 H2 V12 H0 Z M13,0 V12 L3,6 Z</StreamGeometry>
+            <StreamGeometry x:Key="NextTrackIcon">M0,0 L10,6 L0,12 Z M11,0 H13 V12 H11 Z</StreamGeometry>
+            <StreamGeometry x:Key="AddIcon">M8,1 V15 M1,8 H15</StreamGeometry>
+            <StreamGeometry x:Key="FolderIcon">M1,3.5 Q1,2 2.5,2 H6 L7.5,4 H13.5 Q15,4 15,5.5 V12.5 Q15,14 13.5,14 H2.5 Q1,14 1,12.5 Z</StreamGeometry>
+            <StreamGeometry x:Key="ClearIcon">M1,4 H15 M6,4 V1.5 H10 V4 M3,4 L4,15 H12 L13,4</StreamGeometry>
+            <StreamGeometry x:Key="ArrowLeftIcon">M15,8 H1 M6,3 L1,8 L6,13</StreamGeometry>
+            <StreamGeometry x:Key="ArrowRightIcon">M1,8 H15 M10,3 L15,8 L10,13</StreamGeometry>
+            <StreamGeometry x:Key="ChevronUpIcon">M1,5 L5,1 L9,5</StreamGeometry>
+            <StreamGeometry x:Key="ChevronDownIcon">M1,1 L5,5 L9,1</StreamGeometry>
+            <StreamGeometry x:Key="ChevronRightIcon">M1,1 L5,5 L1,9</StreamGeometry>
+            <StreamGeometry x:Key="CheckIcon">M1,5 L4.5,8.5 L11,1.5</StreamGeometry>
+            <StreamGeometry x:Key="PlaySmallIcon">M0,0 L10,6 L0,12 Z</StreamGeometry>
+            <StreamGeometry x:Key="RefreshIcon">M13.5,8 A5.5,5.5 0 1 1 11.89,4.11 M8.9,3.85 L11.89,4.11 L11.63,1.12</StreamGeometry>
+            <StreamGeometry x:Key="SortIcon">M1,3 H15 M1,8 H11 M1,13 H7</StreamGeometry>
+            <StreamGeometry x:Key="SearchIcon">M11.5,6.5 A5,5 0 1 1 1.5,6.5 A5,5 0 1 1 11.5,6.5 Z M10.1,10.1 L14.5,14.5</StreamGeometry>
+            <StreamGeometry x:Key="PanelLeftIcon">M3,2 H13 Q15,2 15,4 V12 Q15,14 13,14 H3 Q1,14 1,12 V4 Q1,2 3,2 Z M6,2 V14 M2.5,5 H4.5 M2.5,8 H4.5</StreamGeometry>
+            <StreamGeometry x:Key="PanelRightIcon">M3,2 H13 Q15,2 15,4 V12 Q15,14 13,14 H3 Q1,14 1,12 V4 Q1,2 3,2 Z M10,2 V14 M11.5,5 H13.5 M11.5,8 H13.5</StreamGeometry>
+            <StreamGeometry x:Key="CollapseLeftIcon">M7.5,3 L2.5,8 L7.5,13 M13.5,3 L8.5,8 L13.5,13</StreamGeometry>
+            <StreamGeometry x:Key="CollapseRightIcon">M2.5,3 L7.5,8 L2.5,13 M8.5,3 L13.5,8 L8.5,13</StreamGeometry>
+            <StreamGeometry x:Key="OptionsIcon">M13.31,6.58 L15.23,6.98 L15.23,9.02 L13.31,9.42 L12.76,10.75 L13.83,12.39 L12.39,13.83 L10.75,12.76 L9.42,13.31 L9.02,15.23 L6.98,15.23 L6.58,13.31 L5.25,12.76 L3.61,13.83 L2.17,12.39 L3.24,10.75 L2.69,9.42 L0.77,9.02 L0.77,6.98 L2.69,6.58 L3.24,5.25 L2.17,3.61 L3.61,2.17 L5.25,3.24 L6.58,2.69 L6.98,0.77 L9.02,0.77 L9.42,2.69 L10.75,3.24 L12.39,2.17 L13.83,3.61 L12.76,5.25 Z M10.4,8 A2.4,2.4 0 1 1 5.6,8 A2.4,2.4 0 1 1 10.4,8 Z</StreamGeometry>
+            <StreamGeometry x:Key="ArtworkIcon">M3,1.5 H13 Q14.5,1.5 14.5,3 V13 Q14.5,14.5 13,14.5 H3 Q1.5,14.5 1.5,13 V3 Q1.5,1.5 3,1.5 Z M1.5,11.5 L5.5,7.5 L9.5,11.5 L11.5,9.5 L14.5,12.5 M9.75,5.25 A1.25,1.25 0 1 1 12.25,5.25 A1.25,1.25 0 1 1 9.75,5.25 Z</StreamGeometry>
+            <StreamGeometry x:Key="AnalyzerIcon">M3,1.5 H13 Q14.5,1.5 14.5,3 V13 Q14.5,14.5 13,14.5 H3 Q1.5,14.5 1.5,13 V3 Q1.5,1.5 3,1.5 Z M4,5 H7 M9,5 H12 M4,8 H12 M3.5,12 L5,10.5 L6.5,12.5 L8,10 L9.5,12.5 L11,10.5 L12.5,12</StreamGeometry>
+            <StreamGeometry x:Key="PinIcon">M9.5,1.5 L14.5,6.5 M10.75,2.75 L7,6.5 L4,6.5 L9.5,12 L9.5,9 L13.25,5.25 M6.75,9.25 L1.75,14.25</StreamGeometry>
+            <StreamGeometry x:Key="FullscreenIcon">M1,5 V1 H5 M11,1 H15 V5 M15,11 V15 H11 M5,15 H1 V11</StreamGeometry>
+            <StreamGeometry x:Key="SpeakerIcon">M1,5 H4 L8,1 V15 L4,11 H1 Z</StreamGeometry>
+            <StreamGeometry x:Key="SpeakerWavesIcon">M11,5 Q13,8 11,11 M13.5,2.5 Q17,8 13.5,13.5</StreamGeometry>
+            <StreamGeometry x:Key="MinimizeIcon">M0,5.5 H10</StreamGeometry>
+            <StreamGeometry x:Key="MaximizeIcon">M0.5,0.5 H9.5 V9.5 H0.5 Z</StreamGeometry>
+            <StreamGeometry x:Key="RestoreIcon">M2.5,0.5 H9.5 V7.5 M0.5,2.5 H7.5 V9.5 H0.5 Z</StreamGeometry>
+            <StreamGeometry x:Key="CloseIcon">M0.5,0.5 L9.5,9.5 M9.5,0.5 L0.5,9.5</StreamGeometry>
+            <StreamGeometry x:Key="VisualsScreenIcon">M4.75,3.75 H15.25 A3,3 0 0 1 18.25,6.75 V13.25 A3,3 0 0 1 15.25,16.25 H4.75 A3,3 0 0 1 1.75,13.25 V6.75 A3,3 0 0 1 4.75,3.75 Z</StreamGeometry>
+            <StreamGeometry x:Key="VisualsSparkIcon">M9.1,6.2 Q9.98,9.72 13.5,10.6 Q9.98,11.48 9.1,15 Q8.22,11.48 4.7,10.6 Q8.22,9.72 9.1,6.2 Z M14.4,5.1 Q14.86,6.54 16.3,7 Q14.86,7.46 14.4,8.9 Q13.94,7.46 12.5,7 Q13.94,6.54 14.4,5.1 Z</StreamGeometry>
+            <StreamGeometry x:Key="HeartIcon">M8,14 C8,14 1.2,9.6 1.2,5.4 A3.3,3.3 0 0 1 8,4.2 A3.3,3.3 0 0 1 14.8,5.4 C14.8,9.6 8,14 8,14 Z</StreamGeometry>
+            <StreamGeometry x:Key="StarIcon">M8,1 L10.1,5.6 L15,6.1 L11.3,9.4 L12.4,14.3 L8,11.8 L3.6,14.3 L4.7,9.4 L1,6.1 L5.9,5.6 Z</StreamGeometry>
+            <StreamGeometry x:Key="ListIcon">M1,3 H11 M1,8 H11 M1,13 H8 M13,10 V16 M10,13 H16</StreamGeometry>
+            <StreamGeometry x:Key="EjectIcon">M7,0 L14,8 H0 Z M0,10 H14 V12.5 H0 Z</StreamGeometry>
+            <StreamGeometry x:Key="ShuffleIcon">M1,4 H3.5 Q6.5,4 8,8 Q9.5,12 12.5,12 H15 M1,12 H3.5 Q6.5,12 8,8 Q9.5,4 12.5,4 H15 M13,2 L15,4 L13,6 M13,10 L15,12 L13,14</StreamGeometry>
+            <StreamGeometry x:Key="RepeatIcon">M2,8.5 V6.5 Q2,4 4.5,4 H13.5 M11.5,2 L13.5,4 L11.5,6 M14,7.5 V9.5 Q14,12 11.5,12 H2.5 M4.5,10 L2.5,12 L4.5,14</StreamGeometry>
+            <GeometryGroup x:Key="MusicIcon">
+                <EllipseGeometry Center="6,21" RadiusX="4.5" RadiusY="3.5" />
+                <EllipseGeometry Center="22,18" RadiusX="4.5" RadiusY="3.5" />
+                <StreamGeometry>M9,21 V4.5 L26,1 V18 H24.5 V6.5 L10.5,9.6 V21 Z</StreamGeometry>
+            </GeometryGroup>
+
+            <!-- A solid icon that takes its colour from the button it sits in. -->
+            <ControlTheme x:Key="SolidIcon" TargetType="Path">
+                <Setter Property="Fill" Value="{Binding $parent[Button].Foreground}" />
+                <Setter Property="Stretch" Value="None" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </ControlTheme>
+            <!-- A line-drawn icon that takes its colour from the button it sits in. -->
+            <ControlTheme x:Key="LineIcon" TargetType="Path">
+                <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+                <Setter Property="StrokeThickness" Value="1.5" />
+                <Setter Property="StrokeLineCap" Value="Round" />
+                <Setter Property="StrokeJoin" Value="Round" />
+                <Setter Property="Stretch" Value="None" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </ControlTheme>
+            <ControlTheme x:Key="CaptionIcon" TargetType="Path" BasedOn="{StaticResource LineIcon}">
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="StrokeLineCap" Value="Flat" />
+                <Setter Property="StrokeJoin" Value="Miter" />
+            </ControlTheme>
+
+            <!-- Borderless icon button: just a glyph that brightens on hover. -->
+            <ControlTheme x:Key="IconButton" TargetType="Button">
+                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="Width" Value="36" />
+                <Setter Property="Height" Value="36" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{TemplateBinding Background}">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:pointerover">
+                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                    <Style Selector="^ /template/ Border#Chrome">
+                        <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                    </Style>
+                </Style>
+                <Style Selector="^:pressed">
+                    <Setter Property="Opacity" Value="0.7" />
+                </Style>
+                <Style Selector="^:disabled">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Style>
+            </ControlTheme>
+
+            <!-- The player's previous, stop, next and eject buttons: bare glyphs, or hardware buttons in some skins. -->
+            <ControlTheme x:Key="TransportButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <Setter Property="Foreground" Value="{DynamicResource ButtonGlyphBrush}" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid>
+                            <Border CornerRadius="{DynamicResource ControlCorner}" Background="{DynamicResource ButtonFaceBrush}" />
+                            <Border Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{TemplateBinding Background}" />
+                            <Border Name="LightEdge" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="1,1,0,0"
+                                    BorderBrush="{DynamicResource ButtonLightEdgeBrush}" />
+                            <Border Name="DarkEdge" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="0,0,1,1"
+                                    BorderBrush="{DynamicResource ButtonDarkEdgeBrush}" />
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+                <!-- Pressed in: the edges swap, so a raised button looks pushed down. -->
+                <Style Selector="^:pressed /template/ Border#LightEdge">
+                    <Setter Property="BorderBrush" Value="{DynamicResource ButtonDarkEdgeBrush}" />
+                </Style>
+                <Style Selector="^:pressed /template/ Border#DarkEdge">
+                    <Setter Property="BorderBrush" Value="{DynamicResource ButtonLightEdgeBrush}" />
+                </Style>
+            </ControlTheme>
+
+            <!-- The big play button: round in most skins, nearly square in the boxier ones. -->
+            <ControlTheme x:Key="PlayButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="Width" Value="46" />
+                <Setter Property="Height" Value="46" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid>
+                            <Border Name="Glow" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource AccentGradientBrush}"
+                                    Opacity="{DynamicResource PlayGlowRest}">
+                                <Border.Effect>
+                                    <BlurEffect Radius="14" />
+                                </Border.Effect>
+                            </Border>
+                            <Border CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource AccentGradientBrush}" />
+                            <Border CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource PlayGlossBrush}" />
+                            <Border Name="LightEdge" CornerRadius="{DynamicResource RoundCorner}" BorderThickness="1,1,0,0"
+                                    BorderBrush="{DynamicResource ButtonLightEdgeBrush}" />
+                            <Border Name="DarkEdge" CornerRadius="{DynamicResource RoundCorner}" BorderThickness="0,0,1,1"
+                                    BorderBrush="{DynamicResource ButtonDarkEdgeBrush}" />
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:pointerover">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+                    <Style Selector="^ /template/ Border#Glow">
+                        <Setter Property="Opacity" Value="0.6" />
+                    </Style>
+                </Style>
+                <Style Selector="^:pressed">
+                    <Setter Property="Opacity" Value="0.85" />
+                </Style>
+                <Style Selector="^:pressed /template/ Border#LightEdge">
+                    <Setter Property="BorderBrush" Value="{DynamicResource ButtonDarkEdgeBrush}" />
+                </Style>
+                <Style Selector="^:pressed /template/ Border#DarkEdge">
+                    <Setter Property="BorderBrush" Value="{DynamicResource ButtonLightEdgeBrush}" />
+                </Style>
+            </ControlTheme>
+
+            <!-- Small rounded text button. -->
+            <ControlTheme x:Key="PillButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Width" Value="NaN" />
+                <Setter Property="Height" Value="26" />
+                <Setter Property="Padding" Value="10,0" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Chrome" CornerRadius="{DynamicResource RoundCorner}" Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <!-- A switch for a panel or window: lit in the accent colour while it's open. -->
+            <ControlTheme x:Key="PanelToggle" TargetType="ToggleButton">
+                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Height" Value="28" />
+                <Setter Property="Padding" Value="9,0,11,0" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:pointerover">
+                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                    <Style Selector="^ /template/ Border#Chrome">
+                        <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                    </Style>
+                </Style>
+                <Style Selector="^:checked">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                </Style>
+                <Style Selector="^:pressed">
+                    <Setter Property="Opacity" Value="0.7" />
+                </Style>
+                <Style Selector="^:disabled">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Style>
+            </ControlTheme>
+
+            <!-- Text inside the options panel: a label above each setting, and a quieter hint below some. -->
+            <ControlTheme x:Key="OptionLabel" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                <Setter Property="Margin" Value="2,14,0,6" />
+            </ControlTheme>
+            <ControlTheme x:Key="OptionHint" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="Margin" Value="2,6,0,0" />
+            </ControlTheme>
+
+            <!-- A row of choices where exactly one is picked: SegmentButtons inside a SegmentBar. -->
+            <ControlTheme x:Key="SegmentBar" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{DynamicResource BarCorner}" />
+                <Setter Property="Padding" Value="2" />
+            </ControlTheme>
+            <ControlTheme x:Key="SegmentButton" TargetType="RadioButton">
+                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Height" Value="28" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Chrome" CornerRadius="{DynamicResource SegmentCorner}" Background="{TemplateBinding Background}">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:pointerover">
+                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                    <Style Selector="^ /template/ Border#Chrome">
+                        <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                    </Style>
+                </Style>
+                <Style Selector="^:checked">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                    <Style Selector="^ /template/ Border#Chrome">
+                        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                    </Style>
+                </Style>
+            </ControlTheme>
+
+            <!-- A one-line text box, e.g. for naming a playlist. -->
+            <ControlTheme x:Key="TextInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
+                <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{DynamicResource ControlCorner}" />
+                <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Height" Value="34" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Padding" Value="8,0" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Style Selector="^:pointerover /template/ Border#PART_BorderElement">
+                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+                </Style>
+                <Style Selector="^:focus /template/ Border#PART_BorderElement">
+                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="BorderThickness" Value="1" />
+                </Style>
+                <Style Selector="^:pointerover, ^:focus">
+                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                </Style>
+            </ControlTheme>
+
+            <!-- A search box: a magnifying glass, then what's typed, with a faint hint (Watermark) while it's empty. -->
+            <ControlTheme x:Key="SearchInput" TargetType="TextBox" BasedOn="{StaticResource TextInput}">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Height" Value="28" />
+                <Setter Property="Padding" Value="0,0,26,0" />
+                <Setter Property="InnerLeftContent">
+                    <Template>
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SearchIcon}"
+                              Stroke="{DynamicResource FaintTextBrush}" Margin="8,0,4,0" />
+                    </Template>
+                </Setter>
+            </ControlTheme>
+
+            <!-- An on/off switch with its label on the left. -->
+            <ControlTheme x:Key="SwitchToggle" TargetType="CheckBox">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid Background="Transparent" ColumnDefinitions="*,Auto">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                              VerticalAlignment="Center" Margin="2,0,12,0" />
+                            <Border Name="Track" Grid.Column="1" Width="36" Height="20" CornerRadius="{DynamicResource RoundCorner}"
+                                    Background="{DynamicResource FaintTextBrush}">
+                                <Border Name="Thumb" Width="14" Height="14" Margin="3,0" HorizontalAlignment="Left"
+                                        CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:checked /template/ Border#Track">
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                </Style>
+                <Style Selector="^:checked /template/ Border#Thumb">
+                    <Setter Property="HorizontalAlignment" Value="Right" />
+                    <Setter Property="Background" Value="{DynamicResource AccentForegroundBrush}" />
+                </Style>
+                <Style Selector="^:pointerover /template/ Border#Track">
+                    <Setter Property="Opacity" Value="0.85" />
+                </Style>
+                <Style Selector="^:disabled">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Style>
+            </ControlTheme>
+
+            <!-- One theme or skin in the pickers: a small preview, ringed when chosen. -->
+            <ControlTheme x:Key="ThemeSwatch" TargetType="RadioButton">
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="Margin" Value="0,0,6,6" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Ring" CornerRadius="{DynamicResource CardCorner}" BorderThickness="2" BorderBrush="Transparent" Padding="2">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:pointerover /template/ Border#Ring">
+                    <Setter Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+                </Style>
+                <Style Selector="^:checked /template/ Border#Ring">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </Style>
+            </ControlTheme>
+
+            <!-- The visual name in the player bar: a quiet button that opens the visual picker. -->
+            <ControlTheme x:Key="PickerButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                <Setter Property="Width" Value="NaN" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Padding" Value="12,0" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <!-- Window caption buttons. -->
+            <ControlTheme x:Key="CaptionButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <Setter Property="FontSize" Value="10" />
+                <Setter Property="Width" Value="46" />
+                <Setter Property="Height" Value="36" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Chrome" Background="{TemplateBinding Background}">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+            <ControlTheme x:Key="CloseCaptionButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+                <Style Selector="^:pointerover">
+                    <Setter Property="Foreground" Value="White" />
+                    <Style Selector="^ /template/ Border#Chrome">
+                        <Setter Property="Background" Value="#C42B1C" />
+                    </Style>
+                </Style>
+            </ControlTheme>
+
+            <!-- Hairline slider: a thin track that fills with the accent; the thumb appears on hover. -->
+            <ControlTheme x:Key="SliderEdgeButton" TargetType="RepeatButton">
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="IsTabStop" Value="False" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid Background="Transparent">
+                            <Border Height="3" CornerRadius="{DynamicResource TrackCorner}" Background="{TemplateBinding Background}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+            <ControlTheme x:Key="SeekEdgeButton" TargetType="RepeatButton">
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="IsTabStop" Value="False" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid Background="Transparent">
+                            <Border Height="6" CornerRadius="{DynamicResource TrackCorner}" Background="{TemplateBinding Background}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <ControlTheme x:Key="ThinSlider" TargetType="Slider">
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Height" Value="18" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Track Name="PART_Track" VerticalAlignment="Center" Orientation="Horizontal"
+                               Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                               Value="{TemplateBinding Value, Mode=TwoWay}" IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderEdgeButton}"
+                                              Background="{DynamicResource AccentGradientBrush}" />
+                            </Track.DecreaseButton>
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderEdgeButton}"
+                                              Background="{DynamicResource HairlineBrush}" />
+                            </Track.IncreaseButton>
+                            <Thumb Name="Knob" Opacity="0">
+                                <Thumb.Template>
+                                    <ControlTemplate>
+                                        <Border Width="12" Height="12" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:pointerover /template/ Thumb#Knob">
+                    <Setter Property="Opacity" Value="1" />
+                </Style>
+                <Style Selector="^:disabled">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Style>
+            </ControlTheme>
+
+            <!-- Sliders that aren't given a theme: the thin track of the Windows app. -->
+            <ControlTheme x:Key="{x:Type Slider}" TargetType="Slider" BasedOn="{StaticResource ThinSlider}" />
+
+            <!-- The seek bar: a thicker accent track with a playhead that always shows. -->
+            <ControlTheme x:Key="SeekSlider" TargetType="Slider" BasedOn="{StaticResource ThinSlider}">
+                <Setter Property="Height" Value="20" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Track Name="PART_Track" VerticalAlignment="Center" Orientation="Horizontal"
+                               Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                               Value="{TemplateBinding Value, Mode=TwoWay}">
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SeekEdgeButton}"
+                                              Background="{DynamicResource AccentGradientBrush}" />
+                            </Track.DecreaseButton>
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SeekEdgeButton}"
+                                              Background="{DynamicResource HoverBrush}" />
+                            </Track.IncreaseButton>
+                            <Thumb Name="Knob">
+                                <Thumb.Template>
+                                    <ControlTemplate>
+                                        <Grid Background="Transparent">
+                                            <Border Name="Head" Width="12" Height="12" CornerRadius="{DynamicResource RoundCorner}"
+                                                    Background="{DynamicResource TextBrush}"
+                                                    BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2" />
+                                        </Grid>
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <!-- The volume bar: thin and filled in a quiet grey. -->
+            <ControlTheme x:Key="VolumeSlider" TargetType="Slider" BasedOn="{StaticResource ThinSlider}">
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Track Name="PART_Track" VerticalAlignment="Center" Orientation="Horizontal"
+                               Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                               Value="{TemplateBinding Value, Mode=TwoWay}">
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderEdgeButton}"
+                                              Background="{DynamicResource MutedTextBrush}" />
+                            </Track.DecreaseButton>
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderEdgeButton}"
+                                              Background="{DynamicResource HairlineBrush}" />
+                            </Track.IncreaseButton>
+                            <Thumb Name="Knob" Opacity="0">
+                                <Thumb.Template>
+                                    <ControlTemplate>
+                                        <Border Width="10" Height="10" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <!-- Folder headings in the library: a chevron that turns when the folder is open. -->
+            <ControlTheme x:Key="FolderExpander" TargetType="Expander">
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <StackPanel>
+                            <ToggleButton Name="Header" Focusable="False" Cursor="Hand" Background="Transparent"
+                                          Tag="{TemplateBinding Tag}"
+                                          IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate>
+                                        <Border Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="{TemplateBinding Background}">
+                                            <DockPanel>
+                                                <Path Name="Chevron" DockPanel.Dock="Left" Margin="2,0,10,0" VerticalAlignment="Center"
+                                                      Data="{StaticResource ChevronRightIcon}" Stroke="{DynamicResource MutedTextBrush}"
+                                                      StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" />
+                                                <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+                                            </DockPanel>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter Content="{TemplateBinding Header}" />
+                            </ToggleButton>
+                            <ContentPresenter Name="Body" Content="{TemplateBinding Content}" IsVisible="{TemplateBinding IsExpanded}" />
+                        </StackPanel>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^ /template/ ToggleButton#Header:checked /template/ Path#Chevron">
+                    <Setter Property="RenderTransform" Value="rotate(90deg)" />
+                </Style>
+                <Style Selector="^ /template/ ToggleButton#Header:pointerover">
+                    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                </Style>
+                <!-- A heading the library has highlighted. -->
+                <Style Selector="^.highlighted /template/ ToggleButton#Header">
+                    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                </Style>
+            </ControlTheme>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

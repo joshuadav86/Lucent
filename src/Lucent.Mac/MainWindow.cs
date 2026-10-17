@@ -19,9 +19,9 @@ namespace Lucent.Mac;
 /// on it, one after another, and the visuals move to the music like on Windows. The rest of the
 /// Windows app's windows (playlist, library, equalizer, editor...) come over in later steps.
 /// </summary>
-public sealed class MainWindow : Window
+public sealed partial class MainWindow : Window
 {
-    private readonly MacPlayer _player = new();
+    private readonly AudioPlayer _player = new();
     private readonly SongClock _songClock = new();
     private readonly List<string> _queue = new();
     private readonly VisualEngine? _engine;
@@ -52,8 +52,7 @@ public sealed class MainWindow : Window
         }
 
         Control visuals;
-        var device = MTLDevice.CreateSystemDefaultDevice();
-        if (device.NativePtr == IntPtr.Zero)
+        if (MetalSupport.TryCreateDevice() is not { } device)
         {
             visuals = Message("This Mac can't run Metal, so the visuals can't be shown. Music still plays.");
         }
@@ -360,4 +359,10 @@ public sealed class MainWindow : Window
 
         e.Handled = true;
     }
+
+    public bool IsShuttingDown { get; private set; }
+
+    public void HandleShortcut(KeyEventArgs e) => OnKeyDown(this, e);
+
+    public void AddDroppedPaths(IEnumerable<string> paths) => AddFiles(paths);
 }
