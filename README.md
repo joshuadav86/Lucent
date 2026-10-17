@@ -21,14 +21,14 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
   - **Fractals:** Julia Kaleidoscope, Apollonian Lace, Mandelbrot Dive, Mandelbulb Bloom, Burning Ship, Kleinian Limit, Newton Basins, Kali Flame, Koch Snowflake, Fractal Forest and more
   - **Music-shaped:** Spectrum Tunnel, Neon Oscilloscope, Cymatic Plate, Pulsar Ridges, Spectral Sunflower, Spectrum Galaxy, Lissajous Laser, Plasma Orb, Caustic Rings, Beat Shards and more
   - **Cosmic and organic:** Bass Nebula, Aurora Veil, Black Hole, Cosmic Jellyfish, Supernova Remnant, Electric Storm, Ink Flow, Chrome Blobs, Shot Silk, Living Cells and more
-- A visual picker: click the visual's name in the player bar (or press V) to choose any visual from a list
-- Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so
+- A visual picker: click the visual's name in the player bar (the button with the screen-and-spark icon), or press V, to choose any visual from a list
+- Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so. The AUTO pill in the player bar shows how often; click the arrow beside it (or right-click the pill) to choose anything from 10 seconds to 3 minutes
 - Options (the gear in the title bar, or O):
   - **Resolution:** draw visuals at the window's size, or at 1080p, 1440p or 4K. Above the window's size they're drawn bigger and shrunk to fit (supersampling), for smoother, finer detail
   - **Detail:** Low to Ultra, for more ray-marching steps and deeper fractals in the 3D and fractal visuals
   - **Glow:** how strongly bright parts bloom, from off to strong
   - **HDR:** on screens with HDR turned on in Windows, highlights shine brighter than normal white
-  - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout
+  - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown in the player bar, next to the visuals)
 - Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
 - Remembers the last visual, your options and your theme
 - Visuals compile in the background and are kept on disk, so the app starts straight away
