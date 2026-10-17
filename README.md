@@ -4,7 +4,7 @@
 
 A modern, open-source music player for Windows with GPU-powered visualizations inspired by the classic Winamp era.
 
-> Early days: the music player, GPU visualizer, options and themes work. More visuals are next.
+> Early days: the music player, GPU visualizer, options and themes work.
 
 ## Features
 
@@ -16,7 +16,12 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - A music library: link a folder and every song inside it is listed, newest first, with other sort orders and folder headings you can open or close
 - Shows track title, artist and length from the file's tags
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- 18 visuals, including fractals like Crystal Kaleidoscope, Julia Kaleidoscope, Apollonian Lace and Sacred Geometry, and fly-through worlds like Menger Voyage, Kaleido Cathedral, Gyroid Caverns, Hyperspace Rings, Neon Lattice and Sierpinski Dive
+- 66 visuals in five families:
+  - **Fly-through worlds:** Menger Voyage, Gyroid Caverns, Hyperspace Rings, Mandelbox Tunnel, Fractal Temple, Crystal Cavern, Wormhole Transit, Folded Metropolis, Kleinian Reef, Fibre Optic Braid and more
+  - **Kaleidoscopes and sacred geometry:** Crystal Kaleidoscope, Kaleido Cathedral, Sacred Geometry, Rose Window, Metatron's Cube, Flower of Life, Penrose Mosaic, Prism Mandala, Lotus Bloom, Droste Zoom and more
+  - **Fractals:** Julia Kaleidoscope, Apollonian Lace, Mandelbrot Dive, Mandelbulb Bloom, Burning Ship, Kleinian Limit, Newton Basins, Kali Flame, Koch Snowflake, Fractal Forest and more
+  - **Music-shaped:** Spectrum Tunnel, Neon Oscilloscope, Cymatic Plate, Pulsar Ridges, Spectral Sunflower, Spectrum Galaxy, Lissajous Laser, Plasma Orb, Caustic Rings, Beat Shards and more
+  - **Cosmic and organic:** Bass Nebula, Aurora Veil, Black Hole, Cosmic Jellyfish, Supernova Remnant, Electric Storm, Ink Flow, Chrome Blobs, Shot Silk, Living Cells and more
 - A visual picker: click the visual's name under the visuals (the button with the screen-and-spark icon), or press V, to choose any visual from a list
 - Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so. The AUTO pill under the visuals shows how often; click the arrow beside it (or right-click the pill) to choose anything from 10 seconds to 3 minutes
 - Options (the gear in the player's title bar, or O):
