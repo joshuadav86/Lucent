@@ -141,6 +141,7 @@ public partial class MainWindow : Window
         UpdateShuffleRepeatButtons();
         TrackInfoWindow.TagsSaved += OnTagsSaved;
         ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
+        AnalyzerWindow.OpenChanged += OnAnalyzerOpenChanged;
         AudioTools.MainPlayerChanged += (_, _) => UpdatePlayPauseButton();
         AudioTools.FilesReplaced += OnTagsSaved;
         UpdatePlayPauseButton();
@@ -774,6 +775,12 @@ public partial class MainWindow : Window
             _settings.ShowEqualizer = isOpen;
         }
     }
+
+    private void OnToggleAnalyzer(object sender, RoutedEventArgs e) => ToggleAnalyzer();
+
+    private void ToggleAnalyzer() => AnalyzerToggle.IsChecked = AnalyzerWindow.Toggle(this, _player, _settings);
+
+    private void OnAnalyzerOpenChanged(object? sender, EventArgs e) => AnalyzerToggle.IsChecked = AnalyzerWindow.IsOpen;
 
     /// <summary>The equalizer window, if it's open.</summary>
     private static Window? OpenEqualizerWindow => EqualizerWindow.Current is { IsVisible: true } equalizer ? equalizer : null;
@@ -1691,6 +1698,9 @@ public partial class MainWindow : Window
             case Key.E:
                 ToggleEqualizer();
                 break;
+            case Key.Y:
+                ToggleAnalyzer();
+                break;
             case Key.O:
                 Activate();
                 ToggleOptions();
@@ -1889,6 +1899,7 @@ public partial class MainWindow : Window
     {
         TrackInfoWindow.TagsSaved -= OnTagsSaved;
         ArtworkWindow.OpenChanged -= OnArtworkOpenChanged;
+        AnalyzerWindow.OpenChanged -= OnAnalyzerOpenChanged;
         _settings.CollapsedLibraryFolders = _libraryWindow.CollapsedFolders.ToList();
         _settings.Save();
         _library.Dispose();

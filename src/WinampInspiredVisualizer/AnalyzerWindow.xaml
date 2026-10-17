@@ -1,0 +1,67 @@
+<Window x:Class="WinampInspiredVisualizer.AnalyzerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Analyzer - Lucid"
+        Icon="Assets/Lucid.ico"
+        Width="520" Height="360" MinWidth="320" MinHeight="200"
+        Background="{DynamicResource SurfaceBrush}"
+        BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        PreviewKeyDown="OnPreviewKeyDown"
+        StateChanged="OnWindowStateChanged"
+        Closing="OnClosing"
+        Closed="OnClosed">
+
+    <!-- Same custom title bar as the main window, with native resizing. -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Grid x:Name="WindowRoot" Background="{DynamicResource PanelSheenBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Title bar: the frequency under the mouse, the colours, and close. -->
+        <DockPanel Grid.Row="0" Background="{DynamicResource TitleBarBrush}">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Style="{StaticResource SegmentBar}" Margin="0,0,6,0" WindowChrome.IsHitTestVisibleInChrome="True"
+                        ToolTip="The colours loudness is painted in">
+                    <StackPanel x:Name="PaletteBar" Orientation="Horizontal" />
+                </Border>
+                <Button Style="{StaticResource CloseCaptionButton}" Height="36" ToolTip="Close (Y)"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseWindow">
+                    <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Image Source="Assets/Lucid-64.png" Width="14" Height="14" VerticalAlignment="Center"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock Text="ANALYZER" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="ReadoutText" Margin="12,0,0,0" FontSize="11" VerticalAlignment="Center"
+                           Foreground="{DynamicResource FaintTextBrush}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- The heatmap and waveform, in a sunken display like the equalizer's curve. Right-click for speed. -->
+        <Border x:Name="Display" Grid.Row="1" Margin="10,2,10,10" ClipToBounds="True"
+                CornerRadius="{DynamicResource ControlCorner}"
+                Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                MouseMove="OnDisplayMouseMove" MouseLeave="OnDisplayMouseLeave" MouseLeftButtonDown="OnDisplayMouseDown"
+                ContextMenuOpening="OnDisplayMenuOpening">
+            <Border.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="SlowMenuItem" Header="Scroll slowly" Click="OnSpeedChosen" Tag="Slow" />
+                    <MenuItem x:Name="NormalMenuItem" Header="Scroll at normal speed" Click="OnSpeedChosen" Tag="Normal" />
+                    <MenuItem x:Name="FastMenuItem" Header="Scroll quickly" Click="OnSpeedChosen" Tag="Fast" />
+                    <Separator />
+                    <MenuItem x:Name="OnTopMenuItem" Header="Keep on top" Click="OnToggleOnTop" />
+                </ContextMenu>
+            </Border.ContextMenu>
+        </Border>
+    </Grid>
+</Window>

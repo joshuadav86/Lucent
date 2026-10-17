@@ -312,6 +312,11 @@
                                   Content="Art" ToolTip="Show the playing song's artwork in its own window (C)" Click="OnToggleArtwork" />
                     <ToggleButton x:Name="EqualizerToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
                                   Content="EQ" ToolTip="Show or hide the equalizer (E)" Click="OnToggleEqualizer" />
+                    <ToggleButton x:Name="AnalyzerToggle" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  ToolTip="Show or hide the analyzer: the music's frequencies scrolling by as a heatmap (Y)"
+                                  Click="OnToggleAnalyzer">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource AnalyzerIcon}" />
+                    </ToggleButton>
                 </StackPanel>
             </DockPanel>
         </Grid>
