@@ -559,12 +559,14 @@ public sealed class WindowSnapper
         }
     }
 
+    private static readonly int ToleranceForTest = int.TryParse(Environment.GetEnvironmentVariable("LUCID_TOLERANCE"), out var t) ? t : 6;
+
     private static bool Touching(Rect a, Rect b)
     {
         // Windows placed side by side on a scaled screen (150% or 200%) can land a few pixels apart
         // or overlap a little, because Lucid places them in scaled units and Windows rounds each
         // edge to whole pixels. A few pixels either way still counts as docked.
-        const int tolerance = 6;
+        var tolerance = ToleranceForTest;
         var overlapX = a.Left < b.Right && b.Left < a.Right;
         var overlapY = a.Top < b.Bottom && b.Top < a.Bottom;
         var sideBySide = overlapY && (Math.Abs(a.Right - b.Left) <= tolerance || Math.Abs(b.Right - a.Left) <= tolerance);
