@@ -181,13 +181,16 @@ public partial class MainWindow : Window
             _visuals.Show();
         }
 
+        // The queue and library always open docked to the player (they keep the size they had).
         if (_settings.ShowQueue)
         {
+            DockToPlayer(_queue);
             _queue.Show();
         }
 
         if (_settings.ShowLibrary)
         {
+            DockToPlayer(_libraryWindow);
             _libraryWindow.Show();
         }
 
@@ -277,6 +280,76 @@ public partial class MainWindow : Window
             window.Top = Top;
         }
     }
+
+    /// <summary>
+    /// Docks the queue or library against the player: the queue underneath (or above, if there's
+    /// no room below), the library to the left (or the right, past the visuals, if there's no room).
+    /// </summary>
+    private void DockToPlayer(ToolWindow window)
+    {
+        var area = ScreenArea.Of(this);
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.WindowState = WindowState.Normal;
+        var playerBottom = Top + ActualHeight;
+
+        if (window == _queue)
+        {
+            var height = SizeOf(window).Height;
+            var roomBelow = area.Bottom - playerBottom;
+            var roomAbove = Top - area.Top;
+            var below = roomBelow >= height || roomBelow >= roomAbove;
+            height = Math.Max(window.MinHeight, Math.Min(height, below ? roomBelow : roomAbove));
+            window.Width = ActualWidth;
+            window.Height = height;
+            window.Left = Left;
+            window.Top = below ? playerBottom : Top - height;
+            return;
+        }
+
+        // The library runs the height of the player and the queue, if the queue's docked to it.
+        var top = Top;
+        var bottom = playerBottom;
+        if (_queue.IsVisible && Math.Abs(_queue.Left - Left) < 2)
+        {
+            if (Math.Abs(_queue.Top - playerBottom) < 2)
+            {
+                bottom = _queue.Top + _queue.ActualHeight;
+            }
+            else if (Math.Abs(_queue.Top + _queue.ActualHeight - Top) < 2)
+            {
+                top = _queue.Top;
+            }
+        }
+
+        var width = SizeOf(window).Width;
+        var left = Left - width;
+        if (left < area.Left)
+        {
+            // No room on the left: go on the right, beyond the visuals if they're docked there.
+            left = Left + ActualWidth;
+            if (_visuals.IsVisible && !_visuals.IsFullscreen && Math.Abs(_visuals.Left - left) < 2)
+            {
+                left = _visuals.Left + _visuals.ActualWidth;
+            }
+
+            if (left + width > area.Right)
+            {
+                left = Math.Max(area.Left, Left - width);
+            }
+        }
+
+        window.Left = left;
+        window.Top = top;
+        window.Height = Math.Max(window.MinHeight, Math.Min(bottom - top, area.Height));
+    }
+
+    private bool IsDockedLeft(Window window) =>
+        Math.Abs(window.Left + window.ActualWidth - Left) < 2 && window.Top < Top + ActualHeight && window.Top + window.ActualHeight > Top;
+
+    // A window that hasn't been shown yet has no actual size, only the one it's been given.
+    private static Size SizeOf(Window window) => new(
+        window.ActualWidth > 0 ? window.ActualWidth : window.Width,
+        window.ActualHeight > 0 ? window.ActualHeight : window.Height);
 
     private void OnArrangeWindows(object sender, RoutedEventArgs e) => ArrangeWindows();
 
@@ -385,13 +458,24 @@ public partial class MainWindow : Window
             RestorePlacement(window);
         }
 
-        // A window left on a screen that's since been unplugged (or turned off) comes back beside the player.
-        if (!IsOnScreen(window))
+        if (window != _visuals)
         {
+            // The queue and library always open docked to the player, wherever they were left.
+            DockToPlayer(window);
+        }
+        else if (!IsOnScreen(window))
+        {
+            // The visuals open where they were left, unless that's on a screen that's since been unplugged.
             PlaceBesidePlayer(window);
         }
 
         window.Show();
+
+        // A library docked to the player's left grows to match when the queue opens underneath.
+        if (window == _queue && _libraryWindow.IsVisible && IsDockedLeft(_libraryWindow))
+        {
+            DockToPlayer(_libraryWindow);
+        }
     }
 
     private void OnToolWindowVisibilityChanged()
