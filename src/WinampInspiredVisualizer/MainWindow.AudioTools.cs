@@ -3,9 +3,15 @@ using WinampInspiredVisualizer.Editor;
 
 namespace WinampInspiredVisualizer;
 
-/// <summary>The title bar's Edit button, which opens the audio editor and converter. Kept in its own file.</summary>
+/// <summary>The audio editor and converter: the title bar's Edit button and the song menus. Kept in its own file.</summary>
 public partial class MainWindow
 {
     private void OnAudioTools(object sender, RoutedEventArgs e) =>
         AudioTools.ShowMenu(AudioToolsButton, this, _player, _settings);
+
+    /// <summary>Opens a song in the audio editor, for the queue and library menus.</summary>
+    public void OpenInEditor(Window owner, string path) => AudioTools.OpenEditor(owner, _player, path);
+
+    /// <summary>Opens the converter for some songs, for the queue and library menus.</summary>
+    public void ConvertFiles(Window owner, IReadOnlyList<string> paths) => AudioTools.Convert(owner, _settings, paths);
 }
