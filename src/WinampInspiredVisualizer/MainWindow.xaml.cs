@@ -359,6 +359,85 @@ public partial class MainWindow : Window
     /// <summary>Puts every window back together around the player, as on the first run, and remembers it.</summary>
     private void ArrangeWindows()
     {
+        RestoreAllWindows();
+        ArrangeFirstTime();
+        SavePlacements();
+    }
+
+    private void OnFillScreen(object sender, RoutedEventArgs e) => FillScreen();
+
+    /// <summary>
+    /// Docks the shown windows together and stretches them to fill the screen: the library down the
+    /// left, the player at the top with the queue under it to the bottom, and the visuals filling the rest.
+    /// </summary>
+    private void FillScreen()
+    {
+        RestoreAllWindows();
+        var area = ScreenArea.Of(this);
+        var library = _libraryWindow.IsVisible;
+        var visuals = _visuals.IsVisible;
+        var playerWidth = ActualWidth;
+        var playerHeight = ActualHeight;
+        var libraryWidth = 0.0;
+        if (library)
+        {
+            var room = area.Width - playerWidth;
+            libraryWidth = visuals
+                ? Math.Clamp(SizeOf(_libraryWindow).Width, _libraryWindow.MinWidth, Math.Max(_libraryWindow.MinWidth, room - _visuals.MinWidth))
+                : Math.Max(_libraryWindow.MinWidth, room);
+        }
+
+        Left = area.Left + libraryWidth;
+        Top = area.Top;
+        if (library)
+        {
+            Place(_libraryWindow, area.Left, area.Top, libraryWidth, area.Height);
+        }
+
+        if (_queue.IsVisible)
+        {
+            Place(_queue, Left, Top + playerHeight, playerWidth, Math.Max(_queue.MinHeight, area.Height - playerHeight));
+        }
+
+        if (visuals)
+        {
+            Place(_visuals, Left + playerWidth, area.Top, Math.Max(_visuals.MinWidth, area.Right - Left - playerWidth), area.Height);
+        }
+
+        SavePlacements();
+    }
+
+    private void OnShrinkWindows(object sender, RoutedEventArgs e) => ShrinkWindows();
+
+    /// <summary>Docks the shown windows around the player at their smallest sizes.</summary>
+    private void ShrinkWindows()
+    {
+        RestoreAllWindows();
+        var playerWidth = ActualWidth;
+        var playerHeight = ActualHeight;
+        var queueHeight = _queue.IsVisible ? _queue.MinHeight : 0;
+        var stackHeight = playerHeight + queueHeight;
+        if (_queue.IsVisible)
+        {
+            Place(_queue, Left, Top + playerHeight, playerWidth, queueHeight);
+        }
+
+        if (_visuals.IsVisible)
+        {
+            Place(_visuals, Left + playerWidth, Top, _visuals.MinWidth, Math.Max(_visuals.MinHeight, stackHeight));
+        }
+
+        if (_libraryWindow.IsVisible)
+        {
+            Place(_libraryWindow, Left - _libraryWindow.MinWidth, Top, _libraryWindow.MinWidth, Math.Max(_libraryWindow.MinHeight, stackHeight));
+        }
+
+        SavePlacements();
+    }
+
+    /// <summary>Brings every window, the visuals included, out of maximized or fullscreen.</summary>
+    private void RestoreAllWindows()
+    {
         foreach (var window in ToolWindows)
         {
             if (window.WindowState != WindowState.Normal && !(window == _visuals && _visuals.IsFullscreen))
@@ -373,8 +452,6 @@ public partial class MainWindow : Window
         }
 
         WindowState = WindowState.Normal;
-        ArrangeFirstTime();
-        SavePlacements();
     }
 
     private static bool IsOnScreen(Window window) =>
@@ -1155,6 +1232,12 @@ public partial class MainWindow : Window
                 break;
             case Key.D:
                 ArrangeWindows();
+                break;
+            case Key.G:
+                FillScreen();
+                break;
+            case Key.K:
+                ShrinkWindows();
                 break;
             case Key.L:
                 ToggleWindow(_libraryWindow);

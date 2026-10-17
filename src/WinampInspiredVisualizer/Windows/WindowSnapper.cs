@@ -8,7 +8,9 @@ namespace WinampInspiredVisualizer.Windows;
 /// Makes Lucid's windows behave like Winamp's: their edges snap to each other and to the
 /// edges of the screen, and dragging the player window carries every window docked to it.
 /// Drop a window beside others with one corner lined up and the other corner nearly lined up,
-/// and it stretches to line that one up too.
+/// and it stretches to line that one up too. Resizing a window resizes the windows docked to it
+/// along that edge: the edge between two windows moves both, and an outside edge shared by several
+/// windows moves them all. Hold Ctrl while resizing to resize just the one window.
 /// Works on the raw window rectangles (physical pixels) while Windows moves them.
 /// </summary>
 /// <remarks>
@@ -40,6 +42,7 @@ public sealed class WindowSnapper
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint MONITOR_DEFAULTTONEAREST = 2;
     private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+    private const int VK_CONTROL = 0x11;
 
     /// <summary>How close (in pixels at 100% scaling) an edge has to come before it snaps.</summary>
     private const double SnapDistance = 16;
@@ -55,6 +58,9 @@ public sealed class WindowSnapper
     private Rect _startRect;
     private Rect _startMargins;
     private bool _resized;
+
+    /// <summary>The windows resizing along with the one being resized, found when the resize starts.</summary>
+    private readonly List<Linked> _linked = new();
 
     public WindowSnapper(Window main)
     {
@@ -86,6 +92,7 @@ public sealed class WindowSnapper
                 _moving = hwnd;
                 _resized = false;
                 _carried.Clear();
+                _linked.Clear();
                 GetCursorPos(out _startCursor);
                 GetWindowRect(hwnd, out _startRect);
                 _startMargins = Margins(hwnd);
@@ -125,11 +132,20 @@ public sealed class WindowSnapper
             }
             case WM_SIZING when hwnd == _moving:
             {
-                _resized = true;
-                var rect = Visible(UnsnappedSize(hwnd, wParam.ToInt32()), _startMargins);
-                SnapSize(hwnd, ref rect, wParam.ToInt32());
-                rect = Outer(rect, _startMargins);
-                Marshal.StructureToPtr(rect, lParam, false);
+                var edge = wParam.ToInt32();
+                if (!_resized)
+                {
+                    _resized = true;
+                    if (GetKeyState(VK_CONTROL) >= 0)
+                    {
+                        FindLinked(hwnd, edge);
+                    }
+                }
+
+                var rect = Visible(UnsnappedSize(hwnd, edge), _startMargins);
+                SnapSize(hwnd, ref rect, edge);
+                MoveLinked(ref rect);
+                Marshal.StructureToPtr(Outer(rect, _startMargins), lParam, false);
                 break;
             }
             case WM_EXITSIZEMOVE:
@@ -140,11 +156,242 @@ public sealed class WindowSnapper
 
                 _moving = IntPtr.Zero;
                 _carried.Clear();
+                _linked.Clear();
                 MoveFinished?.Invoke(this, EventArgs.Empty);
                 break;
         }
 
         return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// Finds the windows that resize along with this one. For each edge being dragged: a docked
+    /// window on the other side of it gives way (its facing edge follows), and a docked window
+    /// whose own edge runs along the same line goes with it (that edge follows too). The player
+    /// can't be resized, so where it sits on the line nothing follows that edge, and a window
+    /// that's also docked to something that isn't moving stays put.
+    /// </summary>
+    private void FindLinked(IntPtr hwnd, int edge)
+    {
+        const int flush = 2;
+        var self = Visible(_startRect, _startMargins);
+        var group = Group(hwnd, self);
+        var sides = new List<Side>();
+        if (edge is WMSZ_LEFT or WMSZ_TOPLEFT or WMSZ_BOTTOMLEFT)
+        {
+            sides.Add(Side.Left);
+        }
+        else if (edge is WMSZ_RIGHT or WMSZ_TOPRIGHT or WMSZ_BOTTOMRIGHT)
+        {
+            sides.Add(Side.Right);
+        }
+
+        if (edge is WMSZ_TOP or WMSZ_TOPLEFT or WMSZ_TOPRIGHT)
+        {
+            sides.Add(Side.Top);
+        }
+        else if (edge is WMSZ_BOTTOM or WMSZ_BOTTOMLEFT or WMSZ_BOTTOMRIGHT)
+        {
+            sides.Add(Side.Bottom);
+        }
+
+        var follows = new Dictionary<IntPtr, Linked>();
+        Linked For(IntPtr handle, Rect rect) =>
+            follows.TryGetValue(handle, out var linked) ? linked : follows[handle] = new Linked(handle, rect, Margins(handle), MinSize(handle));
+
+        foreach (var side in sides)
+        {
+            var line = Get(self, side);
+            var opposite = Opposite(side);
+
+            // Windows whose edge runs along the same line go with it.
+            var along = group.Where(other => Math.Abs(Get(other.Rect, side) - line) <= flush).ToList();
+            if (along.Any(other => !Resizable(other.Handle)))
+            {
+                along.Clear();
+            }
+
+            foreach (var other in along)
+            {
+                For(other.Handle, other.Rect).Follow(side, side);
+            }
+
+            // Windows on the other side of the line give way, unless something else docked to them stays put.
+            var facing = group.Where(other => Math.Abs(Get(other.Rect, opposite) - line) <= flush && Across(self, other.Rect, side)).ToList();
+            if (facing.Any(other => !Resizable(other.Handle)))
+            {
+                facing.Clear();
+            }
+
+            foreach (var other in facing)
+            {
+
+                var pinned = group.Any(third => third.Handle != other.Handle
+                    && Math.Abs(Get(third.Rect, side) - line) <= flush
+                    && Across(third.Rect, other.Rect, side)
+                    && !along.Any(moving => moving.Handle == third.Handle));
+                if (!pinned)
+                {
+                    For(other.Handle, other.Rect).Follow(opposite, side);
+                }
+            }
+        }
+
+        _linked.AddRange(follows.Values);
+    }
+
+    /// <summary>Moves the linked windows with the edges of the one being resized, keeping each above its minimum size.</summary>
+    private void MoveLinked(ref Rect rect)
+    {
+        if (_linked.Count == 0)
+        {
+            return;
+        }
+
+        var start = Visible(_startRect, _startMargins);
+        foreach (var side in new[] { Side.Left, Side.Top, Side.Right, Side.Bottom })
+        {
+            var delta = Get(rect, side) - Get(start, side);
+            foreach (var linked in _linked)
+            {
+                foreach (var (own, driver) in linked.Edges)
+                {
+                    if (driver != side)
+                    {
+                        continue;
+                    }
+
+                    // How far this edge can move before the window gets too small.
+                    var horizontal = own is Side.Left or Side.Right;
+                    var room = (horizontal ? linked.Start.Right - linked.Start.Left - linked.Min.Width : linked.Start.Bottom - linked.Start.Top - linked.Min.Height);
+                    delta = own is Side.Left or Side.Top ? Math.Min(delta, Math.Max(0, room)) : Math.Max(delta, -Math.Max(0, room));
+                }
+            }
+
+            Set(ref rect, side, Get(start, side) + delta);
+        }
+
+        foreach (var linked in _linked)
+        {
+            var target = linked.Start;
+            foreach (var (own, driver) in linked.Edges)
+            {
+                Set(ref target, own, Get(linked.Start, own) + Get(rect, driver) - Get(start, driver));
+            }
+
+            var outer = Outer(target, linked.Margins);
+            SetWindowPos(linked.Handle, IntPtr.Zero, outer.Left, outer.Top, outer.Right - outer.Left, outer.Bottom - outer.Top,
+                SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
+
+    /// <summary>The shown windows docked to this one, directly or through others.</summary>
+    private List<(IntPtr Handle, Rect Rect)> Group(IntPtr hwnd, Rect self)
+    {
+        var group = new List<(IntPtr Handle, Rect Rect)> { (hwnd, self) };
+        var others = OtherWindows(hwnd).ToList();
+        for (var i = 0; i < group.Count; i++)
+        {
+            foreach (var other in others.ToList())
+            {
+                if (Touching(group[i].Rect, other.Rect))
+                {
+                    group.Add(other);
+                    others.Remove(other);
+                }
+            }
+        }
+
+        group.RemoveAt(0);
+        return group;
+    }
+
+    /// <summary>True when the two rectangles overlap along the line of this side (so they meet across it, rather than corner to corner).</summary>
+    private static bool Across(Rect a, Rect b, Side side) => side is Side.Left or Side.Right
+        ? a.Top < b.Bottom && b.Top < a.Bottom
+        : a.Left < b.Right && b.Left < a.Right;
+
+    private static bool Resizable(IntPtr handle) =>
+        HwndSource.FromHwnd(handle)?.RootVisual is Window { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip };
+
+    private static (int Width, int Height) MinSize(IntPtr handle)
+    {
+        var window = HwndSource.FromHwnd(handle)?.RootVisual as Window;
+        var scale = Scale(handle);
+        return ((int)Math.Ceiling((window?.MinWidth ?? 0) * scale), (int)Math.Ceiling((window?.MinHeight ?? 0) * scale));
+    }
+
+    private static Side Opposite(Side side) => side switch
+    {
+        Side.Left => Side.Right,
+        Side.Right => Side.Left,
+        Side.Top => Side.Bottom,
+        _ => Side.Top,
+    };
+
+    private static int Get(Rect rect, Side side) => side switch
+    {
+        Side.Left => rect.Left,
+        Side.Top => rect.Top,
+        Side.Right => rect.Right,
+        _ => rect.Bottom,
+    };
+
+    private static void Set(ref Rect rect, Side side, int value)
+    {
+        switch (side)
+        {
+            case Side.Left:
+                rect.Left = value;
+                break;
+            case Side.Top:
+                rect.Top = value;
+                break;
+            case Side.Right:
+                rect.Right = value;
+                break;
+            default:
+                rect.Bottom = value;
+                break;
+        }
+    }
+
+    private enum Side
+    {
+        Left,
+        Top,
+        Right,
+        Bottom,
+    }
+
+    /// <summary>A window resizing along with the one being dragged: which of its edges follow which of the dragged edges.</summary>
+    private sealed class Linked
+    {
+        public Linked(IntPtr handle, Rect start, Rect margins, (int Width, int Height) min)
+        {
+            Handle = handle;
+            Start = start;
+            Margins = margins;
+            Min = min;
+        }
+
+        public IntPtr Handle { get; }
+
+        public Rect Start { get; }
+
+        public Rect Margins { get; }
+
+        public (int Width, int Height) Min { get; }
+
+        public List<(Side Own, Side Driver)> Edges { get; } = new();
+
+        public void Follow(Side own, Side driver)
+        {
+            if (!Edges.Any(edge => edge.Own == own))
+            {
+                Edges.Add((own, driver));
+            }
+        }
     }
 
     /// <summary>
@@ -328,7 +575,7 @@ public sealed class WindowSnapper
         {
             var handle = Handle(window);
             if (handle == IntPtr.Zero || handle == self || !window.IsVisible || window.WindowState != WindowState.Normal
-                || _carried.Any(carried => carried.Handle == handle))
+                || _carried.Any(carried => carried.Handle == handle) || _linked.Any(linked => linked.Handle == handle))
             {
                 continue;
             }
@@ -560,6 +807,9 @@ public sealed class WindowSnapper
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetCursorPos(out Point point);
+
+    [DllImport("user32.dll")]
+    private static extern short GetKeyState(int key);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out Rect value, int size);
