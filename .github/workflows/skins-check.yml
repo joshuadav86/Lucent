@@ -1,0 +1,27 @@
+name: Skins check
+on:
+  push:
+    branches: [skins-check]
+permissions:
+  contents: write
+jobs:
+  shots:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build
+        run: dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - name: Screenshot each skin
+        shell: powershell
+        run: ./tools/skins-check.ps1
+      - name: Save the screenshots to the branch
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          mkdir -p shots && cp "$RUNNER_TEMP"/shots/* shots/ || true
+          git add shots && git commit -m "Skin screenshots [skip ci]" && git push || true
