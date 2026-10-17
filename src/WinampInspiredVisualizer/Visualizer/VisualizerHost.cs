@@ -41,6 +41,9 @@ public sealed class VisualizerHost : HwndHost
         _analyzer = new AudioAnalyzer(capture);
     }
 
+    /// <summary>The song that's playing and its bars, which Auto uses to change visual on a downbeat.</summary>
+    public SongClock SongClock { get; } = new();
+
     /// <summary>Raised on the UI thread with the names of the visuals that loaded.</summary>
     public event EventHandler<IReadOnlyList<string>>? PresetsLoaded;
 
@@ -242,6 +245,7 @@ public sealed class VisualizerHost : HwndHost
         _renderer.MorphTransitionsOnly = _morphTransitionsOnly;
         _renderer.Hdr = _hdr;
         _renderer.AutoCycleChoices = IndicesOf(_renderer.PresetNames, _autoCycleNames);
+        _renderer.SongClock = SongClock;
         _renderer.PresetChanged += index => dispatcher.InvokeAsync(() =>
         {
             _presetIndex = index;
