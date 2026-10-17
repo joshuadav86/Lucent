@@ -27,13 +27,14 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
   - **Save** replaces the original after asking (formats Lucid can't write, like M4A or OGG, are saved as a new FLAC file instead). **Save as new version** keeps the original and suggests "Song (edited)". The tags and artwork come along, and the new file is checked before it replaces anything
 - A converter: right-click songs and choose **Convert to…**, or use the waveform button. Make MP3 (128 to 320 kbps, or VBR V0 and V2), FLAC (16 or 24-bit) or WAV (16, 24 or 32-bit float), keep the sample rate or change it to 44.1 or 48 kHz, and put the new files next to the originals or in a folder you choose. Several songs convert at once, tags and artwork are copied, and nothing is replaced without asking
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- 71 visuals in six families:
+- 76 visuals in seven families:
   - **Fly-through worlds:** Menger Voyage, Gyroid Caverns, Hyperspace Rings, Mandelbox Tunnel, Fractal Temple, Crystal Cavern, Wormhole Transit, Folded Metropolis, Kleinian Reef, Fibre Optic Braid and more
   - **Kaleidoscopes and sacred geometry:** Crystal Kaleidoscope, Kaleido Cathedral, Sacred Geometry, Rose Window, Metatron's Cube, Flower of Life, Penrose Mosaic, Prism Mandala, Lotus Bloom, Droste Zoom and more
   - **Fractals:** Julia Kaleidoscope, Apollonian Lace, Mandelbrot Dive, Mandelbulb Bloom, Burning Ship, Kleinian Limit, Newton Basins, Kali Flame, Koch Snowflake, Fractal Forest and more
   - **Music-shaped:** Spectrum Tunnel, Neon Oscilloscope, Cymatic Plate, Pulsar Ridges, Spectral Sunflower, Spectrum Galaxy, Lissajous Laser, Plasma Orb, Caustic Rings, Beat Shards and more
   - **Cosmic and organic:** Bass Nebula, Aurora Veil, Black Hole, Cosmic Jellyfish, Supernova Remnant, Electric Storm, Ink Flow, Chrome Blobs, Shot Silk, Living Cells and more
   - **Particles:** hundreds of thousands of glowing particles moving on the graphics card every frame: Strange Attractors, Galaxy Collision, Firework Mandala, Silk Currents, Sonic Dandelion and Knot Stream
+  - **Cyberpunk:** rain-soaked neon cities and retro-futurist worlds: Neon Downpour, Sunset Highway, Hologram Billboards, Neon Alley and Circuit City
 - A visual picker: click the visual's name under the visuals (the button with the screen-and-spark icon), or press V, to choose any visual from a list
 - Favourite visuals and lists of visuals: star a visual in the picker, with the star under the visuals, or with F. The menu at the top of the picker switches between all visuals, your favourites and lists you make (right-click a visual to add it to one). The picker, N and B, and Auto mode then stick to that list
 - Folders and tags in the visual picker: visuals are listed in folders by family (Fractal, Cosmic, Particles and so on) that you can open or close, or switch off with the FOLDERS pill. Tick tags on the left (Calm, Intense, Neon, Space, 3D and more) to show only visuals with any of those tags; CLEAR shows everything again. N and B, and Auto mode, stick to what the picker shows
