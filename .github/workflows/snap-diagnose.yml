@@ -17,7 +17,7 @@ jobs:
           gh release download latest -p Lucid-win-x64.zip -R $env:GITHUB_REPOSITORY
           Expand-Archive Lucid-win-x64.zip -DestinationPath app
       - name: Drag windows and record where they go
-        shell: pwsh
+        shell: powershell
         run: ./tools/snap-diagnose.ps1
       - uses: actions/upload-artifact@v4
         if: always()
