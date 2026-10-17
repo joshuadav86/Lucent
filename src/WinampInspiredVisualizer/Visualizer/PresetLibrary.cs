@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer.Visualizer;
 
@@ -46,7 +47,7 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
 }
 
 /// <summary>
-/// Finds the preset and engine shader files that ship next to the app. Lucid.exe carries its own
+/// Finds the preset and engine shader files that ship next to the app. Lucent.exe carries its own
 /// copies too, used when it's run without its folder (straight from the zip, say).
 /// </summary>
 public static class PresetLibrary
@@ -56,11 +57,10 @@ public static class PresetLibrary
     public static string ShadersFolder => Path.Combine(AppContext.BaseDirectory, "Shaders");
 
     /// <summary>
-    /// The user's own visuals, in %AppData%\Lucid\Presets. They load alongside the built-in ones (one
+    /// The user's own visuals, in %AppData%\Lucent\Presets. They load alongside the built-in ones (one
     /// with the same file name replaces it) and, unlike the app's folder, survive updates.
     /// </summary>
-    public static string UserPresetsFolder => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "Presets");
+    public static string UserPresetsFolder => Path.Combine(AppDataFolder.Path, "Presets");
 
     public static string ReadShader(string fileName)
     {

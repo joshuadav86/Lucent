@@ -22,7 +22,7 @@ jobs:
     env:
       # Every build gets a higher version than the last, so the installer and in-app updates can
       # tell which is newer.
-      LUCID_VERSION: 0.1.${{ github.run_number }}
+      LUCENT_VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -78,13 +78,13 @@ jobs:
           dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:Version=${{ env.LUCID_VERSION }}
+          -p:Version=${{ env.LUCENT_VERSION }}
           -o publish
 
-      - name: Check the MP3 encoder is next to Lucid.exe
+      - name: Check the MP3 encoder is next to Lucent.exe
         shell: pwsh
         run: |
-          # The converter's MP3 encoder is a separate native DLL (LAME). It must sit beside Lucid.exe,
+          # The converter's MP3 encoder is a separate native DLL (LAME). It must sit beside Lucent.exe,
           # not inside the single-file bundle, for it to load.
           Get-ChildItem publish | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
           foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll") {
@@ -93,32 +93,35 @@ jobs:
 
       - name: Zip app
         shell: pwsh
-        run: Compress-Archive -Path publish/* -DestinationPath Lucid-win-x64.zip
+        run: Compress-Archive -Path publish/* -DestinationPath Lucent-win-x64.zip
 
       - name: Build the installer
         shell: pwsh
         run: |
-          # Velopack makes Lucid-Setup.exe (installs for the current user, no admin needed) and the
+          # Velopack makes Lucent-Setup.exe (installs for the current user, no admin needed) and the
           # update package and feed that installed copies check for new builds.
+          # The packId stays "Lucid" from before the app was renamed Lucent. It names the install folder
+          # and identifies the app to Velopack, so changing it would strand copies already installed.
+          # The title and main exe can change: Velopack renames and retargets shortcuts when it updates.
           dotnet tool install vpk --version 1.2.161 --tool-path .vpk
-          .vpk/vpk pack --packId Lucid --packVersion $env:LUCID_VERSION --packDir publish --mainExe Lucid.exe `
-            --packTitle Lucid --packAuthors joshuadav86 `
-            --icon src/WinampInspiredVisualizer/Assets/Lucid.ico `
-            --splashImage assets/lucid-icon.png --splashProgressColor "#8B5CF6" `
+          .vpk/vpk pack --packId Lucid --packVersion $env:LUCENT_VERSION --packDir publish --mainExe Lucent.exe `
+            --packTitle Lucent --packAuthors joshuadav86 `
+            --icon src/WinampInspiredVisualizer/Assets/Lucent.ico `
+            --splashImage assets/lucent-icon.png --splashProgressColor "#8B5CF6" `
             --outputDir releases
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item releases/Lucid-win-Setup.exe Lucid-Setup.exe
+          Copy-Item releases/Lucid-win-Setup.exe Lucent-Setup.exe
           Get-ChildItem releases | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Lucid-win-x64
-          path: Lucid-win-x64.zip
+          name: Lucent-win-x64
+          path: Lucent-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Lucid-Setup
-          path: Lucid-Setup.exe
+          name: Lucent-Setup
+          path: Lucent-Setup.exe
 
       - name: Update "latest" download
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -133,9 +136,9 @@ jobs:
             exit 0
           fi
           gh release delete latest --cleanup-tag --yes || true
-          # The .nupkg and the releases/assets files are what installed copies of Lucid update from.
-          gh release create latest Lucid-Setup.exe Lucid-win-x64.zip \
+          # The .nupkg and the releases/assets files are what installed copies of Lucent update from.
+          gh release create latest Lucent-Setup.exe Lucent-win-x64.zip \
             releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES \
             --target "$GITHUB_SHA" --prerelease \
-            --title "Latest build ($LUCID_VERSION)" \
-            --notes "Automatic build of the newest version on main. Download Lucid-Setup.exe and run it to install Lucid; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucid.exe without installing (that copy doesn't update itself)."
+            --title "Latest build ($LUCENT_VERSION)" \
+            --notes "Automatic build of the newest version on main. Download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself)."

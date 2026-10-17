@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace WinampInspiredVisualizer.Export;
 
-/// <summary>The kinds of file Lucid can write.</summary>
+/// <summary>The kinds of file Lucent can write.</summary>
 public enum ExportFormat
 {
     Mp3,
@@ -134,7 +134,7 @@ public sealed class ExportOptions
         _ => "32-bit float",
     };
 
-    /// <summary>The formats Lucid can write back to, by file extension.</summary>
+    /// <summary>The formats Lucent can write back to, by file extension.</summary>
     public static ExportFormat? WritableFormat(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
         ".mp3" => ExportFormat.Mp3,

@@ -41,7 +41,7 @@ public partial class EditorWindow : Window
         _path = path;
         _mainPlayer = mainPlayer;
         FileTitle.Text = Path.GetFileName(path);
-        Title = $"{Path.GetFileName(path)} - Audio editor - Lucid";
+        Title = $"{Path.GetFileName(path)} - Audio editor - Lucent";
 
         _playheadTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(30) };
         _playheadTimer.Tick += (_, _) => UpdatePlayhead();
@@ -574,7 +574,7 @@ public partial class EditorWindow : Window
         {
             var kind = Path.GetExtension(_path).TrimStart('.').ToUpperInvariant();
             return await SaveAsNewVersionAsync(
-                $"Lucid can't write {kind} files, so the edit will be saved as a new file. FLAC is lossless: no quality is lost.");
+                $"Lucent can't write {kind} files, so the edit will be saved as a new file. FLAC is lossless: no quality is lost.");
         }
 
         var name = Path.GetFileName(_path);
@@ -631,7 +631,7 @@ public partial class EditorWindow : Window
         // From now on the editor works on the new file, so Save updates it rather than the original.
         _path = target;
         _info = info with { Path = target, BitsPerSample = options.Format == ExportFormat.Flac ? options.FlacBitDepth : info.BitsPerSample };
-        Title = $"{Path.GetFileName(target)} - Audio editor - Lucid";
+        Title = $"{Path.GetFileName(target)} - Audio editor - Lucent";
         UpdateHistory();
         return true;
     }
@@ -681,7 +681,7 @@ public partial class EditorWindow : Window
         return true;
     }
 
-    /// <summary>Save settings that match the original file as closely as Lucid can write.</summary>
+    /// <summary>Save settings that match the original file as closely as Lucent can write.</summary>
     private static ExportOptions OptionsLike(SourceFileInfo info, ExportFormat format)
     {
         var options = new ExportOptions { Format = format, SampleRate = SampleRateChoice.Keep };

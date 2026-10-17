@@ -1,16 +1,16 @@
 using System.IO;
 using System.Text;
+using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer.Playlist;
 
 /// <summary>
-/// Music playlists the user has saved, kept as standard .m3u8 files in %AppData%\Lucid\Playlists,
+/// Music playlists the user has saved, kept as standard .m3u8 files in %AppData%\Lucent\Playlists,
 /// so other players (Winamp included) can open them too.
 /// </summary>
 public static class SavedPlaylists
 {
-    public static string Folder => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "Playlists");
+    public static string Folder => Path.Combine(AppDataFolder.Path, "Playlists");
 
     /// <summary>The saved playlists' names, alphabetically.</summary>
     public static IReadOnlyList<string> Names()

@@ -71,7 +71,7 @@ Write-Host "::notice::res $([W]::SetRes(1920, 1080))"; Start-Sleep 3
 $script:log = ""
 function Find($t) { [W]::Of([uint32]$script:proc.Id) | Where-Object { [W]::Title($_) -eq $t } | Select-Object -First 1 }
 function TestDrag($tag) {
-  $pl = Find 'Lucid'
+  $pl = Find 'Lucent'
   if (-not $pl) { $script:log += " || ${tag}: no player [$(Windows)]"; return }
   $p = [W]::Box($pl)
   [void][W]::SetForegroundWindow($pl); Start-Sleep 1
@@ -80,11 +80,11 @@ function TestDrag($tag) {
   $script:log += " || ${tag}: player $($p.L),$($p.T) moved $($p2.L - $p.L),$($p2.T - $p.T)"
 }
 function Windows() { if ($script:proc.HasExited) { return "EXITED code $($script:proc.ExitCode)" }; ([W]::Of([uint32]$script:proc.Id) | ForEach-Object { $b = [W]::Box($_); "'$([W]::Title($_))' $($b.L),$($b.T)" }) -join '; ' }
-function Press($k) { $pl = Find 'Lucid'; if (-not $pl) { $script:log += " || key ${k}: no player [$(Windows)]"; return }; [void][W]::SetForegroundWindow($pl); Start-Sleep 1; [W]::Key($k); Start-Sleep 2 }
+function Press($k) { $pl = Find 'Lucent'; if (-not $pl) { $script:log += " || key ${k}: no player [$(Windows)]"; return }; [void][W]::SetForegroundWindow($pl); Start-Sleep 1; [W]::Key($k); Start-Sleep 2 }
 function Run($label, [scriptblock]$steps) {
-  Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucid') -ErrorAction SilentlyContinue
+  Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucent') -ErrorAction SilentlyContinue
   $script:started = Get-Date
-  $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
+  $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucent.exe') -PassThru
   Start-Sleep 35
   try { & $steps } catch { $script:log += " || ERROR $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
   Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3

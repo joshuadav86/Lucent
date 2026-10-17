@@ -26,7 +26,7 @@ public static class AudioFileLoader
     public static readonly TimeSpan MaxDuration = TimeSpan.FromHours(1);
 
     /// <summary>
-    /// Decodes every sample of the file, with any decoder Lucid plays through. Files with more than two
+    /// Decodes every sample of the file, with any decoder Lucent plays through. Files with more than two
     /// channels are mixed down to stereo. Throws <see cref="AudioFileException"/> with a friendly message on failure.
     /// </summary>
     public static (AudioBuffer Audio, SourceFileInfo Info, bool MixedDown) Load(string path, IProgress<double>? progress,

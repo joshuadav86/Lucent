@@ -1,9 +1,9 @@
-"""Builds Lucid's "Lens" icon: a lens whose outline is a standing wave, with the live wave running through it.
+"""Builds Lucent's "Lens" icon: a lens whose outline is a standing wave, with the live wave running through it.
 
     python make_icon.py <output folder>
 
-Writes lucid-icon.svg (the 1024 x 1024 master), lucid-icon.png (README logo), Lucid.ico (app and window icon,
-16 to 256 px) and Lucid-64.png (the title bar). Below 40 px the mark is drawn bolder and the inner wave gets
+Writes lucent-icon.svg (the 1024 x 1024 master), lucent-icon.png (README logo), Lucent.ico (app and window icon,
+16 to 256 px) and Lucent-64.png (the title bar). Below 40 px the mark is drawn bolder and the inner wave gets
 flatter crests, so it still reads as a wave in Explorer and the taskbar. Needs Pillow, NumPy and CairoSVG.
 """
 import io
@@ -123,10 +123,10 @@ def write_ico(path, images):
 
 if __name__ == "__main__":
     out = sys.argv[1]
-    with open(f"{out}/lucid-icon.svg", "w", encoding="utf-8") as f:
+    with open(f"{out}/lucent-icon.svg", "w", encoding="utf-8") as f:
         f.write(icon_svg())
-    render(icon_svg(), 512).save(f"{out}/lucid-icon.png", optimize=True)
+    render(icon_svg(), 512).save(f"{out}/lucent-icon.png", optimize=True)
     sizes = [256, 128, 64, 48, 40, 32, 24, 20, 16]
-    write_ico(f"{out}/Lucid.ico", [render(icon_svg(**design_for(s)), s) for s in sizes])
+    write_ico(f"{out}/Lucent.ico", [render(icon_svg(**design_for(s)), s) for s in sizes])
     # The title bar shows this at 16 px (more on high-DPI screens), so it uses the bold small-size design.
-    render(icon_svg(**design_for(24)), 64).save(f"{out}/Lucid-64.png", optimize=True)
+    render(icon_svg(**design_for(24)), 64).save(f"{out}/Lucent-64.png", optimize=True)

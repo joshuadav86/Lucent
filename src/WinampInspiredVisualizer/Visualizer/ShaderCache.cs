@@ -8,7 +8,7 @@ using Vortice.Direct3D;
 namespace WinampInspiredVisualizer.Visualizer;
 
 /// <summary>
-/// Compiles HLSL and keeps the results in %LocalAppData%\Lucid\ShaderCache, so each visual
+/// Compiles HLSL and keeps the results in %LocalAppData%\Lucent\ShaderCache, so each visual
 /// is only compiled the first time it's used (or after it changes).
 /// </summary>
 public sealed class ShaderCache
@@ -17,7 +17,7 @@ public sealed class ShaderCache
     private const string Version = "fxc-o3-1";
 
     private readonly string _folder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lucid", "ShaderCache");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lucent", "ShaderCache");
 
     private readonly ConcurrentDictionary<string, bool> _used = new(StringComparer.OrdinalIgnoreCase);
 

@@ -25,7 +25,7 @@
         <!-- Glyphs drawn on top of the accent gradient (the play button). -->
         <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFF" />
 
-        <!-- Skin: the Lucid skin's shapes, type and finish. Themes/SkinManager.cs swaps these at runtime
+        <!-- Skin: the Lucent skin's shapes, type and finish. Themes/SkinManager.cs swaps these at runtime
              (building its brushes from the theme's colours), so anything shaped from here uses DynamicResource. -->
         <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
         <!-- The time and title in the player's display. -->
@@ -172,7 +172,7 @@
             </Setter>
         </Style>
 
-        <!-- The player's previous, stop, next and eject buttons. Lucid draws them as bare glyphs; other skins
+        <!-- The player's previous, stop, next and eject buttons. Lucent draws them as bare glyphs; other skins
              give them a face and raised edges, like hardware buttons. -->
         <Style x:Key="TransportButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
             <Setter Property="Foreground" Value="{DynamicResource ButtonGlyphBrush}" />

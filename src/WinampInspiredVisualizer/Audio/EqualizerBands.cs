@@ -33,7 +33,7 @@ public sealed class EqualizerBands
     public double SpacingOctaves { get; }
 
     /// <summary>
-    /// The layout an older version of Lucid used for this many bands (3, 5, 10 and 31 were offered
+    /// The layout an older version of Lucent used for this many bands (3, 5, 10 and 31 were offered
     /// once), so sliders saved with it can be redrawn at a band count offered now. Null for others.
     /// </summary>
     public static EqualizerBands? Former(int count) => count is 3 or 5 or 10 or 31 ? Create(count) : null;

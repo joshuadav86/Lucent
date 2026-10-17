@@ -8,7 +8,7 @@ namespace WinampInspiredVisualizer.Themes;
 /// <summary>How a skin finishes its surfaces: the light, edges and texture laid over the theme's colours.</summary>
 public enum SkinFinish
 {
-    /// <summary>Flat panels and hairlines (Lucid's own look).</summary>
+    /// <summary>Flat panels and hairlines (Lucent's own look).</summary>
     Flat,
     /// <summary>Raised and sunken edges, a black LCD display with scan lines.</summary>
     Bevel,
@@ -25,7 +25,7 @@ public enum SkinFinish
 /// a skin decides how those colours are laid out, so any skin works with any theme. Each skin
 /// comes with a theme it was designed around, which is chosen with it.
 /// </summary>
-/// <param name="Rounding">How rounded corners are, compared with Lucid's own (1).</param>
+/// <param name="Rounding">How rounded corners are, compared with Lucent's own (1).</param>
 /// <param name="RoundShapes">Whether pills, knobs and the play button are fully round.</param>
 public sealed record Skin(
     string Name,
@@ -39,7 +39,7 @@ public sealed record Skin(
     SkinFinish Finish);
 
 /// <summary>
-/// The built-in skins, and swapping between them. App.xaml holds the Lucid skin's resources;
+/// The built-in skins, and swapping between them. App.xaml holds the Lucent skin's resources;
 /// applying a skin replaces them with ones built from the skin and the current theme's colours,
 /// and everything that uses them through DynamicResource reshapes and repaints.
 /// </summary>
@@ -47,7 +47,7 @@ public static class SkinManager
 {
     public static IReadOnlyList<Skin> Skins { get; } = new[]
     {
-        new Skin("Lucid", "Soft corners, hairlines and calm, modern type.", "Midnight",
+        new Skin("Lucent", "Soft corners, hairlines and calm, modern type.", "Midnight",
             "Segoe UI Variable Text, Segoe UI", "Segoe UI Variable Text, Segoe UI", FontWeights.SemiBold,
             Rounding: 1, RoundShapes: true, SkinFinish.Flat),
         new Skin("Classic", "Square corners, raised buttons and a black LCD, like the players of 1999.", "Emerald",
@@ -64,7 +64,7 @@ public static class SkinManager
             Rounding: 0.5, RoundShapes: true, SkinFinish.Metal),
     };
 
-    // Lucid's corner sizes, which a skin's Rounding scales. Each is a resource App.xaml also defines.
+    // Lucent's corner sizes, which a skin's Rounding scales. Each is a resource App.xaml also defines.
     private static readonly (string Key, double Radius)[] Corners =
     {
         ("TinyCorner", 6), ("SegmentCorner", 7), ("ControlCorner", 8), ("BarCorner", 9),
@@ -118,7 +118,7 @@ public static class SkinManager
             values[key] = new CornerRadius(radius * skin.Rounding);
         }
 
-        // Lucid's own look: flat, with hairline edges. Each finish below changes some of these.
+        // Lucent's own look: flat, with hairline edges. Each finish below changes some of these.
         Brush frame = Solid(hairline);
         Brush sheen = Brushes.Transparent;
         Brush titleBar = Brushes.Transparent;

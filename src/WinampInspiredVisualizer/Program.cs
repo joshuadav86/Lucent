@@ -1,9 +1,10 @@
 using Velopack;
+using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer;
 
 /// <summary>
-/// Starts Lucid. Velopack runs first: when the installer or an update launches Lucid.exe to set
+/// Starts Lucent. Velopack runs first: when the installer or an update launches Lucent.exe to set
 /// up shortcuts or clean up, it does that and exits before any window opens.
 /// </summary>
 public static class Program
@@ -12,6 +13,7 @@ public static class Program
     public static void Main(string[] args)
     {
         VelopackApp.Build().Run();
+        AppDataFolder.CopyFromOldName();
 
         var app = new App();
         app.InitializeComponent();

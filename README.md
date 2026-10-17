@@ -1,6 +1,6 @@
-<p align="center"><img src="assets/lucid-icon.png" width="128" alt="Lucid icon"></p>
+<p align="center"><img src="assets/lucent-icon.png" width="128" alt="Lucent icon"></p>
 
-<h1 align="center">Lucid</h1>
+<h1 align="center">Lucent</h1>
 
 <p align="center"><b>Winamp's soul, a 2026 graphics card's muscle.</b><br>
 A music player for Windows with 143 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
@@ -26,7 +26,7 @@ A music player for Windows with 143 live GPU visuals, ray-traced scenes and part
   <a href="#make-your-own-visuals">Make visuals</a>
 </p>
 
-![Lucid's Black Hole visual, fullscreen](assets/screenshots/hero-black-hole.jpg)
+![Lucent's Black Hole visual, fullscreen](assets/screenshots/hero-black-hole.jpg)
 
 ## What's new
 
@@ -142,7 +142,7 @@ Double-click the visuals or press **F11**. Click once to pause or play, and righ
 
 A small player in the spirit of Winamp's, with the equalizer, queue, library, analyzer, artwork and visuals each in their own window. Edges snap to each other and to the screen, docked windows travel together while you drag, and resizing one edge resizes its neighbours. Press **D** to tidy everything back into one neat rectangle, **G** to fill the screen, or **K** to shrink it all.
 
-![The Lucid player with its library, equalizer, queue and visuals docked together](assets/screenshots/player-layout.jpg)
+![The Lucent player with its library, equalizer, queue and visuals docked together](assets/screenshots/player-layout.jpg)
 
 ## Equalizer
 
@@ -153,7 +153,7 @@ Docked under the player like Winamp's, with sliders styled after mixing-desk fad
 - **4, 8, 16, 24 or 32 bands.** Switching keeps your curve, and the new faders rise into place.
 - **The music's live spectrum** sits behind the response curve, so problem frequencies show up as peaks.
 - **15 presets** such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own.
-- **Preamp and safe boosting.** Lucid lowers the volume a touch when you boost, so the music doesn't distort.
+- **Preamp and safe boosting.** Lucent lowers the volume a touch when you boost, so the music doesn't distort.
 - The visuals react to the equalized sound.
 
 <br clear="right">
@@ -177,7 +177,7 @@ Skins decide the shape, type and finish of every window. Themes decide the colou
 
 | Skin | Look | Made for |
 |---|---|---|
-| **Lucid** | Soft corners, hairlines and calm, modern type | Midnight |
+| **Lucent** | Soft corners, hairlines and calm, modern type | Midnight |
 | **Classic** | Square corners, raised buttons and a black LCD, like the players of 1999 | Emerald |
 | **Glass** | Frosted panes, soft light and big round buttons | Deep Ocean |
 | **Neon** | Hard edges that glow in the accent colour, over scan lines | Ultraviolet |
@@ -199,18 +199,18 @@ Skins decide the shape, type and finish of every window. Themes decide the colou
 
 ## Download and run
 
-1. Download [`Lucid-Setup.exe`](../../releases/download/latest/Lucid-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
-2. Run it. Lucid installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
+1. Download [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
+2. Run it. Lucent installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
 
-Installed Lucid keeps itself up to date. Each time it starts it checks for a newer build, downloads it in the background and installs it when you close Lucid; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists and visuals are kept. Uninstall it from Windows' **Installed apps** list.
+Installed Lucent keeps itself up to date. Each time it starts it checks for a newer build, downloads it in the background and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists and visuals are kept. Uninstall it from Windows' **Installed apps** list.
 
 If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
 
-Rather not install? Download `Lucid-win-x64.zip` from the same release, right-click it and choose **Extract All**, then double-click `Lucid.exe`. That copy doesn't update itself.
+Rather not install? Download `Lucent-win-x64.zip` from the same release, right-click it and choose **Extract All**, then double-click `Lucent.exe`. That copy doesn't update itself.
 
 ## Keyboard shortcuts
 
-Shortcuts work from any Lucid window, and your keyboard's media keys work while Lucid has focus.
+Shortcuts work from any Lucent window, and your keyboard's media keys work while Lucent has focus.
 
 | Playback | | Windows | | Visuals | |
 |---|---|---|---|---|---|
@@ -226,17 +226,17 @@ Shortcuts work from any Lucid window, and your keyboard's media keys work while 
 
 - A small player window like Winamp's, with a big time display, a spectrum meter (click it for a waveform, or to hide it), a scrolling title, and the bitrate and sample rate
 - The visuals, queue, library, equalizer, analyzer and artwork each have their own window. Edges snap to each other and to the screen (keep dragging to pull a window free). A window dropped beside others with one corner lined up stretches a little to line up its other corner too. Dragging the player carries every window docked to it, even ones that are switched off, and docked windows stay together throughout the drag. Windows never end up overlapping by accident
-- The equalizer opens docked under the player, with the queue below it. The visuals and library line up with the bottom of the column, so the windows form one neat rectangle whichever are open. Lucid remembers where you left them
+- The equalizer opens docked under the player, with the queue below it. The visuals and library line up with the bottom of the column, so the windows form one neat rectangle whichever are open. Lucent remembers where you left them
 - Resizing a window resizes the windows docked to it: drag the edge between two windows to move both, or an outside edge they share to stretch them together; hold Ctrl to resize just one
 - On a first start, just the player, equalizer and visuals open
-- Add files or folders with the eject button, or drag them onto any Lucid window
+- Add files or folders with the eject button, or drag them onto any Lucent window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library, newest first, with other sort orders and folder headings you can open or close. Search by title, artist, album or file name as you type (Ctrl+F); Esc clears it
 - Favorite songs: the heart in the player (or H), or right-click songs in the queue or library. The FAVORITES pill in the library shows only them
 - Playlists: save the queue, add songs from the queue or library, and play them from **Playlists** in the queue window. They're standard .m3u8 files
 - Edit a song's info (right-click it, or Ctrl+I): title, artist, album, album artist, year, track and disc, genre, composer, BPM, comment and lyrics. Edit several songs at once. Add, paste, remove or save cover art; very large pictures are shrunk to 1600 pixels. New info is written to a checked copy before it replaces the original, and songs keep their date so they stay put in the library
 - An artwork window (Art in the player, or C) that uses the file's cover, or a folder.jpg, cover.jpg or front.jpg next to it. Pin it on top, copy or save the picture
-- An audio editor (the waveform button in the player, or **Open in editor…** on a song) showing both channels. Drag to select, the wheel zooms, Space plays. Normalize to a peak of −0.1, −1 or −3 dB or a loudness of −14, −16 or −23 LUFS, change pitch by up to 12 semitones in 0.1 steps (keeping the speed or like a record), gain, fade in and out, trim, delete, silence and reverse, with undo and redo. Save over the original after asking, or as a new version; formats Lucid can't write are saved as FLAC
+- An audio editor (the waveform button in the player, or **Open in editor…** on a song) showing both channels. Drag to select, the wheel zooms, Space plays. Normalize to a peak of −0.1, −1 or −3 dB or a loudness of −14, −16 or −23 LUFS, change pitch by up to 12 semitones in 0.1 steps (keeping the speed or like a record), gain, fade in and out, trim, delete, silence and reverse, with undo and redo. Save over the original after asking, or as a new version; formats Lucent can't write are saved as FLAC
 - A converter (**Convert to…**): MP3 at 128 to 320 kbps or VBR V0 and V2, FLAC at 16 or 24-bit, WAV at 16, 24 or 32-bit float, at the original sample rate or 44.1 or 48 kHz. Several songs at once, tags and artwork copied, nothing replaced without asking
 - A Direct3D 11 visualizer with MilkDrop-style feedback trails, and visuals that compile in the background and are kept on disk, so the app starts straight away
 - The visual picker lists visuals in family folders (switch them off with the FOLDERS pill) and filters by tag; CLEAR shows everything again. Enter shows the first match, Esc clears the search
@@ -264,7 +264,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/WinampInspiredVisualizer/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into `%AppData%\Lucid\Presets` (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/WinampInspiredVisualizer/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into `%AppData%\Lucent\Presets` (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
 
 A particle visual also defines `Spawn`, `Simulate` and `Show`, which start, move and draw each of its particles. The engine runs them for every particle each frame on the graphics card and adds the glowing dots into a layer that `Render` reads with `particles(uv)`. A `// Particles: 300000` line sets how many run on Normal detail. Random numbers, 3D projection with lens blur, curl-noise flow and motion streaks are in [`Shaders/Particles.hlsli`](src/WinampInspiredVisualizer/Shaders/Particles.hlsli).
 
@@ -280,4 +280,4 @@ dotnet run --project src/WinampInspiredVisualizer
 
 [MIT](LICENSE). Not affiliated with or endorsed by Winamp.
 
-MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucid.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
+MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucent.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).

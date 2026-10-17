@@ -125,7 +125,7 @@ public sealed record EqualizerPreset(string Name, EqualizerCurve Curve)
     }
 }
 
-/// <summary>The presets that come with Lucid.</summary>
+/// <summary>The presets that come with Lucent.</summary>
 public static class EqualizerPresets
 {
     public const string FlatName = "Flat";

@@ -6,7 +6,7 @@ using WinampInspiredVisualizer.Library;
 
 namespace WinampInspiredVisualizer.Settings;
 
-/// <summary>Preferences kept between runs, stored as JSON in %AppData%\Lucid\settings.json.</summary>
+/// <summary>Preferences kept between runs, stored as JSON in %AppData%\Lucent\settings.json.</summary>
 public sealed class AppSettings
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -123,7 +123,7 @@ public sealed class AppSettings
     public string Theme { get; set; } = "Midnight";
 
     /// <summary>The skin: shapes, type and finish, laid over the theme's colours.</summary>
-    public string Skin { get; set; } = "Lucid";
+    public string Skin { get; set; } = "Lucent";
 
     // ---- Track info and artwork ----
 
@@ -163,8 +163,7 @@ public sealed class AppSettings
     /// <summary>The format and quality last picked in the converter, offered again next time.</summary>
     public ExportOptions ConvertOptions { get; set; } = new();
 
-    private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "settings.json");
+    private static string FilePath => Path.Combine(AppDataFolder.Path, "settings.json");
 
     public static AppSettings Load()
     {

@@ -688,7 +688,7 @@ public sealed partial class Spectrogram : FrameworkElement
                 (0.88, Color.FromRgb(0xFF, 0xDC, 0x40)),
                 (1.00, Color.FromRgb(0xFF, 0xFF, 0xF0)),
             },
-            // The theme's own colours, so the analyzer matches the rest of Lucid.
+            // The theme's own colours, so the analyzer matches the rest of Lucent.
             _ => new[]
             {
                 (0.00, ColorOf(ThemeLowBrush, Colors.Black)),

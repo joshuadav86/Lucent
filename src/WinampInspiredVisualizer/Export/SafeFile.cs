@@ -20,7 +20,7 @@ public static class SafeFile
         }
 
         var unique = Guid.NewGuid().ToString("N")[..8];
-        return Path.Combine(folder, $".{name}.lucid-{unique}{Path.GetExtension(finalPath)}");
+        return Path.Combine(folder, $".{name}.lucent-{unique}{Path.GetExtension(finalPath)}");
     }
 
     /// <summary>Hides a finished temporary file, so the library doesn't list it while it is checked.</summary>
@@ -71,7 +71,7 @@ public static class SafeFile
         }
     }
 
-    /// <summary>True for errors that mean another program (or Lucid's own player) has the file open.</summary>
+    /// <summary>True for errors that mean another program (or Lucent's own player) has the file open.</summary>
     public static bool IsFileInUse(Exception ex) =>
         ex is IOException io && (io.HResult & 0xFFFF) is 32 or 33; // ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION
 }
