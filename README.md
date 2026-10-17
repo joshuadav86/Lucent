@@ -10,7 +10,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 
 - Plays MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
 - A small player window like Winamp's, with a big time display, a spectrum meter (click it for a waveform, or to hide it), a scrolling title, and the bitrate and sample rate
-- The visuals, the queue and the library each have their own window. Their edges snap to each other and to the screen, and dragging the player carries every window docked to it. The visuals open with the player; the Visuals, Queue and Library switches in the player show or hide each one, and Lucid remembers where you left them
+- The visuals, the queue and the library each have their own window. Their edges snap to each other and to the screen (keep dragging to pull a window free), and dragging the player carries every window docked to it, including ones that are switched off. Press D, or right-click the window switches in the player, to dock every window back around the player. The visuals open with the player; the Visuals, Queue and Library switches in the player show or hide each one, and Lucid remembers where you left them
 - Add files or whole folders with the eject button, or drag them onto any Lucid window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library: link a folder and every song inside it is listed, newest first, with other sort orders and folder headings you can open or close
@@ -40,12 +40,13 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
   - **Glow:** how strongly bright parts bloom, from off to strong
   - **HDR:** on screens with HDR turned on in Windows, highlights shine brighter than normal white
   - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown under the visuals)
+- A Winamp-style equalizer (the EQ switch in the player, or E): choose 3, 4, 5, 8, 10, 16, 24 or 31 bands, drag the sliders (double-click one to put it back to 0) with the response curve drawn live above them, set the preamp, and pick from 15 presets such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own. Changing the band count keeps your curve, the visuals react to the equalized sound, and Lucid turns the volume down a touch when you boost so the music doesn't distort
 - Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
 - Remembers the last visual, your options and your theme
 - Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, O opens options, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, C opens the artwork window, Ctrl+I edits the selected (or playing) song's info, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
+**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, D docks them all back around the player, O opens options, E opens the equalizer, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, C opens the artwork window, Ctrl+I edits the selected (or playing) song's info, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
 
 ## Download and run
 
