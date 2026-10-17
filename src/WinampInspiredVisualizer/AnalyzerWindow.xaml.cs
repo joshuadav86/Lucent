@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Settings;
@@ -11,8 +12,9 @@ namespace WinampInspiredVisualizer;
 
 /// <summary>
 /// The analyzer: a scrolling heatmap of the music's frequencies over time with its waveform
-/// underneath, like the Vision plugin. It opens docked to the player's group and snaps like the
-/// other windows; its frame and the Theme colours follow the skin and theme.
+/// underneath, the spectrum right now beside it and a stereo spread scope, like the Vision plugin.
+/// Any of the four can be hidden. It opens docked to the player's group and snaps like the other
+/// windows; its frame and the Theme colours follow the skin and theme.
 /// </summary>
 public partial class AnalyzerWindow : Window
 {
@@ -31,6 +33,7 @@ public partial class AnalyzerWindow : Window
         _spectrogram = new Spectrogram(player.Capture)
         {
             Palette = settings.AnalyzerPalette,
+            Modules = settings.AnalyzerModules,
             ColumnsPerSecond = ColumnsPerSecond(settings.AnalyzerSpeed),
         };
         Display.Child = _spectrogram;
@@ -91,6 +94,62 @@ public partial class AnalyzerWindow : Window
 
     // ---- Choices ----
 
+    private static readonly (AnalyzerModules Module, string Name)[] Panels =
+    {
+        (AnalyzerModules.Heatmap, "Heatmap"),
+        (AnalyzerModules.Spectrum, "Spectrum"),
+        (AnalyzerModules.Waveform, "Waveform"),
+        (AnalyzerModules.Stereo, "Stereo spread"),
+    };
+
+    // The parts' on/off items, made fresh for the Panels button's menu and the right-click menu.
+    private List<MenuItem> PanelItems()
+    {
+        var shown = _settings.AnalyzerModules;
+        return Panels.Select(panel =>
+        {
+            var on = (shown & panel.Module) != 0;
+            var item = new MenuItem
+            {
+                Header = panel.Name,
+                IsCheckable = true,
+                IsChecked = on,
+                // The last one showing stays, so the window is never empty.
+                IsEnabled = !on || (shown & ~panel.Module & AnalyzerModules.All) != 0,
+                Tag = panel.Module,
+            };
+            item.Click += OnPanelToggled;
+            return item;
+        }).ToList();
+    }
+
+    private void OnPanelsClicked(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = PanelsButton, Placement = PlacementMode.Bottom };
+        foreach (var item in PanelItems())
+        {
+            menu.Items.Add(item);
+        }
+
+        menu.IsOpen = true;
+    }
+
+    private void OnPanelToggled(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: AnalyzerModules module })
+        {
+            var shown = _settings.AnalyzerModules ^ module;
+            if ((shown & AnalyzerModules.All) == 0)
+            {
+                return;
+            }
+
+            _settings.AnalyzerModules = shown;
+            _spectrogram.Modules = shown;
+            _settings.Save();
+        }
+    }
+
     private void OnPaletteChosen(object sender, RoutedEventArgs e)
     {
         if (sender is RadioButton { Tag: SpectrogramPalette palette })
@@ -103,6 +162,17 @@ public partial class AnalyzerWindow : Window
 
     private void OnDisplayMenuOpening(object sender, ContextMenuEventArgs e)
     {
+        while (DisplayMenu.Items[0] != PanelItemsEnd)
+        {
+            DisplayMenu.Items.RemoveAt(0);
+        }
+
+        var at = 0;
+        foreach (var item in PanelItems())
+        {
+            DisplayMenu.Items.Insert(at++, item);
+        }
+
         SlowMenuItem.IsChecked = _settings.AnalyzerSpeed == AnalyzerSpeed.Slow;
         NormalMenuItem.IsChecked = _settings.AnalyzerSpeed == AnalyzerSpeed.Normal;
         FastMenuItem.IsChecked = _settings.AnalyzerSpeed == AnalyzerSpeed.Fast;

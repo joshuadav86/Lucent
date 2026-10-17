@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Analyzer - Lucid"
         Icon="Assets/Lucid.ico"
-        Width="520" Height="360" MinWidth="320" MinHeight="200"
+        Width="760" Height="460" MinWidth="440" MinHeight="220"
         Background="{DynamicResource SurfaceBrush}"
         BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
         ShowInTaskbar="False"
@@ -28,6 +28,16 @@
         <!-- Title bar: the frequency under the mouse, the colours, and close. -->
         <DockPanel Grid.Row="0" Background="{DynamicResource TitleBarBrush}">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Which parts show: the heatmap, spectrum, waveform and stereo scope. -->
+                <Button x:Name="PanelsButton" Style="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
+                        ToolTip="Choose which parts of the analyzer to show"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnPanelsClicked">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Panels" FontSize="12" VerticalAlignment="Center" />
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                              Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                    </StackPanel>
+                </Button>
                 <Border Style="{StaticResource SegmentBar}" Margin="0,0,6,0" WindowChrome.IsHitTestVisibleInChrome="True"
                         ToolTip="The colours loudness is painted in">
                     <StackPanel x:Name="PaletteBar" Orientation="Horizontal" />
@@ -47,14 +57,15 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- The heatmap and waveform, in a sunken display like the equalizer's curve. Right-click for speed. -->
+        <!-- The analyzer's parts, in a sunken display like the equalizer's curve. Right-click for panels and speed. -->
         <Border x:Name="Display" Grid.Row="1" Margin="10,2,10,10" ClipToBounds="True"
                 CornerRadius="{DynamicResource ControlCorner}"
                 Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                 MouseMove="OnDisplayMouseMove" MouseLeave="OnDisplayMouseLeave" MouseLeftButtonDown="OnDisplayMouseDown"
                 ContextMenuOpening="OnDisplayMenuOpening">
             <Border.ContextMenu>
-                <ContextMenu>
+                <ContextMenu x:Name="DisplayMenu">
+                    <Separator x:Name="PanelItemsEnd" />
                     <MenuItem x:Name="SlowMenuItem" Header="Scroll slowly" Click="OnSpeedChosen" Tag="Slow" />
                     <MenuItem x:Name="NormalMenuItem" Header="Scroll at normal speed" Click="OnSpeedChosen" Tag="Normal" />
                     <MenuItem x:Name="FastMenuItem" Header="Scroll quickly" Click="OnSpeedChosen" Tag="Fast" />

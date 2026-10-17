@@ -11,10 +11,12 @@ namespace WinampInspiredVisualizer.Windows;
 /// <summary>
 /// The analyzer's picture, like the Vision plugin's: a heatmap of the music scrolling right to left,
 /// low notes at the bottom and high ones at the top, coloured by how loud each frequency was at each
-/// moment, with the waveform scrolling underneath in step. It reads the music the same way as the
-/// equalizer's live spectrum, but keeps the last few seconds so you can see them go by.
+/// moment, with the waveform scrolling underneath in step. Beside them sit the spectrum right now, on
+/// the same frequency scale as the heatmap, and a stereo spread scope (see Spectrogram.Panels.cs).
+/// Each of the four can be shown or hidden; the rest fill the space. It reads the music the same way
+/// as the equalizer's live spectrum, but keeps the last few seconds so you can see them go by.
 /// </summary>
-public sealed class Spectrogram : FrameworkElement
+public sealed partial class Spectrogram : FrameworkElement
 {
     private const int FftExponent = 12;
     private const int FftSize = 1 << FftExponent;
@@ -40,6 +42,14 @@ public sealed class Spectrogram : FrameworkElement
     private const double LabelSize = 11.5;
     private const double LabelSpacing = 16;
     private const double Gap = 6;
+    // The spectrum and stereo panels down the right: this share of the width, within limits.
+    private const double SideShare = 0.3;
+    private const double SideMin = 150;
+    private const double SideMax = 280;
+    // With the stereo scope shown the bottom row grows to give it room.
+    private const double StereoRowShare = 0.36;
+    private const double StereoRowMin = 110;
+    private const double StereoRowMax = 200;
     private const double MarkSeconds = 5;
 
     public static readonly DependencyProperty ThemeLowBrushProperty = PaletteBrush(nameof(ThemeLowBrush));
@@ -79,6 +89,17 @@ public sealed class Spectrogram : FrameworkElement
     private WriteableBitmap? _bitmap;
     private int _columns;
     private int _rows;
+    // The loudness of each row in the newest analysis, 0 to 1, for the spectrum panel.
+    private float[] _latest = Array.Empty<float>();
+
+    // Where each part goes, worked out again when the size or the choice of parts changes.
+    private AnalyzerModules _modules = AnalyzerModules.All;
+    private Rect _axis = Rect.Empty;
+    private Rect _heatmap = Rect.Empty;
+    private Rect _spectrum = Rect.Empty;
+    private Rect _wave = Rect.Empty;
+    private Rect _stereo = Rect.Empty;
+    private double _topHeight;
 
     // Which part of the analysis each row reads, worked out again when the sample rate changes.
     private int[] _rowFirst = Array.Empty<int>();
@@ -189,6 +210,18 @@ public sealed class Spectrogram : FrameworkElement
         }
     }
 
+    /// <summary>Which parts are shown. At least one always is.</summary>
+    public AnalyzerModules Modules
+    {
+        get => _modules;
+        set
+        {
+            _modules = (value & AnalyzerModules.All) == 0 ? AnalyzerModules.Heatmap : value & AnalyzerModules.All;
+            Resize();
+            InvalidateVisual();
+        }
+    }
+
     /// <summary>How fast the picture scrolls, in screen pixels a second.</summary>
     public double ColumnsPerSecond
     {
@@ -196,10 +229,10 @@ public sealed class Spectrogram : FrameworkElement
         set => _columnsPerSecond = Math.Clamp(value, 5, 400);
     }
 
-    /// <summary>The frequency at a height in the heatmap, or null below it (over the waveform).</summary>
+    /// <summary>The frequency at a height in the heatmap or spectrum, or null outside them.</summary>
     public double? FrequencyAt(double y)
     {
-        var height = HeatmapHeight;
+        var height = _topHeight;
         if (height <= 0 || y < 0 || y > height)
         {
             return null;
@@ -211,7 +244,50 @@ public sealed class Spectrogram : FrameworkElement
     // The top of the picture: 20 kHz, or as high as the music goes at a low sample rate.
     private double TopHz => Math.Min(HighestHz, _capture.SampleRate / 2.0);
 
-    private double HeatmapHeight => Math.Max(0, ActualHeight - WaveformHeight - Gap);
+    private bool Shows(AnalyzerModules module) => (_modules & module) != 0;
+
+    // How far down a frequency sits in the heatmap and spectrum.
+    private double HeightOf(double hertz) => _topHeight * (1 - Math.Log(hertz / LowestHz) / Math.Log(TopHz / LowestHz));
+
+    /// <summary>
+    /// Lays the parts out in two rows: the heatmap and spectrum on top with the frequency scale down
+    /// the left, the waveform and stereo scope underneath. A hidden part's neighbour takes its place.
+    /// </summary>
+    private void Arrange()
+    {
+        var width = ActualWidth;
+        var height = ActualHeight;
+        var top = Shows(AnalyzerModules.Heatmap) || Shows(AnalyzerModules.Spectrum);
+        var bottom = Shows(AnalyzerModules.Waveform) || Shows(AnalyzerModules.Stereo);
+        var bottomHeight = !bottom ? 0
+            : !top ? height
+            : Shows(AnalyzerModules.Stereo) ? Math.Clamp(height * StereoRowShare, StereoRowMin, StereoRowMax)
+            : WaveformHeight;
+        _topHeight = !top ? 0 : bottom ? Math.Max(0, height - bottomHeight - Gap) : height;
+        var side = Math.Clamp(width * SideShare, SideMin, SideMax);
+
+        // Two parts side by side split the row; one alone fills it.
+        static (Rect Left, Rect Right) Row(bool left, bool right, double x, double y, double width, double height, double side)
+        {
+            var full = width - x;
+            if (left && right)
+            {
+                return (new Rect(x, y, Math.Max(0, full - side - Gap), height), new Rect(width - side, y, side, height));
+            }
+
+            var whole = new Rect(x, y, Math.Max(0, full), height);
+            return (left ? whole : Rect.Empty, right ? whole : Rect.Empty);
+        }
+
+        _axis = top ? new Rect(0, 0, AxisWidth, height) : Rect.Empty;
+        var left = top ? AxisWidth : 0;
+        (_heatmap, _spectrum) = top
+            ? Row(Shows(AnalyzerModules.Heatmap), Shows(AnalyzerModules.Spectrum), left, 0, width, _topHeight, side)
+            : (Rect.Empty, Rect.Empty);
+        (_wave, _stereo) = bottom
+            ? Row(Shows(AnalyzerModules.Waveform), Shows(AnalyzerModules.Stereo), left, height - bottomHeight, width, bottomHeight, side)
+            : (Rect.Empty, Rect.Empty);
+    }
 
     // ---- Running ----
 
@@ -243,10 +319,13 @@ public sealed class Spectrogram : FrameworkElement
     /// <summary>One column per pixel across, one row per pixel down (up to a point), keeping what fits.</summary>
     private void Resize()
     {
-        var columns = Math.Max(1, (int)Math.Ceiling(ActualWidth - AxisWidth));
-        var rows = Math.Clamp((int)Math.Ceiling(HeatmapHeight), 1, MaxRows);
+        Arrange();
+        static int Pixels(Rect rect) => rect.IsEmpty ? 0 : (int)Math.Ceiling(rect.Width);
+        var columns = Math.Max(1, Math.Max(Pixels(_heatmap), Pixels(_wave)));
+        var rows = Math.Clamp((int)Math.Ceiling(_topHeight), 1, MaxRows);
         if (columns == _columns && rows == _rows)
         {
+            ResizePanels();
             return;
         }
 
@@ -278,9 +357,11 @@ public sealed class Spectrogram : FrameworkElement
         _marks = marks;
         _columns = columns;
         _rows = rows;
+        _latest = new float[rows];
         _pixels = new uint[columns * rows];
         _bitmap = new WriteableBitmap(columns, rows, 96, 96, PixelFormats.Bgr32, null);
         _mappedRate = 0;
+        ResizePanels();
         Paint();
     }
 
@@ -297,16 +378,19 @@ public sealed class Spectrogram : FrameworkElement
             return;
         }
 
+        var sampleRate = _capture.SampleRate;
+        var delay = sampleRate * AudioPlayer.OutputLatencyMs / 1000 * 2 / 3;
+        UpdatePanels((float)deltaTime, delay);
         _carry += deltaTime * _columnsPerSecond;
         var count = (int)_carry;
         if (count == 0)
         {
+            InvalidateVisual();
             return;
         }
 
         _carry -= count;
         count = Math.Min(count, _columns);
-        var sampleRate = _capture.SampleRate;
         if (_mappedRate != sampleRate)
         {
             MapRows(sampleRate);
@@ -323,7 +407,6 @@ public sealed class Spectrogram : FrameworkElement
         // Each new column is the music at its own moment: the last one now, the ones before it a
         // column's worth of time earlier each, so a slow frame doesn't smear.
         var samplesPerColumn = Math.Max(1, (int)(sampleRate / _columnsPerSecond));
-        var delay = sampleRate * AudioPlayer.OutputLatencyMs / 1000 * 2 / 3;
         for (var i = 0; i < count; i++)
         {
             var column = _columns - count + i;
@@ -405,6 +488,7 @@ public sealed class Spectrogram : FrameworkElement
             var decibels = 10f * MathF.Log10(power + 1e-12f) + _rowTilt[row];
             var level = Math.Clamp((decibels - FloorDb) / (CeilingDb - FloorDb), 0f, 1f);
             _levels[row * _columns + column] = (byte)(level * 255 + 0.5f);
+            _latest[row] = level;
         }
     }
 
@@ -445,65 +529,113 @@ public sealed class Spectrogram : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
-        var width = ActualWidth;
-        var heatHeight = HeatmapHeight;
-        if (_bitmap is null || width < 2 || heatHeight < 2)
+        if (_bitmap is null || ActualWidth < 2 || ActualHeight < 2)
         {
             return;
         }
 
-        dc.DrawImage(_bitmap, new Rect(AxisWidth, 0, _columns, heatHeight));
-
-        // Faint lines every few seconds, moving with the music.
         var grid = new Pen(GridBrush, 1) { DashStyle = DashStyles.Dot };
-        var waveTop = heatHeight + Gap;
-        for (var column = 0; column < _columns; column++)
-        {
-            if (_marks[column])
-            {
-                var x = AxisWidth + column + 0.5;
-                dc.DrawLine(grid, new Point(x, 0), new Point(x, heatHeight));
-                dc.DrawLine(grid, new Point(x, waveTop), new Point(x, ActualHeight));
-            }
-        }
-
-        // The frequency scale, in its own strip so the numbers never sit on top of the colours:
-        // larger, bolder type in the theme's text colour, with a tick and a faint line across.
-        dc.DrawRectangle(AxisBrush, null, new Rect(0, 0, AxisWidth, ActualHeight));
-        var tick = new Pen(LabelBrush, 1);
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var typeface = new Typeface(TryFindResource("UiFont") as FontFamily ?? new FontFamily("Segoe UI"),
             FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        FormattedText Text(string text, double size, Brush brush) => new(text, CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight, typeface, size, brush, pixelsPerDip);
+
+        // The history runs right to left from each part's right edge; a part narrower than the
+        // history shows only its newest end.
+        if (Usable(_heatmap))
+        {
+            dc.PushClip(new RectangleGeometry(_heatmap));
+            dc.DrawImage(_bitmap, new Rect(_heatmap.Right - _columns, 0, _columns, _heatmap.Height));
+            DrawMarks(dc, grid, _heatmap);
+            dc.Pop();
+        }
+
+        if (!_axis.IsEmpty)
+        {
+            DrawScale(dc, grid, Text);
+        }
+
+        if (Usable(_spectrum))
+        {
+            DrawSpectrum(dc, grid);
+        }
+
+        if (Usable(_wave))
+        {
+            dc.PushClip(new RectangleGeometry(_wave));
+            DrawMarks(dc, grid, _wave);
+            DrawWave(dc, grid);
+            dc.Pop();
+        }
+
+        if (Usable(_stereo))
+        {
+            DrawStereo(dc, grid, Text);
+        }
+    }
+
+    private static bool Usable(Rect rect) => !rect.IsEmpty && rect.Width >= 2 && rect.Height >= 2;
+
+    // Faint lines every few seconds, moving with the music.
+    private void DrawMarks(DrawingContext dc, Pen grid, Rect area)
+    {
+        var left = area.Right - _columns;
+        for (var column = Math.Max(0, (int)(area.Left - left)); column < _columns; column++)
+        {
+            if (_marks[column])
+            {
+                var x = left + column + 0.5;
+                dc.DrawLine(grid, new Point(x, area.Top), new Point(x, area.Bottom));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The frequency scale, in its own strip so the numbers never sit on top of the colours:
+    /// larger, bolder type in the theme's text colour, with a tick and a faint line across.
+    /// </summary>
+    private void DrawScale(DrawingContext dc, Pen grid, Func<string, double, Brush, FormattedText> text)
+    {
+        dc.DrawRectangle(AxisBrush, null, _axis);
+        var tick = new Pen(LabelBrush, 1);
         var lastLabel = double.PositiveInfinity;
         foreach (var (hertz, label) in ScaleStops)
         {
-            var y = Math.Round(heatHeight * (1 - Math.Log(hertz / LowestHz) / Math.Log(TopHz / LowestHz))) + 0.5;
+            var y = Math.Round(HeightOf(hertz)) + 0.5;
             // Labels are placed from the bottom up, skipping any that would crowd the one below.
-            if (hertz >= TopHz || y < LabelSize / 2 + 1 || y > heatHeight - LabelSize / 2 - 1 || lastLabel - y < LabelSpacing)
+            if (hertz >= TopHz || y < LabelSize / 2 + 1 || y > _topHeight - LabelSize / 2 - 1 || lastLabel - y < LabelSpacing)
             {
                 continue;
             }
 
             lastLabel = y;
-            dc.DrawLine(grid, new Point(AxisWidth, y), new Point(width, y));
+            dc.DrawLine(grid, new Point(AxisWidth, y), new Point(ActualWidth, y));
             dc.DrawLine(tick, new Point(AxisWidth - 5, y), new Point(AxisWidth, y));
-            var text = new FormattedText(label, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, LabelSize,
-                LabelBrush, pixelsPerDip);
-            dc.DrawText(text, new Point(AxisWidth - 8 - text.Width, y - text.Height / 2));
+            var formatted = text(label, LabelSize, LabelBrush);
+            dc.DrawText(formatted, new Point(AxisWidth - 8 - formatted.Width, y - formatted.Height / 2));
         }
+    }
 
-        // The waveform: the swing of each column's audio, centred on a line.
-        var middle = waveTop + WaveformHeight / 2;
-        dc.DrawLine(grid, new Point(AxisWidth, middle), new Point(width, middle));
-        var points = new Point[_columns * 2];
-        for (var column = 0; column < _columns; column++)
+    // The waveform: the swing of each column's audio, centred on a line.
+    private void DrawWave(DrawingContext dc, Pen grid)
+    {
+        var middle = _wave.Top + _wave.Height / 2;
+        var half = _wave.Height / 2 - 2;
+        dc.DrawLine(grid, new Point(_wave.Left, middle), new Point(_wave.Right, middle));
+        var left = _wave.Right - _columns;
+        var first = Math.Clamp((int)(_wave.Left - left), 0, _columns - 1);
+        var count = _columns - first;
+        var points = new Point[count * 2];
+        for (var i = 0; i < count; i++)
         {
-            var x = AxisWidth + column + 0.5;
+            var column = first + i;
+            var x = left + column + 0.5;
             // At least a hairline, so quiet passages still show.
             var high = Math.Max(_waveHigh[column], 0.01f);
             var low = Math.Min(_waveLow[column], -0.01f);
-            points[column] = new Point(x, middle - high * WaveformHeight / 2);
-            points[points.Length - 1 - column] = new Point(x, middle - low * WaveformHeight / 2);
+            points[i] = new Point(x, middle - high * half);
+            points[points.Length - 1 - i] = new Point(x, middle - low * half);
         }
 
         var wave = new StreamGeometry();
@@ -582,6 +714,7 @@ public sealed class Spectrogram : FrameworkElement
             _palette[i] = 0xFF000000u | (uint)Mix(from.R, to.R) << 16 | (uint)Mix(from.G, to.G) << 8 | Mix(from.B, to.B);
         }
 
+        PaletteChanged();
         Paint();
     }
 
