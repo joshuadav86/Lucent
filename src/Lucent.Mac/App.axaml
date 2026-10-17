@@ -694,15 +694,18 @@
                                         </Border>
                                     </ControlTemplate>
                                 </ToggleButton.Template>
+                                <ToggleButton.Styles>
+                                    <!-- The chevron turns down while the folder is open. -->
+                                    <Style Selector="ToggleButton:checked /template/ Path#Chevron">
+                                        <Setter Property="RenderTransform" Value="rotate(90deg)" />
+                                    </Style>
+                                </ToggleButton.Styles>
                                 <ContentPresenter Content="{TemplateBinding Header}" />
                             </ToggleButton>
                             <ContentPresenter Name="Body" Content="{TemplateBinding Content}" IsVisible="{TemplateBinding IsExpanded}" />
                         </StackPanel>
                     </ControlTemplate>
                 </Setter>
-                <Style Selector="^ /template/ ToggleButton#Header:checked /template/ Path#Chevron">
-                    <Setter Property="RenderTransform" Value="rotate(90deg)" />
-                </Style>
                 <Style Selector="^ /template/ ToggleButton#Header:pointerover">
                     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
                 </Style>
