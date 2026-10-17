@@ -5,11 +5,13 @@ namespace WinampInspiredVisualizer.Playlist;
 /// <summary>A file in the playlist, with whatever tag info could be read from it.</summary>
 public sealed class Track
 {
-    private Track(string path, string title, string artist, TimeSpan duration, int bitrate = 0, int sampleRate = 0, int channels = 0)
+    private Track(string path, string title, string artist, TimeSpan duration, int bitrate = 0, int sampleRate = 0, int channels = 0,
+        string album = "")
     {
         Path = path;
         Title = title;
         Artist = artist;
+        Album = album;
         Duration = duration;
         Bitrate = bitrate;
         SampleRate = sampleRate;
@@ -21,6 +23,9 @@ public sealed class Track
     public string Title { get; }
 
     public string Artist { get; }
+
+    /// <summary>The album name, or empty if the file doesn't say.</summary>
+    public string Album { get; }
 
     public TimeSpan Duration { get; }
 
@@ -69,7 +74,8 @@ public sealed class Track
             var artist = file.Tag.FirstPerformer ?? string.Empty;
             var properties = file.Properties;
             return new Track(path, title, artist, properties?.Duration ?? TimeSpan.Zero,
-                properties?.AudioBitrate ?? 0, properties?.AudioSampleRate ?? 0, properties?.AudioChannels ?? 0);
+                properties?.AudioBitrate ?? 0, properties?.AudioSampleRate ?? 0, properties?.AudioChannels ?? 0,
+                file.Tag.Album ?? string.Empty);
         }
         catch (Exception)
         {

@@ -45,6 +45,7 @@
         <Geometry x:Key="PlaySmallIcon">M0,0 L10,6 L0,12 Z</Geometry>
         <Geometry x:Key="RefreshIcon">M13.5,8 A5.5,5.5 0 1 1 11.89,4.11 M8.9,3.85 L11.89,4.11 L11.63,1.12</Geometry>
         <Geometry x:Key="SortIcon">M1,3 H15 M1,8 H11 M1,13 H7</Geometry>
+        <Geometry x:Key="SearchIcon">M11.5,6.5 A5,5 0 1 1 1.5,6.5 A5,5 0 1 1 11.5,6.5 Z M10.1,10.1 L14.5,14.5</Geometry>
         <Geometry x:Key="PanelLeftIcon">M3,2 H13 Q15,2 15,4 V12 Q15,14 13,14 H3 Q1,14 1,12 V4 Q1,2 3,2 Z M6,2 V14 M2.5,5 H4.5 M2.5,8 H4.5</Geometry>
         <Geometry x:Key="PanelRightIcon">M3,2 H13 Q15,2 15,4 V12 Q15,14 13,14 H3 Q1,14 1,12 V4 Q1,2 3,2 Z M10,2 V14 M11.5,5 H13.5 M11.5,8 H13.5</Geometry>
         <Geometry x:Key="CollapseLeftIcon">M7.5,3 L2.5,8 L7.5,13 M13.5,3 L8.5,8 L13.5,13</Geometry>
@@ -298,6 +299,46 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A search box: a magnifying glass, then what's typed, with a faint hint (the box's Tag) while it's empty.
+             The right padding leaves room for a clear button laid over the box's right end. -->
+        <Style x:Key="SearchInput" TargetType="TextBox" BasedOn="{StaticResource TextInput}">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0,0,26,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Chrome" CornerRadius="8" Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <DockPanel>
+                                <Path x:Name="Glass" DockPanel.Dock="Left" Style="{StaticResource LineIcon}" Data="{StaticResource SearchIcon}"
+                                      Stroke="{DynamicResource FaintTextBrush}" Margin="8,0,4,0" />
+                                <Grid Margin="{TemplateBinding Padding}">
+                                    <TextBlock x:Name="Hint" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                               Margin="2,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource FaintTextBrush}" IsHitTestVisible="False"
+                                               Visibility="Collapsed" />
+                                    <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
+                                </Grid>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="Hint" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Glass" Property="Stroke" Value="{DynamicResource MutedTextBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

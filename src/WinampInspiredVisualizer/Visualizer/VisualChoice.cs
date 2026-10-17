@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer.Visualizer;
 
@@ -13,6 +14,7 @@ public sealed class VisualChoice : INotifyPropertyChanged
         Index = index;
         Family = family;
         Tags = tags;
+        SearchKey = SearchText.Key(new[] { name, family }.Concat(tags));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -27,6 +29,9 @@ public sealed class VisualChoice : INotifyPropertyChanged
 
     /// <summary>Its tags, such as "Calm" and "Space", in the order the picker lists tags.</summary>
     public IReadOnlyList<string> Tags { get; }
+
+    /// <summary>Its name, family and tags, ready for the picker's search box to look in.</summary>
+    public string SearchKey { get; }
 
     /// <summary>"Fractal · Calm, Geometric", shown when the mouse rests on the visual in the picker.</summary>
     public string StyleText => Tags.Count == 0 ? Family : $"{Family} · {string.Join(", ", Tags)}";

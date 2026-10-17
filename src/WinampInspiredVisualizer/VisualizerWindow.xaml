@@ -153,13 +153,14 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Which visuals to show (and for Auto to play from): all, the favourites, or one of your lists. -->
-                                <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="6,4,4,2">
+                                <!-- Search, then which visuals to show (and for Auto to play from): all, the favourites, or one of your lists. -->
+                                <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="4,4,4,2">
                                     <Button x:Name="ListPickerButton" DockPanel.Dock="Right" Style="{StaticResource PickerButton}"
                                             Height="28" Padding="10,0" ToolTip="Show all visuals, your favourites or one of your lists"
                                             Click="OnListMenu">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock x:Name="ListPickerLabel" Text="All visuals" FontSize="12" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="ListPickerLabel" Text="All visuals" FontSize="12" MaxWidth="130"
+                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
                                                   Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                                         </StackPanel>
@@ -167,8 +168,19 @@
                                     <!-- Family folders on or off. -->
                                     <Button x:Name="GroupFamiliesButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="0,0,6,0"
                                             Content="FOLDERS" ToolTip="Show or hide the family folders" Click="OnToggleGroupFamilies" />
-                                    <TextBlock Text="VISUALS" Margin="6,0,0,0" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"
-                                               Foreground="{DynamicResource MutedTextBrush}" />
+                                    <!-- Search: shows only the visuals with every typed word in their name, family or tags.
+                                         (No right-click menu: opening one would close the picker. Ctrl+V still pastes.) -->
+                                    <Grid Margin="0,0,8,0">
+                                        <TextBox x:Name="SearchBox" Style="{StaticResource SearchInput}" Tag="Search by name, family or tag"
+                                                 ToolTip="Type to find visuals by name, family or tag. Enter shows the first one, Esc clears the search."
+                                                 ContextMenuService.IsEnabled="False"
+                                                 TextChanged="OnSearchChanged" PreviewKeyDown="OnSearchKeyDown" />
+                                        <Button x:Name="ClearSearchButton" Style="{StaticResource IconButton}" Width="22" Height="22"
+                                                HorizontalAlignment="Right" Margin="0,0,3,0" Visibility="Collapsed"
+                                                ToolTip="Clear the search (Esc)" Click="OnClearSearch">
+                                            <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                                        </Button>
+                                    </Grid>
                                 </DockPanel>
                                 <TextBlock x:Name="ListHint" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource OptionHint}"
                                            Margin="12,4,12,6" Visibility="Collapsed" />

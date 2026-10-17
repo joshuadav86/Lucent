@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using WinampInspiredVisualizer.Playlist;
+using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer.Library;
 
@@ -9,6 +10,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
     private string _title;
     private string _artist = string.Empty;
     private string _durationText = string.Empty;
+    private string? _searchKey;
 
     public LibraryItem(string path, string folder, DateTime added)
     {
@@ -35,6 +37,8 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public string Artist => _artist;
 
+    public string Album => Track?.Album ?? string.Empty;
+
     public string DurationText => _durationText;
 
     public string Details => string.IsNullOrEmpty(_artist)
@@ -46,6 +50,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public bool HasTags => Track is not null;
 
+    /// <summary>The title, artist, album and file name, ready for the library's search box to look in.</summary>
+    public string SearchKey => _searchKey ??= SearchText.Key(new[] { _title, _artist, Album, FileName });
+
     public Track ToTrack() => Track ?? Track.FromFile(Path);
 
     public void ApplyTags(Track track)
@@ -54,6 +61,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
         _title = track.Title;
         _artist = track.Artist;
         _durationText = track.DurationText;
+        _searchKey = null;
         Raise(nameof(Title));
         Raise(nameof(Artist));
         Raise(nameof(DurationText));
