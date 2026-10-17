@@ -74,6 +74,7 @@ public static class AudioTools
         Watch(owner);
         var window = new EditorWindow(path, player) { Owner = owner };
         Editors.Add(window);
+        (Application.Current.MainWindow as MainWindow)?.AddToSnapping(window);
         window.Closing += (_, e) =>
         {
             // This runs after the editor's own check. Refused while idle means the user chose to keep
