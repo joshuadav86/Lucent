@@ -1,0 +1,285 @@
+<w:ToolWindow xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:w="using:Lucent.Mac.Windows"
+              xmlns:local="using:Lucent.Mac"
+              xmlns:vis="using:WinampInspiredVisualizer.Visualizer"
+              x:Class="Lucent.Mac.VisualizerWindow"
+              Title="Lucent visuals"
+              Width="820" Height="560" MinWidth="360" MinHeight="240"
+              Background="{DynamicResource SurfaceBrush}">
+
+    <Border x:Name="Frame" BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <Grid x:Name="WindowRoot" RowDefinitions="Auto,*,Auto">
+
+            <!-- Title bar -->
+            <Grid x:Name="TitleBar" Grid.Row="0" Height="34" ColumnDefinitions="*,Auto" Background="{DynamicResource TitleBarBrush}"
+                  w:Chrome.IsCaption="True" DoubleTapped="OnTitleBarDoubleTapped">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Grid Width="20" Height="20" VerticalAlignment="Center">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource VisualsScreenIcon}"
+                              Stroke="{DynamicResource MutedTextBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                        <Path Data="{StaticResource VisualsSparkIcon}" Fill="{DynamicResource AccentBrush}"
+                              HorizontalAlignment="Left" VerticalAlignment="Top" />
+                    </Grid>
+                    <TextBlock Text="VISUALS" Margin="8,0,0,0" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="VisualizerStatus" Margin="16,0,0,0" FontSize="11" MaxWidth="460"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                               Foreground="#E0A84F" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button x:Name="MaximizeButton" Theme="{StaticResource CaptionButton}" Height="34" Width="40" ToolTip.Tip="Maximize"
+                            Click="OnMaximizeRestore">
+                        <Path x:Name="MaximizeIcon" Theme="{StaticResource CaptionIcon}" Data="{StaticResource MaximizeIcon}" />
+                    </Button>
+                    <Button Theme="{StaticResource CloseCaptionButton}" Height="34" Width="40" ToolTip.Tip="Hide the visuals (W)"
+                            Click="OnHideWindow">
+                        <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- The Metal view is placed in here from code. Double-click it for fullscreen. -->
+            <Border x:Name="VisualizerFrame" Grid.Row="1" Background="Black" />
+
+            <!-- Visuals bar -->
+            <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6" ColumnDefinitions="*,Auto,*">
+
+                <!-- Frame rate readout, shown when "Show frame rate" is on in Options. -->
+                <TextBlock x:Name="FrameRateText" Grid.Column="0" Text="– fps" Margin="4,0,12,0" FontSize="11"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource MutedTextBrush}" IsVisible="False"
+                           ToolTip.Tip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Previous visual (B)" Click="OnPreviousPreset">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ArrowLeftIcon}" />
+                    </Button>
+                    <Button x:Name="PresetPickerButton" Theme="{StaticResource PickerButton}" Width="220" Margin="4,0"
+                            Padding="10,0,12,0" ToolTip.Tip="Choose a visual (V)" Click="OnTogglePresetPicker">
+                        <DockPanel>
+                            <!-- A screen with a spark in it: marks this as the place to pick the visuals. -->
+                            <Grid DockPanel.Dock="Left" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <Path Theme="{StaticResource LineIcon}" Data="{StaticResource VisualsScreenIcon}"
+                                      Stroke="{DynamicResource MutedTextBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                                <Path Data="{StaticResource VisualsSparkIcon}" Fill="{DynamicResource AccentBrush}"
+                                      HorizontalAlignment="Left" VerticalAlignment="Top" />
+                            </Grid>
+                            <Path DockPanel.Dock="Right" Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronUpIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                            <TextBlock x:Name="PresetName" Text="Loading visuals…" FontSize="12"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Next visual (N)" Click="OnNextPreset">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ArrowRightIcon}" />
+                    </Button>
+
+                    <!-- The visual picker: tag tick boxes on the left, the visuals (in family folders) on the right. -->
+                    <Popup x:Name="PresetPopup" PlacementTarget="{Binding #PresetPickerButton}"
+                           Placement="Top" VerticalOffset="-10" IsLightDismissEnabled="True"
+                           Closed="OnPresetPopupClosed">
+                        <Border Margin="16" Width="500" Padding="6" CornerRadius="{DynamicResource CardCorner}"
+                                Background="{DynamicResource SurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                                BoxShadow="0 0 24 0 #99000000">
+                            <Border.Resources>
+                                <!-- A tag's tick box: a small rounded box that fills with the accent colour when ticked. -->
+                                <ControlTheme x:Key="TagCheck" TargetType="CheckBox">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+                                    <Setter Property="FontSize" Value="12" />
+                                    <Setter Property="Cursor" Value="Hand" />
+                                    <Setter Property="Focusable" Value="False" />
+                                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                    <Setter Property="Template">
+                                        <ControlTemplate>
+                                            <Border Name="Row" Padding="6,5" Margin="0,1" CornerRadius="{DynamicResource TinyCorner}" Background="Transparent">
+                                                <DockPanel>
+                                                    <Border Name="Box" DockPanel.Dock="Left" Width="14" Height="14" Margin="0,0,8,0"
+                                                            CornerRadius="4" BorderThickness="1.2" VerticalAlignment="Center"
+                                                            BorderBrush="{DynamicResource FaintTextBrush}" Background="Transparent">
+                                                        <Path Name="Tick" Data="{StaticResource CheckIcon}" Width="8" Height="7" Stretch="Uniform"
+                                                              Stroke="{DynamicResource AccentForegroundBrush}" StrokeThickness="1.6"
+                                                              StrokeLineCap="Round" StrokeJoin="Round" Opacity="0" />
+                                                    </Border>
+                                                    <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                                                      ContentTemplate="{TemplateBinding ContentTemplate}" VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter>
+                                    <Style Selector="^:pointerover /template/ Border#Row">
+                                        <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                                    </Style>
+                                    <Style Selector="^:pointerover /template/ Border#Box">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource MutedTextBrush}" />
+                                    </Style>
+                                    <Style Selector="^:checked /template/ Border#Box">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                    </Style>
+                                    <Style Selector="^:checked /template/ Path#Tick">
+                                        <Setter Property="Opacity" Value="1" />
+                                    </Style>
+                                </ControlTheme>
+                            </Border.Resources>
+                            <Border.Styles>
+                                <!-- The visual picker's rows: the chosen visual's name in the accent colour, a starred one's star filled. -->
+                                <Style Selector="ListBox#PresetList ListBoxItem:selected TextBlock.label">
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                                </Style>
+                                <Style Selector="Path.star">
+                                    <Setter Property="Stroke" Value="{DynamicResource FaintTextBrush}" />
+                                    <Setter Property="Fill" Value="Transparent" />
+                                </Style>
+                                <Style Selector="Path.star.favorite">
+                                    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                                    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                </Style>
+                                <!-- A family folder's heading is the whole row: no row padding, hover or selection of its own. -->
+                                <Style Selector="ListBox#PresetList ListBoxItem.folder">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0" />
+                                    <Setter Property="Focusable" Value="False" />
+                                </Style>
+                                <Style Selector="ListBox#PresetList ListBoxItem.folder:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ListBox#PresetList ListBoxItem.folder:selected /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                            </Border.Styles>
+                            <Grid RowDefinitions="Auto,Auto,420" ColumnDefinitions="150,*">
+
+                                <!-- Search, then which visuals to show (and for Auto to play from): all, the favourites, or one of your lists. -->
+                                <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="4,4,4,2">
+                                    <Button x:Name="ListPickerButton" DockPanel.Dock="Right" Theme="{StaticResource PickerButton}"
+                                            Height="28" Padding="10,0" ToolTip.Tip="Show all visuals, your favorites or one of your lists"
+                                            Click="OnListMenu">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock x:Name="ListPickerLabel" Text="All visuals" FontSize="12" MaxWidth="130"
+                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                                  Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                                        </StackPanel>
+                                    </Button>
+                                    <!-- Family folders on or off. -->
+                                    <Button x:Name="GroupFamiliesButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Margin="0,0,6,0"
+                                            Content="FOLDERS" ToolTip.Tip="Show or hide the family folders" Click="OnToggleGroupFamilies" />
+                                    <!-- Search: shows only the visuals with every typed word in their name, family or tags.
+                                         (No right-click menu: opening one would close the picker. ⌘V still pastes.) -->
+                                    <Grid Margin="0,0,8,0">
+                                        <TextBox x:Name="SearchBox" Theme="{StaticResource SearchInput}" Watermark="Search by name, family or tag"
+                                                 ToolTip.Tip="Type to find visuals by name, family or tag. Return shows the first one, Esc clears the search."
+                                                 ContextFlyout="{x:Null}" ContextMenu="{x:Null}"
+                                                 TextChanged="OnSearchChanged" />
+                                        <Button x:Name="ClearSearchButton" Theme="{StaticResource IconButton}" Width="22" Height="22"
+                                                HorizontalAlignment="Right" Margin="0,0,3,0" IsVisible="False"
+                                                ToolTip.Tip="Clear the search (Esc)" Click="OnClearSearch">
+                                            <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                                        </Button>
+                                    </Grid>
+                                </DockPanel>
+                                <TextBlock x:Name="ListHint" Grid.Row="1" Grid.ColumnSpan="2" Theme="{StaticResource OptionHint}"
+                                           Margin="12,4,12,6" IsVisible="False" />
+
+                                <!-- Tags: tick some to show only the visuals with any of them. -->
+                                <Border Grid.Row="2" Grid.Column="0" Margin="0,4,6,0" Padding="0,0,6,0"
+                                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                                    <DockPanel>
+                                        <DockPanel DockPanel.Dock="Top" Margin="6,2,0,4" Height="24">
+                                            <Button x:Name="ClearTagsButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="22"
+                                                    Padding="8,0" Content="CLEAR" IsVisible="False"
+                                                    ToolTip.Tip="Untick every tag and show all the visuals again" Click="OnClearTags" />
+                                            <TextBlock Text="TAGS" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                        </DockPanel>
+                                        <TextBlock x:Name="TagHint" DockPanel.Dock="Bottom" Theme="{StaticResource OptionHint}" Margin="6,8,0,4"
+                                                   Text="Tick tags to show only the visuals with any of them." />
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                            <ItemsControl x:Name="TagList">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vis:VisualTag">
+                                                        <CheckBox Theme="{StaticResource TagCheck}" IsChecked="{Binding IsChecked}"
+                                                                  Opacity="{Binding Count, Converter={x:Static local:VisualizerWindow.FaintWhenNone}}"
+                                                                  Click="OnTagClick">
+                                                            <DockPanel>
+                                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" FontSize="11" Margin="8,0,2,0"
+                                                                           VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                            </DockPanel>
+                                                        </CheckBox>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- The visuals, in family folders that open or close (and stay that way next time). -->
+                                <ListBox x:Name="PresetList" Grid.Row="2" Grid.Column="1" Margin="0,4,0,0"
+                                         Background="Transparent" BorderThickness="0"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         KeyDown="OnPresetListKeyDown">
+                                    <ListBox.DataTemplates>
+                                        <DataTemplate x:DataType="local:VisualFamilyFolder">
+                                            <Expander Theme="{StaticResource FolderExpander}" IsExpanded="{Binding IsExpanded}"
+                                                      HorizontalAlignment="Stretch">
+                                                <Expander.Header>
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
+                                                                   Margin="8,0,2,0" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource FaintTextBrush}" />
+                                                        <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource MutedTextBrush}" />
+                                                    </DockPanel>
+                                                </Expander.Header>
+                                            </Expander>
+                                        </DataTemplate>
+                                        <DataTemplate x:DataType="vis:VisualChoice">
+                                            <DockPanel Background="Transparent" ToolTip.Tip="{Binding StyleText}">
+                                                <!-- Star: click to make it a favourite. -->
+                                                <Button DockPanel.Dock="Right" Theme="{StaticResource IconButton}" Width="24" Height="24"
+                                                        Margin="6,-4,-4,-4" Click="OnStarClick"
+                                                        ToolTip.Tip="{Binding IsFavorite, Converter={x:Static local:VisualizerWindow.StarTip}}">
+                                                    <Path Classes="star" Classes.favorite="{Binding IsFavorite}" Data="{StaticResource StarIcon}"
+                                                          StrokeThickness="1.2" StrokeJoin="Round" Width="12" Height="12" Stretch="Uniform" />
+                                                </Button>
+                                                <TextBlock Classes="label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ListBox.DataTemplates>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Popup>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <ToggleButton x:Name="FavoriteButton" Theme="{StaticResource PanelToggle}" Padding="8,0"
+                                  ToolTip.Tip="Make this visual a favorite (F)" Click="OnToggleFavorite">
+                        <Path x:Name="FavoriteIcon" Data="{StaticResource StarIcon}" StrokeThickness="1.3" StrokeJoin="Round"
+                              Stroke="{Binding $parent[ToggleButton].Foreground}"
+                              Fill="Transparent" Width="14" Height="14" Stretch="Uniform" />
+                    </ToggleButton>
+                    <!-- Auto mode: the pill turns it on or off (right-click it, or use the arrow, to choose how often it changes). -->
+                    <Button x:Name="AutoCycleButton" Theme="{StaticResource PillButton}" Content="AUTO · 25s"
+                            Margin="6,0,0,0" Foreground="{DynamicResource AccentBrush}"
+                            Click="OnToggleAutoCycle" />
+                    <Button x:Name="AutoCycleIntervalButton" Theme="{StaticResource IconButton}" Width="22" Height="26"
+                            Margin="1,0,6,0" ToolTip.Tip="How often Auto changes the visual" Click="OnAutoCycleIntervalMenu">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronUpIcon}" />
+                    </Button>
+                    <Button x:Name="FullscreenButton" Theme="{StaticResource IconButton}" Width="32" Height="32"
+                            ToolTip.Tip="Fullscreen visuals (⌃⌘F, Esc to exit)" Click="OnToggleFullscreen">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource FullscreenIcon}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</w:ToolWindow>

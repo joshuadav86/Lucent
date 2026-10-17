@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
@@ -9,6 +10,8 @@ namespace Lucent.Mac.Visuals;
 /// <summary>
 /// The part of the window the visuals draw into: a native macOS view backed by a Core Animation
 /// Metal layer, hosted in the Avalonia layout. It starts drawing as soon as macOS creates it.
+/// The view lets clicks through to the window beneath it, so they reach the Avalonia controls
+/// around it (the visuals' clicks, double-clicks and menu are handled there).
 /// </summary>
 public sealed class MetalView : NativeControlHost
 {
@@ -24,6 +27,9 @@ public sealed class MetalView : NativeControlHost
     /// <summary>Raised on the UI thread once the renderer exists, so the window can listen to it.</summary>
     public event EventHandler<MetalRenderer>? RendererStarted;
 
+    /// <summary>The NSView the visuals draw into, once macOS has made it.</summary>
+    public IntPtr NativeView => _view;
+
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
         if (!OperatingSystem.IsMacOS())
@@ -31,7 +37,7 @@ public sealed class MetalView : NativeControlHost
             return base.CreateNativeControlCore(parent);
         }
 
-        _view = ObjC.Send(ObjC.Send(ObjC.Class("NSView"), "alloc"), "initWithFrame:", new ObjC.CGRect { Width = 100, Height = 100 });
+        _view = ObjC.Send(ObjC.Send(ViewClass(), "alloc"), "initWithFrame:", new ObjC.CGRect { Width = 100, Height = 100 });
         _layer = ObjC.Send(ObjC.Send(ObjC.Class("CAMetalLayer"), "layer"), "retain");
         ObjC.SendVoid(_layer, "setDevice:", _engine.Device.NativePtr);
         ObjC.SendVoid(_layer, "setPixelFormat:", (ulong)MTLPixelFormat.BGRA8Unorm);
@@ -48,6 +54,13 @@ public sealed class MetalView : NativeControlHost
         RendererStarted?.Invoke(this, Renderer);
         return new PlatformHandle(_view, "NSView");
     }
+
+    /// <summary>An NSView that's never the target of a click: hitTest: answers nil, so AppKit hands the click to the window's own view.</summary>
+    private static unsafe IntPtr ViewClass() =>
+        ObjC.Subclass("LucentVisualsView", "NSView", ("hitTest:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, ObjC.CGPoint, IntPtr>)&HitTest, "@@:{CGPoint=dd}"));
+
+    [UnmanagedCallersOnly]
+    private static IntPtr HitTest(IntPtr self, IntPtr selector, ObjC.CGPoint point) => IntPtr.Zero;
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {

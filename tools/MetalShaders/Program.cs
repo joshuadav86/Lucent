@@ -1,3 +1,4 @@
+using Lucent.Mac.Visuals;
 using Lucent.MetalShaders;
 using WinampInspiredVisualizer.Visualizer;
 
@@ -17,7 +18,7 @@ var common = Read("Common.hlsli");
 var particles = Read("Particles.hlsli");
 var presetMain = Read("PresetMain.hlsli");
 var particleMain = Read("ParticleMain.hlsli");
-var engine = common + "\n" + Read("Engine.hlsl");
+var engine = MetalTranslation.EngineSource(common, Read("Engine.hlsl"));
 
 Directory.CreateDirectory(Path.Combine(output, "Presets"));
 var jobs = new List<(string Name, string Source, string Entry, string OutFile)>
@@ -26,7 +27,7 @@ var jobs = new List<(string Name, string Source, string Entry, string OutFile)>
     ("Engine.hlsl", engine, "PSPresent", "Engine.PSPresent.metal"),
     ("Engine.hlsl", engine, "PSBlend", "Engine.PSBlend.metal"),
     ("Engine.hlsl", engine, "PSDownsample", "Engine.PSDownsample.metal"),
-    ("Particles.hlsli", common + "\n" + particles, "PSSprite", "Particles.PSSprite.metal"),
+    ("Particles.hlsli", MetalTranslation.SpriteSource(common, particles), "PSSprite", "Particles.PSSprite.metal"),
 };
 
 foreach (var path in Directory.EnumerateFiles(Path.Combine(appFolder, "Presets"), "*.hlsl").Order())
@@ -34,18 +35,15 @@ foreach (var path in Directory.EnumerateFiles(Path.Combine(appFolder, "Presets")
     // Same assembly as the Windows renderer (Renderer.CompileLoop) and the build's fxc check.
     var preset = PresetSource.Load(path, File.ReadAllText(path));
     var fileName = Path.GetFileName(path);
-    var api = preset.IsParticles ? common + "\n" + particles : common;
-    var code = api + "\n#line 1\n" + preset.Code + "\n";
-    jobs.Add((fileName, code + presetMain, "PSMain", $"Presets/{fileName}.PSMain.metal"));
-    if (preset.IsParticles)
+    foreach (var entry in preset.IsParticles ? new[] { "PSMain", "CSMain", "VSParticle" } : new[] { "PSMain" })
     {
-        jobs.Add((fileName, code + particleMain, "CSMain", $"Presets/{fileName}.CSMain.metal"));
-        jobs.Add((fileName, code + particleMain, "VSParticle", $"Presets/{fileName}.VSParticle.metal"));
+        var code = MetalTranslation.PresetSource(common, particles, presetMain, particleMain, preset.Code, preset.IsParticles, entry);
+        jobs.Add((fileName, code, entry, $"Presets/{fileName}.{entry}.metal"));
     }
 }
 
 // Load SPIRV-Cross up front, so if it can't load that fails once, with the whole error.
-_ = ShaderTranslator.Dxc;
+MetalTranslation.LoadSpirvCross();
 
 var failures = 0;
 var translated = jobs.AsParallel().AsOrdered().Select(job =>

@@ -50,6 +50,8 @@ public static class Screenshots
         ("StoresSyncing", () => PreviewStores(signedIn: true, syncing: true)),
         ("StoresFirstSync", () => PreviewStores(signedIn: true, firstSync: true)),
         ("BandcampSignIn", () => new Lucent.Mac.Stores.BandcampSignInWindow()),
+        ("Visuals", () => PreviewVisuals()),
+        ("VisualsPicker", () => PreviewVisualsPicker()),
     };
 
     public static int Run(string[] args)
@@ -144,6 +146,46 @@ public static class Screenshots
         prompt.OkButton.Content = "Create";
         prompt.Answer.Text = "Late night";
         return prompt;
+    }
+
+    private static VisualizerWindow PreviewVisuals(string lastVisual = "Lava Lamp")
+    {
+        var settings = new AppSettings
+        {
+            LastVisual = lastVisual,
+            FavoriteVisuals = { "Lava Lamp", "Aurora", "Neural Bloom" },
+            VisualLists = { ["Late night"] = new List<string> { "Lava Lamp", "Neural Bloom" } },
+            ShowFrameRate = true,
+        };
+        var host = new Lucent.Mac.Visualizer.VisualizerHost(new WinampInspiredVisualizer.Audio.AudioCapture())
+        {
+            StartPresetName = settings.LastVisual,
+        };
+        var window = new VisualizerWindow();
+        window.Attach(host, settings);
+        window.ShowFrameRate(settings.ShowFrameRate);
+        Dispatcher.UIThread.RunJobs();
+        window.FrameRateText.Text = "60 fps · 1638 × 1012";
+        return window;
+    }
+
+    /// <summary>The visual picker, which opens above the visuals' bar, in a window of its own so it can be drawn.</summary>
+    private static Window PreviewVisualsPicker()
+    {
+        // The visuals load once their window is shown; then the picker moves to a window of its own.
+        var visuals = PreviewVisuals("Crystal Cavern");
+        visuals.Show();
+        Dispatcher.UIThread.RunJobs();
+        var picker = visuals.PresetPopup.Child!;
+        visuals.PresetPopup.Child = null;
+        visuals.Close();
+        return new Window
+        {
+            Width = 532,
+            SizeToContent = SizeToContent.Height,
+            Background = Avalonia.Media.Brushes.Transparent,
+            Content = picker,
+        };
     }
 
     private static Window PreviewMessage()

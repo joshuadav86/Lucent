@@ -18,6 +18,8 @@
     <Version>0.1.0</Version>
     <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
     <MetalShadersFolder Condition="'$(MetalShadersFolder)' == ''">$(MSBuildThisFileDirectory)../../artifacts/metal-shaders</MetalShadersFolder>
+    <!-- DXC's library for macOS (libdxcompiler.dylib, built in CI), which translates the user's own visuals as the app runs. -->
+    <DxcLibraryFolder Condition="'$(DxcLibraryFolder)' == ''">$(MSBuildThisFileDirectory)../../artifacts/dxc-mac</DxcLibraryFolder>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +30,9 @@
     <PackageReference Include="SharpMetal" Version="1.1.0" />
     <!-- In-app updates, the same version as the Windows app's. -->
     <PackageReference Include="Velopack" Version="1.2.161" />
+    <!-- SPIRV-Cross, for translating the user's own visuals to Metal as the app runs (with DXC, below). -->
+    <PackageReference Include="Silk.NET.SPIRV.Cross" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.SPIRV.Cross.Native" Version="2.23.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,9 +42,16 @@
   <ItemGroup>
     <!-- The visuals' HLSL files, for their names, families, tags and particle counts. -->
     <None Include="..\WinampInspiredVisualizer\Presets\*.hlsl" Link="Presets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The engine's HLSL, which the user's own visuals are assembled with before they're translated. -->
+    <None Include="..\WinampInspiredVisualizer\Shaders\*.hlsl*" Link="Shaders\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Their Metal translations, from tools/MetalShaders. -->
     <None Include="$(MetalShadersFolder)\**\*.metal" Link="Shaders\Metal\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\WinampInspiredVisualizer\Assets\Lucent-64.png" Link="Assets\Lucent-64.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('$(DxcLibraryFolder)/libdxcompiler.dylib')">
+    <None Include="$(DxcLibraryFolder)/libdxcompiler.dylib" Link="libdxcompiler.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(DxcLibraryFolder)/LICENSE-*.txt" Link="Licenses/DXC/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="WarnWithoutMetalShaders" BeforeTargets="Build" Condition="!Exists('$(MetalShadersFolder)')">
