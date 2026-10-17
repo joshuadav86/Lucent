@@ -268,6 +268,7 @@ public partial class LibraryWindow : ToolWindow
             LibraryFolderList.Remove(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder);
         }
 
+        HighlightFolders(Array.Empty<string>());
         ApplyLibraryFolders();
     }
 
@@ -399,7 +400,14 @@ public partial class LibraryWindow : ToolWindow
         {
             // A folder heading, or the empty space below the songs, gets the folder menu instead.
             e.Handled = true;
-            OpenFolderMenu(Ancestor<GroupItem>(source)?.DataContext as CollectionViewGroup);
+            if (Ancestor<GroupItem>(source)?.DataContext is CollectionViewGroup { Name: { } name }
+                && !_highlightedFolders.Contains(name.ToString() ?? string.Empty))
+            {
+                // Right-clicking a heading outside the highlight highlights just that one.
+                HighlightFolders(new[] { name.ToString() ?? string.Empty });
+            }
+
+            OpenFolderMenu();
             return;
         }
 
@@ -429,14 +437,15 @@ public partial class LibraryWindow : ToolWindow
         }
     }
 
-    /// <summary>The menu for a folder heading: play it, or add and remove library folders.</summary>
-    private void OpenFolderMenu(CollectionViewGroup? group)
+    /// <summary>The menu for the highlighted folder headings: play them, or add and remove library folders.</summary>
+    private void OpenFolderMenu()
     {
         var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.MousePoint };
-        var songs = group?.Items.OfType<LibraryItem>().ToList() ?? new List<LibraryItem>();
+        var groups = HighlightedGroups();
+        var songs = groups.SelectMany(group => group.Items.OfType<LibraryItem>()).ToList();
         if (songs.Count > 0)
         {
-            var play = new MenuItem { Header = "Play this folder" };
+            var play = new MenuItem { Header = groups.Count == 1 ? "Play this folder" : "Play these folders" };
             play.Click += async (_, _) =>
             {
                 var tracks = await Task.Run(() => songs.Select(item => item.ToTrack()).ToList());
@@ -456,8 +465,14 @@ public partial class LibraryWindow : ToolWindow
         menu.Items.Add(AddFolderMenuItem());
         if (songs.Count > 0)
         {
+            var remove = RemoveFoldersMenuItem(HighlightedDirectories());
+            remove.InputGestureText = "Del";
+            menu.Items.Add(remove);
+        }
+
+        if (groups.Count == 1 && songs.Count > 0)
+        {
             var directory = songs[0].Directory;
-            menu.Items.Add(RemoveFoldersMenuItem(new[] { directory }));
             menu.Items.Add(new Separator());
             var show = new MenuItem { Header = "Show in File Explorer" };
             show.Click += (_, _) => Player?.ShowInExplorer(directory);
@@ -465,6 +480,123 @@ public partial class LibraryWindow : ToolWindow
         }
 
         menu.IsOpen = true;
+    }
+
+    // ---- Highlighting folder headings ----
+    // Ctrl+click a heading to highlight it, Shift+click to highlight a run of them, then right-click
+    // them or press Delete to take them out of the library. A plain click still opens or closes one.
+
+    private readonly HashSet<string> _highlightedFolders = new(StringComparer.OrdinalIgnoreCase);
+    private string? _folderAnchor;
+
+    private void OnFolderHeadingMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // Only the heading itself; clicks on the songs inside the folder go to the list as usual.
+        if (sender is not Expander { DataContext: CollectionViewGroup group } expander
+            || Ancestor<ToggleButton>(e.OriginalSource as DependencyObject) is not { } heading
+            || Ancestor<Expander>(heading) != expander)
+        {
+            return;
+        }
+
+        var name = group.Name?.ToString() ?? string.Empty;
+        var modifiers = Keyboard.Modifiers;
+        if (modifiers.HasFlag(ModifierKeys.Shift) && _folderAnchor is not null)
+        {
+            var names = GroupNames();
+            var from = names.FindIndex(n => string.Equals(n, _folderAnchor, StringComparison.OrdinalIgnoreCase));
+            var to = names.IndexOf(name);
+            if (from >= 0 && to >= 0)
+            {
+                var run = names.GetRange(Math.Min(from, to), Math.Abs(to - from) + 1);
+                HighlightFolders(modifiers.HasFlag(ModifierKeys.Control) ? _highlightedFolders.Concat(run) : run, keepAnchor: true);
+            }
+        }
+        else if (modifiers.HasFlag(ModifierKeys.Control) || modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            var highlighted = _highlightedFolders.ToList();
+            if (!highlighted.Remove(name))
+            {
+                highlighted.Add(name);
+            }
+
+            HighlightFolders(highlighted);
+            _folderAnchor = name;
+        }
+        else
+        {
+            // A plain click opens or closes the folder, and ends any highlight.
+            HighlightFolders(Array.Empty<string>());
+            return;
+        }
+
+        // Keep the folder open or closed, and take the keys so Delete works next.
+        e.Handled = true;
+        LibraryView.UnselectAll();
+        LibraryView.Focus();
+    }
+
+    private void HighlightFolders(IEnumerable<string> names, bool keepAnchor = false)
+    {
+        var list = names.ToList();
+        _highlightedFolders.Clear();
+        _highlightedFolders.UnionWith(list);
+        if (!keepAnchor)
+        {
+            _folderAnchor = list.LastOrDefault();
+        }
+
+        foreach (var expander in Descendants<Expander>(LibraryView))
+        {
+            ShowHighlight(expander);
+        }
+    }
+
+    private void ShowHighlight(Expander expander) =>
+        expander.Tag = expander.DataContext is CollectionViewGroup group
+            && _highlightedFolders.Contains(group.Name?.ToString() ?? string.Empty);
+
+    private List<string> GroupNames() =>
+        _libraryView?.Groups?.Cast<CollectionViewGroup>().Select(group => group.Name?.ToString() ?? string.Empty).ToList()
+        ?? new List<string>();
+
+    private List<CollectionViewGroup> HighlightedGroups() =>
+        _libraryView?.Groups?.Cast<CollectionViewGroup>()
+            .Where(group => _highlightedFolders.Contains(group.Name?.ToString() ?? string.Empty))
+            .ToList()
+        ?? new List<CollectionViewGroup>();
+
+    /// <summary>The folders on disk behind the highlighted headings.</summary>
+    private List<string> HighlightedDirectories() => HighlightedGroups()
+        .Select(group => group.Items.OfType<LibraryItem>().FirstOrDefault()?.Directory)
+        .OfType<string>()
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private void OnLibrarySelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Picking songs ends the folder highlight, so Delete never acts on something out of sight.
+        if (LibraryView.SelectedItems.Count > 0 && _highlightedFolders.Count > 0)
+        {
+            HighlightFolders(Array.Empty<string>());
+        }
+    }
+
+    private static IEnumerable<T> Descendants<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+            {
+                yield return match;
+            }
+
+            foreach (var descendant in Descendants<T>(child))
+            {
+                yield return descendant;
+            }
+        }
     }
 
     private static T? Ancestor<T>(DependencyObject? element) where T : DependencyObject
@@ -484,6 +616,8 @@ public partial class LibraryWindow : ToolWindow
     {
         if (sender is Expander { DataContext: CollectionViewGroup group } expander)
         {
+            ShowHighlight(expander);
+
             // While searching every heading is open, so no match is hidden in a closed one.
             expander.IsExpanded = IsSearching || !_collapsedFolders.Contains(group.Name?.ToString() ?? string.Empty);
         }
@@ -539,6 +673,20 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnLibraryKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Delete && _highlightedFolders.Count > 0)
+        {
+            RemoveLibraryFolders(HighlightedDirectories());
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape && _highlightedFolders.Count > 0)
+        {
+            HighlightFolders(Array.Empty<string>());
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Enter && SelectedLibraryItems().FirstOrDefault() is { } item)
         {
             Player?.PlayFromLibrary(item);
