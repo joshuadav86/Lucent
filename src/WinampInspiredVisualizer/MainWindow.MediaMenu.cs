@@ -1,6 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Threading;
+using WinampInspiredVisualizer.Playlist;
 
 namespace WinampInspiredVisualizer;
 
@@ -8,7 +11,8 @@ namespace WinampInspiredVisualizer;
 public partial class MainWindow
 {
     /// <summary>
-    /// Adds what's playing, play or pause, stop, next and previous track, and a volume slider, so the
+    /// Adds what's playing, a bar to move through the song, play or pause, stop, next and previous
+    /// track, and a volume slider, so the
     /// music can be controlled without leaving fullscreen.
     /// </summary>
     public void AddPlaybackItems(ItemsControl menu)
@@ -22,11 +26,81 @@ public partial class MainWindow
             });
         }
 
+        if (_player.HasTrack && _player.Duration > TimeSpan.Zero)
+        {
+            menu.Items.Add(SeekItem());
+        }
+
         menu.Items.Add(PlaybackItem(_player.IsPlaying ? "Pause" : "Play", "Space", TogglePlayPause));
         menu.Items.Add(PlaybackItem("Stop", "", StopPlayback));
         menu.Items.Add(PlaybackItem("Next track", "X", () => PlayNext(wrap: true)));
         menu.Items.Add(PlaybackItem("Previous track", "Z", PlayPrevious));
         menu.Items.Add(VolumeItem());
+    }
+
+    private MenuItem SeekItem()
+    {
+        var duration = _player.Duration;
+        var time = new TextBlock { Width = 82, VerticalAlignment = VerticalAlignment.Center };
+        var slider = new Slider
+        {
+            Minimum = 0,
+            Maximum = duration.TotalSeconds,
+            Value = Math.Min(_player.Position.TotalSeconds, duration.TotalSeconds),
+            Width = 150,
+            VerticalAlignment = VerticalAlignment.Center,
+            Focusable = false,
+            IsMoveToPointEnabled = true,
+        };
+
+        var dragging = false;
+        var updating = false;
+        void ShowTime() => time.Text = TimeFormat.Format(TimeSpan.FromSeconds(slider.Value));
+        ShowTime();
+
+        // The bar follows the song while the menu is open, except while it's being dragged.
+        var follow = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        follow.Tick += (_, _) =>
+        {
+            if (dragging || !_player.HasTrack)
+            {
+                return;
+            }
+
+            updating = true;
+            slider.Value = Math.Min(_player.Position.TotalSeconds, slider.Maximum);
+            updating = false;
+            ShowTime();
+        };
+        slider.Loaded += (_, _) => follow.Start();
+        slider.Unloaded += (_, _) => follow.Stop();
+
+        // Like the player's own bar: dragging shows the time and jumps when let go, a click jumps
+        // straight there, and the mouse wheel skips 5 seconds.
+        slider.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => dragging = true));
+        slider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler((_, _) =>
+        {
+            dragging = false;
+            _player.Position = TimeSpan.FromSeconds(slider.Value);
+        }));
+        slider.ValueChanged += (_, e) =>
+        {
+            ShowTime();
+            if (!updating && !dragging)
+            {
+                _player.Position = TimeSpan.FromSeconds(e.NewValue);
+            }
+        };
+        slider.PreviewMouseWheel += (_, e) =>
+        {
+            slider.Value = Math.Clamp(slider.Value + Math.Sign(e.Delta) * 5, 0, slider.Maximum);
+            e.Handled = true;
+        };
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(time);
+        row.Children.Add(slider);
+        return new MenuItem { Header = row, StaysOpenOnClick = true };
     }
 
     private MenuItem VolumeItem()
