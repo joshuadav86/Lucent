@@ -1,5 +1,7 @@
 // Name: Aurora Veil
 // Ribbons of northern lights that sway with the mids and shimmer with the treble.
+// Family: Organic
+// Tags: Calm, Colourful
 
 float3 Render(float2 uv, float2 p)
 {

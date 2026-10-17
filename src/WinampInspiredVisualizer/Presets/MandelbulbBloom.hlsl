@@ -1,5 +1,7 @@
 // Name: Mandelbulb Bloom
 // A ray-marched Mandelbulb turning in the dark while each of its levels slowly twists, so its petals coil, unfurl and bloom again.
+// Family: Fractal
+// Tags: Dark, 3D
 
 // Distance to a power-8 Mandelbulb (trig-free form), with an orbit trap for colour. Each iteration is
 // pre-rotated by a slowly changing angle, which twists the petals so the bulb keeps blooming.

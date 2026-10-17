@@ -1,5 +1,7 @@
 // Name: Ink Flow
 // Marbled inks swirl on black water in glossy combed ribbons edged with gold, each ribbon glowing with its own slice of the spectrum.
+// Family: Organic
+// Tags: Calm, Colourful, Water
 
 // Twists the plane around a drifting vortex. The twist winds up and slowly unwinds again.
 float2 inkVortex(float2 q, float seed)

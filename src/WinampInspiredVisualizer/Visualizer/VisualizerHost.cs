@@ -82,6 +82,9 @@ public sealed class VisualizerHost : HwndHost
         return Enumerable.Range(0, names.Count).Where(index => wanted.Contains(names[index])).ToList();
     }
 
+    /// <summary>Every visual (with its family and tags), in the order <see cref="PresetIndex"/> counts them; empty until they load.</summary>
+    public IReadOnlyList<PresetSource> Presets => _renderer?.Presets ?? Array.Empty<PresetSource>();
+
     /// <summary>The visual to start with (by name), usually the one showing when the app last closed.</summary>
     public string? StartPresetName { get; set; }
 

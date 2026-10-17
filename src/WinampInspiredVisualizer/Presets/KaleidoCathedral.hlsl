@@ -1,5 +1,7 @@
 // Name: Kaleido Cathedral
 // Racing down the nave of an infinite fractal cathedral that folds itself like a kaleidoscope.
+// Family: Kaleidoscope
+// Tags: Intense, Colourful, 3D
 
 float block(float3 p, float3 size)
 {

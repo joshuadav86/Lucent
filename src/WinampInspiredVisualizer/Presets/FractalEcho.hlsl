@@ -1,5 +1,7 @@
 // Name: Fractal Echo
 // A hall of mirrors: each corner holds a smaller, spinning copy of the whole picture.
+// Family: Kaleidoscope
+// Tags: Dark, Neon, Retro
 
 float3 Render(float2 uv, float2 p)
 {

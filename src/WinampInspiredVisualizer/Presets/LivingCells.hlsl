@@ -1,5 +1,7 @@
 // Name: Living Cells
 // Glowing plant cells under the microscope, chloroplasts streaming round and round inside their wavy walls, as waves of light ripple from cell to cell on every beat.
+// Family: Organic
+// Tags: Calm, Neon
 
 // Where the centre of grid cell `cell` is now, wandering inside its square.
 float2 cellCentre(float2 cell)

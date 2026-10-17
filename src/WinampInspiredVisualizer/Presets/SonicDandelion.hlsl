@@ -1,5 +1,7 @@
 // Name: Sonic Dandelion
 // A glowing seed head of four thousand filaments, each one a band of the spectrum, stretching, swaying and bursting outward with the music as it turns in the dark.
+// Family: Particles
+// Tags: Colourful
 // Particles: 262144
 
 // Each filament is a line of dots from the surface of the head out to its tip.

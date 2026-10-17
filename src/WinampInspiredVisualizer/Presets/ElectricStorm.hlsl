@@ -1,5 +1,7 @@
 // Name: Electric Storm
 // White-hot lightning cracks through a churning storm on every beat, leaving afterimages that ripple outward and melt through the spectrum.
+// Family: Organic
+// Tags: Intense, Dark
 
 // Sideways wander of a bolt at x (in units of the bolt's length), from octave `first` up to `last`.
 float stormWander(float x, float seed, int first, int last)

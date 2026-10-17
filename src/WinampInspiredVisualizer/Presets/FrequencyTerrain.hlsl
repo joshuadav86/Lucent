@@ -1,5 +1,7 @@
 // Name: Frequency Terrain
 // Gliding over liquid hills sculpted from the last few seconds of the spectrum, with rainbow contours flowing up their slopes.
+// Family: Music-shaped
+// Tags: Colourful, Neon, 3D
 
 // The spectrum's history lives in a 48x30 pixel block in the top-left corner of the feedback
 // buffer (bands across, one row per moment), stored far too dim to see.

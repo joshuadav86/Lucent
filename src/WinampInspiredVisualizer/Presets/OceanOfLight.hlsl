@@ -1,5 +1,7 @@
 // Name: Ocean of Light
 // Gliding over a night sea whose breaking crests blaze with bioluminescent lace beneath wheeling star trails; every beat sends a ring of light racing across the water.
+// Family: Organic
+// Tags: Calm, Dark, Water
 
 static const float2x2 SeaTurn = float2x2(1.6, 1.2, -1.2, 1.6);
 

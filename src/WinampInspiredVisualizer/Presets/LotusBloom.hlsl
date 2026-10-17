@@ -1,6 +1,8 @@
 // Name: Lotus Bloom
 // A lotus that never stops opening: rings of veined, glowing petals are born at the golden seed pod,
 // unfold outward layer after layer, flare open on the beat and stretch with the spectrum.
+// Family: Kaleidoscope
+// Tags: Calm, Colourful
 
 float lbStroke(float d, float halfWidth, float px)
 {

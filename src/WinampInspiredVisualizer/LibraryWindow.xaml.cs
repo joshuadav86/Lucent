@@ -329,6 +329,17 @@ public partial class LibraryWindow : ToolWindow
     private void OnLibraryEditInfo(object sender, RoutedEventArgs e) =>
         Player?.EditInfo(SelectedLibraryItems().Select(item => item.Path));
 
+    private void OnLibraryOpenInEditor(object sender, RoutedEventArgs e)
+    {
+        if (SelectedLibraryItems().FirstOrDefault() is { } item)
+        {
+            Player?.OpenInEditor(this, item.Path);
+        }
+    }
+
+    private void OnLibraryConvert(object sender, RoutedEventArgs e) =>
+        Player?.ConvertFiles(this, SelectedLibraryItems().Select(item => item.Path).ToList());
+
     private void OnLibraryShowInExplorer(object sender, RoutedEventArgs e)
     {
         if (SelectedLibraryItems().FirstOrDefault() is { } item)

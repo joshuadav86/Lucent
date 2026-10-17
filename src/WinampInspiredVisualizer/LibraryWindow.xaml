@@ -77,6 +77,8 @@
                         <MenuItem Header="Play this folder" Click="OnLibraryPlayFolder" />
                         <Separator x:Name="SongMenuItemsStart" />
                         <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnLibraryEditInfo" />
+                        <MenuItem Header="Open in editor…" Click="OnLibraryOpenInEditor" />
+                        <MenuItem Header="Convert to…" Click="OnLibraryConvert" />
                         <MenuItem Header="Show in File Explorer" Click="OnLibraryShowInExplorer" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
