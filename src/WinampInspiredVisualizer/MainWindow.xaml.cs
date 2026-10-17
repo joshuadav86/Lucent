@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Interop;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -34,7 +35,6 @@ public partial class MainWindow : Window
     private readonly AudioPlayer _player = new();
     private readonly ObservableCollection<PlaylistEntry> _playlist = new();
     private readonly DispatcherTimer _positionTimer;
-    private readonly DispatcherTimer _meterTimer;
     private readonly VisualizerHost _visualizer;
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly MusicLibrary _library = new();
@@ -93,15 +93,9 @@ public partial class MainWindow : Window
 
         _meter = new SpectrumMeter(_player.Capture) { Mode = _settings.Meter };
         MeterHost.Child = _meter;
-        _meterTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
-        _meterTimer.Tick += (_, _) =>
-        {
-            if (WindowState != WindowState.Minimized)
-            {
-                _meter.Tick();
-            }
-        };
-        _meterTimer.Start();
+        // The meter redraws with every frame the screen shows (usually 60 a second or more),
+        // so it moves as smoothly as the visuals; a timer would hold it to about 20.
+        CompositionTarget.Rendering += OnMeterFrame;
 
         _visualizer = new VisualizerHost(_player.Capture);
         _visualizer.DisplayChanged += (_, display) =>
@@ -143,6 +137,14 @@ public partial class MainWindow : Window
         ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
         UpdatePlayPauseButton();
         ShowNowPlaying(null);
+    }
+
+    private void OnMeterFrame(object? sender, EventArgs e)
+    {
+        if (WindowState != WindowState.Minimized)
+        {
+            _meter.Tick();
+        }
     }
 
     /// <summary>True once the player is closing, so the other windows close for real instead of hiding.</summary>
@@ -187,6 +189,13 @@ public partial class MainWindow : Window
         if (_settings.ShowLibrary)
         {
             _libraryWindow.Show();
+        }
+
+        // Every window gets its real (hidden) window now, so ones that start switched off still move
+        // with the player while it's dragged, and turn up docked where they belong.
+        foreach (var window in ToolWindows)
+        {
+            new WindowInteropHelper(window).EnsureHandle();
         }
 
         UpdateWindowToggles();
@@ -246,6 +255,70 @@ public partial class MainWindow : Window
         window.Top = Math.Clamp(Top, work.Top, Math.Max(work.Top, work.Bottom - window.Height));
     }
 
+    /// <summary>Docks a window back against the player: the queue under it, the visuals to its right, the library to its left.</summary>
+    private void PlaceBesidePlayer(ToolWindow window)
+    {
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        if (window == _queue)
+        {
+            window.Left = Left;
+            window.Top = Top + ActualHeight;
+            window.Width = ActualWidth;
+        }
+        else if (window == _visuals)
+        {
+            window.Left = Left + ActualWidth;
+            window.Top = Top;
+            window.Height = Math.Max(window.Height, ActualHeight + (_queue.IsVisible ? _queue.ActualHeight : 0));
+        }
+        else
+        {
+            window.Left = Left - (window.ActualWidth > 0 ? window.ActualWidth : window.Width);
+            window.Top = Top;
+        }
+    }
+
+    private void OnArrangeWindows(object sender, RoutedEventArgs e) => ArrangeWindows();
+
+    /// <summary>Puts every window back together around the player, as on the first run, and remembers it.</summary>
+    private void ArrangeWindows()
+    {
+        foreach (var window in ToolWindows)
+        {
+            if (window.WindowState != WindowState.Normal && !(window == _visuals && _visuals.IsFullscreen))
+            {
+                window.WindowState = WindowState.Normal;
+            }
+        }
+
+        if (_visuals.IsFullscreen)
+        {
+            _visuals.ToggleFullscreen();
+        }
+
+        WindowState = WindowState.Normal;
+        ArrangeFirstTime();
+        SavePlacements();
+    }
+
+    private static bool IsOnScreen(Window window) =>
+        IsOnScreen(new Rect(window.Left, window.Top, window.ActualWidth > 0 ? window.ActualWidth : window.Width,
+            window.ActualHeight > 0 ? window.ActualHeight : window.Height));
+
+    /// <summary>True when enough of the rectangle is on the screens to grab its title bar.</summary>
+    private static bool IsOnScreen(Rect bounds)
+    {
+        if (double.IsNaN(bounds.Left) || double.IsNaN(bounds.Top) || double.IsNaN(bounds.Width) || double.IsNaN(bounds.Height))
+        {
+            return false;
+        }
+
+        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+            SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+        var visible = Rect.Intersect(screen, bounds);
+        return !visible.IsEmpty && visible.Width >= 100 && visible.Height >= 40;
+    }
+
     /// <summary>A saved position, if it's still on one of the screens.</summary>
     private WindowBounds? Saved(string name)
     {
@@ -254,10 +327,7 @@ public partial class MainWindow : Window
             return null;
         }
 
-        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
-            SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
-        var visible = Rect.Intersect(screen, new Rect(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
-        return visible.IsEmpty || visible.Width < 100 || visible.Height < 40 ? null : bounds;
+        return IsOnScreen(new Rect(bounds.Left, bounds.Top, bounds.Width, bounds.Height)) ? bounds : null;
     }
 
     private void SavePlacements()
@@ -313,6 +383,12 @@ public partial class MainWindow : Window
         if (!window.IsLoaded && Saved(window.PlacementName) is null)
         {
             RestorePlacement(window);
+        }
+
+        // A window left on a screen that's since been unplugged (or turned off) comes back beside the player.
+        if (!IsOnScreen(window))
+        {
+            PlaceBesidePlayer(window);
         }
 
         window.Show();
@@ -990,6 +1066,9 @@ public partial class MainWindow : Window
             case Key.Q:
                 ToggleWindow(_queue);
                 break;
+            case Key.D:
+                ArrangeWindows();
+                break;
             case Key.L:
                 ToggleWindow(_libraryWindow);
                 break;
@@ -1207,7 +1286,7 @@ public partial class MainWindow : Window
         _settings.Save();
         _library.Dispose();
         _positionTimer.Stop();
-        _meterTimer.Stop();
+        CompositionTarget.Rendering -= OnMeterFrame;
         _visualizer.Dispose();
         _player.Dispose();
     }

@@ -8,7 +8,7 @@ namespace WinampInspiredVisualizer.Windows;
 
 /// <summary>
 /// The little meter in the player window, like Winamp's: spectrum bars with falling peak
-/// caps, or an oscilloscope line. It analyzes the music itself, about 30 times a second.
+/// caps, or an oscilloscope line. It analyzes the music itself, every frame.
 /// </summary>
 public sealed class SpectrumMeter : FrameworkElement
 {
@@ -38,7 +38,7 @@ public sealed class SpectrumMeter : FrameworkElement
         }
     }
 
-    /// <summary>Reads the newest audio and redraws. Called by the player window's timer.</summary>
+    /// <summary>Reads the newest audio and redraws. Called by the player window once per screen frame.</summary>
     public void Tick()
     {
         var now = DateTime.UtcNow;

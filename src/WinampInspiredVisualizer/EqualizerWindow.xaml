@@ -145,7 +145,7 @@
         </Grid>
 
         <!-- On/off, band count, presets and reset -->
-        <DockPanel Margin="16,2,16,0">
+        <DockPanel x:Name="HeaderRow" Margin="16,2,16,0">
             <CheckBox x:Name="EnabledSwitch" DockPanel.Dock="Left" Style="{StaticResource SwitchToggle}" Content="On"
                       VerticalAlignment="Center" ToolTip="Turn the equalizer on or off, to hear the difference"
                       Click="OnEnabledClicked" />
@@ -180,7 +180,7 @@
         </DockPanel>
 
         <!-- The response curve sits directly above the band sliders, lined up with them. -->
-        <Grid x:Name="SliderArea" Margin="16,14,16,0">
+        <Grid x:Name="SliderArea" Margin="16,14,16,0" HorizontalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />

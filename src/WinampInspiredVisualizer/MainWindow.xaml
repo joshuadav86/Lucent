@@ -272,7 +272,13 @@
                 </StackPanel>
 
                 <!-- Each lights up while its window is open. -->
-                <StackPanel x:Name="WindowToggles" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <StackPanel x:Name="WindowToggles" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Background="Transparent">
+                    <StackPanel.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Dock all windows to the player" InputGestureText="D" Click="OnArrangeWindows" />
+                        </ContextMenu>
+                    </StackPanel.ContextMenu>
                     <ToggleButton x:Name="VisualsToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
                                   Content="Visuals" ToolTip="Show or hide the visuals (W)" Click="OnToggleVisuals" />
                     <ToggleButton x:Name="QueueToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
