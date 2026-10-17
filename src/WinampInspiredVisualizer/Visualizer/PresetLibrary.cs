@@ -23,8 +23,12 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     /// <summary>The folder the visual picker lists it in, from a "// Family: Fractal" line ("Other" without one).</summary>
     public string Family { get; } = VisualStyles.FamilyName(ReadHeader(FamilyPattern, Code));
 
-    /// <summary>The picker's tick boxes it answers to, from a "// Tags: Calm, Space" line (none without one).</summary>
-    public IReadOnlyList<string> Tags { get; } = VisualStyles.TagNames(ReadHeader(TagsPattern, Code));
+    /// <summary>
+    /// The picker's tick boxes it answers to, from a "// Tags: Calm, Space" line (none without one).
+    /// Particle visuals are always tagged Particles too.
+    /// </summary>
+    public IReadOnlyList<string> Tags { get; } = VisualStyles.TagNames(
+        ReadHeader(TagsPattern, Code) + (SimulatePattern.IsMatch(Code) ? $", {VisualStyles.ParticlesTag}" : string.Empty));
 
     private static string? ReadHeader(Regex pattern, string code)
     {
