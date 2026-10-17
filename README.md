@@ -3,7 +3,7 @@
 <h1 align="center">Lucent</h1>
 
 <p align="center"><b>Winamp's soul, a 2026 graphics card's muscle.</b><br>
-A music player for Windows with 143 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
+A music player for Windows with 141 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
 
 <p align="center">
   <a href="../../releases/tag/latest"><img src="https://img.shields.io/badge/download-latest%20build-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download the latest build"></a>
@@ -11,13 +11,13 @@ A music player for Windows with 143 live GPU visuals, ray-traced scenes and part
 
 <p align="center">
   <img src="https://img.shields.io/badge/Windows-10%20%26%2011-22D3EE?style=flat-square" alt="Windows 10 and 11">
-  <img src="https://img.shields.io/badge/visuals-143-D946EF?style=flat-square" alt="143 visuals">
+  <img src="https://img.shields.io/badge/visuals-141-D946EF?style=flat-square" alt="141 visuals">
   <img src="https://img.shields.io/badge/Direct3D-11-F97316?style=flat-square" alt="Direct3D 11">
   <img src="https://img.shields.io/badge/license-MIT-10B981?style=flat-square" alt="MIT license">
 </p>
 
 <p align="center">
-  <a href="#143-visuals">Visuals</a> ·
+  <a href="#141-visuals">Visuals</a> ·
   <a href="#the-player">Player</a> ·
   <a href="#equalizer">Equalizer</a> ·
   <a href="#analyzer">Analyzer</a> ·
@@ -32,19 +32,19 @@ A music player for Windows with 143 live GPU visuals, ray-traced scenes and part
 
 | | |
 |---|---|
-| ✨ **50 new visuals** | Ray-traced glass, chrome and planets, plus particle storms of fire, smoke, sparks and starlings. 143 in all. |
+| ✨ **49 new visuals** | Ray-traced glass, chrome and planets, plus particle storms of fire, smoke, sparks and starlings. 141 in all. |
 | 📊 **Analyzer** | A scrolling spectrogram heatmap like Winamp's Vision plugin, with a live spectrum, waveform and stereo spread scope. |
 | 🎨 **Skins** | Five skins change the shape, type and finish of every window, and any skin goes with any of the eight themes. |
 | 🎚️ **Studio equalizer** | 4, 8, 16, 24 or 32 mixing-desk faders over the music's live spectrum. |
 | 🧲 **Smoother snapping** | Docked windows move as one while you drag, and never overlap by accident. |
 
-## 143 visuals
+## 141 visuals
 
 Every visual is drawn live on your graphics card and listens to the bass, mids, treble and beat of what's playing. Auto mode studies each song ahead of time and changes visual right on a downbeat, with morphs that melt, glow, fly or fold one visual into the next.
 
 ### Ray traced
 
-Physically lit 3D scenes with real reflections, glass that bends light and soft shadows. 33 of them, from a diamond throwing rainbows to a whole planet under moving cloud.
+Physically lit 3D scenes with real reflections, glass that bends light and soft shadows. 31 of them, from a diamond throwing rainbows to a whole planet under moving cloud.
 
 <table>
 <tr>
@@ -53,7 +53,7 @@ Physically lit 3D scenes with real reflections, glass that bends light and soft 
 <td width="33%"><img src="assets/screenshots/visuals/cornell-box.jpg" alt="Cornell Box"><br><sub><b>Cornell Box</b></sub></td>
 </tr>
 <tr>
-<td><img src="assets/screenshots/visuals/snow-globe.jpg" alt="Snow Globe"><br><sub><b>Snow Globe</b></sub></td>
+<td><img src="assets/screenshots/visuals/disco-ball.jpg" alt="Disco Ball"><br><sub><b>Disco Ball</b></sub></td>
 <td><img src="assets/screenshots/visuals/crystal-organ.jpg" alt="Crystal Organ"><br><sub><b>Crystal Organ</b></sub></td>
 <td><img src="assets/screenshots/visuals/cloud-sea.jpg" alt="Cloud Sea"><br><sub><b>Cloud Sea</b></sub></td>
 </tr>
@@ -106,7 +106,7 @@ The MilkDrop spirit, rebuilt: fly through infinite fractals, stare into kaleidos
 | Family | Visuals | A few favorites |
 |---|---:|---|
 | Particles | 42 | Galaxy Collision, Phoenix Rising, Murmuration, Volcanic Eruption, Sand Yantra |
-| Ray traced | 33 | Diamond Fire, Glass and Chrome, Hall of Mirrors, Snow Globe, Tesseract |
+| Ray traced | 31 | Diamond Fire, Glass and Chrome, Hall of Mirrors, Disco Ball, Tesseract |
 | Kaleidoscope | 15 | Kaleido Cathedral, Rose Window, Metatron's Cube, Flower of Life, Droste Zoom |
 | Fly-through | 12 | Menger Voyage, Mandelbox Tunnel, Wormhole Transit, Gyroid Caverns |
 | Music-shaped | 12 | Spectrum Tunnel, Cymatic Plate, Lissajous Laser, Pulsar Ridges |
