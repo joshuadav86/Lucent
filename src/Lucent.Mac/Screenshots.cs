@@ -1,3 +1,4 @@
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -19,7 +20,15 @@ public static class Screenshots
     /// </summary>
     private static readonly (string Name, Func<Window> Create)[] Catalog =
     {
-        ("Player", () => new MainWindow()),
+        ("Player", () => PreviewPlayer("Lucent")),
+        ("Player-Lucent", () => PreviewPlayer("Lucent")),
+        ("Player-Classic", () => PreviewPlayer("Classic")),
+        ("Player-Glass", () => PreviewPlayer("Glass")),
+        ("Player-Neon", () => PreviewPlayer("Neon")),
+        ("Player-Studio", () => PreviewPlayer("Studio")),
+        ("Player-Options", () => PreviewOptions("Graphics")),
+        ("Player-Options-Visuals", () => PreviewOptions("Visuals")),
+        ("Player-Options-Look", () => PreviewOptions("Theme")),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
     };
@@ -67,6 +76,45 @@ public static class Screenshots
         }
 
         return failures == 0 ? 0 : 1;
+    }
+
+    /// <summary>The player in a skin, part way through a song in a queue of three.</summary>
+    private static Window PreviewPlayer(string skin)
+    {
+        var player = new MainWindow();
+        player.PreviewSkin(skin);
+        player.ShowPreview(new[]
+        {
+            SampleTrack("Boards of Canada", "Roygbiv", TimeSpan.FromSeconds(151), 320, 44100, 2),
+            SampleTrack("Aphex Twin", "Xtal", TimeSpan.FromSeconds(294), 1411, 44100, 2),
+            SampleTrack("Burial", "Archangel", TimeSpan.FromSeconds(238), 256, 48000, 2),
+        }, TimeSpan.FromSeconds(83));
+        return player;
+    }
+
+    /// <summary>The player's options panel (normally a pop-up under its button), on one of its tabs.</summary>
+    private static Window PreviewOptions(string tab)
+    {
+        var player = new MainWindow();
+        player.PreviewSkin("Lucent");
+        var panel = player.TakeOptionsPanel(tab);
+        return new Window
+        {
+            Width = 372,
+            SizeToContent = SizeToContent.Height,
+            Background = Avalonia.Media.Brushes.Transparent,
+            Content = panel,
+        };
+    }
+
+    /// <summary>A track as if read from a tagged file (none is needed: the screenshots play nothing).</summary>
+    private static WinampInspiredVisualizer.Playlist.Track SampleTrack(string artist, string title, TimeSpan duration, int bitrate, int sampleRate, int channels)
+    {
+        var constructor = typeof(WinampInspiredVisualizer.Playlist.Track).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
+        return (WinampInspiredVisualizer.Playlist.Track)constructor.Invoke(new object[]
+        {
+            $"/Users/you/Music/{artist}/{title}.flac", title, artist, duration, bitrate, sampleRate, channels, string.Empty,
+        });
     }
 
     private static Window PreviewPrompt()

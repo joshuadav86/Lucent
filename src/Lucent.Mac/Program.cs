@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using Avalonia;
 using Lucent.Mac.Audio;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Settings;
 
 // Metal, Core Audio and AppKit: this app only runs on macOS.
 [assembly: SupportedOSPlatform("macos")]
@@ -28,6 +29,8 @@ public static class Program
         }
 
         ErrorLog.Watch();
+        // Settings, playlists and visuals from before Lucent was renamed come across on the first run.
+        AppDataFolder.CopyFromOldName();
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         return 0;
@@ -36,5 +39,7 @@ public static class Program
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            // The player builds the whole app menu itself (About, Hide, Quit), so Avalonia's own items stay out.
+            .With(new MacOSPlatformOptions { DisableDefaultApplicationMenuItems = true })
             .LogToTrace();
 }
