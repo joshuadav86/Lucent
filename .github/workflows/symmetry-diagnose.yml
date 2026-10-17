@@ -1,0 +1,27 @@
+name: Symmetry diagnose
+on:
+  push:
+    branches: [symmetry-diagnose]
+permissions:
+  contents: write
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build
+        run: dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj -c Release -r win-x64 --self-contained true -o publish
+      - name: Drag windows and record where they go
+        shell: powershell
+        run: ./tools/symmetry-diagnose.ps1
+      - name: Save the screenshots to the branch
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          mkdir -p diag && cp "$RUNNER_TEMP"/shots/* diag/ || true
+          git add diag && git commit -m "Diagnose screenshots [skip ci]" && git push || true
