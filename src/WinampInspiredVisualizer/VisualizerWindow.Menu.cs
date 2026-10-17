@@ -8,7 +8,7 @@ namespace WinampInspiredVisualizer;
 public partial class VisualizerWindow
 {
     /// <summary>
-    /// Fullscreen, moving between visuals, favourites and Auto, and the graphics options, at the
+    /// Fullscreen, playback controls (in fullscreen), moving between visuals, favourites and Auto, and the graphics options, at the
     /// mouse. It works in fullscreen too, where the controls under the visuals are hidden.
     /// </summary>
     private void ShowVisualsMenu()
@@ -21,6 +21,13 @@ public partial class VisualizerWindow
         var menu = new ContextMenu { PlacementTarget = VisualizerFrame, Placement = PlacementMode.MousePoint };
         menu.Items.Add(Item(_isFullscreen ? "Leave fullscreen" : "Fullscreen", _isFullscreen ? "Esc" : "F11", ToggleFullscreen));
         menu.Items.Add(new Separator());
+        if (_isFullscreen && Player is { } playback)
+        {
+            // Fullscreen covers the player, so its controls come along in the menu.
+            playback.AddPlaybackItems(menu);
+            menu.Items.Add(new Separator());
+        }
+
         menu.Items.Add(Item("Next visual", "N", () => ChangePreset(+1)));
         menu.Items.Add(Item("Previous visual", "B", () => ChangePreset(-1)));
         if (!_isFullscreen)
