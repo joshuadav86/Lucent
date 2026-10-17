@@ -1,12 +1,77 @@
-<p align="center"><img src="assets/lucid-icon.png" width="128" alt="Lucid icon"></p>
+<p align="center"><img src="assets/lucid-icon.png" width="112" alt="Lucid icon"></p>
 
-# Lucid
+<h1 align="center">Lucid</h1>
 
-A modern, open-source music player for Windows with GPU-powered visualizations inspired by the classic Winamp era.
+<p align="center"><b>A music player for Windows with 88 GPU visuals that dance to your music.</b><br>
+Inspired by Winamp and MilkDrop, rebuilt for modern graphics cards.</p>
 
-> Early days: the music player, GPU visualizer, options and themes work.
+<p align="center"><a href="../../releases/tag/latest"><b>⬇ Download the latest build</b></a> · Windows 10 and 11 · free and open source</p>
 
-## Features
+![Lucid's Black Hole visual, fullscreen](assets/screenshots/hero-black-hole.jpg)
+
+## A player that looks the part
+
+The player, equalizer, queue, library and visuals each get their own window, and they snap together like Winamp's did. Drag the player and everything docked to it comes along. Press D to tidy them back into one neat rectangle.
+
+![The Lucid player with its library, equalizer, queue and visuals docked together](assets/screenshots/player-layout.jpg)
+
+## 88 visuals, drawn live on your graphics card
+
+Fly through fractal worlds, kaleidoscopes, galaxies made of hundreds of thousands of particles, and rain-soaked neon cities. Every visual reacts to the bass, mids, treble and beat of what's playing. Auto mode listens to each song ahead of time and switches visuals right on a downbeat.
+
+<table>
+<tr>
+<td><img src="assets/screenshots/sunset-highway.jpg" alt="Sunset Highway"><br><sub>Sunset Highway</sub></td>
+<td><img src="assets/screenshots/mandelbulb-bloom.jpg" alt="Mandelbulb Bloom"><br><sub>Mandelbulb Bloom</sub></td>
+<td><img src="assets/screenshots/rose-window.jpg" alt="Rose Window"><br><sub>Rose Window</sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/galaxy-collision.jpg" alt="Galaxy Collision"><br><sub>Galaxy Collision</sub></td>
+<td><img src="assets/screenshots/kaleido-cathedral.jpg" alt="Kaleido Cathedral"><br><sub>Kaleido Cathedral</sub></td>
+<td><img src="assets/screenshots/flower-of-life.jpg" alt="Flower of Life"><br><sub>Flower of Life</sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/neon-downpour.jpg" alt="Neon Downpour"><br><sub>Neon Downpour</sub></td>
+<td><img src="assets/screenshots/menger-voyage.jpg" alt="Menger Voyage"><br><sub>Menger Voyage</sub></td>
+<td><img src="assets/screenshots/cosmic-jellyfish.jpg" alt="Cosmic Jellyfish"><br><sub>Cosmic Jellyfish</sub></td>
+</tr>
+</table>
+
+## Find the right visual in seconds
+
+Press V and start typing. Visuals are sorted into families and tagged (Calm, Intense, Neon, Space, 3D and more), and you can star favourites or make your own lists for Auto mode to play from.
+
+![The visual picker, searching for Kaleido Cathedral](assets/screenshots/visual-picker.jpg)
+
+## Fullscreen, without losing control
+
+Double-click the visuals (or press F11) to go fullscreen. Click once to pause or play, and right-click for a menu with a seek bar, track controls, volume and every graphics option.
+
+![The right-click menu over the Neon Downpour visual in fullscreen](assets/screenshots/fullscreen-menu.jpg)
+
+## Highlights
+
+- **Plays almost anything:** MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
+- **A real library:** link a folder and every song shows up, searchable as you type, with favourites and playlists that Winamp can open too
+- **Equalizer:** 3 to 31 bands, 15 presets, and a live response curve
+- **Built-in audio editor:** trim, fade, normalize, change pitch and more, with undo
+- **Converter and tag editor:** make MP3, FLAC or WAV, and edit titles, artists and cover art safely
+- **Graphics options:** up to 4K supersampling, Ultra detail, adjustable glow and HDR
+- **Eight themes**, from Midnight to Glacier (light)
+- **Make your own visuals:** each one is a single shader file (see below)
+
+## Download and run
+
+1. Go to the [Latest build](../../releases/tag/latest) release.
+2. Download `Lucid-win-x64.zip`, right-click it and choose **Extract All**.
+3. Double-click `Lucid.exe` in the extracted folder.
+
+Nothing needs installing. If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**. Lucid.exe works on its own too, but keep the Presets folder beside it if you want to change or add visuals.
+
+## Everything Lucid does
+
+<details>
+<summary>The full feature list and keyboard shortcuts</summary>
 
 - Plays MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
 - A small player window like Winamp's, with a big time display, a spectrum meter (click it for a waveform, or to hide it), a scrolling title, and the bitrate and sample rate
@@ -55,20 +120,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 
 **Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, D docks them all back around the player, G stretches them to fill the screen, K shrinks them all to their smallest, O opens options, E opens the equalizer, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, C opens the artwork window, Ctrl+I edits the selected (or playing) song's info, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
 
-## Download and run
-
-1. Go to the [Latest build](../../releases/tag/latest) release.
-2. Download `Lucid-win-x64.zip` and unzip it.
-3. Double-click `Lucid.exe`.
-
-Keep the files together: Lucid.exe works on its own too, but the Presets folder beside it is where you can change or add visuals. Nothing needs installing. If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
-
-## Roadmap
-
-1. Project setup and automatic builds
-2. Music player: play, pause, seek, volume, playlist, and wide format support via FFmpeg
-3. Visualizer engine: live audio analysis driving GPU shaders, with starter visuals
-4. Themes, community visual presets, and a contributor guide
+</details>
 
 ## Making your own visuals
 
