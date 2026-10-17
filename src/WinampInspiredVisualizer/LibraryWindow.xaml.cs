@@ -501,6 +501,13 @@ public partial class LibraryWindow : ToolWindow
         var add = new MenuItem { Header = _settings.LibraryFolders.Count == 0 ? "Link a music folder…" : "Link another folder…" };
         add.Click += (_, _) => LinkLibraryFolder();
         menu.Items.Add(add);
+        var stores = new MenuItem
+        {
+            Header = "Bandcamp and Beatport…",
+            ToolTip = "Add the music you buy on Bandcamp and Beatport to the library",
+        };
+        stores.Click += (_, _) => Player?.ShowStores();
+        menu.Items.Add(stores);
         if (RemoveAllFoldersMenuItem() is { } removeAll)
         {
             menu.Items.Add(removeAll);

@@ -169,6 +169,35 @@ public sealed class AppSettings
     /// <summary>The processing the converter last did to every song (normalizing, trimming silence…), in order.</summary>
     public List<ProcessingStep> ConvertSteps { get; set; } = new();
 
+    // ---- Bandcamp and Beatport ----
+
+    /// <summary>Import Bandcamp downloads from <see cref="DownloadsWatchFolder"/> into the library by themselves.</summary>
+    public bool BandcampImport { get; set; }
+
+    /// <summary>Import Beatport downloads from <see cref="DownloadsWatchFolder"/> into the library by themselves.</summary>
+    public bool BeatportImport { get; set; }
+
+    /// <summary>The folder watched for store downloads; null for the Downloads folder.</summary>
+    public string? DownloadsWatchFolder { get; set; }
+
+    /// <summary>
+    /// Where store music goes: a Bandcamp and a Beatport folder inside it, then a folder per artist and per
+    /// release. Null for the Music folder.
+    /// </summary>
+    public string? StoreMusicFolder { get; set; }
+
+    /// <summary>
+    /// Download new purchases from the signed-in Bandcamp account when Lucent starts. Off until the first
+    /// sync has been chosen in the Bandcamp window, so signing in never starts a big download by itself.
+    /// </summary>
+    public bool BandcampSync { get; set; }
+
+    /// <summary>The signed-in Bandcamp fan's username, for showing (the sign-in itself is kept encrypted elsewhere).</summary>
+    public string? BandcampUsername { get; set; }
+
+    /// <summary>The format to download purchases in (Bandcamp's own names, like "flac" or "mp3-320").</summary>
+    public string BandcampFormat { get; set; } = "flac";
+
     private static string FilePath => Path.Combine(AppDataFolder.Path, "settings.json");
 
     public static AppSettings Load()
