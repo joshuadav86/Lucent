@@ -50,6 +50,12 @@ public sealed class WindowSnapper
     /// <summary>How far (in pixels at 100% scaling) a dropped window will stretch to line up its other corner.</summary>
     private const double CornerDistance = 40;
 
+    /// <summary>
+    /// How far (in pixels at 100% scaling) a window can be pushed into another before it slides over it.
+    /// Up to this, it stays against that window's edge instead, so windows don't end up overlapping by accident.
+    /// </summary>
+    private const double OverlapDistance = 64;
+
     private readonly Window _main;
     private readonly List<Window> _windows = new();
     private readonly List<(IntPtr Handle, int OffsetX, int OffsetY)> _carried = new();
@@ -123,10 +129,9 @@ public sealed class WindowSnapper
                 rect.Top += dy;
                 rect.Bottom += dy;
                 Marshal.StructureToPtr(rect, lParam, false);
-                foreach (var (handle, offsetX, offsetY) in _carried)
+                if (_carried.Count > 0)
                 {
-                    SetWindowPos(handle, IntPtr.Zero, rect.Left + offsetX, rect.Top + offsetY, 0, 0,
-                        SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+                    MoveTogether(hwnd, rect);
                 }
 
                 break;
@@ -163,6 +168,40 @@ public sealed class WindowSnapper
         }
 
         return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// Moves the player and the windows docked to it in one go. Moved one at a time, the docked
+    /// windows would land a moment before or after the player, so during a drag they'd seem to
+    /// pull apart from it and overlap it by turns.
+    /// </summary>
+    private void MoveTogether(IntPtr hwnd, Rect rect)
+    {
+        const uint flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE;
+        var batch = BeginDeferWindowPos(_carried.Count + 1);
+        if (batch != IntPtr.Zero)
+        {
+            batch = DeferWindowPos(batch, hwnd, IntPtr.Zero, rect.Left, rect.Top, 0, 0, flags);
+        }
+
+        foreach (var (handle, offsetX, offsetY) in _carried)
+        {
+            if (batch != IntPtr.Zero)
+            {
+                batch = DeferWindowPos(batch, handle, IntPtr.Zero, rect.Left + offsetX, rect.Top + offsetY, 0, 0, flags);
+            }
+        }
+
+        if (batch != IntPtr.Zero && EndDeferWindowPos(batch))
+        {
+            return;
+        }
+
+        // Windows couldn't move them together; move them one by one instead.
+        foreach (var (handle, offsetX, offsetY) in _carried)
+        {
+            SetWindowPos(handle, IntPtr.Zero, rect.Left + offsetX, rect.Top + offsetY, 0, 0, flags);
+        }
     }
 
     /// <summary>
@@ -624,8 +663,66 @@ public sealed class WindowSnapper
             }
         }
 
-        return (Math.Abs(bestX) <= reach ? bestX : 0, Math.Abs(bestY) <= reach ? bestY : 0);
+        return KeepApart(hwnd, rect, Math.Abs(bestX) <= reach ? bestX : 0, Math.Abs(bestY) <= reach ? bestY : 0);
     }
+
+    /// <summary>
+    /// When the window has been pushed a little way into another of Lucid's windows, moves it back
+    /// out against that window's nearest edge. Pushed further in than that, it's meant to go over it.
+    /// </summary>
+    private (int Dx, int Dy) KeepApart(IntPtr hwnd, Rect rect, int dx, int dy)
+    {
+        var resist = (int)Math.Round(OverlapDistance * Scale(hwnd));
+        var others = OtherWindows(hwnd).Select(other => other.Rect).ToList();
+
+        // Pushing out of one window can land in the one beside it, so look twice.
+        for (var pass = 0; pass < 2; pass++)
+        {
+            var moved = Offset(rect, dx, dy);
+            if (others.Where(other => Overlapping(moved, other)).Cast<Rect?>().FirstOrDefault() is not { } into)
+            {
+                break;
+            }
+
+            var best = (X: 0, Y: 0);
+            var bestDistance = resist + 1;
+            foreach (var (x, y) in new[] { (into.Left - moved.Right, 0), (into.Right - moved.Left, 0), (0, into.Top - moved.Bottom), (0, into.Bottom - moved.Top) })
+            {
+                var distance = Math.Abs(x) + Math.Abs(y);
+                var outside = Offset(moved, x, y);
+                if (distance < bestDistance && !others.Any(other => Overlapping(outside, other)))
+                {
+                    best = (x, y);
+                    bestDistance = distance;
+                }
+            }
+
+            if (bestDistance > resist)
+            {
+                break;
+            }
+
+            dx += best.X;
+            dy += best.Y;
+        }
+
+        return (dx, dy);
+    }
+
+    /// <summary>True when the rectangles cover some of the same area, more than the slack allowed for edges that touch.</summary>
+    private static bool Overlapping(Rect a, Rect b)
+    {
+        const int flush = 2;
+        return a.Left < b.Right - flush && b.Left < a.Right - flush && a.Top < b.Bottom - flush && b.Top < a.Bottom - flush;
+    }
+
+    private static Rect Offset(Rect rect, int dx, int dy) => new()
+    {
+        Left = rect.Left + dx,
+        Top = rect.Top + dy,
+        Right = rect.Right + dx,
+        Bottom = rect.Bottom + dy,
+    };
 
     private void SnapSize(IntPtr hwnd, ref Rect rect, int edge)
     {
@@ -678,6 +775,33 @@ public sealed class WindowSnapper
             else if (bottom)
             {
                 rect.Bottom += bestY;
+            }
+        }
+
+        // An edge pulled a little way into a window it started outside of stops at that window's edge.
+        const int flush = 2;
+        var resist = (int)Math.Round(OverlapDistance * Scale(hwnd));
+        var start = Visible(_startRect, _startMargins);
+        foreach (var (_, other) in OtherWindows(hwnd))
+        {
+            var besideY = rect.Top < other.Bottom - flush && other.Top < rect.Bottom - flush;
+            var besideX = rect.Left < other.Right - flush && other.Left < rect.Right - flush;
+            if (right && besideY && start.Right <= other.Left + flush && rect.Right > other.Left && rect.Right - other.Left <= resist)
+            {
+                rect.Right = other.Left;
+            }
+            else if (left && besideY && start.Left >= other.Right - flush && rect.Left < other.Right && other.Right - rect.Left <= resist)
+            {
+                rect.Left = other.Right;
+            }
+
+            if (bottom && besideX && start.Bottom <= other.Top + flush && rect.Bottom > other.Top && rect.Bottom - other.Top <= resist)
+            {
+                rect.Bottom = other.Top;
+            }
+            else if (top && besideX && start.Top >= other.Bottom - flush && rect.Top < other.Bottom && other.Bottom - rect.Top <= resist)
+            {
+                rect.Top = other.Bottom;
             }
         }
     }
@@ -794,6 +918,16 @@ public sealed class WindowSnapper
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr BeginDeferWindowPos(int count);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr DeferWindowPos(IntPtr batch, IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EndDeferWindowPos(IntPtr batch);
 
     [DllImport("user32.dll")]
     private static extern IntPtr MonitorFromRect(ref Rect rect, uint flags);
