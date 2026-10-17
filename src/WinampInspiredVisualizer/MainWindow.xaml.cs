@@ -380,6 +380,13 @@ public partial class MainWindow : Window
         if (window == _queue)
         {
             var height = SizeOf(window).Height;
+            if (area.Bottom - playerBottom < height)
+            {
+                // Make room under the player rather than open the queue off the top of the screen.
+                LiftDocked(height - (area.Bottom - playerBottom));
+                playerBottom = ColumnTop;
+            }
+
             var roomBelow = area.Bottom - playerBottom;
             var roomAbove = Top - area.Top;
             var below = roomBelow >= height || roomBelow >= roomAbove;
@@ -426,6 +433,48 @@ public partial class MainWindow : Window
         window.Left = left;
         window.Top = top;
         window.Height = Math.Max(window.MinHeight, Math.Min(bottom - top, area.Height));
+    }
+
+    /// <summary>
+    /// Moves the player and the windows docked to it up the screen by up to <paramref name="distance"/>,
+    /// no further than the top of the screen, to make room under them.
+    /// </summary>
+    private void LiftDocked(double distance)
+    {
+        if (WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        var area = ScreenArea.Of(this);
+        var group = new List<Window> { this };
+        var others = Application.Current.Windows.Cast<Window>()
+            .Where(other => other != this && other.Owner == this && other.IsVisible && other.WindowState == WindowState.Normal
+                && !(other == _visuals && _visuals.IsFullscreen))
+            .ToList();
+        static Rect Bounds(Window window) => new(window.Left, window.Top, window.ActualWidth, window.ActualHeight);
+        for (var i = 0; i < group.Count; i++)
+        {
+            foreach (var other in others.ToList())
+            {
+                if (Touches(Bounds(group[i]), Bounds(other)))
+                {
+                    group.Add(other);
+                    others.Remove(other);
+                }
+            }
+        }
+
+        var lift = Math.Min(distance, group.Min(window => window.Top) - area.Top);
+        if (lift <= 0)
+        {
+            return;
+        }
+
+        foreach (var window in group)
+        {
+            window.Top -= lift;
+        }
     }
 
     /// <summary>
@@ -806,6 +855,15 @@ public partial class MainWindow : Window
         var playerBottom = Top + ActualHeight;
         var height = SizeOf(equalizer).Height;
         equalizer.Closing += (_, _) => CloseEqualizerGap(equalizer);
+        var queueBelow = _queue.IsVisible && Math.Abs(_queue.Left - Left) < 2 && Math.Abs(_queue.Top - playerBottom) < 2;
+        var needed = playerBottom + height + (queueBelow ? _queue.MinHeight : 0) - area.Bottom;
+        if (needed > 0)
+        {
+            // Make room under the player, so the equalizer doesn't end up somewhere odd (or on top of the player).
+            LiftDocked(needed);
+            playerBottom = Top + ActualHeight;
+        }
+
         if (playerBottom + height > area.Bottom)
         {
             DockNewWindow(equalizer);
