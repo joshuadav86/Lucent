@@ -320,7 +320,7 @@ Found something broken? Click **🐞 Report a bug** at the bottom of Lucent's op
 
 ## Support Lucent
 
-Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86). The **☕ Buy me a coffee** button at the bottom of Lucent's options panel goes to the same page.
+Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86). The coffee cup in Lucent's title bar and the **☕ Buy me a coffee** button at the bottom of its options panel go to the same page.
 
 ## License
 
