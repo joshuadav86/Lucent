@@ -58,6 +58,14 @@
                         <TextBlock Text="Queue" Margin="8,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </ToggleButton>
+                <ToggleButton x:Name="EqualizerToggle" Style="{StaticResource PanelToggle}" Margin="2,0,0,0"
+                              ToolTip="Show or hide the equalizer (E)" Click="OnToggleEqualizer"
+                              WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource LineIcon}" Data="M3,1.5 V14.5 M8,1.5 V14.5 M13,1.5 V14.5 M1.5,10 H4.5 M6.5,5 H9.5 M11.5,8 H14.5" />
+                        <TextBlock Text="EQ" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </ToggleButton>
                 <ToggleButton x:Name="OptionsButton" Style="{StaticResource PanelToggle}" Margin="2,0,0,0"
                               ToolTip="Graphics, visual changes and themes (O)" Click="OnToggleOptions"
                               WindowChrome.IsHitTestVisibleInChrome="True">

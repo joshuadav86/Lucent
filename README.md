@@ -24,12 +24,13 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
   - **Glow:** how strongly bright parts bloom, from off to strong
   - **HDR:** on screens with HDR turned on in Windows, highlights shine brighter than normal white
   - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown in the player bar, next to the visuals)
+- A Winamp-style equalizer (the EQ switch in the title bar, or E): choose 3, 4, 5, 8, 10, 16, 24 or 31 bands, drag the sliders (double-click one to put it back to 0) with the response curve drawn live above them, set the preamp, and pick from 15 presets such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own. Changing the band count keeps your curve, the visuals react to the equalized sound, and Lucid turns the volume down a touch when you boost so the music doesn't distort
 - Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
 - Remembers the last visual, your options and your theme
 - Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, L and Q show or hide the library and queue, O opens options, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
+**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, L and Q show or hide the library and queue, O opens options, E opens the equalizer, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
 
 ## Download and run
 

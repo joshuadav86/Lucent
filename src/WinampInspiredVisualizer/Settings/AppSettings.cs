@@ -54,6 +54,10 @@ public sealed class AppSettings
     /// <summary>The visual showing when the app last closed.</summary>
     public string? LastVisual { get; set; }
 
+    // ---- Sound ----
+
+    public EqualizerSettings Equalizer { get; set; } = new();
+
     // ---- Look ----
 
     public string Theme { get; set; } = "Midnight";
