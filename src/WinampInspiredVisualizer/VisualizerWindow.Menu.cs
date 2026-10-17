@@ -11,6 +11,7 @@ public partial class VisualizerWindow
 {
     private DispatcherTimer? _clickTimer;
     private bool _skipClick;
+    private DateTime _activatedAt;
 
     /// <summary>
     /// Fullscreen, playback controls (in fullscreen), moving between visuals, favourites and Auto, and the graphics options, at the
@@ -84,9 +85,9 @@ public partial class VisualizerWindow
     }
 
     /// <summary>
-    /// In fullscreen, a left click on the visuals brings up the song's seek bar and playback
-    /// controls at the mouse, since fullscreen covers the player. It waits out the double-click
-    /// time first, so double-clicking still just leaves fullscreen.
+    /// A left click on the visuals plays or pauses the music, in a window or fullscreen. It waits
+    /// out the double-click time first, so double-clicking still just switches fullscreen, and the
+    /// click that brings Lucid to the front doesn't count.
     /// </summary>
     private void OnVisualsClicked()
     {
@@ -97,7 +98,7 @@ public partial class VisualizerWindow
             return;
         }
 
-        if (!_isFullscreen || Player is null)
+        if (Player is null || DateTime.UtcNow - _activatedAt < TimeSpan.FromMilliseconds(500))
         {
             return;
         }
@@ -108,7 +109,7 @@ public partial class VisualizerWindow
             _clickTimer.Tick += (_, _) =>
             {
                 _clickTimer.Stop();
-                ShowPlaybackMenu();
+                Player?.PlayOrPause();
             };
         }
 
@@ -121,18 +122,6 @@ public partial class VisualizerWindow
         _clickTimer?.Stop();
         _skipClick = true;
         ToggleFullscreen();
-    }
-
-    private void ShowPlaybackMenu()
-    {
-        if (!_isFullscreen || Player is not { } playback)
-        {
-            return;
-        }
-
-        var menu = new ContextMenu { PlacementTarget = VisualizerFrame, Placement = PlacementMode.MousePoint };
-        playback.AddPlaybackItems(menu);
-        menu.IsOpen = true;
     }
 
     [DllImport("user32.dll")]

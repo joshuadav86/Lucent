@@ -10,6 +10,9 @@ namespace WinampInspiredVisualizer;
 /// <summary>Playback controls, as items for the visuals' right-click menu. Kept in its own file.</summary>
 public partial class MainWindow
 {
+    /// <summary>Plays or pauses, as the Space key does. Clicking the visuals uses it.</summary>
+    public void PlayOrPause() => TogglePlayPause();
+
     /// <summary>
     /// Adds what's playing, a bar to move through the song, play or pause, stop, next and previous
     /// track, and a volume slider, so the
