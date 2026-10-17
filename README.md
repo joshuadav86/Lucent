@@ -3,7 +3,7 @@
 <h1 align="center">Lucent</h1>
 
 <p align="center"><b>Built for audio nerds.</b><br>
-Winamp's soul, a 2026 graphics card's muscle: a player, editor and analyzer for Windows, with 141 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
+Winamp's soul, a 2026 graphics card's muscle: a player, editor and analyzer for Windows, with 200 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
 
 <p align="center">
   <a href="../../releases/tag/latest"><img src="https://img.shields.io/badge/download-latest%20build-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download the latest build"></a>
@@ -12,13 +12,13 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor and analyzer for 
 
 <p align="center">
   <img src="https://img.shields.io/badge/Windows-10%20%26%2011-22D3EE?style=flat-square" alt="Windows 10 and 11">
-  <img src="https://img.shields.io/badge/visuals-141-D946EF?style=flat-square" alt="141 visuals">
+  <img src="https://img.shields.io/badge/visuals-200-D946EF?style=flat-square" alt="200 visuals">
   <img src="https://img.shields.io/badge/Direct3D-11-F97316?style=flat-square" alt="Direct3D 11">
   <img src="https://img.shields.io/badge/license-MIT-10B981?style=flat-square" alt="MIT license">
 </p>
 
 <p align="center">
-  <a href="#141-visuals">Visuals</a> ·
+  <a href="#200-visuals">Visuals</a> ·
   <a href="#the-player">Player</a> ·
   <a href="#equalizer">Equalizer</a> ·
   <a href="#analyzer">Analyzer</a> ·
@@ -33,14 +33,14 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor and analyzer for 
 
 | | |
 |---|---|
-| ✨ **141 visuals** | Fractals, kaleidoscopes and cyberpunk cities, ray-traced glass, chrome and planets, and particle storms of fire, smoke, sparks and starlings. |
+| ✨ **200 visuals** | Geometric patterns, minimal pieces and endless fractals, ray-traced glass, chrome and planets, and particle storms of fire, smoke, sparks and starlings. |
 | 📊 **Analyzer** | A scrolling spectrogram heatmap like Winamp's Vision plugin, with a live spectrum, waveform and stereo spread scope. |
 | 🎨 **Skins and themes** | Five skins change the shape, type and finish of every window, and any skin goes with any of the eight themes. |
 | 🎚️ **Studio equalizer** | 4, 8, 16, 24 or 32 mixing-desk faders over the music's live spectrum. |
 | 🧲 **Snapping windows** | The player, equalizer, queue, library and visuals snap together like Winamp's and move as one. |
 | ✂️ **Built-in tools** | An audio editor, a converter and a tag editor, all a right-click away. |
 
-## 141 visuals
+## 200 visuals
 
 Every visual is drawn live on your graphics card and listens to the bass, mids, treble and beat of what's playing. Auto mode studies each sound ahead of time and changes visual right on a downbeat, with morphs that melt, glow, fly or fold one visual into the next.
 
@@ -68,7 +68,7 @@ Physically lit 3D scenes with real reflections, glass that bends light and soft 
 
 ### Particles
 
-Hundreds of thousands of glowing particles simulated on the graphics card every frame, with lens blur and motion streaks. 42 of them, and up to four times as many particles on Ultra detail.
+Hundreds of thousands of glowing particles simulated on the graphics card every frame, with lens blur and motion streaks. 57 of them, and up to four times as many particles on Ultra detail.
 
 <table>
 <tr>
@@ -85,6 +85,28 @@ Hundreds of thousands of glowing particles simulated on the graphics card every 
 <td><img src="assets/screenshots/visuals/strange-attractors.jpg" alt="Strange Attractors"><br><sub><b>Strange Attractors</b></sub></td>
 <td><img src="assets/screenshots/visuals/knot-stream.jpg" alt="Knot Stream"><br><sub><b>Knot Stream</b></sub></td>
 <td><img src="assets/screenshots/visuals/dyson-swarm.jpg" alt="Dyson Swarm"><br><sub><b>Dyson Swarm</b></sub></td>
+</tr>
+</table>
+
+### Geometric, minimal and fractal
+
+Tilings, star polygons and quasicrystals; a single ink circle or an eclipse that breathes with the bass; and fractals from glass trees to sphere foam you fly through.
+
+<table>
+<tr>
+<td width="33%"><img src="assets/screenshots/visuals/quasicrystal.jpg" alt="Quasicrystal"><br><sub><b>Quasicrystal</b></sub></td>
+<td width="33%"><img src="assets/screenshots/visuals/girih-tiles.jpg" alt="Girih Tiles"><br><sub><b>Girih Tiles</b></sub></td>
+<td width="33%"><img src="assets/screenshots/visuals/voronoi-glass.jpg" alt="Voronoi Glass"><br><sub><b>Voronoi Glass</b></sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/visuals/enso.jpg" alt="Enso"><br><sub><b>Enso</b></sub></td>
+<td><img src="assets/screenshots/visuals/eclipse.jpg" alt="Eclipse"><br><sub><b>Eclipse</b></sub></td>
+<td><img src="assets/screenshots/visuals/harmonograph.jpg" alt="Harmonograph"><br><sub><b>Harmonograph</b></sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/visuals/pythagoras-tree.jpg" alt="Pythagoras Tree"><br><sub><b>Pythagoras Tree</b></sub></td>
+<td><img src="assets/screenshots/visuals/apollonian-spheres.jpg" alt="Apollonian Spheres"><br><sub><b>Apollonian Spheres</b></sub></td>
+<td><img src="assets/screenshots/visuals/buddhabrot.jpg" alt="Buddhabrot"><br><sub><b>Buddhabrot</b></sub></td>
 </tr>
 </table>
 
@@ -107,12 +129,14 @@ The MilkDrop spirit, rebuilt: fly through infinite fractals, stare into kaleidos
 
 | Family | Visuals | A few favorites |
 |---|---:|---|
-| Particles | 42 | Galaxy Collision, Phoenix Rising, Murmuration, Volcanic Eruption, Sand Yantra |
+| Particles | 57 | Galaxy Collision, Phoenix Rising, Murmuration, Buddhabrot, Physarum |
 | Ray traced | 31 | Diamond Fire, Glass and Chrome, Hall of Mirrors, Disco Ball, Tesseract |
+| Fractal | 26 | Mandelbulb Bloom, Pythagoras Tree, Apollonian Spheres, Burning Ship, Orbit Traps |
 | Kaleidoscope | 15 | Kaleido Cathedral, Rose Window, Metatron's Cube, Flower of Life, Droste Zoom |
+| Geometric | 15 | Quasicrystal, Girih Tiles, Voronoi Glass, Spirograph, Hilbert Curve |
+| Minimal | 14 | Enso, Eclipse, Harmonograph, Horizon Line, Rothko Fields |
 | Fly-through | 12 | Menger Voyage, Mandelbox Tunnel, Wormhole Transit, Gyroid Caverns |
 | Music-shaped | 12 | Spectrum Tunnel, Cymatic Plate, Lissajous Laser, Pulsar Ridges |
-| Fractal | 11 | Mandelbulb Bloom, Apollonian Lace, Burning Ship, Newton Basins |
 | Cyberpunk | 7 | Neon Downpour, Sunset Highway, Folded Metropolis, Neon Alley |
 | Organic | 6 | Aurora Veil, Ink Flow, Shot Silk, Living Cells |
 | Cosmic | 5 | Black Hole, Bass Nebula, Cosmic Jellyfish, Supernova Remnant |
