@@ -10,7 +10,7 @@ output="${1:-$root/artifacts/mac-native}"
 shift || true
 build="$root/build/PluginHost-mac"
 
-cmake -S "$root/src/PluginHost" -B "$build" -DCMAKE_BUILD_TYPE=Release \
+cmake -S "$root/src/PluginHost" -B "$build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
   -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 "$@"
 cmake --build "$build" --config Release --parallel
 
