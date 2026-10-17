@@ -1,12 +1,17 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 
 namespace WinampInspiredVisualizer;
 
-/// <summary>The menu you get by right-clicking the visuals. Kept in its own file.</summary>
+/// <summary>The menus you get by clicking the visuals. Kept in its own file.</summary>
 public partial class VisualizerWindow
 {
+    private DispatcherTimer? _clickTimer;
+    private bool _skipClick;
+
     /// <summary>
     /// Fullscreen, playback controls (in fullscreen), moving between visuals, favourites and Auto, and the graphics options, at the
     /// mouse. It works in fullscreen too, where the controls under the visuals are hidden.
@@ -77,6 +82,61 @@ public partial class VisualizerWindow
 
         menu.IsOpen = true;
     }
+
+    /// <summary>
+    /// In fullscreen, a left click on the visuals brings up the song's seek bar and playback
+    /// controls at the mouse, since fullscreen covers the player. It waits out the double-click
+    /// time first, so double-clicking still just leaves fullscreen.
+    /// </summary>
+    private void OnVisualsClicked()
+    {
+        if (_skipClick)
+        {
+            // The button coming up after a double-click.
+            _skipClick = false;
+            return;
+        }
+
+        if (!_isFullscreen || Player is null)
+        {
+            return;
+        }
+
+        if (_clickTimer is null)
+        {
+            _clickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime()) };
+            _clickTimer.Tick += (_, _) =>
+            {
+                _clickTimer.Stop();
+                ShowPlaybackMenu();
+            };
+        }
+
+        _clickTimer.Stop();
+        _clickTimer.Start();
+    }
+
+    private void OnVisualsDoubleClicked()
+    {
+        _clickTimer?.Stop();
+        _skipClick = true;
+        ToggleFullscreen();
+    }
+
+    private void ShowPlaybackMenu()
+    {
+        if (!_isFullscreen || Player is not { } playback)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu { PlacementTarget = VisualizerFrame, Placement = PlacementMode.MousePoint };
+        playback.AddPlaybackItems(menu);
+        menu.IsOpen = true;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
 
     private static MenuItem Item(string header, string keys, Action action)
     {

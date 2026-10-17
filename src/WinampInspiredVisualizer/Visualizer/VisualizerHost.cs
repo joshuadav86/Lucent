@@ -17,6 +17,7 @@ public sealed class VisualizerHost : HwndHost
     private const int WS_CLIPSIBLINGS = 0x04000000;
     private const int CS_DBLCLKS = 0x0008;
     private const int WM_ERASEBKGND = 0x0014;
+    private const int WM_LBUTTONUP = 0x0202;
     private const int WM_LBUTTONDBLCLK = 0x0203;
     private const int WM_RBUTTONUP = 0x0205;
     private const int IDC_ARROW = 32512;
@@ -51,6 +52,9 @@ public sealed class VisualizerHost : HwndHost
     public event EventHandler<string>? ProblemReported;
 
     public event EventHandler? DoubleClicked;
+
+    /// <summary>Raised when the left mouse button is let go over the visuals, including the second click of a double-click.</summary>
+    public event EventHandler? Clicked;
 
     /// <summary>Raised when the visuals are right-clicked, for their menu.</summary>
     public event EventHandler? RightClicked;
@@ -291,6 +295,9 @@ public sealed class VisualizerHost : HwndHost
                 // Direct3D covers the whole window; skipping the erase avoids flicker.
                 handled = true;
                 return new IntPtr(1);
+            case WM_LBUTTONUP:
+                Clicked?.Invoke(this, EventArgs.Empty);
+                return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
             case WM_LBUTTONDBLCLK:
                 DoubleClicked?.Invoke(this, EventArgs.Empty);
                 handled = true;
