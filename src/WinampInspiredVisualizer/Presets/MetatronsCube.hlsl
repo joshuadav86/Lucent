@@ -122,12 +122,13 @@ float3 Render(float2 uv, float2 p)
         [loop]
         for (int i2 = 0; i2 < 8; i2++)
         {
+            // (Constant loop bounds: fxc misreads inner loops that start at i + 1.)
             [loop]
-            for (int j2 = i2 + 1; j2 < 8; j2++)
+            for (int j2 = 0; j2 < 8; j2++)
             {
                 int diff = i2 ^ j2;
                 int bits = (diff & 1) + ((diff >> 1) & 1) + ((diff >> 2) & 1);
-                if (bits < 3)
+                if (j2 > i2 && bits < 3)
                 {
                     float d = mcSegment(q, pts[i2].xy, pts[j2].xy);
                     float s = mcStroke(d, hwq, pxq) + 0.06 / (1.0 + d * d * 2500.0);
@@ -143,9 +144,9 @@ float3 Render(float2 uv, float2 p)
         for (int i3 = 8; i3 < 14; i3++)
         {
             [loop]
-            for (int j3 = i3 + 1; j3 < 14; j3++)
+            for (int j3 = 8; j3 < 14; j3++)
             {
-                if ((j3 - i3 != 1) || ((i3 - 8) % 2 != 0))
+                if (j3 > i3 && ((j3 - i3 != 1) || ((i3 - 8) % 2 != 0)))
                 {
                     float d = mcSegment(q, pts[i3].xy, pts[j3].xy);
                     float s = mcStroke(d, hwq, pxq) + 0.06 / (1.0 + d * d * 2500.0);
