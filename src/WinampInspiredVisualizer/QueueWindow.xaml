@@ -68,6 +68,7 @@
                         <MenuItem Header="Play" Click="OnPlaySelected" />
                         <MenuItem Header="Remove from the queue" InputGestureText="Del" Click="OnRemoveSelected" />
                         <Separator x:Name="SongMenuItemsStart" />
+                        <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnEditInfo" />
                         <MenuItem Header="Show in File Explorer" Click="OnShowInExplorer" />
                     </ContextMenu>
                 </ListBox.ContextMenu>

@@ -97,6 +97,25 @@ public sealed class AppSettings
 
     public string Theme { get; set; } = "Midnight";
 
+    // ---- Track info and artwork ----
+
+    /// <summary>
+    /// Put files' modified dates back after editing their info. The library lists newest first by date,
+    /// so this keeps edited songs where they were instead of jumping to the top.
+    /// </summary>
+    public bool KeepFileDatesWhenEditing { get; set; } = true;
+
+    /// <summary>Where the artwork window was last placed (null until it has been opened).</summary>
+    public double? ArtworkWindowLeft { get; set; }
+
+    public double? ArtworkWindowTop { get; set; }
+
+    public double ArtworkWindowWidth { get; set; } = 420;
+
+    public double ArtworkWindowHeight { get; set; } = 456;
+
+    public bool ArtworkWindowOnTop { get; set; }
+
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "settings.json");
 

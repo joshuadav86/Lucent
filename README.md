@@ -17,6 +17,11 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Favourite songs: click the heart in the player (or press H), or right-click songs in the queue or library. The FAVOURITES pill in the library shows only them
 - Playlists: save the queue as a playlist, add songs to one from the queue or library (right-click), and play them or add them to the queue from **Playlists** in the queue window. They're saved as standard .m3u8 files, so Winamp and other players can open them too
 - Shows track title, artist and length from the file's tags
+- Edit a song's info: right-click it in the queue or library (or the song name in the player) and choose **Edit info…**, or press Ctrl+I. Change the title, artist, album, album artist, year, track and disc numbers, genre, composer, BPM, comment and lyrics, and see the file's format, quality and size. Choose several songs to change them all at once (fields that differ say "several values" and stay as they are unless you type in them)
+  - Artwork: add a cover by choosing a picture, dropping one onto the cover, or pasting one you've copied (Ctrl+V). Remove it, or save it as an image. Very large pictures are shrunk to 1600 pixels so files don't balloon
+  - Saving is safe: the new info is written to a copy that's checked before it replaces the original, so a problem can't damage your music. Files that can't be saved are listed with the reason. The song playing only pauses for a moment
+  - Songs keep their date when edited, so they stay put in the library's newest-first order (switch "Keep the files' dates" off if you'd rather they move to the top)
+- An artwork window: click **Art** in the player, or press C, to see the playing song's cover as big as you like. It uses the cover stored in the file, or a folder.jpg, cover.jpg or front.jpg next to it. Pin it on top of other windows, and right-click it to copy or save the picture or edit the song's info
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
 - 71 visuals in six families:
   - **Fly-through worlds:** Menger Voyage, Gyroid Caverns, Hyperspace Rings, Mandelbox Tunnel, Fractal Temple, Crystal Cavern, Wormhole Transit, Folded Metropolis, Kleinian Reef, Fibre Optic Braid and more
@@ -39,7 +44,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, O opens options, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
+**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, O opens options, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, C opens the artwork window, Ctrl+I edits the selected (or playing) song's info, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
 
 ## Download and run
 

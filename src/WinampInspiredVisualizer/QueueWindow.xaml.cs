@@ -88,6 +88,9 @@ public partial class QueueWindow : ToolWindow
 
     private void OnRemoveSelected(object sender, RoutedEventArgs e) => Player?.RemoveFromQueue(SelectedEntries());
 
+    private void OnEditInfo(object sender, RoutedEventArgs e) =>
+        Player?.EditInfo(SelectedEntries().Select(entry => entry.Track.Path));
+
     private void OnShowInExplorer(object sender, RoutedEventArgs e)
     {
         if (PlaylistView.SelectedItem is PlaylistEntry entry)

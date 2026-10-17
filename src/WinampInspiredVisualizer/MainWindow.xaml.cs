@@ -138,6 +138,8 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         UpdateShuffleRepeatButtons();
+        TrackInfoWindow.TagsSaved += OnTagsSaved;
+        ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
         UpdatePlayPauseButton();
         ShowNowPlaying(null);
     }
@@ -921,6 +923,13 @@ public partial class MainWindow : Window
     /// <summary>The keyboard shortcuts, which work from any of Lucid's windows.</summary>
     public void HandleShortcut(KeyEventArgs e)
     {
+        if (e.Key == Key.I && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            EditInfoForSelection();
+            e.Handled = true;
+            return;
+        }
+
         // Typing in a text box (or using Ctrl/Alt shortcuts) isn't a shortcut for the player.
         if (e.OriginalSource is TextBoxBase || Keyboard.Modifiers is ModifierKeys.Control or ModifierKeys.Alt)
         {
@@ -983,6 +992,9 @@ public partial class MainWindow : Window
                 break;
             case Key.R:
                 CycleRepeat();
+                break;
+            case Key.C:
+                ToggleArtwork();
                 break;
             case Key.O:
                 Activate();
@@ -1108,6 +1120,7 @@ public partial class MainWindow : Window
 
     private void ShowNowPlaying(Track? track)
     {
+        ArtworkWindow.ShowTrack(track);
         UpdateTrackFavoriteButton();
         if (track is null)
         {
@@ -1179,6 +1192,8 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        TrackInfoWindow.TagsSaved -= OnTagsSaved;
+        ArtworkWindow.OpenChanged -= OnArtworkOpenChanged;
         _settings.CollapsedLibraryFolders = _libraryWindow.CollapsedFolders.ToList();
         _settings.Save();
         _library.Dispose();

@@ -185,7 +185,12 @@
                                 MouseLeftButtonUp="OnMeterClick" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
+                        <StackPanel.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
                         <DockPanel>
                             <!-- Heart: make the song that's playing a favourite. -->
                             <Button x:Name="TrackFavoriteButton" DockPanel.Dock="Right" Style="{StaticResource IconButton}"
@@ -274,6 +279,8 @@
                                   Content="Queue" ToolTip="Show or hide the queue (Q)" Click="OnToggleQueue" />
                     <ToggleButton x:Name="LibraryToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
                                   Content="Library" ToolTip="Show or hide the library (L)" Click="OnToggleLibrary" />
+                    <ToggleButton x:Name="ArtToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
+                                  Content="Art" ToolTip="Show the playing song's artwork in its own window (C)" Click="OnToggleArtwork" />
                 </StackPanel>
             </DockPanel>
         </Grid>

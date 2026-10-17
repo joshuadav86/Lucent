@@ -326,6 +326,9 @@ public partial class LibraryWindow : ToolWindow
         Player?.ReplaceQueue(tracks, 0);
     }
 
+    private void OnLibraryEditInfo(object sender, RoutedEventArgs e) =>
+        Player?.EditInfo(SelectedLibraryItems().Select(item => item.Path));
+
     private void OnLibraryShowInExplorer(object sender, RoutedEventArgs e)
     {
         if (SelectedLibraryItems().FirstOrDefault() is { } item)
