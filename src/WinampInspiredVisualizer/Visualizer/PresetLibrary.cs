@@ -41,32 +41,58 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     }
 }
 
-/// <summary>Finds the preset and engine shader files that ship next to the app.</summary>
+/// <summary>
+/// Finds the preset and engine shader files that ship next to the app. Lucid.exe carries its own
+/// copies too, used when it's run without its folder (straight from the zip, say).
+/// </summary>
 public static class PresetLibrary
 {
     public static string PresetsFolder => Path.Combine(AppContext.BaseDirectory, "Presets");
 
     public static string ShadersFolder => Path.Combine(AppContext.BaseDirectory, "Shaders");
 
-    public static string ReadShader(string fileName) => File.ReadAllText(Path.Combine(ShadersFolder, fileName));
+    public static string ReadShader(string fileName)
+    {
+        var path = Path.Combine(ShadersFolder, fileName);
+        return File.Exists(path) ? File.ReadAllText(path) : ReadBuiltIn($"Shaders/{fileName}")
+            ?? throw new FileNotFoundException($"The {fileName} shader is missing.", path);
+    }
 
     public static IReadOnlyList<PresetSource> LoadPresets()
     {
-        if (!Directory.Exists(PresetsFolder))
+        var files = Directory.Exists(PresetsFolder)
+            ? Directory.EnumerateFiles(PresetsFolder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))).ToList()
+            : new List<(string Path, string Code)>();
+        if (files.Count == 0)
         {
-            return Array.Empty<PresetSource>();
+            files = typeof(PresetLibrary).Assembly.GetManifestResourceNames()
+                .Where(name => name.StartsWith("Presets/", StringComparison.Ordinal))
+                .Select(name => (Path: Path.Combine(PresetsFolder, name["Presets/".Length..]), Code: ReadBuiltIn(name)!))
+                .ToList();
         }
 
-        return Directory.EnumerateFiles(PresetsFolder, "*.hlsl")
-            .Select(path => new PresetSource(ReadName(path), path, File.ReadAllText(path)))
+        return files
+            .Select(file => new PresetSource(ReadName(file.Path, file.Code), file.Path, file.Code))
             .OrderBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    /// <summary>Uses a "// Name: ..." first line if present, otherwise the file name.</summary>
-    private static string ReadName(string path)
+    private static string? ReadBuiltIn(string name)
     {
-        var firstLine = File.ReadLines(path).FirstOrDefault()?.Trim() ?? string.Empty;
+        using var stream = typeof(PresetLibrary).Assembly.GetManifestResourceStream(name);
+        if (stream is null)
+        {
+            return null;
+        }
+
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    /// <summary>Uses a "// Name: ..." first line if present, otherwise the file name.</summary>
+    private static string ReadName(string path, string code)
+    {
+        var firstLine = new StringReader(code).ReadLine()?.Trim() ?? string.Empty;
         const string prefix = "// Name:";
         return firstLine.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
             ? firstLine[prefix.Length..].Trim()
