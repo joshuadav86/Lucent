@@ -109,7 +109,7 @@ public partial class LibraryWindow : ToolWindow
             return null;
         }
 
-        return item => item is LibraryItem song
+        return item => item is LibraryItem { IsPlaceholder: false } song
             && (favorites is null || favorites.Contains(song.Path))
             && SearchText.Matches(song.SearchKey, words);
     }
@@ -166,6 +166,7 @@ public partial class LibraryWindow : ToolWindow
                     ? "None of your library folders have music Lucent can play yet. New files appear here on their own."
                     : "Every sound inside it shows up here, newest first, and new files appear on their own.";
         LinkFolderButton.Visibility = favoritesOnly || noMatches ? Visibility.Collapsed : Visibility.Visible;
+        EmptyLibraryHint.IsHitTestVisible = true;
     }
 
     // ---- Playlists ----
@@ -187,12 +188,13 @@ public partial class LibraryWindow : ToolWindow
             known[item.Path] = item;
         }
 
-        List<(string Name, string Path, DateTime Added)> entries;
+        List<(string Name, List<(string Path, DateTime Added)> Files)> playlists;
         try
         {
-            entries = await Task.Run(() => SavedPlaylists.Names()
-                .SelectMany(name => SavedPlaylists.Read(name).Select(path =>
-                    (name, path, known.TryGetValue(path, out var song) ? song.Added : AddedTime(path))))
+            playlists = await Task.Run(() => SavedPlaylists.Names()
+                .Select(name => (name, SavedPlaylists.Read(name)
+                    .Select(path => (path, known.TryGetValue(path, out var song) ? song.Added : AddedTime(path)))
+                    .ToList()))
                 .ToList());
         }
         catch (Exception)
@@ -206,21 +208,31 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
-        var items = new List<LibraryItem>(entries.Count);
+        var items = new List<LibraryItem>();
         var untagged = new List<LibraryItem>();
-        foreach (var (name, path, added) in entries)
+        foreach (var (name, files) in playlists)
         {
-            var item = new LibraryItem(path, name, Path.GetDirectoryName(path) ?? string.Empty, added);
-            if (known.TryGetValue(path, out var song) && song.Track is { } track)
+            if (files.Count == 0)
             {
-                item.ApplyTags(track);
-            }
-            else
-            {
-                untagged.Add(item);
+                // An empty playlist still gets its heading, so it can be found, renamed and filled.
+                items.Add(LibraryItem.Placeholder(name, "Empty. Right-click sounds and choose Add to playlist."));
+                continue;
             }
 
-            items.Add(item);
+            foreach (var (path, added) in files)
+            {
+                var item = new LibraryItem(path, name, Path.GetDirectoryName(path) ?? string.Empty, added);
+                if (known.TryGetValue(path, out var song) && song.Track is { } track)
+                {
+                    item.ApplyTags(track);
+                }
+                else
+                {
+                    untagged.Add(item);
+                }
+
+                items.Add(item);
+            }
         }
 
         _playlistItems = items;
@@ -266,22 +278,26 @@ public partial class LibraryWindow : ToolWindow
 
     private void UpdatePlaylistsStatus()
     {
-        var total = _playlistItems.Count;
+        var total = _playlistItems.Count(item => !item.IsPlaceholder);
         var lists = _playlistItems.Select(item => item.Folder).Distinct().Count();
         var filtered = IsSearching || _settings.LibraryFavoritesOnly;
         var shown = filtered ? _libraryView?.Count ?? 0 : total;
-        LibraryCount.Text = total == 0
+        LibraryCount.Text = lists == 0
             ? "No playlists"
             : filtered
                 ? $"{shown:N0} of {total:N0} {(total == 1 ? "sound" : "sounds")}"
                 : $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}  ·  {total:N0} {(total == 1 ? "sound" : "sounds")}";
 
-        EmptyLibraryHint.Visibility = shown == 0 ? Visibility.Visible : Visibility.Collapsed;
-        EmptyLibraryTitle.Text = total == 0 ? "No playlists yet"
+        // Empty playlists show their headings, so the hint is only for no playlists at all, or no matches.
+        EmptyLibraryHint.Visibility = lists == 0 || (filtered && shown == 0) ? Visibility.Visible : Visibility.Collapsed;
+
+        // Right-clicks go through the hint to the list underneath, for New playlist….
+        EmptyLibraryHint.IsHitTestVisible = false;
+        EmptyLibraryTitle.Text = lists == 0 ? "No playlists yet"
             : IsSearching ? "No sounds match your search"
             : "No favorites in your playlists";
-        EmptyLibraryText.Text = total == 0
-            ? "Right-click sounds and choose Add to playlist, or save the queue as a playlist, and they show up here."
+        EmptyLibraryText.Text = lists == 0
+            ? "Right-click here and choose New playlist, or right-click sounds and choose Add to playlist."
             : IsSearching
                 ? "Search looks in titles, artists, albums and file names. Try other words, or press Esc to clear the search."
                 : "Turn FAVORITES off to see every sound in your playlists.";
@@ -304,7 +320,9 @@ public partial class LibraryWindow : ToolWindow
     {
         var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.MousePoint };
         var names = HighlightedGroups().Select(group => group.Name?.ToString() ?? string.Empty).ToList();
-        var songs = HighlightedGroups().SelectMany(group => group.Items.OfType<LibraryItem>()).ToList();
+        var songs = HighlightedGroups().SelectMany(group => group.Items.OfType<LibraryItem>())
+            .Where(item => !item.IsPlaceholder)
+            .ToList();
         if (songs.Count > 0)
         {
             var play = new MenuItem { Header = names.Count == 1 ? "Play this playlist" : "Play these playlists" };
@@ -339,6 +357,10 @@ public partial class LibraryWindow : ToolWindow
         {
             menu.Items.Add(new Separator());
         }
+
+        var create = new MenuItem { Header = "New playlist…" };
+        create.Click += (_, _) => Player?.CreatePlaylist(this);
+        menu.Items.Add(create);
 
         var folders = new MenuItem { Header = "Back to library folders" };
         folders.Click += (_, _) => SetShowingPlaylists(false);
@@ -649,7 +671,7 @@ public partial class LibraryWindow : ToolWindow
 
         _songMenuItems.Clear();
         var source = e.OriginalSource as DependencyObject;
-        if (Ancestor<ListBoxItem>(source) is null)
+        if (Ancestor<ListBoxItem>(source) is not { DataContext: LibraryItem { IsPlaceholder: false } })
         {
             // A folder heading, or the empty space below the songs, gets the folder menu instead.
             e.Handled = true;
@@ -935,10 +957,12 @@ public partial class LibraryWindow : ToolWindow
 
         if (_libraryView.Groups is { Count: > 0 } groups)
         {
-            return groups.Cast<CollectionViewGroup>().SelectMany(group => group.Items.Cast<LibraryItem>()).ToList();
+            return groups.Cast<CollectionViewGroup>().SelectMany(group => group.Items.Cast<LibraryItem>())
+                .Where(item => !item.IsPlaceholder)
+                .ToList();
         }
 
-        return _libraryView.Cast<LibraryItem>().ToList();
+        return _libraryView.Cast<LibraryItem>().Where(item => !item.IsPlaceholder).ToList();
     }
 
     public List<LibraryItem> SelectedLibraryItems()
@@ -951,7 +975,7 @@ public partial class LibraryWindow : ToolWindow
     {
         // Only rows count; double-clicking a folder heading or the scroll bar does nothing.
         if (e.OriginalSource is DependencyObject source
-            && ItemsControl.ContainerFromElement(LibraryView, source) is ListBoxItem { DataContext: LibraryItem item })
+            && ItemsControl.ContainerFromElement(LibraryView, source) is ListBoxItem { DataContext: LibraryItem { IsPlaceholder: false } item })
         {
             Player?.PlayFromLibrary(item);
         }
