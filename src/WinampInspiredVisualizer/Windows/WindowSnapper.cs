@@ -833,10 +833,19 @@ public sealed class WindowSnapper
     /// <summary>
     /// The part of the window you can see. Windows can pad a window's rectangle with invisible
     /// borders, and snapping to those would leave gaps between windows, so edges are measured here.
+    /// Lucid's own windows draw their whole rectangle themselves (no Windows frame), so for those
+    /// the rectangle is what you see, whatever Windows reports for the frame it would have drawn.
     /// </summary>
     private static Rect VisibleRect(IntPtr hwnd)
     {
         GetWindowRect(hwnd, out var outer);
+        if (GetClientRect(hwnd, out var client)
+            && client.Right - client.Left == outer.Right - outer.Left
+            && client.Bottom - client.Top == outer.Bottom - outer.Top)
+        {
+            return outer;
+        }
+
         if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out var visible, Marshal.SizeOf<Rect>()) == 0
             && visible.Right > visible.Left && visible.Bottom > visible.Top)
         {
@@ -914,6 +923,10 @@ public sealed class WindowSnapper
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
