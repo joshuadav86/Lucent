@@ -16,6 +16,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -44,7 +45,19 @@
                 </StackPanel>
             </DockPanel>
 
-            <DockPanel Grid.Row="1" Margin="8,0,4,8">
+            <!-- Search: narrows the list to the songs with every typed word in their title, artist, album or file name. -->
+            <Grid Grid.Row="1" Margin="8,0,4,8">
+                <TextBox x:Name="SearchBox" Style="{StaticResource SearchInput}" Tag="Search songs, artists and albums"
+                         ToolTip="Find songs by title, artist, album or file name (Ctrl+F). Esc clears it."
+                         TextChanged="OnSearchChanged" PreviewKeyDown="OnSearchKeyDown" />
+                <Button x:Name="ClearSearchButton" Style="{StaticResource IconButton}" Width="22" Height="22"
+                        HorizontalAlignment="Right" Margin="0,0,3,0" Visibility="Collapsed"
+                        ToolTip="Clear the search (Esc)" Click="OnClearSearch">
+                    <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <DockPanel Grid.Row="2" Margin="8,0,4,8">
                 <Button x:Name="GroupFoldersButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}"
                         Content="FOLDERS" ToolTip="Show or hide folder headings" Click="OnToggleGroupFolders" />
                 <Button x:Name="FavoritesOnlyButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="0,0,6,0"
@@ -61,7 +74,7 @@
                 </Button>
             </DockPanel>
 
-            <ListBox x:Name="LibraryView" Grid.Row="2" Background="Transparent" BorderThickness="0"
+            <ListBox x:Name="LibraryView" Grid.Row="3" Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.IsVirtualizingWhenGrouping="True"
@@ -132,7 +145,7 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <StackPanel x:Name="EmptyLibraryHint" Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel x:Name="EmptyLibraryHint" Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
                 <TextBlock x:Name="EmptyLibraryTitle" Text="Link a music folder" Margin="0,12,0,0" FontSize="13"
                            HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />

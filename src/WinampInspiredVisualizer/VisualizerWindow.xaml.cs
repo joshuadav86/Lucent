@@ -5,6 +5,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Visualizer;
 using WinampInspiredVisualizer.Windows;
@@ -25,6 +26,7 @@ public partial class VisualizerWindow : ToolWindow
     private List<VisualTag> _tags = new();
     private HashSet<string> _tickedTags = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _collapsedFamilies = new(StringComparer.OrdinalIgnoreCase);
+    private string[] _searchWords = Array.Empty<string>();
     private DateTime _presetPopupClosedAt;
     private bool _isFullscreen;
     private WindowState _stateBeforeFullscreen;
@@ -128,13 +130,28 @@ public partial class VisualizerWindow : ToolWindow
             Show();
         }
 
+        // Typing goes to the window that's active, so make it this one (V may have been pressed in the player).
+        if (!IsActive)
+        {
+            Activate();
+        }
+
         PresetPopup.IsOpen = true;
         if (PresetList.SelectedItem is not null)
         {
             PresetList.ScrollIntoView(PresetList.SelectedItem);
         }
 
-        PresetList.Focus();
+        // Ready to type a search straight away, once the picker is on screen. Any earlier search is
+        // selected, so typing replaces it.
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (PresetPopup.IsOpen)
+            {
+                SearchBox.Focus();
+                SearchBox.SelectAll();
+            }
+        }, DispatcherPriority.Input);
     }
 
     private void OnPresetPopupClosed(object? sender, EventArgs e) => _presetPopupClosedAt = DateTime.UtcNow;
@@ -245,13 +262,14 @@ public partial class VisualizerWindow : ToolWindow
             inList = _choices.Where(choice => wanted.Contains(choice.Name)).ToList();
         }
 
-        // Each tick box counts the visuals in this list that have its tag.
+        // Each tick box counts the visuals in this list (and matching the search) that have its tag.
+        var searched = inList.Where(MatchesSearch).ToList();
         foreach (var tag in _tags)
         {
-            tag.Count = inList.Count(choice => choice.Tags.Contains(tag.Name, StringComparer.OrdinalIgnoreCase));
+            tag.Count = searched.Count(choice => choice.Tags.Contains(tag.Name, StringComparer.OrdinalIgnoreCase));
         }
 
-        _shown = InPickerOrder(inList.Where(MatchesTags));
+        _shown = InPickerOrder(searched.Where(MatchesTags));
         var view = new ListCollectionView(_shown);
         if (_settings.GroupVisualsByFamily)
         {
@@ -261,8 +279,8 @@ public partial class VisualizerWindow : ToolWindow
         PresetList.ItemsSource = view;
         ListPickerLabel.Text = list is null ? "All visuals" : $"{list} ({inList.Count})";
 
-        // Narrowed by a list or by tags, Auto plays from what's shown. If nothing is shown it plays from everything.
-        var narrowed = names is not null || _tickedTags.Count > 0;
+        // Narrowed by a list, tags or a search, Auto plays from what's shown. If nothing is shown it plays from everything.
+        var narrowed = names is not null || _tickedTags.Count > 0 || _searchWords.Length > 0;
         if (_host is not null)
         {
             _host.AutoCycleNames = !narrowed || _shown.Count == 0 ? null : _shown.Select(choice => choice.Name).ToList();
@@ -288,6 +306,9 @@ public partial class VisualizerWindow : ToolWindow
     private bool MatchesTags(VisualChoice choice) =>
         _tickedTags.Count == 0 || choice.Tags.Any(_tickedTags.Contains);
 
+    /// <summary>Whether a visual has every word typed in the search box in its name, family or tags.</summary>
+    private bool MatchesSearch(VisualChoice choice) => SearchText.Matches(choice.SearchKey, _searchWords);
+
     private HashSet<string> TickedTags() =>
         new(_tags.Where(tag => tag.IsChecked).Select(tag => tag.Name), StringComparer.OrdinalIgnoreCase);
 
@@ -296,15 +317,33 @@ public partial class VisualizerWindow : ToolWindow
     {
         var tagNames = _tags.Where(tag => tag.IsChecked).Select(tag => tag.Name).ToList();
         var tagText = string.Join(" or ", tagNames);
+        var search = SearchBox.Text.Trim();
+        var searching = _searchWords.Length > 0;
+
+        // "tagged Calm or Space and matching "blue"": what the tags and the search narrow it to.
+        var filters = new List<string>();
+        if (tagNames.Count > 0)
+        {
+            filters.Add($"tagged {tagText}");
+        }
+
+        if (searching)
+        {
+            filters.Add($"matching \u201C{search}\u201D");
+        }
+
+        var filterText = string.Join(" and ", filters);
 
         ListHint.Text = list is not null && inListCount == 0
             ? list == AppSettings.FavoritesListName
                 ? "No favourites yet. Click a visual's star to add it here."
                 : "This list is empty. Right-click any visual in All visuals to add it."
             : _shown.Count == 0
-                ? $"None of these visuals are tagged {tagText}. Tick other tags, or click Clear."
-                : tagNames.Count > 0
-                    ? $"Showing {_shown.Count} of {inListCount}, tagged {tagText}. Auto plays from these, and N and B step through them."
+                ? searching
+                    ? $"No visuals {(tagNames.Count > 0 ? $"tagged {tagText} " : string.Empty)}match \u201C{search}\u201D. Try other words, or press Esc to clear the search."
+                    : $"None of these visuals are tagged {tagText}. Tick other tags, or click Clear."
+                : filters.Count > 0
+                    ? $"Showing {_shown.Count} of {inListCount}, {filterText}. Auto plays from these, and N and B step through them."
                     : "Auto plays from this list, and N and B step through it.";
         ListHint.Visibility = narrowed ? Visibility.Visible : Visibility.Collapsed;
 
@@ -312,8 +351,8 @@ public partial class VisualizerWindow : ToolWindow
         TagHint.Visibility = _tags.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
         // A reminder on the visual's name in the bar, since the picker is closed most of the time.
-        PresetPickerButton.ToolTip = tagNames.Count > 0
-            ? $"Choose a visual (V). Showing only visuals tagged {tagText}."
+        PresetPickerButton.ToolTip = filters.Count > 0
+            ? $"Choose a visual (V). Showing only visuals {filterText}."
             : "Choose a visual (V)";
     }
 
@@ -379,7 +418,8 @@ public partial class VisualizerWindow : ToolWindow
             if (PresetPopup.IsOpen && !favorite)
             {
                 ListPickerLabel.Text = $"{AppSettings.FavoritesListName} ({_settings.FavoriteVisuals.Count})";
-                var playable = _choices.Where(other => other.IsFavorite && MatchesTags(other)).Select(other => other.Name).ToList();
+                var playable = _choices.Where(other => other.IsFavorite && MatchesTags(other) && MatchesSearch(other))
+                    .Select(other => other.Name).ToList();
                 _host!.AutoCycleNames = playable.Count == 0 ? null : playable;
             }
             else
@@ -570,13 +610,15 @@ public partial class VisualizerWindow : ToolWindow
     {
         if (sender is Expander { DataContext: CollectionViewGroup group } expander)
         {
-            expander.IsExpanded = !_collapsedFamilies.Contains(group.Name?.ToString() ?? string.Empty);
+            // While searching every folder is open, so no match is hidden in a closed one.
+            expander.IsExpanded = _searchWords.Length > 0 || !_collapsedFamilies.Contains(group.Name?.ToString() ?? string.Empty);
         }
     }
 
     private void OnFamilyFolderExpanded(object sender, RoutedEventArgs e)
     {
-        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true }
+        if (_searchWords.Length == 0
+            && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true }
             && _collapsedFamilies.Remove(group.Name?.ToString() ?? string.Empty))
         {
             SaveCollapsedFamilies();
@@ -585,7 +627,8 @@ public partial class VisualizerWindow : ToolWindow
 
     private void OnFamilyFolderCollapsed(object sender, RoutedEventArgs e)
     {
-        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true }
+        if (_searchWords.Length == 0
+            && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true }
             && _collapsedFamilies.Add(group.Name?.ToString() ?? string.Empty))
         {
             SaveCollapsedFamilies();
@@ -617,6 +660,50 @@ public partial class VisualizerWindow : ToolWindow
         _settings.VisualTagFilter = _tags.Where(tag => tag.IsChecked).Select(tag => tag.Name).ToList();
         _settings.Save();
         ShowActiveList();
+    }
+
+    // ---- Search ----
+
+    private void OnSearchChanged(object sender, TextChangedEventArgs e)
+    {
+        ClearSearchButton.Visibility = SearchBox.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        _searchWords = SearchText.Words(SearchBox.Text);
+        ShowActiveList();
+    }
+
+    private void OnSearchKeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Enter:
+                // Shows the first match, like clicking it.
+                if (_shown.Count > 0)
+                {
+                    PickPreset(_shown[0]);
+                }
+
+                e.Handled = true;
+                break;
+            case Key.Escape when SearchBox.Text.Length > 0:
+                SearchBox.Clear();
+                e.Handled = true;
+                break;
+            case Key.Escape:
+                PresetPopup.IsOpen = false;
+                e.Handled = true;
+                break;
+            case Key.Down when _shown.Count > 0:
+                // Into the list, to pick with the arrow keys and Enter.
+                SearchText.FocusRow(PresetList, PresetList.SelectedItem ?? _shown[0]);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void OnClearSearch(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        SearchBox.Focus();
     }
 
     // ---- Auto ----
