@@ -174,8 +174,9 @@
         <Grid Grid.Row="3" Margin="14,8,14,10">
             <editor:WaveformView x:Name="Waveform"
                                  WaveBrush="{DynamicResource AccentBrush}"
+                                 SelectedWaveBrush="#F2F0EA"
                                  LaneBrush="{DynamicResource SurfaceBrush}"
-                                 SelectionBrush="{DynamicResource AccentSoftBrush}"
+                                 SelectionBrush="#2EF2F0EA"
                                  LineBrush="{DynamicResource HairlineBrush}"
                                  LabelBrush="{DynamicResource MutedTextBrush}"
                                  CursorBrush="{DynamicResource AccentBrush}"

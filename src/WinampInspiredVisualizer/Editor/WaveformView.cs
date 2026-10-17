@@ -17,6 +17,7 @@ public sealed class WaveformView : FrameworkElement
     private const double DragThreshold = 3;
 
     public static readonly DependencyProperty WaveBrushProperty = Register(nameof(WaveBrush));
+    public static readonly DependencyProperty SelectedWaveBrushProperty = Register(nameof(SelectedWaveBrush));
     public static readonly DependencyProperty LaneBrushProperty = Register(nameof(LaneBrush));
     public static readonly DependencyProperty SelectionBrushProperty = Register(nameof(SelectionBrush));
     public static readonly DependencyProperty LineBrushProperty = Register(nameof(LineBrush));
@@ -64,6 +65,9 @@ public sealed class WaveformView : FrameworkElement
     public event EventHandler? CursorPlaced;
 
     public Brush? WaveBrush { get => (Brush?)GetValue(WaveBrushProperty); set => SetValue(WaveBrushProperty, value); }
+
+    /// <summary>The waveform inside the selection, so what's selected stands out from the rest.</summary>
+    public Brush? SelectedWaveBrush { get => (Brush?)GetValue(SelectedWaveBrushProperty); set => SetValue(SelectedWaveBrushProperty, value); }
 
     public Brush? LaneBrush { get => (Brush?)GetValue(LaneBrushProperty); set => SetValue(LaneBrushProperty, value); }
 
@@ -266,13 +270,15 @@ public sealed class WaveformView : FrameworkElement
         }
 
         // Selection behind the waveform, across the ruler and every lane.
+        var selected = Rect.Empty;
         if (!_selection.IsEmpty)
         {
             var x0 = Math.Max(0, FrameToX(_selection.Start));
             var x1 = Math.Min(width, FrameToX(_selection.End));
             if (x1 > x0 - 1)
             {
-                dc.DrawRectangle(SelectionBrush, null, new Rect(x0, 0, Math.Max(1, x1 - x0), height));
+                selected = new Rect(x0, 0, Math.Max(1, x1 - x0), height);
+                dc.DrawRectangle(SelectionBrush, null, selected);
             }
         }
 
@@ -285,8 +291,17 @@ public sealed class WaveformView : FrameworkElement
             var middle = top + laneHeight / 2;
             dc.DrawLine(linePen, new Point(0, Math.Round(middle) + 0.5), new Point(width, Math.Round(middle) + 0.5));
             dc.PushClip(new RectangleGeometry(lane));
-            DrawWave(dc, c, top, laneHeight, width);
+            DrawWave(dc, c, top, laneHeight, width, WaveBrush);
             dc.Pop();
+
+            // The selected part is drawn again over it in its own colour.
+            var selectedLane = Rect.Intersect(lane, selected);
+            if (!selectedLane.IsEmpty && SelectedWaveBrush is not null)
+            {
+                dc.PushClip(new RectangleGeometry(selectedLane));
+                DrawWave(dc, c, top, laneHeight, width, SelectedWaveBrush);
+                dc.Pop();
+            }
 
             var label = channels == 1 ? "Mono" : c == 0 ? "L" : "R";
             dc.DrawText(Text(label, 10, LabelBrush), new Point(8, top + 4));
@@ -304,7 +319,7 @@ public sealed class WaveformView : FrameworkElement
         }
         else
         {
-            var pen = new Pen(CursorBrush ?? Brushes.White, 1);
+            var pen = new Pen(SelectedWaveBrush ?? CursorBrush ?? Brushes.White, 1);
             foreach (var edge in new[] { _selection.Start, _selection.End })
             {
                 var x = Math.Round(FrameToX(edge)) + 0.5;
@@ -316,7 +331,7 @@ public sealed class WaveformView : FrameworkElement
         }
     }
 
-    private void DrawWave(DrawingContext dc, int channel, double top, double laneHeight, double width)
+    private void DrawWave(DrawingContext dc, int channel, double top, double laneHeight, double width, Brush? brush)
     {
         var half = laneHeight / 2 - 2;
         var middle = top + laneHeight / 2;
@@ -387,11 +402,11 @@ public sealed class WaveformView : FrameworkElement
         geometry.Freeze();
         if (_samplesPerPixel >= 1)
         {
-            dc.DrawGeometry(WaveBrush, null, geometry);
+            dc.DrawGeometry(brush, null, geometry);
         }
         else
         {
-            dc.DrawGeometry(null, new Pen(WaveBrush, 1.5), geometry);
+            dc.DrawGeometry(null, new Pen(brush, 1.5), geometry);
             if (1 / _samplesPerPixel >= 8)
             {
                 // Far enough in to see individual samples as dots.
@@ -400,7 +415,7 @@ public sealed class WaveformView : FrameworkElement
                 var last = Math.Min(samples.Length - 1, (int)Math.Ceiling(XToFrame(width)));
                 for (var i = first; i <= last; i++)
                 {
-                    dc.DrawEllipse(WaveBrush, null, new Point(FrameToX(i), middle - Math.Clamp(samples[i], -1.5f, 1.5f) * half), 2, 2);
+                    dc.DrawEllipse(brush, null, new Point(FrameToX(i), middle - Math.Clamp(samples[i], -1.5f, 1.5f) * half), 2, 2);
                 }
             }
         }
