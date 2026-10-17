@@ -14,6 +14,8 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Add files or whole folders with the eject button, or drag them onto any Lucid window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library: link a folder and every song inside it is listed, newest first, with other sort orders and folder headings you can open or close
+- Favourite songs: click the heart in the player (or press H), or right-click songs in the queue or library. The FAVOURITES pill in the library shows only them
+- Playlists: save the queue as a playlist, add songs to one from the queue or library (right-click), and play them or add them to the queue from **Playlists** in the queue window. They're saved as standard .m3u8 files, so Winamp and other players can open them too
 - Shows track title, artist and length from the file's tags
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
 - 72 visuals in six families:
@@ -24,6 +26,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
   - **Cosmic and organic:** Bass Nebula, Aurora Veil, Black Hole, Cosmic Jellyfish, Supernova Remnant, Electric Storm, Ink Flow, Chrome Blobs, Shot Silk, Living Cells and more
   - **Particles:** hundreds of thousands of glowing particles moving on the graphics card every frame: Strange Attractors, Galaxy Collision, Firework Mandala, Silk Currents, Sonic Dandelion and Knot Stream
 - A visual picker: click the visual's name under the visuals (the button with the screen-and-spark icon), or press V, to choose any visual from a list
+- Favourite visuals and lists of visuals: star a visual in the picker, with the star under the visuals, or with F. The menu at the top of the picker switches between all visuals, your favourites and lists you make (right-click a visual to add it to one). The picker, N and B, and Auto mode then stick to that list
 - Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so. The AUTO pill under the visuals shows how often; click the arrow beside it (or right-click the pill) to choose anything from 10 seconds to 3 minutes
 - Options (the gear in the player's title bar, or O):
   - **Resolution:** draw visuals at the window's size, or at 1080p, 1440p or 4K. Above the window's size they're drawn bigger and shrunk to fit (supersampling), for smoother, finer detail
@@ -36,7 +39,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, O opens options, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
+**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, O opens options, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
 
 ## Download and run
 

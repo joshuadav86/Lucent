@@ -49,6 +49,7 @@ public sealed class Renderer : IDisposable
     private volatile float _bloomStrength = 1f;
     private volatile float _transitionSeconds = 3f;
     private volatile float _autoCycleSeconds = 25f;
+    private volatile int[]? _autoCycleChoices;
     private volatile bool _morphsOnly;
     private volatile bool _hdrRequested;
     private int _compilersRunning;
@@ -157,6 +158,13 @@ public sealed class Renderer : IDisposable
     {
         get => _transitionSeconds;
         set => _transitionSeconds = Math.Clamp(value, 0.25f, 30f);
+    }
+
+    /// <summary>The visuals Auto picks from (by index), or null for all of them.</summary>
+    public IReadOnlyCollection<int>? AutoCycleChoices
+    {
+        get => _autoCycleChoices;
+        set => _autoCycleChoices = value?.ToArray();
     }
 
     public float AutoCycleSeconds
@@ -700,9 +708,10 @@ public sealed class Renderer : IDisposable
     private int RandomReadyPreset()
     {
         var ready = new List<int>();
+        var choices = _autoCycleChoices;
         for (var index = 0; index < _slots.Length; index++)
         {
-            if (index != _activePreset && IsReady(index))
+            if (index != _activePreset && IsReady(index) && (choices is null || Array.IndexOf(choices, index) >= 0))
             {
                 ready.Add(index);
             }

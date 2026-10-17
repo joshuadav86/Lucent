@@ -186,15 +186,25 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <!-- The title scrolls when it's too long to fit, like Winamp's. -->
-                        <Canvas x:Name="MarqueeArea" Height="20" ClipToBounds="True" SizeChanged="OnMarqueeSizeChanged">
-                            <StackPanel x:Name="MarqueeStrip" Orientation="Horizontal">
-                                <TextBlock x:Name="NowPlayingText" Text="Nothing playing" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}" />
-                                <TextBlock x:Name="NowPlayingRepeat" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}" Visibility="Collapsed" />
-                            </StackPanel>
-                        </Canvas>
+                        <DockPanel>
+                            <!-- Heart: make the song that's playing a favourite. -->
+                            <Button x:Name="TrackFavoriteButton" DockPanel.Dock="Right" Style="{StaticResource IconButton}"
+                                    Width="24" Height="24" Margin="6,-2,-6,-2" IsEnabled="False"
+                                    ToolTip="Add this song to your favourites (H)" Click="OnToggleTrackFavorite">
+                                <Path x:Name="TrackFavoriteIcon" Data="{StaticResource HeartIcon}" Width="13" Height="13" Stretch="Uniform"
+                                      Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.3" StrokeLineJoin="Round"
+                                      Fill="Transparent" />
+                            </Button>
+                            <!-- The title scrolls when it's too long to fit, like Winamp's. -->
+                            <Canvas x:Name="MarqueeArea" Height="20" ClipToBounds="True" SizeChanged="OnMarqueeSizeChanged">
+                                <StackPanel x:Name="MarqueeStrip" Orientation="Horizontal">
+                                    <TextBlock x:Name="NowPlayingText" Text="Nothing playing" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="NowPlayingRepeat" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" Visibility="Collapsed" />
+                                </StackPanel>
+                            </Canvas>
+                        </DockPanel>
                         <TextBlock x:Name="TrackDetails" Text="Drop music on any Lucid window to begin" FontSize="11" Margin="0,3,0,0"
                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                         <DockPanel Margin="0,10,0,0">

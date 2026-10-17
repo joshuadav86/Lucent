@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Windows;
@@ -19,6 +21,47 @@ public partial class QueueWindow : ToolWindow
     {
         var selected = new HashSet<PlaylistEntry>(PlaylistView.SelectedItems.Cast<PlaylistEntry>());
         return PlaylistView.Items.Cast<PlaylistEntry>().Where(selected.Contains).ToList();
+    }
+
+    private void OnPlaylistsMenu(object sender, RoutedEventArgs e)
+    {
+        if (Player is null)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu { PlacementTarget = PlaylistsButton, Placement = PlacementMode.Bottom };
+        Player.FillPlaylistsMenu(menu, this);
+        menu.IsOpen = true;
+    }
+
+    // Favourite and Add to playlist depend on what's selected, so they're made fresh each time.
+    private readonly List<object> _songMenuItems = new();
+
+    private void OnQueueMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        foreach (var item in _songMenuItems)
+        {
+            QueueMenu.Items.Remove(item);
+        }
+
+        _songMenuItems.Clear();
+        var entries = SelectedEntries();
+        if (Player is null || entries.Count == 0)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var tracks = entries.Select(entry => entry.Track).ToList();
+        _songMenuItems.Add(Player.FavoriteMenuItem(tracks.Select(track => track.Path).ToList()));
+        _songMenuItems.Add(Player.AddToPlaylistMenu(this, () => Task.FromResult(tracks)));
+        _songMenuItems.Add(new Separator());
+        var at = QueueMenu.Items.IndexOf(SongMenuItemsStart) + 1;
+        foreach (var item in _songMenuItems)
+        {
+            QueueMenu.Items.Insert(at++, item);
+        }
     }
 
     private void OnAddFiles(object sender, RoutedEventArgs e) => Player?.AddFilesFromDialog(this);
