@@ -166,8 +166,15 @@ public partial class MainWindow : Window
             _snapper.Add(window);
         }
 
-        if (Saved("Player") is null)
+        var firstTime = Saved("Player") is null;
+        if (firstTime)
         {
+            // The equalizer opens first so the first layout can make room for it under the player.
+            if (_settings.ShowEqualizer)
+            {
+                OpenEqualizer();
+            }
+
             ArrangeFirstTime();
         }
         else
@@ -197,6 +204,12 @@ public partial class MainWindow : Window
             _libraryWindow.Show();
         }
 
+        // The equalizer opens under the player, moving the queue down to make room.
+        if (!firstTime && _settings.ShowEqualizer)
+        {
+            OpenEqualizer();
+        }
+
         // Every window gets its real (hidden) window now, so ones that start switched off still move
         // with the player while it's dragged, and turn up docked where they belong.
         foreach (var window in ToolWindows)
@@ -209,16 +222,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The first layout, like Winamp's: the queue under the player, the visuals beside them both,
-    /// and the library (if it's open) on the other side, centred on the screen.
+    /// The first layout, like Winamp's: the equalizer (if it's open) and the queue under the player,
+    /// the visuals beside them all, and the library (if it's open) on the other side, centred on the screen.
     /// </summary>
     private void ArrangeFirstTime()
     {
         var work = SystemParameters.WorkArea;
         var playerWidth = ActualWidth;
         var playerHeight = ActualHeight;
-        var queueHeight = Math.Clamp(work.Height * 0.36, 220, 360);
-        var stackHeight = playerHeight + queueHeight;
+        var equalizer = OpenEqualizerWindow;
+        var equalizerHeight = equalizer is null ? 0 : SizeOf(equalizer).Height;
+        var queueHeight = Math.Clamp(Math.Min(work.Height * 0.36, work.Height - playerHeight - equalizerHeight - 40), _queue.MinHeight, 360);
+        var stackHeight = playerHeight + equalizerHeight + queueHeight;
         var libraryWidth = _settings.ShowLibrary ? 360.0 : 0.0;
         var visualsWidth = Math.Clamp(work.Width - playerWidth - libraryWidth - 40, 420, 860);
         var groupWidth = libraryWidth + playerWidth + visualsWidth;
@@ -227,7 +242,12 @@ public partial class MainWindow : Window
 
         Left = left + libraryWidth;
         Top = top;
-        Place(_queue, Left, top + playerHeight, playerWidth, queueHeight);
+        if (equalizer is not null)
+        {
+            Place(equalizer, Left, top + playerHeight, playerWidth, equalizerHeight);
+        }
+
+        Place(_queue, Left, top + playerHeight + equalizerHeight, playerWidth, queueHeight);
         Place(_visuals, Left + playerWidth, top, visualsWidth, stackHeight);
         if (_settings.ShowLibrary)
         {
@@ -255,7 +275,7 @@ public partial class MainWindow : Window
         // Never placed before (the library, usually): beside the player where there's room.
         var work = SystemParameters.WorkArea;
         window.WindowStartupLocation = WindowStartupLocation.Manual;
-        var height = Math.Max(window.Height, ActualHeight + (_queue.IsVisible ? _queue.ActualHeight : 0));
+        var height = Math.Max(window.Height, ColumnTop - Top + (_queue.IsVisible ? _queue.ActualHeight : 0));
         window.Height = Math.Min(height, work.Height);
         window.Left = Left - window.Width >= work.Left ? Left - window.Width : Math.Min(Left + ActualWidth, work.Right - window.Width);
         window.Top = Math.Clamp(Top, work.Top, Math.Max(work.Top, work.Bottom - window.Height));
@@ -268,14 +288,14 @@ public partial class MainWindow : Window
         if (window == _queue)
         {
             window.Left = Left;
-            window.Top = Top + ActualHeight;
+            window.Top = ColumnTop;
             window.Width = ActualWidth;
         }
         else if (window == _visuals)
         {
             window.Left = Left + ActualWidth;
             window.Top = Top;
-            window.Height = Math.Max(window.Height, ActualHeight + (_queue.IsVisible ? _queue.ActualHeight : 0));
+            window.Height = Math.Max(window.Height, ColumnTop - Top + (_queue.IsVisible ? _queue.ActualHeight : 0));
         }
         else
         {
@@ -285,15 +305,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Docks the queue or library against the player: the queue underneath (or above, if there's
-    /// no room below), the library to the left (or the right, past the visuals, if there's no room).
+    /// Docks the queue or library against the player: the queue underneath (under the equalizer, if
+    /// that's docked there, or above the player if there's no room below), the library to the left
+    /// (or the right, past the visuals, if there's no room).
     /// </summary>
     private void DockToPlayer(ToolWindow window)
     {
         var area = ScreenArea.Of(this);
         window.WindowStartupLocation = WindowStartupLocation.Manual;
         window.WindowState = WindowState.Normal;
-        var playerBottom = Top + ActualHeight;
+        var playerBottom = ColumnTop;
 
         if (window == _queue)
         {
@@ -489,9 +510,16 @@ public partial class MainWindow : Window
             Place(_libraryWindow, area.Left, area.Top, libraryWidth, area.Height);
         }
 
+        var equalizerHeight = 0.0;
+        if (OpenEqualizerWindow is { } equalizer)
+        {
+            equalizerHeight = SizeOf(equalizer).Height;
+            Place(equalizer, Left, Top + playerHeight, playerWidth, equalizerHeight);
+        }
+
         if (_queue.IsVisible)
         {
-            Place(_queue, Left, Top + playerHeight, playerWidth, Math.Max(_queue.MinHeight, area.Height - playerHeight));
+            Place(_queue, Left, Top + playerHeight + equalizerHeight, playerWidth, Math.Max(_queue.MinHeight, area.Height - playerHeight - equalizerHeight));
         }
 
         if (visuals)
@@ -511,10 +539,17 @@ public partial class MainWindow : Window
         var playerWidth = ActualWidth;
         var playerHeight = ActualHeight;
         var queueHeight = _queue.IsVisible ? _queue.MinHeight : 0;
-        var stackHeight = playerHeight + queueHeight;
+        var equalizerHeight = 0.0;
+        if (OpenEqualizerWindow is { } equalizer)
+        {
+            equalizerHeight = SizeOf(equalizer).Height;
+            Place(equalizer, Left, Top + playerHeight, playerWidth, equalizerHeight);
+        }
+
+        var stackHeight = playerHeight + equalizerHeight + queueHeight;
         if (_queue.IsVisible)
         {
-            Place(_queue, Left, Top + playerHeight, playerWidth, queueHeight);
+            Place(_queue, Left, Top + playerHeight + equalizerHeight, playerWidth, queueHeight);
         }
 
         if (_visuals.IsVisible)
@@ -612,7 +647,94 @@ public partial class MainWindow : Window
     private void OnToggleEqualizer(object sender, RoutedEventArgs e) => ToggleEqualizer();
 
     private void ToggleEqualizer() =>
-        EqualizerWindow.Toggle(this, _player, _settings, isOpen => EqualizerToggle.IsChecked = isOpen);
+        EqualizerWindow.Toggle(this, _player, _settings, OnEqualizerOpenChanged);
+
+    private void OpenEqualizer() => EqualizerWindow.Show(this, _player, _settings, OnEqualizerOpenChanged);
+
+    private void OnEqualizerOpenChanged(bool isOpen)
+    {
+        EqualizerToggle.IsChecked = isOpen;
+        // Closing Lucid closes the equalizer too; that shouldn't count as switching it off.
+        if (!IsShuttingDown)
+        {
+            _settings.ShowEqualizer = isOpen;
+        }
+    }
+
+    /// <summary>The equalizer window, if it's open.</summary>
+    private static Window? OpenEqualizerWindow => EqualizerWindow.Current is { IsVisible: true } equalizer ? equalizer : null;
+
+    /// <summary>Where the queue docks: right under the player, or under the equalizer when that's docked there.</summary>
+    private double ColumnTop
+    {
+        get
+        {
+            var playerBottom = Top + ActualHeight;
+            return OpenEqualizerWindow is { } equalizer && Math.Abs(equalizer.Left - Left) < 2 && Math.Abs(equalizer.Top - playerBottom) < 2
+                ? playerBottom + SizeOf(equalizer).Height
+                : playerBottom;
+        }
+    }
+
+    /// <summary>
+    /// Docks the equalizer right under the player, the same width, like Winamp's. A queue docked
+    /// under the player moves down beneath it, keeping its bottom edge where it was if it can, and
+    /// moves back up when the equalizer closes. With no room under the player it docks beside the
+    /// windows instead.
+    /// </summary>
+    public void DockEqualizer(Window equalizer)
+    {
+        var area = ScreenArea.Of(this);
+        var playerBottom = Top + ActualHeight;
+        var height = SizeOf(equalizer).Height;
+        equalizer.Closing += (_, _) => CloseEqualizerGap(equalizer);
+        if (playerBottom + height > area.Bottom)
+        {
+            DockNewWindow(equalizer);
+            return;
+        }
+
+        _snapper.Add(equalizer);
+        Place(equalizer, Left, playerBottom, ActualWidth, height);
+        if (!_queue.IsVisible || Math.Abs(_queue.Left - Left) >= 2 || Math.Abs(_queue.Top - playerBottom) >= 2)
+        {
+            return;
+        }
+
+        var bottom = _queue.Top + _queue.ActualHeight;
+        var queueTop = playerBottom + height;
+        var newBottom = Math.Min(area.Bottom, Math.Max(bottom, queueTop + _queue.MinHeight));
+        _queue.Top = queueTop;
+        _queue.Height = Math.Max(_queue.MinHeight, newBottom - queueTop);
+
+        // If the queue had to grow past the bottom of the windows beside it, they grow to match.
+        if (newBottom > bottom + 1)
+        {
+            foreach (var window in new Window[] { _visuals, _libraryWindow })
+            {
+                if (window.IsVisible && window.WindowState == WindowState.Normal && Math.Abs(window.Top + window.ActualHeight - bottom) < 2)
+                {
+                    window.Height = newBottom - window.Top;
+                }
+            }
+        }
+    }
+
+    // When the equalizer under the player closes, the queue under it moves up to the player again.
+    private void CloseEqualizerGap(Window equalizer)
+    {
+        var top = equalizer.Top;
+        var bottom = top + equalizer.ActualHeight;
+        if (IsShuttingDown || Math.Abs(top - (Top + ActualHeight)) >= 2 || Math.Abs(equalizer.Left - Left) >= 2
+            || !_queue.IsVisible || Math.Abs(_queue.Left - Left) >= 2 || Math.Abs(_queue.Top - bottom) >= 2)
+        {
+            return;
+        }
+
+        var queueBottom = _queue.Top + _queue.ActualHeight;
+        _queue.Top = top;
+        _queue.Height = queueBottom - top;
+    }
 
     private void OnToggleVisuals(object sender, RoutedEventArgs e) => ToggleWindow(_visuals);
 

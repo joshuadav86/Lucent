@@ -27,12 +27,18 @@ public partial class EqualizerWindow : Window
     private readonly List<Slider> _bandSliders = new();
     private EqualizerBands _bands;
     private double _columnWidth;
+    // The width it keeps when it opens from the player: the player's own, so it docks underneath
+    // like Winamp's. Null for its natural width.
+    private readonly double? _fitWidth;
 
     // The preamp column and the +12/0/−12 scale beside it, to the left of the band sliders.
     private const double PreampAndScaleWidth = 48 + 26 + 6;
 
     // Beyond this the sliders look scattered rather than spread out.
     private const double WidestColumn = 110;
+    // How narrow columns may get to fit the player's width with 31 bands, and the knob they hold.
+    private const double NarrowestFittedColumn = 12;
+    private const double SliderKnobWidth = 16;
     // True while the sliders are being set from code (and during start-up), so their change
     // handlers stay quiet.
     private bool _updating = true;
@@ -54,11 +60,12 @@ public partial class EqualizerWindow : Window
     private double _widthFrom;
     private double _widthTo;
 
-    private EqualizerWindow(AudioPlayer player, AppSettings settings)
+    private EqualizerWindow(AudioPlayer player, AppSettings settings, double? fitWidth)
     {
         InitializeComponent();
         _player = player;
         _settings = settings;
+        _fitWidth = fitWidth;
         _bands = EqualizerBands.ForCount(Eq.BandCount);
         Eq.BandCount = _bands.Count;
         Eq.Gains = Equalizer.SliderGains(Eq, _bands).ToList();
@@ -89,11 +96,15 @@ public partial class EqualizerWindow : Window
         LocationChanged += (_, _) => RememberPosition();
         Loaded += (_, _) => RedrawCurve();
 
+        FitHeader();
         BuildBands();
         ShowSettings();
     }
 
     private EqualizerSettings Eq => _settings.Equalizer;
+
+    /// <summary>The equalizer window, while it's open.</summary>
+    public static EqualizerWindow? Current => _open;
 
     /// <summary>
     /// Opens the equalizer beside <paramref name="owner"/>, or closes it if it's already open.
@@ -121,10 +132,11 @@ public partial class EqualizerWindow : Window
             return _open;
         }
 
-        var window = new EqualizerWindow(player, settings) { Owner = owner };
-        if (owner is MainWindow main)
+        var main = owner as MainWindow;
+        var window = new EqualizerWindow(player, settings, main?.ActualWidth) { Owner = owner };
+        if (main is not null)
         {
-            main.DockNewWindow(window);
+            main.DockEqualizer(window);
         }
         else
         {
@@ -155,9 +167,18 @@ public partial class EqualizerWindow : Window
         // With only a few bands the row of buttons along the top is the widest thing in the window,
         // so the sliders spread out to fill that width (up to a point; the rest is shared either side)
         // instead of bunching up on the left.
-        HeaderRow.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var room = HeaderRow.DesiredSize.Width - SliderArea.Margin.Left - SliderArea.Margin.Right - PreampAndScaleWidth;
-        _columnWidth = Math.Clamp(Math.Floor(room / _bands.Count), narrowest, Math.Max(narrowest, WidestColumn));
+        if (_fitWidth is { } width)
+        {
+            // Docked under the player, the sliders share the player's width, however many there are.
+            var fit = width - BorderThickness.Left - BorderThickness.Right - SliderArea.Margin.Left - SliderArea.Margin.Right - PreampAndScaleWidth;
+            _columnWidth = Math.Clamp(Math.Floor(fit / _bands.Count), NarrowestFittedColumn, WidestColumn);
+        }
+        else
+        {
+            HeaderRow.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            var room = HeaderRow.DesiredSize.Width - SliderArea.Margin.Left - SliderArea.Margin.Right - PreampAndScaleWidth;
+            _columnWidth = Math.Clamp(Math.Floor(room / _bands.Count), narrowest, Math.Max(narrowest, WidestColumn));
+        }
 
         BandPanel.Children.Clear();
         _bandSliders.Clear();
@@ -174,10 +195,23 @@ public partial class EqualizerWindow : Window
             slider.MouseDoubleClick += (sender, _) => ((Slider)sender!).Value = 0;
             slider.PreviewMouseWheel += (sender, e) => Nudge((Slider)sender!, e);
 
+            // Sliders in very narrow columns are drawn thinner so their knobs don't touch.
+            if (_columnWidth < SliderKnobWidth + 4)
+            {
+                slider.LayoutTransform = new ScaleTransform(Math.Max(0.5, (_columnWidth - 4) / SliderKnobWidth), 1);
+            }
+
             var text = new TextBlock { Style = (Style)Resources["BandLabel"], Text = label };
-            if (_bands.Count >= 24)
+            if (_bands.Count >= 24 || _columnWidth < 30)
             {
                 text.FontSize = 9;
+            }
+
+            // In very narrow columns every other label is left out so they don't run together; the
+            // slider's tooltip still names its frequency.
+            if (_columnWidth < 20 && band % 2 == 1)
+            {
+                text.Visibility = Visibility.Hidden;
             }
 
             var column = new StackPanel
@@ -204,8 +238,32 @@ public partial class EqualizerWindow : Window
     private void FitToContent()
     {
         Root.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        Width = Math.Ceiling(Root.DesiredSize.Width) + BorderThickness.Left + BorderThickness.Right;
+        Width = _fitWidth ?? Math.Ceiling(Root.DesiredSize.Width) + BorderThickness.Left + BorderThickness.Right;
         Height = Math.Ceiling(Root.DesiredSize.Height) + BorderThickness.Top + BorderThickness.Bottom;
+    }
+
+    /// <summary>
+    /// At the player's width the top row can be a little too wide, so the "Bands" label goes (the
+    /// buttons keep their tooltip) and the band buttons move closer to the switch and presets.
+    /// </summary>
+    private void FitHeader()
+    {
+        if (_fitWidth is not { } width)
+        {
+            return;
+        }
+
+        var room = width - BorderThickness.Left - BorderThickness.Right - HeaderRow.Margin.Left - HeaderRow.Margin.Right;
+        foreach (var step in new Action[] { () => BandsLabel.Visibility = Visibility.Collapsed, () => BandsGroup.Margin = new Thickness(8, 0, 8, 0) })
+        {
+            HeaderRow.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            if (HeaderRow.DesiredSize.Width <= room)
+            {
+                return;
+            }
+
+            step();
+        }
     }
 
     private void PlaceOnScreen(Window owner)

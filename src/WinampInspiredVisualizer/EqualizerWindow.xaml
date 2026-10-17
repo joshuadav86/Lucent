@@ -170,8 +170,8 @@
                     </StackPanel>
                 </Button>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0">
-                <TextBlock Text="Bands" FontSize="12" Foreground="{DynamicResource MutedTextBrush}"
+            <StackPanel x:Name="BandsGroup" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0">
+                <TextBlock x:Name="BandsLabel" Text="Bands" FontSize="12" Foreground="{DynamicResource MutedTextBrush}"
                            VerticalAlignment="Center" Margin="0,0,8,0" />
                 <Border Style="{StaticResource SegmentBar}" ToolTip="How many sliders: fewer for quick changes, more for fine control">
                     <StackPanel x:Name="BandCountBar" Orientation="Horizontal" />

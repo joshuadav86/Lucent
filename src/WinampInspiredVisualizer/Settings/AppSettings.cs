@@ -34,6 +34,9 @@ public sealed class AppSettings
 
     public bool ShowVisuals { get; set; } = true;
 
+    /// <summary>Whether the equalizer is open, docked under the player like Winamp's.</summary>
+    public bool ShowEqualizer { get; set; } = true;
+
     // ---- Player ----
 
     public bool Shuffle { get; set; }
