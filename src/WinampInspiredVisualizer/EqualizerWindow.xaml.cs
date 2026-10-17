@@ -27,6 +27,12 @@ public partial class EqualizerWindow : Window
     private readonly List<Slider> _bandSliders = new();
     private EqualizerBands _bands;
     private double _columnWidth;
+
+    // The preamp column and the +12/0/−12 scale beside it, to the left of the band sliders.
+    private const double PreampAndScaleWidth = 48 + 26 + 6;
+
+    // Beyond this the sliders look scattered rather than spread out.
+    private const double WidestColumn = 110;
     // True while the sliders are being set from code (and during start-up), so their change
     // handlers stay quiet.
     private bool _updating = true;
@@ -113,13 +119,20 @@ public partial class EqualizerWindow : Window
     {
         _bands = EqualizerBands.ForCount(Eq.BandCount);
         // Narrower columns for more bands, so even 31 sliders fit a normal screen.
-        _columnWidth = _bands.Count switch
+        var narrowest = _bands.Count switch
         {
             <= 10 => 40,
             <= 16 => 32,
             <= 24 => 26,
             _ => 22,
         };
+
+        // With only a few bands the row of buttons along the top is the widest thing in the window,
+        // so the sliders spread out to fill that width (up to a point; the rest is shared either side)
+        // instead of bunching up on the left.
+        HeaderRow.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var room = HeaderRow.DesiredSize.Width - SliderArea.Margin.Left - SliderArea.Margin.Right - PreampAndScaleWidth;
+        _columnWidth = Math.Clamp(Math.Floor(room / _bands.Count), narrowest, Math.Max(narrowest, WidestColumn));
 
         BandPanel.Children.Clear();
         _bandSliders.Clear();
