@@ -3,7 +3,7 @@ on:
   push:
     branches: [snap-diagnose]
 permissions:
-  contents: read
+  contents: write
 jobs:
   diagnose:
     runs-on: windows-latest
@@ -19,8 +19,11 @@ jobs:
       - name: Drag windows and record where they go
         shell: powershell
         run: ./tools/snap-diagnose.ps1
-      - uses: actions/upload-artifact@v4
+      - name: Save the screenshots to the branch
         if: always()
-        with:
-          name: shots
-          path: ${{ runner.temp }}/shots
+        shell: bash
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          mkdir -p diag && cp "$RUNNER_TEMP"/shots/*.png diag/ || true
+          git add diag && git commit -m "Diagnose screenshots [skip ci]" && git push || true

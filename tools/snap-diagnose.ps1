@@ -19,8 +19,9 @@ public static class W {
   public static string Title(IntPtr h) { var s = new StringBuilder(256); GetWindowText(h, s, 256); return s.ToString(); }
   public static string Rects(IntPtr h) { R o, v; GetWindowRect(h, out o); DwmGetWindowAttribute(h, 9, out v, 16); return "window " + o + " | visible " + v + " | dpi " + GetDpiForWindow(h); }
   public static void Drag(int x, int y, int dx, int dy) {
-    SetCursorPos(x, y); System.Threading.Thread.Sleep(200); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(200);
-    for (int i = 1; i <= 20; i++) { SetCursorPos(x + dx * i / 20, y + dy * i / 20); System.Threading.Thread.Sleep(40); }
+    SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
+    SetCursorPos(x + 3, y + 3); System.Threading.Thread.Sleep(400);
+    for (int i = 1; i <= 30; i++) { SetCursorPos(x + 3 + (dx - 3) * i / 30, y + 3 + (dy - 3) * i / 30); System.Threading.Thread.Sleep(60); }
     System.Threading.Thread.Sleep(300); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(800);
   }
   public static void Shot(string path) { var b = System.Windows.Forms.Screen.PrimaryScreen.Bounds; using (var bmp = new Bitmap(b.Width, b.Height)) { using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(b.Location, Point.Empty, b.Size); bmp.Save(path); } }
@@ -30,7 +31,7 @@ public static class W {
 Write-Host '::notice::types loaded'
 $out = Join-Path $env:RUNNER_TEMP 'shots'; New-Item -ItemType Directory -Force $out | Out-Null
 $proc = Start-Process -FilePath (Resolve-Path 'app/Lucid.exe') -PassThru
-Start-Sleep 25
+Start-Sleep 40
 function Dump($label) {
   Write-Host "::notice::=== $label"
   foreach ($h in [W]::Of([uint32]$proc.Id)) { Write-Host ("::notice::{0,-22} {1}" -f [W]::Title($h), [W]::Rects($h)) }
