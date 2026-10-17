@@ -66,6 +66,14 @@
                         <TextBlock Text="Options" Margin="8,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </ToggleButton>
+                <ToggleButton x:Name="AudioToolsButton" Style="{StaticResource PanelToggle}" Margin="2,0,0,0"
+                              ToolTip="Edit or convert songs" Click="OnAudioTools"
+                              WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
+                        <TextBlock Text="Edit" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </ToggleButton>
 
                 <Popup x:Name="OptionsPopup" PlacementTarget="{Binding ElementName=OptionsButton}" Placement="Bottom"
                        VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
@@ -255,6 +263,9 @@
                                 <MenuItem Header="Play this folder" Click="OnLibraryPlayFolder" />
                                 <Separator />
                                 <MenuItem Header="Show in File Explorer" Click="OnLibraryShowInExplorer" />
+                                <Separator />
+                                <MenuItem Header="Open in editor" Click="OnLibraryOpenInEditor" />
+                                <MenuItem Header="Convert to…" Click="OnLibraryConvert" />
                             </ContextMenu>
                         </ListBox.ContextMenu>
                         <ListBox.GroupStyle>
@@ -361,6 +372,12 @@
                              SelectionMode="Extended"
                              MouseDoubleClick="OnPlaylistDoubleClick"
                              KeyDown="OnPlaylistKeyDown">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Open in editor" Click="OnQueueOpenInEditor" />
+                                <MenuItem Header="Convert to…" Click="OnQueueConvert" />
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>

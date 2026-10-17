@@ -1,0 +1,866 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+using WinampInspiredVisualizer.Editor;
+using WinampInspiredVisualizer.Editor.Effects;
+using WinampInspiredVisualizer.Export;
+
+namespace WinampInspiredVisualizer;
+
+/// <summary>
+/// A simple two-track (stereo) audio editor: shows a song's waveform, plays it, selects part of it,
+/// processes it, and saves it back or as a new file. Open it with <see cref="AudioTools.OpenEditor"/>.
+/// </summary>
+public partial class EditorWindow : Window
+{
+    /// <summary>With nothing selected, fades cover this much at the start or end.</summary>
+    private static readonly TimeSpan DefaultFadeLength = TimeSpan.FromSeconds(3);
+
+    private readonly EditorHost _host;
+    private readonly EditorPlayer _player = new();
+    private readonly DispatcherTimer _playheadTimer;
+    private string _path;
+    private EditSession? _session;
+    private SourceFileInfo? _info;
+    private CancellationTokenSource? _busy;
+    private bool _closeWhenIdle;
+    private bool _closeConfirmed;
+    private string? _lastSavedPath;
+
+    public EditorWindow(string path, EditorHost host)
+    {
+        InitializeComponent();
+        _path = path;
+        _host = host;
+        FileTitle.Text = Path.GetFileName(path);
+        Title = $"{Path.GetFileName(path)} - Audio editor - Lucid";
+
+        _playheadTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(30) };
+        _playheadTimer.Tick += (_, _) => UpdatePlayhead();
+        _player.Stopped += (_, error) =>
+        {
+            ShowStopped();
+            if (error is not null)
+            {
+                ShowStatus("Playback stopped because of a problem with the audio device.");
+            }
+        };
+
+        Waveform.SelectionChanged += (_, _) => UpdateSelectionInfo();
+        Waveform.ViewChanged += (_, _) => Overview.SetVisibleRange(Waveform.ViewStart, Waveform.ViewLength);
+        Waveform.CursorPlaced += (_, _) =>
+        {
+            // Clicking while playing carries on from the new spot.
+            if (_player.IsPlaying)
+            {
+                PlayFrom(Waveform.CursorFrame, _session?.Audio.Frames ?? 0);
+            }
+        };
+        Overview.NavigateRequested += (_, frame) => Waveform.ScrollTo(frame);
+        Overview.ZoomRequested += (_, notches) => Waveform.Zoom(Math.Pow(0.8, notches));
+
+        PitchSlider.Value = 0;
+        UpdatePitchText();
+        UpdateGainText();
+        SetEditingEnabled(false);
+        Loaded += async (_, _) => await LoadAsync();
+    }
+
+    /// <summary>The file being edited (it changes after "Save as new version").</summary>
+    public string FilePath => _path;
+
+    /// <summary>True when there are edits that haven't been saved.</summary>
+    public bool HasUnsavedChanges => _session?.IsModified == true;
+
+    /// <summary>True while the editor is loading, processing or saving.</summary>
+    public bool IsBusy => _busy is not null;
+
+    private FrameRange Selection => Waveform.Selection;
+
+    // ---- Opening ----
+
+    private async Task LoadAsync()
+    {
+        _busy = new CancellationTokenSource();
+        var progress = new Progress<double>(value => LoadingProgress.Value = value);
+        string? problem = null;
+        var cancelled = false;
+        try
+        {
+            var token = _busy.Token;
+            var (audio, info, mixedDown) = await Task.Run(() => AudioFileLoader.Load(_path, progress, token));
+            LoadingText.Text = "Drawing the waveform…";
+            var session = await Task.Run(() => new EditSession(audio));
+            _session = session;
+            _info = info;
+            Waveform.Peaks = session.Peaks;
+            Overview.Peaks = session.Peaks;
+            LoadingPanel.Visibility = Visibility.Collapsed;
+            ShowStatus(mixedDown
+                ? $"This file has {info.Channels} channels; the editor mixes them down to stereo, so saving makes a stereo file."
+                : "Drag across the waveform to select part of it. The wheel zooms, Shift+wheel scrolls.");
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+        }
+        catch (Exception ex)
+        {
+            problem = ex is AudioFileException ? ex.Message : $"The file couldn't be opened. ({ex.Message})";
+        }
+        finally
+        {
+            _busy.Dispose();
+            _busy = null;
+        }
+
+        if (problem is not null)
+        {
+            MessageBox.Show(this, problem, "Audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        if (problem is not null || cancelled || _closeWhenIdle)
+        {
+            Close();
+            return;
+        }
+
+        SetEditingEnabled(true);
+        UpdateSelectionInfo();
+        UpdateHistory();
+    }
+
+    // ---- Busy work ----
+
+    /// <summary>
+    /// Runs slow work (processing, saving) off the UI thread with a progress bar and a Cancel button.
+    /// Returns false if it was cancelled or failed (the user has been told why).
+    /// </summary>
+    private async Task<bool> RunBusyAsync(string message, Func<IProgress<double>, CancellationToken, Task> work)
+    {
+        if (IsBusy)
+        {
+            return false;
+        }
+
+        StopPlayback();
+        _busy = new CancellationTokenSource();
+        SetEditingEnabled(false);
+        BusyPanel.Visibility = Visibility.Visible;
+        BusyProgress.Value = 0;
+        ShowFileButton.Visibility = Visibility.Collapsed;
+        ShowStatus(message);
+        var progress = new Progress<double>(value => BusyProgress.Value = value);
+        try
+        {
+            await work(progress, _busy.Token);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            ShowStatus("Cancelled. Nothing was changed.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            ShowStatus("That didn't work.");
+            var text = ex switch
+            {
+                AudioFileException => ex.Message,
+                OutOfMemoryException => "There isn't enough memory for that. Try a shorter selection, or close other programs.",
+                _ => FileConverter.FriendlyError(ex),
+            };
+            MessageBox.Show(this, text, "Audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+        finally
+        {
+            _busy.Dispose();
+            _busy = null;
+            BusyPanel.Visibility = Visibility.Collapsed;
+            SetEditingEnabled(true);
+            UpdateHistory();
+            if (_closeWhenIdle)
+            {
+                _ = Dispatcher.BeginInvoke(Close);
+            }
+        }
+    }
+
+    private void OnCancelBusy(object sender, RoutedEventArgs e) => _busy?.Cancel();
+
+    private void SetEditingEnabled(bool enabled)
+    {
+        ProcessBar.IsEnabled = enabled && _session is not null;
+        Toolbar.IsEnabled = enabled && _session is not null;
+        SaveButtons.IsEnabled = enabled && _session is not null;
+        if (enabled)
+        {
+            UpdateSelectionInfo();
+        }
+    }
+
+    private void ShowStatus(string text) => StatusText.Text = text;
+
+    // ---- Processing ----
+
+    /// <summary>Runs an effect over the selection (or the whole song) as one undoable step.</summary>
+    private async Task ApplyAsync(IAudioEffect effect, FrameRange? range = null)
+    {
+        if (_session is not { } session)
+        {
+            return;
+        }
+
+        var target = range ?? Selection;
+        var hadSelection = !target.IsEmpty;
+        (FrameRange Range, string? Note) result = default;
+        var done = await RunBusyAsync($"{effect.Description}…", async (progress, token) =>
+        {
+            result = await Task.Run(() => session.Apply(effect, target, progress, token), token);
+        });
+
+        if (done)
+        {
+            ShowAudio();
+            if (hadSelection)
+            {
+                Waveform.Selection = result.Range;
+            }
+
+            ShowStatus(result.Note ?? $"{effect.Description}: done. Ctrl+Z undoes it.");
+        }
+    }
+
+    /// <summary>Runs a cut (delete or trim) as one undoable step.</summary>
+    private async Task EditAsync(string description, Action<EditSession> edit, Func<FrameRange> selectionAfter)
+    {
+        if (_session is not { } session)
+        {
+            return;
+        }
+
+        if (await RunBusyAsync($"{description}…", async (_, token) => await Task.Run(() => edit(session), token)))
+        {
+            ShowAudio();
+            Waveform.Selection = selectionAfter();
+            ShowStatus($"{description}: done. Ctrl+Z undoes it.");
+        }
+    }
+
+    /// <summary>Shows the session's current audio after a change.</summary>
+    private void ShowAudio()
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        Waveform.Peaks = _session.Peaks;
+        Overview.Peaks = _session.Peaks;
+        Overview.SetVisibleRange(Waveform.ViewStart, Waveform.ViewLength);
+        UpdateHistory();
+        UpdateSelectionInfo();
+    }
+
+    private void OnNormalize(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = NormalizeButton, Placement = PlacementMode.Top, VerticalOffset = -6 };
+        void Add(string header, NormalizeTarget target, double level, string? tip = null)
+        {
+            var item = new MenuItem { Header = header, ToolTip = tip };
+            item.Click += async (_, _) => await ApplyAsync(new NormalizeEffect(target, level));
+            menu.Items.Add(item);
+        }
+
+        menu.Items.Add(new MenuItem { Header = "Make the loudest peak reach", IsEnabled = false });
+        Add("−0.1 dB  (as loud as it can be)", NormalizeTarget.Peak, -0.1);
+        Add("−1 dB  (recommended)", NormalizeTarget.Peak, -1, "A little headroom, so it stays clean after converting to MP3");
+        Add("−3 dB", NormalizeTarget.Peak, -3);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem { Header = "Make the overall loudness reach", IsEnabled = false });
+        const string loudnessTip = "Measured the way streaming services do (ITU BS.1770). Peaks are kept below −1 dB.";
+        Add("−14 LUFS  (Spotify, YouTube)", NormalizeTarget.Loudness, -14, loudnessTip);
+        Add("−16 LUFS  (Apple Music, podcasts)", NormalizeTarget.Loudness, -16, loudnessTip);
+        Add("−23 LUFS  (TV and radio)", NormalizeTarget.Loudness, -23, loudnessTip);
+        menu.IsOpen = true;
+    }
+
+    private void OnGain(object sender, RoutedEventArgs e) => GainPopup.IsOpen = true;
+
+    private void OnGainChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => UpdateGainText();
+
+    private void UpdateGainText()
+    {
+        if (GainValue is not null)
+        {
+            GainValue.Text = $"{GainSlider.Value:+0.0;−0.0;0.0} dB";
+        }
+    }
+
+    private async void OnApplyGain(object sender, RoutedEventArgs e)
+    {
+        GainPopup.IsOpen = false;
+        if (Math.Abs(GainSlider.Value) > 0.01)
+        {
+            await ApplyAsync(new GainEffect(GainSlider.Value));
+        }
+    }
+
+    private void OnPitch(object sender, RoutedEventArgs e) => PitchPopup.IsOpen = true;
+
+    private void OnPitchChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => UpdatePitchText();
+
+    private void OnPitchDown(object sender, RoutedEventArgs e) => PitchSlider.Value = Math.Round(PitchSlider.Value - 0.1, 1);
+
+    private void OnPitchUp(object sender, RoutedEventArgs e) => PitchSlider.Value = Math.Round(PitchSlider.Value + 0.1, 1);
+
+    private void OnPitchModeChanged(object sender, RoutedEventArgs e) => UpdatePitchText();
+
+    private void UpdatePitchText()
+    {
+        if (PitchValue is null || PitchHint is null)
+        {
+            return;
+        }
+
+        var semitones = Math.Round(PitchSlider.Value, 1);
+        PitchValue.Text = Math.Abs(semitones) < 0.05 ? "0 semitones" : $"{semitones:+0.0;−0.0} semitones";
+        var speed = Math.Pow(2, semitones / 12);
+        PitchHint.Text = KeepSpeedChoice.IsChecked == true
+            ? "The tempo and length stay the same. Small moves sound the most natural; a big jump can sound a little hollow."
+            : $"Like a record played faster or slower: sounds the most natural, but the tempo changes too " +
+              $"({speed * 100:0}% speed, so the selection gets {(speed >= 1 ? "shorter" : "longer")}). 12 semitones is an octave.";
+    }
+
+    private async void OnApplyPitch(object sender, RoutedEventArgs e)
+    {
+        PitchPopup.IsOpen = false;
+        var semitones = Math.Round(PitchSlider.Value, 1);
+        if (Math.Abs(semitones) >= 0.05)
+        {
+            await ApplyAsync(new PitchEffect(semitones, KeepSpeedChoice.IsChecked == true));
+        }
+    }
+
+    private async void OnFadeIn(object sender, RoutedEventArgs e) =>
+        await ApplyAsync(new FadeEffect(FadeDirection.In), FadeRange(FadeDirection.In));
+
+    private async void OnFadeOut(object sender, RoutedEventArgs e) =>
+        await ApplyAsync(new FadeEffect(FadeDirection.Out), FadeRange(FadeDirection.Out));
+
+    /// <summary>The selection, or with nothing selected, the first or last few seconds.</summary>
+    private FrameRange FadeRange(FadeDirection direction)
+    {
+        if (!Selection.IsEmpty || _session is null)
+        {
+            return Selection;
+        }
+
+        var frames = _session.Audio.Frames;
+        var length = (int)Math.Min(frames, DefaultFadeLength.TotalSeconds * _session.Audio.SampleRate);
+        return direction == FadeDirection.In ? new FrameRange(0, length) : new FrameRange(frames - length, length);
+    }
+
+    private async void OnSilence(object sender, RoutedEventArgs e) => await ApplyAsync(new SilenceEffect());
+
+    private async void OnReverse(object sender, RoutedEventArgs e) => await ApplyAsync(new ReverseEffect());
+
+    private async void OnTrim(object sender, RoutedEventArgs e)
+    {
+        var selection = Selection;
+        if (!selection.IsEmpty)
+        {
+            await EditAsync("Trim", session => session.TrimTo(selection), () => new FrameRange(0, 0));
+        }
+    }
+
+    private async void OnDelete(object sender, RoutedEventArgs e) => await DeleteSelectionAsync();
+
+    private async Task DeleteSelectionAsync()
+    {
+        var selection = Selection;
+        if (!selection.IsEmpty)
+        {
+            await EditAsync("Delete", session => session.Delete(selection), () => new FrameRange(selection.Start, 0));
+        }
+    }
+
+    // ---- Undo ----
+
+    private async void OnUndo(object sender, RoutedEventArgs e) => await UndoRedoAsync(undo: true);
+
+    private async void OnRedo(object sender, RoutedEventArgs e) => await UndoRedoAsync(undo: false);
+
+    private async Task UndoRedoAsync(bool undo)
+    {
+        if (_session is not { } session || (undo ? !session.CanUndo : !session.CanRedo))
+        {
+            return;
+        }
+
+        var description = undo ? session.UndoDescription : session.RedoDescription;
+        FrameRange? changed = null;
+        if (await RunBusyAsync(undo ? "Undoing…" : "Redoing…", async (_, _) =>
+            {
+                // Not cancellable: it is only copying memory, and stopping halfway would leave the history inconsistent.
+                changed = await Task.Run(() => undo ? session.Undo() : session.Redo());
+            }))
+        {
+            ShowAudio();
+            if (changed is { IsEmpty: false } range)
+            {
+                Waveform.Selection = range;
+            }
+
+            ShowStatus($"{(undo ? "Undid" : "Redid")}: {description}.");
+        }
+    }
+
+    private void UpdateHistory()
+    {
+        var session = _session;
+        UndoButton.IsEnabled = session?.CanUndo == true && !IsBusy;
+        RedoButton.IsEnabled = session?.CanRedo == true && !IsBusy;
+        UndoButton.ToolTip = session?.UndoDescription is { } undo ? $"Undo {undo} (Ctrl+Z)" : "Undo (Ctrl+Z)";
+        RedoButton.ToolTip = session?.RedoDescription is { } redo ? $"Redo {redo} (Ctrl+Y)" : "Redo (Ctrl+Y)";
+        var name = Path.GetFileName(_path);
+        FileTitle.Text = HasUnsavedChanges ? $"{name}  •  edited" : name;
+    }
+
+    // ---- Playback ----
+
+    private void OnPlay(object sender, RoutedEventArgs e) => TogglePlay();
+
+    private void OnPlaySelection(object sender, RoutedEventArgs e)
+    {
+        if (!Selection.IsEmpty)
+        {
+            PlayFrom(Selection.Start, Selection.End);
+        }
+    }
+
+    private void TogglePlay()
+    {
+        if (_player.IsPlaying)
+        {
+            StopPlayback();
+        }
+        else if (!Selection.IsEmpty)
+        {
+            PlayFrom(Selection.Start, Selection.End);
+        }
+        else if (_session is not null)
+        {
+            // From the end, start again at the top.
+            var from = Waveform.CursorFrame >= _session.Audio.Frames - 1 ? 0 : Waveform.CursorFrame;
+            PlayFrom(from, _session.Audio.Frames);
+        }
+    }
+
+    private void PlayFrom(int from, int to)
+    {
+        if (_session is null || IsBusy)
+        {
+            return;
+        }
+
+        _host.PauseMainPlayer();
+        try
+        {
+            _player.Play(_session.Audio, from, to, _host.Volume);
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Couldn't play: {ex.Message}");
+            return;
+        }
+
+        _playheadTimer.Start();
+        PlayIcon.Data = (Geometry)FindResource("StopIcon");
+        PlayIcon.Margin = new Thickness(0);
+        UpdatePlayhead();
+    }
+
+    private void StopPlayback()
+    {
+        _player.Stop();
+        ShowStopped();
+    }
+
+    private void ShowStopped()
+    {
+        _playheadTimer.Stop();
+        Waveform.PlayheadFrame = null;
+        PlayIcon.Data = (Geometry)FindResource("PlayIcon");
+        PlayIcon.Margin = new Thickness(2, 0, 0, 0);
+    }
+
+    private void UpdatePlayhead()
+    {
+        if (!_player.IsPlaying)
+        {
+            ShowStopped();
+            return;
+        }
+
+        var frame = _player.PositionFrame;
+        Waveform.PlayheadFrame = frame;
+        Waveform.KeepInView(frame);
+        PositionText.Text = Format(frame);
+    }
+
+    // ---- Selection and position ----
+
+    private void UpdateSelectionInfo()
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        var selection = Selection;
+        var rate = _session.Audio.SampleRate;
+        if (selection.IsEmpty)
+        {
+            PositionText.Text = Format(Waveform.CursorFrame);
+            ScopeHint.Text = "Nothing is selected, so effects change the whole song. Drag across the waveform to choose a part.";
+        }
+        else
+        {
+            PositionText.Text = $"{Format(selection.Start)} – {Format(selection.End)}";
+            ScopeHint.Text = $"Effects change the selected {selection.Length / (double)rate:0.0#} seconds. Esc selects nothing.";
+        }
+
+        LengthText.Text = $"Length {Format(_session.Audio.Frames)}  ·  {rate / 1000.0:0.#} kHz  ·  " +
+                          (_session.Audio.ChannelCount == 1 ? "mono" : "stereo");
+        var hasSelection = !selection.IsEmpty && !IsBusy;
+        TrimButton.IsEnabled = hasSelection;
+        DeleteButton.IsEnabled = hasSelection;
+        PlaySelectionButton.IsEnabled = hasSelection;
+    }
+
+    private string Format(int frame) => WaveformView.FormatTime(frame / (double)(_session?.Audio.SampleRate ?? 44100));
+
+    // ---- Saving ----
+
+    private async void OnSave(object sender, RoutedEventArgs e) => await SaveAsync();
+
+    private async void OnSaveAs(object sender, RoutedEventArgs e) => await SaveAsNewVersionAsync(null);
+
+    /// <summary>Replaces the original file, after asking.</summary>
+    private async Task<bool> SaveAsync()
+    {
+        if (_session is not { } session || _info is not { } info)
+        {
+            return false;
+        }
+
+        if (ExportOptions.WritableFormat(_path) is not { } format)
+        {
+            var kind = Path.GetExtension(_path).TrimStart('.').ToUpperInvariant();
+            return await SaveAsNewVersionAsync(
+                $"Lucid can't write {kind} files, so the edit will be saved as a new file. FLAC is lossless: no quality is lost.");
+        }
+
+        var name = Path.GetFileName(_path);
+        var warning = format == ExportFormat.Mp3
+            ? "\n\nMP3s lose a little quality every time they are saved. To keep the original as it is, use Save as new version."
+            : string.Empty;
+        var playing = _host.IsOpenInPlayer(_path) ? "\n\nIt's open in the player, which will pause for a moment while it's replaced." : string.Empty;
+        var answer = MessageBox.Show(this,
+            $"Replace \"{name}\" with your edited version?\n\nThe original can't be brought back afterwards.{warning}{playing}",
+            "Save", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes)
+        {
+            return false;
+        }
+
+        return await WriteAsync(_path, OptionsLike(info, format), replaceExisting: true);
+    }
+
+    /// <summary>Asks for a name, format and quality, then saves a new file, keeping the original.</summary>
+    private async Task<bool> SaveAsNewVersionAsync(string? note)
+    {
+        if (_session is null || _info is not { } info)
+        {
+            return false;
+        }
+
+        var format = ExportOptions.WritableFormat(_path) ?? ExportFormat.Flac;
+        var choice = ExportWindow.ShowSaveDialog(this, _path, OptionsLike(info, format), note);
+        if (choice is null)
+        {
+            return false;
+        }
+
+        var (target, options) = choice.Value;
+        var exists = File.Exists(target);
+        if (exists)
+        {
+            var same = string.Equals(Path.GetFullPath(target), Path.GetFullPath(_path), StringComparison.OrdinalIgnoreCase);
+            var question = same
+                ? $"\"{Path.GetFileName(target)}\" is the original file. Replace it with your edited version?"
+                : $"There's already a file called \"{Path.GetFileName(target)}\". Replace it?";
+            if (MessageBox.Show(this, question, "Save as new version", MessageBoxButton.YesNo, MessageBoxImage.Question,
+                    MessageBoxResult.No) != MessageBoxResult.Yes)
+            {
+                return false;
+            }
+        }
+
+        if (!await WriteAsync(target, options, exists))
+        {
+            return false;
+        }
+
+        // From now on the editor works on the new file, so Save updates it rather than the original.
+        _path = target;
+        _info = info with { Path = target, BitsPerSample = options.Format == ExportFormat.Flac ? options.FlacBitDepth : info.BitsPerSample };
+        Title = $"{Path.GetFileName(target)} - Audio editor - Lucid";
+        UpdateHistory();
+        return true;
+    }
+
+    /// <summary>Encodes the audio into a temporary file, checks it, then moves it into place.</summary>
+    private async Task<bool> WriteAsync(string target, ExportOptions options, bool replaceExisting)
+    {
+        if (_session is not { } session)
+        {
+            return false;
+        }
+
+        var audio = session.Audio;
+        var tagSource = _path;
+        PreparedFile? prepared = null;
+        var ok = await RunBusyAsync($"Saving {Path.GetFileName(target)}…", async (progress, token) =>
+        {
+            prepared = await Task.Run(() => ExportPipeline.Prepare(new AudioBufferSampleProvider(audio), audio.Frames, target,
+                tagSource, audioChanged: true, options, progress.Report, token), token);
+
+            // The last step is instant: swap the file into place, with the main player letting go of it if needed.
+            using (_host.ReleaseFile(target))
+            {
+                prepared.Commit(replaceExisting);
+            }
+        });
+
+        if (!ok)
+        {
+            prepared?.Discard();
+            return false;
+        }
+
+        session.MarkSaved();
+        _lastSavedPath = target;
+        UpdateHistory();
+        ShowStatus(prepared?.Note ?? $"Saved \"{Path.GetFileName(target)}\" ({options.Summary}).");
+        ShowFileButton.Visibility = Visibility.Visible;
+        return true;
+    }
+
+    /// <summary>Save settings that match the original file as closely as Lucid can write.</summary>
+    private static ExportOptions OptionsLike(SourceFileInfo info, ExportFormat format)
+    {
+        var options = new ExportOptions { Format = format, SampleRate = SampleRateChoice.Keep };
+        options.FlacBitDepth = info.BitsPerSample > 16 ? 24 : 16;
+        options.WavDepth = info.IsFloat ? PcmDepth.Float32 : info.BitsPerSample > 24 ? PcmDepth.Float32 : info.BitsPerSample > 16 ? PcmDepth.Int24 : PcmDepth.Int16;
+        if (format == ExportFormat.Aiff && options.WavDepth == PcmDepth.Float32)
+        {
+            options.WavDepth = PcmDepth.Int24;
+        }
+
+        // The nearest standard bitrate at or above the original's, so re-saving doesn't lose more than it must.
+        options.Mp3Quality = info.BitrateKbps switch
+        {
+            0 => Mp3Quality.VbrV0,
+            > 256 => Mp3Quality.Cbr320,
+            > 192 => Mp3Quality.Cbr256,
+            > 128 => Mp3Quality.Cbr192,
+            _ => Mp3Quality.Cbr128,
+        };
+        return options;
+    }
+
+    private void OnShowFile(object sender, RoutedEventArgs e)
+    {
+        if (_lastSavedPath is not null)
+        {
+            try
+            {
+                Process.Start("explorer.exe", $"/select,\"{_lastSavedPath}\"");
+            }
+            catch (Exception)
+            {
+                // Nothing useful to add; File Explorer usually opens.
+            }
+        }
+    }
+
+    // ---- Keys ----
+
+    private async void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        // Typing in a box, or using the sliders in the gain and pitch cards, keeps its keys.
+        if (e.OriginalSource is TextBox || GainPopup.IsOpen || PitchPopup.IsOpen)
+        {
+            return;
+        }
+
+        var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        if (IsBusy || _session is null)
+        {
+            if (e.Key == Key.Escape)
+            {
+                _busy?.Cancel();
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Space:
+                TogglePlay();
+                break;
+            case Key.A when ctrl:
+                Waveform.SelectAll();
+                break;
+            case Key.Z when ctrl && shift:
+            case Key.Y when ctrl:
+                e.Handled = true;
+                await UndoRedoAsync(undo: false);
+                return;
+            case Key.Z when ctrl:
+                e.Handled = true;
+                await UndoRedoAsync(undo: true);
+                return;
+            case Key.S when ctrl:
+                e.Handled = true;
+                await SaveAsync();
+                return;
+            case Key.Delete or Key.Back:
+                e.Handled = true;
+                await DeleteSelectionAsync();
+                return;
+            case Key.Escape:
+                if (_player.IsPlaying)
+                {
+                    StopPlayback();
+                }
+                else
+                {
+                    Waveform.ClearSelection();
+                }
+
+                break;
+            case Key.Home:
+                Waveform.ClearSelection();
+                Waveform.CursorFrame = 0;
+                Waveform.ScrollTo(0, 0);
+                break;
+            case Key.End:
+                Waveform.ClearSelection();
+                Waveform.CursorFrame = _session.Audio.Frames;
+                Waveform.ScrollTo(_session.Audio.Frames, 1);
+                break;
+            case Key.OemPlus or Key.Add:
+                Waveform.Zoom(0.5);
+                break;
+            case Key.OemMinus or Key.Subtract:
+                Waveform.Zoom(2);
+                break;
+            case Key.D0 or Key.NumPad0:
+                Waveform.ZoomToFit();
+                break;
+            default:
+                return;
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnZoomIn(object sender, RoutedEventArgs e) => Waveform.Zoom(0.5);
+
+    private void OnZoomOut(object sender, RoutedEventArgs e) => Waveform.Zoom(2);
+
+    private void OnZoomFit(object sender, RoutedEventArgs e) => Waveform.ZoomToFit();
+
+    // ---- Window ----
+
+    private void OnMinimize(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    private void OnMaximizeRestore(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            SystemCommands.RestoreWindow(this);
+        }
+        else
+        {
+            SystemCommands.MaximizeWindow(this);
+        }
+    }
+
+    private void OnCloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
+
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        var maximized = WindowState == WindowState.Maximized;
+        MaximizeIcon.Data = (Geometry)FindResource(maximized ? "RestoreIcon" : "MaximizeIcon");
+        MaximizeButton.ToolTip = maximized ? "Restore" : "Maximize";
+        // A maximized borderless window hangs slightly off-screen; pad it back in.
+        WindowRoot.Margin = maximized ? new Thickness(7) : new Thickness(0);
+    }
+
+    /// <summary>
+    /// Asks before throwing away unsaved edits. Returns false if the user chose to keep the editor open.
+    /// Used when the editor closes, and when the main window closes with editors still open.
+    /// </summary>
+    public bool ConfirmClose()
+    {
+        if (_closeConfirmed || !HasUnsavedChanges)
+        {
+            return true;
+        }
+
+        Activate();
+        var answer = MessageBox.Show(this,
+            $"Your edits to \"{Path.GetFileName(_path)}\" haven't been saved. Close without saving?",
+            "Audio editor", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        _closeConfirmed = answer == MessageBoxResult.Yes;
+        return _closeConfirmed;
+    }
+
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (IsBusy)
+        {
+            // Stop the work first; the window closes once it has wound down.
+            e.Cancel = true;
+            _closeWhenIdle = true;
+            _busy?.Cancel();
+            return;
+        }
+
+        if (!ConfirmClose())
+        {
+            e.Cancel = true;
+            _closeWhenIdle = false;
+        }
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        _playheadTimer.Stop();
+        _player.Dispose();
+    }
+}

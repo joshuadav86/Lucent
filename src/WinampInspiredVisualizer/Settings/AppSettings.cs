@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Library;
 
 namespace WinampInspiredVisualizer.Settings;
@@ -57,6 +58,11 @@ public sealed class AppSettings
     // ---- Look ----
 
     public string Theme { get; set; } = "Midnight";
+
+    // ---- Audio tools ----
+
+    /// <summary>The format and quality last picked in the converter, offered again next time.</summary>
+    public ExportOptions ConvertOptions { get; set; } = new();
 
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "settings.json");
