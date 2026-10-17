@@ -68,6 +68,10 @@ function Rects($tag) {
 }
 function TestDrag($tag) {
   Rects
+  if (-not $script:player -or -not $script:lib) {
+    $titles = ([W]::Of([uint32]$script:proc.Id) | ForEach-Object { [W]::Title($_) }) -join '/'
+    $script:log += " || $tag missing windows, shown: $titles"; return
+  }
   $p = [W]::Box($script:player); $l = [W]::Box($script:lib)
   $line = "$tag windowDpi=$([W]::GetDpiForWindow($script:player)) player=$($p.L),$($p.T),$($p.Ri),$($p.B) library=$($l.L),$($l.T),$($l.Ri),$($l.B) gapX=$($p.L - $l.Ri)"
   [void][W]::SetForegroundWindow($script:player); Start-Sleep 1
@@ -75,7 +79,7 @@ function TestDrag($tag) {
   $p2 = [W]::Box($script:player); $l2 = [W]::Box($script:lib)
   $script:log += " || $line | player moved $($p2.L - $p.L),$($p2.T - $p.T) library moved $($l2.L - $l.L),$($l2.T - $l.T)"
 }
-foreach ($pct in 150, 175, 200) {
+foreach ($pct in 150, 175) {
   Write-Host "::notice::dpi $pct -> $([W]::SetDpi($pct))"; Start-Sleep 4
   foreach ($tol in 2, 6) {
     $env:LUCID_TOLERANCE = "$tol"; $script:log = ""
