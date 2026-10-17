@@ -2,7 +2,7 @@
 
 <h1 align="center">Lucid</h1>
 
-<p align="center"><b>A music player for Windows with 88 GPU visuals that dance to your music.</b><br>
+<p align="center"><b>A music player for Windows with 143 GPU visuals that dance to your music.</b><br>
 Inspired by Winamp and MilkDrop, rebuilt for modern graphics cards.</p>
 
 <p align="center"><a href="../../releases/tag/latest"><b>⬇ Download the latest build</b></a> · Windows 10 and 11 · free and open source</p>
@@ -15,7 +15,7 @@ The player, equalizer, queue, library and visuals each get their own window, and
 
 ![The Lucid player with its library, equalizer, queue and visuals docked together](assets/screenshots/player-layout.jpg)
 
-## 88 visuals, drawn live on your graphics card
+## 143 visuals, drawn live on your graphics card
 
 Fly through fractal worlds, kaleidoscopes, galaxies made of hundreds of thousands of particles, and rain-soaked neon cities. Every visual reacts to the bass, mids, treble and beat of what's playing. Auto mode listens to each song ahead of time and switches visuals right on a downbeat.
 
@@ -93,15 +93,15 @@ Nothing needs installing. If Windows SmartScreen warns about an unknown app, cli
   - **Save** replaces the original after asking (formats Lucid can't write, like M4A or OGG, are saved as a new FLAC file instead). **Save as new version** keeps the original and suggests "Song (edited)". The tags and artwork come along, and the new file is checked before it replaces anything
 - A converter: right-click songs and choose **Convert to…**, or use the waveform button. Make MP3 (128 to 320 kbps, or VBR V0 and V2), FLAC (16 or 24-bit) or WAV (16, 24 or 32-bit float), keep the sample rate or change it to 44.1 or 48 kHz, and put the new files next to the originals or in a folder you choose. Several songs convert at once, tags and artwork are copied, and nothing is replaced without asking
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- 94 visuals in eight families:
+- 143 visuals in eight families:
   - **Fly-through worlds:** Menger Voyage, Gyroid Caverns, Hyperspace Rings, Mandelbox Tunnel, Fractal Temple, Crystal Cavern, Wormhole Transit, Folded Metropolis, Kleinian Reef, Fibre Optic Braid and more
   - **Kaleidoscopes and sacred geometry:** Crystal Kaleidoscope, Kaleido Cathedral, Sacred Geometry, Rose Window, Metatron's Cube, Flower of Life, Penrose Mosaic, Prism Mandala, Lotus Bloom, Droste Zoom and more
   - **Fractals:** Julia Kaleidoscope, Apollonian Lace, Mandelbrot Dive, Mandelbulb Bloom, Burning Ship, Kleinian Limit, Newton Basins, Kali Flame, Koch Snowflake, Fractal Forest and more
   - **Music-shaped:** Spectrum Tunnel, Neon Oscilloscope, Cymatic Plate, Pulsar Ridges, Spectral Sunflower, Spectrum Galaxy, Lissajous Laser, Plasma Orb, Caustic Rings, Beat Shards and more
   - **Cosmic and organic:** Bass Nebula, Aurora Veil, Black Hole, Cosmic Jellyfish, Supernova Remnant, Electric Storm, Ink Flow, Chrome Blobs, Shot Silk, Living Cells and more
-  - **Particles:** hundreds of thousands of glowing particles moving on the graphics card every frame: Strange Attractors, Galaxy Collision, Firework Mandala, Silk Currents, Sonic Dandelion, Knot Stream, Lava Lamp, Fireworks Night, Abyssal Glow, Stellar Nursery, Grand Spiral and Orrery, and five built on sacred geometry: Sand Yantra, Seed of Life, Platonic Nest, Torus Field and Golden Angle
+  - **Particles:** hundreds of thousands of glowing particles moving on the graphics card every frame: Strange Attractors, Galaxy Collision, Firework Mandala, Silk Currents, Sonic Dandelion, Knot Stream, Lava Lamp, Fireworks Night, Abyssal Glow, Stellar Nursery, Grand Spiral and Orrery, and five built on sacred geometry: Sand Yantra, Seed of Life, Platonic Nest, Torus Field and Golden Angle, plus Murmuration, Ember Storm, Solar Flare, Meteor Shower, Volcanic Eruption, Quantum Orbitals, Magnetosphere, Shape Shifter, Cosmic Web, DNA Helix, Smoke Rings, Phoenix Rising, Iron Filings and more
   - **Cyberpunk:** rain-soaked neon cities and retro-futurist worlds: Neon Downpour, Sunset Highway, Hologram Billboards, Neon Alley and Circuit City
-  - **Ray traced:** clean, physically lit 3D scenes with real reflections, glass that bends light, and soft shadows: Glass and Chrome, Newton's Cradle, Glass Prism, Sunlit Pool, Hall of Mirrors and Gyroscope
+  - **Ray traced:** clean, physically lit 3D scenes with real reflections, glass that bends light, and soft shadows: Glass and Chrome, Newton's Cradle, Glass Prism, Sunlit Pool, Hall of Mirrors, Gyroscope, Diamond Fire, Disco Ball, Ferrofluid, Cornell Box, Cathedral Light, Ringed World, Blue Marble, Cloud Sea, Tesseract, Pendulum Wave and more, and scenes full of particles: Snow Globe, Hourglass, Champagne Toast, Dancing Fountains and Spark Forge
 - A visual picker: click the visual's name under the visuals (the button with the screen-and-spark icon), or press V, to choose any visual from a list. Just start typing to search it by name, family or tag: Enter shows the first match, Esc clears the search, and N and B, and Auto mode, stick to the matches
 - Favorite visuals and lists of visuals: star a visual in the picker, with the star under the visuals, or with F. The menu at the top of the picker switches between all visuals, your favorites and lists you make (right-click a visual to add it to one). The picker, N and B, and Auto mode then stick to that list
 - Folders and tags in the visual picker: visuals are listed in folders by family (Fractal, Cosmic, Particles and so on) that you can open or close, or switch off with the FOLDERS pill. Tick tags on the left (Calm, Intense, Neon, Space, 3D and more) to show only visuals with any of those tags; CLEAR shows everything again. N and B, and Auto mode, stick to what the picker shows
