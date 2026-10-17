@@ -60,6 +60,14 @@ public static class W {
   public static R Box(IntPtr h) { R v; DwmGetWindowAttribute(h, 9, out v, 16); return v; }
   public static void Click(int x, int y, int wait) { SetCursorPos(x, y); System.Threading.Thread.Sleep(80); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(40); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(wait); }
   public static string All(uint pid) { var sb = new StringBuilder(); foreach (var w in Of(pid)) { var b = Box(w); var t = Title(w); sb.Append((t.Length > 6 ? t.Substring(6, 3) : "pla") + "=" + b.L + "," + b.T + "," + b.Ri + "," + b.B + " "); } return sb.ToString(); }
+  public static string Wiggle(uint pid, int x, int y, int dx, int dy) {
+    var sb = new StringBuilder(); sb.Append("start " + All(pid) + "\n");
+    SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
+    for (int i = 1; i <= 40; i++) { SetCursorPos(x + dx * i / 40, y + dy * i / 40); System.Threading.Thread.Sleep(16); }
+    for (int i = 0; i < 40; i++) { SetCursorPos(x + dx + (i % 2), y + dy + ((i / 2) % 2)); System.Threading.Thread.Sleep(16); sb.Append("  w" + i + ": " + All(pid) + "\n"); }
+    mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(800);
+    sb.Append("end " + All(pid) + "\n"); return sb.ToString();
+  }
   public static string Track(IntPtr h, uint pid, int x, int y, int dx, int dy, int steps, int stepMs) {
     var sb = new StringBuilder(); sb.Append("start " + All(pid) + "\n");
     SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
@@ -156,16 +164,26 @@ function SizeWin($title, $dx, $tag) {
   $script:log += " || ${tag}: [$(Boxes)]"
 }
 $lib = @{ ShowLibrary = $true }
-Write-Host "::notice::os $([Environment]::OSVersion.VersionString) build $((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)"
-foreach ($dpi in 100, 125) {
+function WiggleWin($title, $dx, $dy, $tag) {
+  $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
+  $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
+  $t = [W]::Wiggle([uint32]$script:proc.Id, $b.L + 150, $b.T + 14, $dx, $dy)
+  [W]::Shot("$out/$tag.png")
+  Add-Content "$out/log.txt" "== $tag`n$t"
+}
+Write-Host "::notice::os $((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)"
+foreach ($dpi in 100) {
   Write-Host "::notice::dpi $dpi -> $([W]::SetDpi($dpi))"; Start-Sleep 4
-  RunWith "rest $dpi" $lib { [W]::Shot("$out/rest-$dpi.png"); Add-Content "$out/log.txt" "rects $dpi $([W]::Rects([uint32]$script:proc.Id))" }
-  RunWith "visuals $dpi" $lib {
+  RunWith "player $dpi" $lib {
     DragWin 'Lucid visuals' 120 0 "v-away-$dpi"
-    DragWin 'Lucid visuals' -110 0 "v-gap10-$dpi"
-    Add-Content "$out/log.txt" "rects after $dpi $([W]::Rects([uint32]$script:proc.Id))"
-    DragWin 'Lucid library' -120 0 "l-away-$dpi"
-    DragWin 'Lucid library' 110 0 "l-gap10-$dpi"
-    Add-Content "$out/log.txt" "rects after lib $dpi $([W]::Rects([uint32]$script:proc.Id))"
+    DragWin 'Lucid' 110 0 "p-to-visuals-$dpi"
+    DragWin 'Lucid' -60 30 "p-move-$dpi"
+    DragWin 'Lucid visuals' -50 -20 "v-back-$dpi"
+  }
+  RunWith "wiggle $dpi" $lib {
+    DragWin 'Lucid visuals' 120 40 "w-away-$dpi"
+    WiggleWin 'Lucid visuals' -112 -38 "w-near-$dpi"
+    DragWin 'Lucid library' -120 30 "w-lib-away-$dpi"
+    WiggleWin 'Lucid library' 114 -26 "w-lib-near-$dpi"
   }
 }
