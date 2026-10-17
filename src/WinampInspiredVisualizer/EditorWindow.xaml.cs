@@ -58,10 +58,10 @@ public partial class EditorWindow : Window
         Waveform.ViewChanged += (_, _) => Overview.SetVisibleRange(Waveform.ViewStart, Waveform.ViewLength);
         Waveform.CursorPlaced += (_, _) =>
         {
-            // Clicking while playing carries on from the new spot.
+            // Clicking while playing carries on from the new spot (through the plugin, if previewing).
             if (_player.IsPlaying)
             {
-                PlayFrom(Waveform.CursorFrame, _session?.Audio.Frames ?? 0);
+                PlayFrom(Waveform.CursorFrame, _session?.Audio.Frames ?? 0, _previewThrough);
             }
         };
         Overview.NavigateRequested += (_, frame) => Waveform.ScrollTo(frame);
@@ -176,6 +176,7 @@ public partial class EditorWindow : Window
             {
                 AudioFileException => ex.Message,
                 OutOfMemoryException => "There isn't enough memory for that. Try a shorter selection, or close other programs.",
+                Editor.Plugins.PluginException => ex.Message,
                 _ => FileConverter.FriendlyError(ex),
             };
             MessageBox.Show(this, text, "Audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -188,6 +189,7 @@ public partial class EditorWindow : Window
             BusyPanel.Visibility = Visibility.Collapsed;
             SetEditingEnabled(true);
             UpdateHistory();
+            ClosePluginIfGone();
             if (_closeWhenIdle)
             {
                 _ = Dispatcher.BeginInvoke(Close);
@@ -202,6 +204,7 @@ public partial class EditorWindow : Window
         ProcessBar.IsEnabled = enabled && _session is not null;
         Toolbar.IsEnabled = enabled && _session is not null;
         SaveButtons.IsEnabled = enabled && _session is not null;
+        PluginBar.IsEnabled = enabled && _session is not null;
         if (enabled)
         {
             UpdateSelectionInfo();
@@ -212,8 +215,11 @@ public partial class EditorWindow : Window
 
     // ---- Processing ----
 
-    /// <summary>Runs an effect over the selection (or the whole song) as one undoable step.</summary>
-    private async Task ApplyAsync(IAudioEffect effect, FrameRange? range = null)
+    /// <summary>
+    /// Runs an effect over the selection (or the whole song) as one undoable step. Afterwards the processed
+    /// part is selected, or <paramref name="selectAfter"/> if given.
+    /// </summary>
+    private async Task ApplyAsync(IAudioEffect effect, FrameRange? range = null, FrameRange? selectAfter = null)
     {
         if (_session is not { } session)
         {
@@ -231,7 +237,11 @@ public partial class EditorWindow : Window
         if (done)
         {
             ShowAudio();
-            if (hadSelection)
+            if (selectAfter is { } selection)
+            {
+                Waveform.Selection = selection;
+            }
+            else if (hadSelection)
             {
                 Waveform.Selection = result.Range;
             }
@@ -466,7 +476,8 @@ public partial class EditorWindow : Window
         }
     }
 
-    private void PlayFrom(int from, int to)
+    /// <summary>Plays part of the song, through <paramref name="through"/> (a plugin preview) if given.</summary>
+    private void PlayFrom(int from, int to, Func<NAudio.Wave.ISampleProvider, float, NAudio.Wave.ISampleProvider>? through = null)
     {
         if (_session is null || IsBusy)
         {
@@ -482,7 +493,8 @@ public partial class EditorWindow : Window
 
         try
         {
-            _player.Play(_session.Audio, from, to, _mainPlayer.Volume);
+            _player.Play(_session.Audio, from, to, _mainPlayer.Volume, through);
+            _previewThrough = through;
         }
         catch (Exception ex)
         {
@@ -493,6 +505,7 @@ public partial class EditorWindow : Window
         _playheadTimer.Start();
         PlayIcon.Data = (Geometry)FindResource("StopIcon");
         PlayIcon.Margin = new Thickness(0);
+        PluginPreviewButton.Content = through is null ? "Preview" : "Stop preview";
         UpdatePlayhead();
     }
 
@@ -508,6 +521,7 @@ public partial class EditorWindow : Window
         Waveform.PlayheadFrame = null;
         PlayIcon.Data = (Geometry)FindResource("PlayIcon");
         PlayIcon.Margin = new Thickness(2, 0, 0, 0);
+        ShowPreviewStopped();
     }
 
     private void UpdatePlayhead()
@@ -878,5 +892,6 @@ public partial class EditorWindow : Window
     {
         _playheadTimer.Stop();
         _player.Dispose();
+        ClosePluginInBackground();
     }
 }

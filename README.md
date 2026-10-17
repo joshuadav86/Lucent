@@ -192,7 +192,7 @@ Skins decide the shape, type and finish of every window. Themes decide the colou
 | 🎵 **Plays almost anything** | MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF |
 | 📚 **Library** | Link a folder and every song shows up, searchable as you type |
 | ❤️ **Favorites and playlists** | Heart songs, star visuals, and save .m3u8 playlists Winamp can open too |
-| ✂️ **Audio editor** | Trim, fade, normalize to dB or LUFS, change pitch, reverse, with undo |
+| ✂️ **Audio editor** | Trim, fade, normalize to dB or LUFS, change pitch, reverse, and your own VST3 effects, with undo |
 | 🔁 **Converter** | Make MP3, FLAC or WAV, with tags and artwork carried across |
 | 🏷️ **Tag editor** | Titles, artists, lyrics and cover art, saved safely to a checked copy first |
 | 🖼️ **Artwork window** | The playing song's cover, as big as you like |
@@ -237,6 +237,7 @@ Shortcuts work from any Lucent window, and your keyboard's media keys work while
 - Edit a song's info (right-click it, or Ctrl+I): title, artist, album, album artist, year, track and disc, genre, composer, BPM, comment and lyrics. Edit several songs at once. Add, paste, remove or save cover art; very large pictures are shrunk to 1600 pixels. New info is written to a checked copy before it replaces the original, and songs keep their date so they stay put in the library
 - An artwork window (Art in the player, or C) that uses the file's cover, or a folder.jpg, cover.jpg or front.jpg next to it. Pin it on top, copy or save the picture
 - An audio editor (the waveform button in the player, or **Open in editor…** on a song) showing both channels. Drag to select, the wheel zooms, Space plays. Normalize to a peak of −0.1, −1 or −3 dB or a loudness of −14, −16 or −23 LUFS, change pitch by up to 12 semitones in 0.1 steps (keeping the speed or like a record), gain, fade in and out, trim, delete, silence and reverse, with undo and redo. Save over the original after asking, or as a new version; formats Lucent can't write are saved as FLAC
+- VST3 effects in the editor (**Plugins**): reverbs, EQs, compressors and anything else installed in the usual VST3 folder (or a folder you add). The plugin's own window opens; **Preview** plays the selection through it as you turn its knobs, and **Apply** changes the selection or the whole song as one step you can undo. Reverb and delay tails ring on into the audio that follows, or lengthen the song at the end. Each plugin runs in a helper program of its own, so one that crashes can't take Lucent or your edits with it, and its settings are remembered for next time. 64-bit VST3 effects only (not VST2, 32-bit plugins or instruments)
 - A converter (**Convert to…**): MP3 at 128 to 320 kbps or VBR V0 and V2, FLAC at 16 or 24-bit, WAV at 16, 24 or 32-bit float, at the original sample rate or 44.1 or 48 kHz. Several songs at once, tags and artwork copied, nothing replaced without asking
 - A Direct3D 11 visualizer with MilkDrop-style feedback trails, and visuals that compile in the background and are kept on disk, so the app starts straight away
 - The visual picker lists visuals in family folders (switch them off with the FOLDERS pill) and filters by tag; CLEAR shows everything again. Enter shows the first match, Esc clears the search
@@ -276,8 +277,17 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) on W
 dotnet run --project src/WinampInspiredVisualizer
 ```
 
+VST3 plugins in the editor need the plugin helper, a small C++ program in [`src/PluginHost`](src/PluginHost). Build it first (with [CMake](https://cmake.org/) and Visual Studio's C++ tools) and the app build copies it next to `Lucent.exe`:
+
+```
+cmake -S src/PluginHost -B build/PluginHost -A x64
+cmake --build build/PluginHost --config Release
+```
+
 ## License
 
 [MIT](LICENSE). Not affiliated with or endorsed by Winamp.
 
 MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucent.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
+
+The plugin helper (`LucentPluginHost.exe`) is built with the [VST 3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT). VST is a registered trademark of Steinberg Media Technologies GmbH.

@@ -73,6 +73,13 @@ jobs:
           }
           if ($failed) { exit 1 }
 
+      - name: Build the plugin helper
+        run: |
+          # LucentPluginHost.exe runs VST3 effects for the audio editor. The app build below copies it
+          # next to Lucent.exe. Configuring downloads the VST3 SDK (MIT).
+          cmake -S src/PluginHost -B build/PluginHost -A x64
+          cmake --build build/PluginHost --config Release
+
       - name: Publish app
         run: >
           dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj
@@ -81,13 +88,13 @@ jobs:
           -p:Version=${{ env.LUCENT_VERSION }}
           -o publish
 
-      - name: Check the MP3 encoder is next to Lucent.exe
+      - name: Check the MP3 encoder and plugin helper are next to Lucent.exe
         shell: pwsh
         run: |
-          # The converter's MP3 encoder is a separate native DLL (LAME). It must sit beside Lucent.exe,
-          # not inside the single-file bundle, for it to load.
+          # The converter's MP3 encoder is a separate native DLL (LAME), and the plugin helper a separate
+          # program. They must sit beside Lucent.exe, not inside the single-file bundle, to be found.
           Get-ChildItem publish | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
-          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll") {
+          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll", "LucentPluginHost.exe") {
             if (-not (Test-Path "publish/$dll")) { Write-Host "::error::$dll is missing from the published app"; exit 1 }
           }
 

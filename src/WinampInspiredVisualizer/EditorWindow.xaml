@@ -91,6 +91,7 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Title bar -->
@@ -188,8 +189,36 @@
             </StackPanel>
         </Grid>
 
+        <!-- The plugin that's open, while one is -->
+        <Border x:Name="PluginBar" Grid.Row="4" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="PluginWindowButton" Style="{StaticResource ToolButton}" Content="Show its window"
+                            Click="OnShowPluginWindow" ToolTip="Bring the plugin's settings window to the front" />
+                    <Button x:Name="PluginPreviewButton" Style="{StaticResource ToolButton}" Content="Preview" Click="OnPreviewPlugin"
+                            ToolTip="Play the selection (or from the cursor) through the plugin. Changes in its window are heard straight away." />
+                    <Button Style="{StaticResource ToolButton}" Click="OnApplyPlugin" Foreground="{DynamicResource AccentBrush}"
+                            ToolTip="Run the selection (or the whole song) through the plugin, as one step you can undo">
+                        <TextBlock Text="Apply" FontWeight="SemiBold" />
+                    </Button>
+                    <Button Style="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnClosePlugin"
+                            ToolTip="Close the plugin. Its settings are remembered for next time." />
+                </StackPanel>
+                <StackPanel VerticalAlignment="Center" Margin="2,0,12,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="PLUGIN" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock x:Name="PluginName" Margin="10,0,0,0" FontSize="13" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+                    </StackPanel>
+                    <TextBlock x:Name="PluginHint" Style="{StaticResource OptionHint}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
         <!-- Processing -->
-        <Border x:Name="ProcessBar" Grid.Row="4" Background="{DynamicResource SurfaceBrush}"
+        <Border x:Name="ProcessBar" Grid.Row="5" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,8">
             <StackPanel>
                 <WrapPanel>
@@ -217,13 +246,21 @@
                             ToolTip="Replace the selection with silence" />
                     <Button Style="{StaticResource ToolButton}" Content="Reverse" Click="OnReverse"
                             ToolTip="Play the selection backwards" />
+                    <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
+                    <Button x:Name="PluginsButton" Style="{StaticResource ToolButton}" Click="OnPlugins"
+                            ToolTip="Use a VST3 effect installed on this computer: reverb, EQ, compression and more">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Plugins" VerticalAlignment="Center" />
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
                 </WrapPanel>
                 <TextBlock x:Name="ScopeHint" Style="{StaticResource OptionHint}" Margin="2,4,0,0" />
             </StackPanel>
         </Border>
 
         <!-- Status and saving -->
-        <Border Grid.Row="5" Background="{DynamicResource SurfaceBrush}"
+        <Border Grid.Row="6" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,8">
             <DockPanel>
                 <StackPanel x:Name="SaveButtons" DockPanel.Dock="Right" Orientation="Horizontal">
