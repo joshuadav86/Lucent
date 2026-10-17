@@ -178,8 +178,8 @@ jobs:
           path: artifacts/metal-shaders
 
   # DXC has no Mac release either, but the Mac app needs it as it runs too: it translates the user's own
-  # visuals (and built-in ones they've edited) to Metal. So its library is built here for Apple silicon,
-  # once per DXC version (the result is cached), and ships inside Lucent.app.
+  # visuals (and built-in ones they've edited) to Metal. So its library is built here as one universal
+  # file for both kinds of Mac, once per DXC version (the result is cached), and ships inside Lucent.app.
   dxc-mac:
     runs-on: macos-latest
     env:
