@@ -89,7 +89,11 @@ public partial class MainWindow : Window
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        _positionTimer.Tick += (_, _) => UpdatePosition();
+        _positionTimer.Tick += (_, _) =>
+        {
+            UpdatePosition();
+            UpdateSongClock();
+        };
         _positionTimer.Start();
 
         _meter = new SpectrumMeter(_player.Capture) { Mode = _settings.Meter };
@@ -1317,6 +1321,8 @@ public partial class MainWindow : Window
         ShowNowPlaying(entry.Track);
         UpdatePlayPauseButton();
         UpdatePosition();
+        UpdateSongClock();
+        FindBeats(entry.Track.Path);
     }
 
     private void OnTrackEnded()

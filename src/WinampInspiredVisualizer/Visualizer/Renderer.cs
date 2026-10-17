@@ -5,6 +5,7 @@ using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
+using WinampInspiredVisualizer.Audio;
 
 namespace WinampInspiredVisualizer.Visualizer;
 
@@ -60,6 +61,9 @@ public sealed class Renderer : IDisposable
     private int _fromPreset = -1;
     private double _transitionStart;
     private double _lastSwitch;
+    // The downbeat (in seconds into the song) the next Auto change is timed to land on, and the song it's in.
+    private double? _landing;
+    private BeatMap? _landingSong;
     private int _transitionStyle;
 
     private IDXGIFactory2? _factory;
@@ -183,6 +187,12 @@ public sealed class Renderer : IDisposable
         get => _autoCycleSeconds;
         set => _autoCycleSeconds = Math.Clamp(value, 5f, 3600f);
     }
+
+    /// <summary>
+    /// The song that's playing and its bars, once they've been worked out. With them, Auto times
+    /// each change so the new visual arrives right on a downbeat.
+    /// </summary>
+    public SongClock? SongClock { get; set; }
 
     /// <summary>When on, only the morphing transitions are used.</summary>
     public bool MorphTransitionsOnly
@@ -792,18 +802,34 @@ public sealed class Renderer : IDisposable
         }
         else if (_autoCycle && _fromPreset < 0)
         {
-            // Switch on a beat once enough time has passed, or regardless a little later.
             var waited = now - _lastSwitch;
             var interval = _autoCycleSeconds;
-            if ((waited > interval && _analyzer.Beat > 0.9f) || waited > interval + 8)
+            if (SongClock?.Read() is { } song)
             {
-                var next = RandomReadyPreset();
-                if (next >= 0)
+                // The song's bars are known: start the change early enough that the new visual is
+                // fully in right on a downbeat, preferring the start of a phrase.
+                var lead = _transitionSeconds;
+                if (_landing is { } planned && (_landingSong != song.Beats || song.Position > planned + 0.25 || planned - song.Position > lead + 30))
                 {
-                    _requestedPreset = next;
-                    StartTransition(next, now);
-                    PresetChanged?.Invoke(next);
+                    // A new song, or the song was moved on or back past it.
+                    _landing = null;
                 }
+
+                if (_landing is null && waited + lead >= interval)
+                {
+                    _landing = song.Beats.LandingAfter(song.Position + lead, preferPhraseWithin: 8);
+                    _landingSong = song.Beats;
+                }
+
+                if ((_landing is { } landing && song.Position >= landing - lead) || waited > interval + 30)
+                {
+                    AutoSwitch(now);
+                }
+            }
+            else if ((waited > interval && _analyzer.Beat > 0.9f) || waited > interval + 8)
+            {
+                // Otherwise switch on a beat once enough time has passed, or regardless a little later.
+                AutoSwitch(now);
             }
         }
 
@@ -821,6 +847,17 @@ public sealed class Renderer : IDisposable
         }
 
         return (float)(t * t * (3 - 2 * t));
+    }
+
+    private void AutoSwitch(double now)
+    {
+        var next = RandomReadyPreset();
+        if (next >= 0)
+        {
+            _requestedPreset = next;
+            StartTransition(next, now);
+            PresetChanged?.Invoke(next);
+        }
     }
 
     private int NextUsable(int start)
@@ -854,6 +891,9 @@ public sealed class Renderer : IDisposable
 
     private void StartTransition(int presetIndex, double now)
     {
+        // Any change, Auto's or the user's, starts the wait for the next one afresh.
+        _landing = null;
+
         // Cutting a transition short: the visual it was leaving is gone straight away.
         var leaving = _fromPreset;
         _fromPreset = _activePreset;
