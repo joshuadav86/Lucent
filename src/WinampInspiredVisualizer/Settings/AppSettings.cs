@@ -28,9 +28,11 @@ public sealed class AppSettings
     /// <summary>Library folder headings the user has closed.</summary>
     public List<string> CollapsedLibraryFolders { get; set; } = new();
 
-    public bool ShowLibrary { get; set; } = true;
+    // A first start opens just the player, the equalizer and the visuals; the library and queue are
+    // a click away on the player.
+    public bool ShowLibrary { get; set; }
 
-    public bool ShowQueue { get; set; } = true;
+    public bool ShowQueue { get; set; }
 
     public bool ShowVisuals { get; set; } = true;
 
