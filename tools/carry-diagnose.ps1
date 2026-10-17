@@ -73,12 +73,12 @@ function TestDrag($tag) {
   [void][W]::SetForegroundWindow($script:player); Start-Sleep 1
   [W]::Drag($p.L + 60, $p.T + 12, 60, 40)
   $p2 = [W]::Box($script:player); $l2 = [W]::Box($script:lib)
-  Write-Host "::notice::$line | player moved $($p2.L - $p.L),$($p2.T - $p.T) library moved $($l2.L - $l.L),$($l2.T - $l.T)"
+  $script:log += " || $line | player moved $($p2.L - $p.L),$($p2.T - $p.T) library moved $($l2.L - $l.L),$($l2.T - $l.T)"
 }
 foreach ($pct in 150, 175, 200) {
   Write-Host "::notice::dpi $pct -> $([W]::SetDpi($pct))"; Start-Sleep 4
   foreach ($tol in 2, 6) {
-    $env:LUCID_TOLERANCE = "$tol"
+    $env:LUCID_TOLERANCE = "$tol"; $script:log = ""
     Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucid') -ErrorAction SilentlyContinue
     $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
     Start-Sleep 35
@@ -92,5 +92,6 @@ foreach ($pct in 150, 175, 200) {
     Start-Sleep 30
     TestDrag "dpi=$pct tol=$tol relaunched"
     Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
+    Write-Host "::notice::$($script:log)"
   }
 }
