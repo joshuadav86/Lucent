@@ -8,6 +8,13 @@ namespace WinampInspiredVisualizer.Export;
 public static class AudioEncoder
 {
     /// <summary>
+    /// Writes an MP3 file, using whichever encoder the app has on its platform. It gets the source,
+    /// the path, the quality, a callback for frames written and a cancellation token, and returns a
+    /// note for the user if the quality had to change. Each app sets this when it starts.
+    /// </summary>
+    public static Func<ISampleProvider, string, Mp3Quality, Action<long>, CancellationToken, string?>? Mp3Encoder { get; set; }
+
+    /// <summary>
     /// Reads <paramref name="source"/> to the end and writes it to <paramref name="path"/>, resampling first if
     /// the options ask for another sample rate. Returns a note for the user if something had to change.
     /// </summary>
@@ -48,7 +55,8 @@ public static class AudioEncoder
         switch (options.Format)
         {
             case ExportFormat.Mp3:
-                note = Mp3Writer.Encode(source, path, options.Mp3Quality, Advance, cancellation) ?? note;
+                var mp3 = Mp3Encoder ?? throw new NotSupportedException("MP3 export isn't available on this platform.");
+                note = mp3(source, path, options.Mp3Quality, Advance, cancellation) ?? note;
                 break;
             case ExportFormat.Flac:
                 WriteFlac(source, path, options, Advance, cancellation);

@@ -24,6 +24,9 @@ public sealed class AudioCapture
     private long _written;
     private int _lastBlock;
 
+    /// <summary>How far ahead of the speakers the audio is decoded, in milliseconds.</summary>
+    public const int OutputLatencyMs = 150;
+
     public int SampleRate { get; private set; } = 44100;
 
     /// <summary>True when no audio has arrived recently (paused, stopped, or nothing loaded).</summary>

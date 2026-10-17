@@ -264,7 +264,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/WinampInspiredVisualizer/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into `%AppData%\Lucent\Presets` (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/Lucent.Core/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into `%AppData%\Lucent\Presets` (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
 
 A particle visual also defines `Spawn`, `Simulate` and `Show`, which start, move and draw each of its particles. The engine runs them for every particle each frame on the graphics card and adds the glowing dots into a layer that `Render` reads with `particles(uv)`. A `// Particles: 300000` line sets how many run on Normal detail. Random numbers, 3D projection with lens blur, curl-noise flow and motion streaks are in [`Shaders/Particles.hlsli`](src/WinampInspiredVisualizer/Shaders/Particles.hlsli).
 
@@ -275,6 +275,8 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) on W
 ```
 dotnet run --project src/WinampInspiredVisualizer
 ```
+
+The code is in two projects. `src/Lucent.Core` holds everything that doesn't depend on Windows (audio analysis, the equalizer, the editor's effects, export, tags, the library, playlists and settings) and builds on any OS, ready for a Mac version. `src/WinampInspiredVisualizer` is the Windows app: its windows, the Direct3D renderer, playback and the shaders.
 
 ## License
 

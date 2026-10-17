@@ -30,6 +30,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Lucent.Core\Lucent.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\Lucent.ico" />
     <Resource Include="Assets\Lucent-64.png" />
   </ItemGroup>
