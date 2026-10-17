@@ -1,0 +1,23 @@
+02:52:13.643 OnLoaded start: player L=252 T=101 W=520 H=246.90333333333334 startup=CenterScreen queue=True lib=True
+02:52:13.839 after ArrangeFirstTime: player L=360 T=0
+02:52:13.952 OnLoaded end: Lucid: L=360 T=0 W=520x246.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=639 W=520x160 vis=True Normal | Lucid library: L=0 T=0 W=360x720 vis=True Normal
+02:52:14.336 after load: Lucid: L=360 T=0 W=520x207.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=600 W=520x199 vis=True Normal | Lucid library: L=0 T=0 W=360x720 vis=True Normal | Equalizer: L=360 T=208 W=520x392 vis=True Normal
+--- second launch
+02:52:53.916 OnLoaded start: player L=360 T=0 W=520 H=246.90333333333334 startup=Manual queue=True lib=True
+02:52:54.189 OnLoaded end: Lucid: L=360 T=0 W=520x246.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=639 W=520x160 vis=True Normal | Lucid library: L=0 T=0 W=360x720 vis=True Normal
+02:52:54.346 after load: Lucid: L=360 T=0 W=520x207.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=600 W=520x199 vis=True Normal | Lucid library: L=0 T=0 W=360x720 vis=True Normal | Equalizer: L=360 T=208 W=520x392 vis=True Normal
+02:53:24.898 ENTERSIZEMOVE Lucid rect=360,0,880,208 carried=4 windows=5 others=[Lucid visuals 880,0,1300,788; Lucid queue 360,600,880,799; Lucid library 0,0,360,720; Equalizer 360,208,880,600]
+02:53:24.909 MOVING Lucid proposed=365,4 unsnapped=360,0 snap=0,0 targets=1
+02:53:24.953 MOVING Lucid proposed=363,2 unsnapped=363,2 snap=0,-2 targets=1
+02:53:24.985 MOVING Lucid proposed=363,0 unsnapped=363,2 snap=0,-2 targets=1
+02:53:27.523 EXITSIZEMOVE Lucid moving=True end=435,56
+02:53:29.489 ENTERSIZEMOVE Lucid queue rect=435,656,955,855 carried=0 windows=5 others=[Lucid 435,56,955,264; Lucid visuals 955,56,1375,844; Lucid library 75,56,435,776; Equalizer 435,264,955,656]
+02:53:29.505 MOVING Lucid queue proposed=438,663 unsnapped=435,656 snap=0,0 targets=5
+02:53:29.537 MOVING Lucid queue proposed=435,661 unsnapped=435,661 snap=0,-5 targets=5
+02:53:29.600 MOVING Lucid queue proposed=435,661 unsnapped=435,666 snap=0,-10 targets=5
+02:53:32.427 EXITSIZEMOVE Lucid queue moving=True end=435,689
+02:53:34.557 ENTERSIZEMOVE Lucid queue rect=435,689,955,888 carried=0 windows=5 others=[Lucid 435,56,955,264; Lucid visuals 955,56,1375,844; Lucid library 75,56,435,776; Equalizer 435,264,955,656]
+02:53:34.593 MOVING Lucid queue proposed=438,683 unsnapped=435,684 snap=0,0 targets=5
+02:53:34.594 MOVING Lucid queue proposed=435,679 unsnapped=435,684 snap=0,0 targets=5
+02:53:34.658 MOVING Lucid queue proposed=435,679 unsnapped=435,679 snap=0,0 targets=5
+02:53:36.767 EXITSIZEMOVE Lucid queue moving=True end=435,555
