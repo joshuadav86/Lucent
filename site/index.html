@@ -449,8 +449,8 @@ footer a:hover { color: var(--fg); }
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow">Audio editor</p>
-        <h2 id="ed-title">Fix a sound without leaving your player.</h2>
-        <p class="lede">Right-click any sound and choose Open in editor. You get both channels, drag to select, run your own VST3 effects, and every change has undo. Nothing is saved over the original until you say so.</p>
+        <h2 id="ed-title">Edit, repair and measure without leaving your player.</h2>
+        <p class="lede">Right-click any sound and choose Open in editor. Cut it, clean it up, check its loudness and master it with studio meters and your own VST3 effects. Every change has undo, and nothing is saved over the original until you say so.</p>
       </div>
       <div class="editor">
         <div class="ed-top">
@@ -471,6 +471,7 @@ footer a:hover { color: var(--fg); }
             <button type="button" data-op="gainup">Gain +3 dB</button>
             <button type="button" data-op="gaindown">Gain −3 dB</button>
             <button type="button" data-op="reverse">Reverse</button>
+            <button type="button" data-op="mono">To mono</button>
           </div>
           <div class="tool-group" role="group" aria-label="Normalize">
             <label for="normSel">Normalize</label>
@@ -490,11 +491,15 @@ footer a:hover { color: var(--fg); }
         </div>
         <div class="ed-foot"><span id="edSel">No selection: edits apply to the whole sound</span><span id="edPeak">Peak −0.8 dB</span><span id="edMsg">Drag across the waveform to select</span></div>
       </div>
-      <div class="analyzer-notes">
-        <div><h3>Normalize your way</h3><p>To a peak of −0.1, −1 or −3 dB, or a loudness of −14, −16 or −23 LUFS.</p></div>
-        <div><h3>Pitch in 0.1 steps</h3><p>Up to 12 semitones either way, keeping the speed or changing it like a record.</p></div>
-        <div><h3>Saved safely</h3><p>Save over the original after a prompt, or as a new version. Formats Lucent can't write are saved as FLAC.</p></div>
-        <div><h3>Convert anything</h3><p>MP3 from 128 to 320 kbps or VBR, FLAC at 16 or 24-bit, or WAV, with tags and artwork carried across.</p></div>
+      <div class="analyzer-notes ed-features">
+        <div><h3>Cut, copy and paste</h3><p>Edits crossfade so nothing clicks, and selections snap to zero crossings.</p></div>
+        <div><h3>Analyze</h3><p>Peak, true peak, LUFS, loudness range, DC offset and spectrum, plus a clip finder that jumps to every clipped spot.</p></div>
+        <div><h3>Meters that keep up</h3><p>A live peak and loudness meter while you play or loop a section, and a spectrogram view of the sound in place of the waveform.</p></div>
+        <div><h3>Repair</h3><p>Take out hum, clicks, background noise and DC offset.</p></div>
+        <div><h3>EQ and dynamics</h3><p>A live EQ and a compressor and limiter you hear as you turn them, next to your own VST3 effects.</p></div>
+        <div><h3>Tempo and pitch</h3><p>Change the tempo with or without the pitch, or the pitch alone in 0.1 semitone steps.</p></div>
+        <div><h3>Channels and markers</h3><p>Swap, split or convert to mono, and drop markers to jump between parts.</p></div>
+        <div><h3>Batch it</h3><p>Run the converter over a whole folder of sounds: MP3, FLAC or WAV, with tags and artwork carried across.</p></div>
       </div>
     </div>
   </section>
@@ -1143,6 +1148,7 @@ footer a:hover { color: var(--fg); }
       case "fadeout": each((v, i) => v * (1 - (i - a) / (b - a))); msg = `Faded out ${where}`; break;
       case "gainup": { let clip = false; each(v => { v *= 1.4125; if (v > 1) clip = true; return Math.min(1, v); }); msg = clip ? "Gain +3 dB. Some peaks now touch 0 dB" : `Gain +3 dB on ${where}`; break; }
       case "gaindown": each(v => v * .7079); msg = `Gain −3 dB on ${where}`; break;
+      case "mono": each((v, i) => (ed.L[i] + ed.R[i]) / 2); msg = `Converted ${where} to mono`; break;
       case "reverse": for (const ch of [ed.L, ed.R]) ch.subarray(a, b).reverse(); msg = `Reversed ${where}`; break;
       case "normalize": {
         const [kind, val] = [document.getElementById("normSel").value[0], +document.getElementById("normSel").value.slice(2)];
