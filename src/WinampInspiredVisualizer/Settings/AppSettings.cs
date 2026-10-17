@@ -93,6 +93,10 @@ public sealed class AppSettings
     /// <summary>The name the favourites go by in lists of visuals; no list of the user's can take it.</summary>
     public const string FavoritesListName = "Favorites";
 
+    // ---- Sound ----
+
+    public EqualizerSettings Equalizer { get; set; } = new();
+
     // ---- Look ----
 
     public string Theme { get; set; } = "Midnight";

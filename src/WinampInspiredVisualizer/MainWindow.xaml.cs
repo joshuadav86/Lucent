@@ -83,6 +83,7 @@ public partial class MainWindow : Window
 
         VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
         _player.Volume = (float)VolumeSlider.Value;
+        _player.Equalizer.Apply(_settings.Equalizer);
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
@@ -289,6 +290,11 @@ public partial class MainWindow : Window
             _settings.Windows[name] = new WindowBounds { Left = bounds.Left, Top = bounds.Top, Width = bounds.Width, Height = bounds.Height };
         }
     }
+
+    private void OnToggleEqualizer(object sender, RoutedEventArgs e) => ToggleEqualizer();
+
+    private void ToggleEqualizer() =>
+        EqualizerWindow.Toggle(this, _player, _settings, isOpen => EqualizerToggle.IsChecked = isOpen);
 
     private void OnToggleVisuals(object sender, RoutedEventArgs e) => ToggleWindow(_visuals);
 
@@ -995,6 +1001,9 @@ public partial class MainWindow : Window
                 break;
             case Key.C:
                 ToggleArtwork();
+                break;
+            case Key.E:
+                ToggleEqualizer();
                 break;
             case Key.O:
                 Activate();
