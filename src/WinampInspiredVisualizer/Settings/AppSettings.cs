@@ -144,13 +144,16 @@ public sealed class AppSettings
     // ---- Analyzer ----
 
     /// <summary>The analyzer window's size. It opens docked to the player's group, wherever there's room.</summary>
-    public double AnalyzerWindowWidth { get; set; } = 520;
+    public double AnalyzerWindowWidth { get; set; } = 760;
 
-    public double AnalyzerWindowHeight { get; set; } = 360;
+    public double AnalyzerWindowHeight { get; set; } = 460;
 
     public SpectrogramPalette AnalyzerPalette { get; set; } = SpectrogramPalette.Classic;
 
     public AnalyzerSpeed AnalyzerSpeed { get; set; } = AnalyzerSpeed.Normal;
+
+    /// <summary>Which parts of the analyzer are shown.</summary>
+    public AnalyzerModules AnalyzerModules { get; set; } = AnalyzerModules.All;
 
     // ---- Audio tools ----
 
@@ -215,6 +218,22 @@ public enum SpectrogramPalette
     Fire,
     /// <summary>The theme's own background and accent colours.</summary>
     Theme,
+}
+
+/// <summary>The parts of the analyzer, any of which can be shown or hidden.</summary>
+[Flags]
+public enum AnalyzerModules
+{
+    None = 0,
+    /// <summary>The frequencies over time, scrolling.</summary>
+    Heatmap = 1,
+    /// <summary>The frequencies right now, as bars beside the heatmap.</summary>
+    Spectrum = 2,
+    /// <summary>The waveform, scrolling under the heatmap.</summary>
+    Waveform = 4,
+    /// <summary>The stereo spread scope and correlation bar.</summary>
+    Stereo = 8,
+    All = Heatmap | Spectrum | Waveform | Stereo,
 }
 
 /// <summary>How fast the analyzer scrolls.</summary>
