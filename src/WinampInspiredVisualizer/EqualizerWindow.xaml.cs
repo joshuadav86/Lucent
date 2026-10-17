@@ -73,8 +73,13 @@ public partial class EqualizerWindow : Window
         _bands = EqualizerBands.ForCount(Eq.BandCount);
         Eq.BandCount = _bands.Count;
         Eq.Gains = Equalizer.SliderGains(Eq, _bands).ToList();
+        // The spectrum fills the response box under the curve, whatever size the box is.
         _spectrum = new EqualizerSpectrum(player.Capture);
-        CurveCanvas.Children.Insert(0, _spectrum);
+        CurveFrame.Child = null;
+        var layers = new Grid();
+        layers.Children.Add(_spectrum);
+        layers.Children.Add(CurveCanvas);
+        CurveFrame.Child = layers;
 
         // Saving is held back until the sliders have been still for a moment.
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
@@ -161,6 +166,8 @@ public partial class EqualizerWindow : Window
     private void BuildBands()
     {
         _bands = EqualizerBands.ForCount(Eq.BandCount);
+        // The box spans the columns, each band's centre in the middle of its column.
+        _spectrum.SetScale(_bands.Centres[0] / Math.Pow(2, _bands.SpacingOctaves / 2), _bands.SpacingOctaves * _bands.Count);
         // Narrower columns for more bands, so even 32 sliders fit a normal screen.
         var narrowest = _bands.Count switch
         {
@@ -364,9 +371,6 @@ public partial class EqualizerWindow : Window
         // Each band's centre sits right above its slider, so frequency runs evenly (in octaves)
         // across the columns.
         var ratio = Math.Pow(2, _bands.SpacingOctaves);
-        _spectrum.Width = width;
-        _spectrum.Height = height;
-        _spectrum.SetScale(_bands.Centres[0] / Math.Sqrt(ratio), _bands.SpacingOctaves * _bands.Count);
         var elapsed = _gliding ? (DateTime.UtcNow - _glideStart).TotalSeconds : double.MaxValue;
         var points = new List<Point>();
         for (var x = 0.0; x <= width; x += 2)
