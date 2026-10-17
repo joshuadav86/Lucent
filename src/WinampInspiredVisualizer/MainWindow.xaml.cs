@@ -166,6 +166,7 @@ public partial class MainWindow : Window
             _snapper.Add(window);
         }
 
+        Diag.Log($"OnLoaded start: player L={Left} T={Top} W={ActualWidth} H={ActualHeight} startup={WindowStartupLocation} queue={_settings.ShowQueue} lib={_settings.ShowLibrary}");
         var firstTime = Saved("Player") is null;
         if (firstTime)
         {
@@ -176,6 +177,7 @@ public partial class MainWindow : Window
             }
 
             ArrangeFirstTime();
+            Diag.Log($"after ArrangeFirstTime: player L={Left} T={Top}");
         }
         else
         {
@@ -219,6 +221,8 @@ public partial class MainWindow : Window
 
         UpdateWindowToggles();
         Activate();
+        Diag.Log("OnLoaded end: " + string.Join(" | ", new Window[] { this, _visuals, _queue, _libraryWindow }.Select(w => $"{w.Title}: L={w.Left} T={w.Top} W={w.ActualWidth}x{w.ActualHeight} vis={w.IsVisible} {w.WindowState}")));
+        Dispatcher.BeginInvoke(() => Diag.Log("after load: " + string.Join(" | ", Application.Current.Windows.Cast<Window>().Select(w => $"{w.Title}: L={w.Left} T={w.Top} W={w.ActualWidth}x{w.ActualHeight} vis={w.IsVisible} {w.WindowState}"))), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>

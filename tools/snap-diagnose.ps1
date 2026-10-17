@@ -30,7 +30,7 @@ public static class W {
 
 Write-Host '::notice::types loaded'
 $out = Join-Path $env:RUNNER_TEMP 'shots'; New-Item -ItemType Directory -Force $out | Out-Null
-$proc = Start-Process -FilePath (Resolve-Path 'app/Lucid.exe') -PassThru
+$proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
 Start-Sleep 40
 function Dump($label) {
   Write-Host "::notice::=== $label"
@@ -43,7 +43,7 @@ Dump 'start'; [W]::Shot("$out/1-start.png")
 $player = Find 'Lucid'
 $r = Box $player
 [void][W]::SetForegroundWindow($player)
-[W]::Drag($r.L + 120, $r.T + 14, 80, 60)
+[W]::Drag($r.L + 40, $r.T + 14, 80, 60)
 Dump 'after dragging the player by 80,60'; [W]::Shot("$out/2-player-dragged.png")
 
 $queue = Find 'Lucid queue'
@@ -58,3 +58,5 @@ if ($queue) {
 Get-Process -Id $proc.Id -ErrorAction SilentlyContinue | Out-Null
 if ($proc.HasExited) { Write-Host "::notice::Lucid exited with $($proc.ExitCode)" }
 Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
+
+Copy-Item (Join-Path $env:TEMP 'lucid-diag.txt') $out -ErrorAction SilentlyContinue

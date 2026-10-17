@@ -102,6 +102,8 @@ public sealed class WindowSnapper
                     FindDocked(hwnd);
                 }
 
+                Diag.Log($"ENTERSIZEMOVE {Title(hwnd)} rect={_startRect.Left},{_startRect.Top},{_startRect.Right},{_startRect.Bottom} carried={_carried.Count} windows={_windows.Count} others=[{string.Join("; ", DockableWindows(hwnd).Select(o => $"{Title(o.Handle)} {o.Rect.Left},{o.Rect.Top},{o.Rect.Right},{o.Rect.Bottom}"))}]");
+                _logMoves = 3;
                 break;
             case WM_MOVING when hwnd == _moving:
             {
@@ -118,6 +120,10 @@ public sealed class WindowSnapper
 
                 var rect = UnsnappedMove();
                 var (dx, dy) = SnapMove(hwnd, Visible(rect, _startMargins));
+                if (_logMoves-- > 0)
+                {
+                    Diag.Log($"MOVING {Title(hwnd)} proposed={proposed.Left},{proposed.Top} unsnapped={rect.Left},{rect.Top} snap={dx},{dy} targets={Targets(hwnd, rect).Count()}");
+                }
                 rect.Left += dx;
                 rect.Right += dx;
                 rect.Top += dy;
@@ -150,6 +156,8 @@ public sealed class WindowSnapper
                 break;
             }
             case WM_EXITSIZEMOVE:
+                GetWindowRect(hwnd, out var endRect);
+                Diag.Log($"EXITSIZEMOVE {Title(hwnd)} moving={hwnd == _moving} end={endRect.Left},{endRect.Top}");
                 if (hwnd == _moving && !_resized && _carried.Count == 0)
                 {
                     MatchCorners(hwnd);
@@ -759,6 +767,10 @@ public sealed class WindowSnapper
     }
 
     private static IntPtr Handle(Window window) => new WindowInteropHelper(window).Handle;
+
+    private int _logMoves;
+
+    private static string Title(IntPtr hwnd) => (HwndSource.FromHwnd(hwnd)?.RootVisual as Window)?.Title ?? hwnd.ToString();
 
     private readonly record struct SnapTarget(int Left, int Top, int Right, int Bottom, bool IsScreen);
 
