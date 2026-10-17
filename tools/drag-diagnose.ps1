@@ -92,8 +92,12 @@ foreach ($pct in 150) {
   Write-Host "::notice::dpi $pct -> $([W]::SetDpi($pct))"; Start-Sleep 4
   Run "dpi $pct normal" {
     TestDrag 'fresh'; [W]::Shot("$out/$pct-a-fresh.png")
+    Press 0x4C; Press 0x4C; TestDrag 'L twice'
+    Press 0x51; Press 0x51; TestDrag 'Q twice'
     Press 0x45; Press 0x45; TestDrag 'E twice'
     Press 0x57; Press 0x57; TestDrag 'W twice'
     Press 0x44; TestDrag 'D'; [W]::Shot("$out/$pct-b-after.png")
   }
 }
+Run "dpi 150 E only" { TestDrag 'fresh'; Press 0x45; Press 0x45; TestDrag 'E twice'; TestDrag 'again' }
+Run "dpi 150 Q only" { TestDrag 'fresh'; Press 0x51; Press 0x51; TestDrag 'Q twice'; TestDrag 'again' }
