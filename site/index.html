@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucent for Windows</title>
-<meta name="description" content="Lucent is a music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer and 141 live GPU visuals. Free for Windows, coming to Mac.">
+<meta name="description" content="Lucent is a music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer and 200 live GPU visuals. Free for Windows, coming to Mac.">
 <meta property="og:title" content="Lucent">
-<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer and 141 live GPU visuals.">
+<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer and 200 live GPU visuals.">
 <meta property="og:image" content="https://lucentaudio.net/img/player-layout.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#09090C">
@@ -362,7 +362,7 @@ footer a:hover { color: var(--fg); }
         <p class="eyebrow">Built for audio nerds · Windows, coming to Mac</p>
         <h1 id="hero-title">Play it. Shape it. <span class="grad">Watch&nbsp;it.</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a music player built for audio nerds. A real audio editor, a studio analyzer and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 141 visuals. On Windows now, with a Mac version on the way.</p>
+          <p class="lede">Lucent is a music player built for audio nerds. A real audio editor, a studio analyzer and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 200 visuals. On Windows now, with a Mac version on the way.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -384,7 +384,7 @@ footer a:hover { color: var(--fg); }
 
   <div class="readout">
     <div class="wrap" aria-label="Lucent in numbers">
-      <span><b>141</b>live visuals</span>
+      <span><b>200</b>live visuals</span>
       <span><b>31</b>ray traced</span>
       <span><b>42</b>particle</span>
       <span><b>4–32</b>EQ bands</span>
@@ -431,7 +431,7 @@ footer a:hover { color: var(--fg); }
   <section class="band" id="visuals" aria-labelledby="visuals-title">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">141 visuals</p>
+        <p class="eyebrow">200 visuals</p>
         <h2 id="visuals-title">Every frame is drawn live on your graphics card.</h2>
         <p class="lede">Each visual listens to the bass, mids, treble and beat of what's playing. Physically lit scenes with real reflections, hundreds of thousands of particles per frame, and endless fractals and kaleidoscopes.</p>
       </div>
@@ -726,14 +726,16 @@ footer a:hover { color: var(--fg); }
   /* ---------- visuals gallery ---------- */
   const V = {
     rt: ["Ray traced", 31, [["diamond-fire","Diamond Fire"],["blue-marble","Blue Marble"],["cornell-box","Cornell Box"],["cathedral-light","Cathedral Light"],["crystal-organ","Crystal Organ"],["cloud-sea","Cloud Sea"],["ringed-world","Ringed World"],["chrome-equalizer","Chrome Equalizer"],["forest-light","Forest Light"],["disco-ball","Disco Ball"]]],
-    pa: ["Particles", 42, [["phoenix-rising","Phoenix Rising"],["galaxy-collision","Galaxy Collision"],["volcanic-eruption","Volcanic Eruption"],["strange-attractors","Strange Attractors"],["solar-flare","Solar Flare"],["iron-filings","Iron Filings"],["magnetosphere","Magnetosphere"],["silk-currents","Silk Currents"],["ember-storm","Ember Storm"],["knot-stream","Knot Stream"],["dyson-swarm","Dyson Swarm"],["murmuration","Murmuration"]]],
+    pa: ["Particles", 57, [["phoenix-rising","Phoenix Rising"],["galaxy-collision","Galaxy Collision"],["volcanic-eruption","Volcanic Eruption"],["strange-attractors","Strange Attractors"],["solar-flare","Solar Flare"],["iron-filings","Iron Filings"],["magnetosphere","Magnetosphere"],["silk-currents","Silk Currents"],["ember-storm","Ember Storm"],["knot-stream","Knot Stream"],["dyson-swarm","Dyson Swarm"],["murmuration","Murmuration"],["buddhabrot","Buddhabrot"],["physarum","Physarum"],["barnsley-fern","Barnsley Fern"]]],
+    ge: ["Geometric", 15, [["quasicrystal","Quasicrystal"],["girih-tiles","Girih Tiles"],["voronoi-glass","Voronoi Glass"],["hex-pulse","Hex Pulse"],["spirograph","Spirograph"]]],
+    mi: ["Minimal", 14, [["enso","Enso"],["eclipse","Eclipse"],["harmonograph","Harmonograph"]]],
     ka: ["Kaleidoscope", 15, [["kaleido-cathedral","Kaleido Cathedral"],["rose-window","Rose Window"],["flower-of-life","Flower of Life"]]],
-    fr: ["Fractal and fly-through", 23, [["mandelbulb-bloom","Mandelbulb Bloom"],["menger-voyage","Menger Voyage"]]],
+    fr: ["Fractal and fly-through", 38, [["mandelbulb-bloom","Mandelbulb Bloom"],["menger-voyage","Menger Voyage"],["pythagoras-tree","Pythagoras Tree"],["apollonian-spheres","Apollonian Spheres"],["orbit-traps","Orbit Traps"]]],
     cy: ["Cyberpunk", 7, [["neon-downpour","Neon Downpour"],["sunset-highway","Sunset Highway"]]],
     co: ["Cosmic", 5, [["cosmic-jellyfish","Cosmic Jellyfish"],["black-hole","Black Hole"]]]
   };
-  const ALL = [["co",1],["rt",0],["ka",0],["pa",1],["rt",1],["co",0],["fr",0],["pa",2],["rt",2],["cy",0],["pa",3],["fr",1],["rt",3],["ka",1],["pa",4],["cy",1],["pa",0]];
-  const SHORT = { rt: "Ray traced", pa: "Particles", ka: "Kaleido", fr: "Fractal", cy: "Cyberpunk", co: "Cosmic" };
+  const ALL = [["co",1],["ge",0],["rt",0],["mi",0],["ka",0],["pa",1],["fr",2],["rt",1],["co",0],["pa",12],["fr",0],["ge",1],["pa",2],["mi",1],["rt",2],["cy",0],["fr",3],["pa",3],["fr",1],["ge",2],["rt",3],["ka",1],["pa",4],["cy",1],["pa",0]];
+  const SHORT = { rt: "Ray traced", pa: "Particles", ge: "Geometric", mi: "Minimal", ka: "Kaleido", fr: "Fractal", cy: "Cyberpunk", co: "Cosmic" };
   const chips = document.getElementById("chips"), gallery = document.getElementById("gallery");
   const famBtn = (key, label, count) => {
     const b = document.createElement("button");
@@ -743,7 +745,7 @@ footer a:hover { color: var(--fg); }
     b.onclick = () => { chips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); showFam(key); };
     chips.append(b);
   };
-  famBtn("all", "All", 141);
+  famBtn("all", "All", 200);
   for (const k in V) famBtn(k, V[k][0], V[k][1]);
   function showFam(key) {
     const items = key === "all" ? ALL.map(([f, i]) => [f, V[f][2][i]]) : V[key][2].map(x => [key, x]);
