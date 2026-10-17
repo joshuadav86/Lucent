@@ -389,7 +389,8 @@ public partial class MainWindow : Window
 
             var roomBelow = area.Bottom - playerBottom;
             var roomAbove = Top - area.Top;
-            var below = roomBelow >= height || roomBelow >= roomAbove;
+            // Above only when it fits there: past the top of the screen its title bar can't be reached.
+            var below = roomBelow >= height || roomBelow >= roomAbove || roomAbove < window.MinHeight;
             height = Math.Max(window.MinHeight, Math.Min(height, below ? roomBelow : roomAbove));
             window.Width = ActualWidth;
             window.Height = height;
