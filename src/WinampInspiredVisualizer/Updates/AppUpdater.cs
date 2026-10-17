@@ -4,9 +4,9 @@ using Velopack.Sources;
 namespace WinampInspiredVisualizer.Updates;
 
 /// <summary>
-/// Keeps an installed Lucent up to date from the "Latest build" release on GitHub. It checks once
-/// at startup, downloads a newer build in the background, and installs it when Lucent closes, or
-/// straight away with a restart if asked. Lucent run from the zip isn't installed and never updates.
+/// Keeps an installed Lucent up to date from the "Latest build" release on GitHub. It checks shortly
+/// after startup and then every hour while Lucent runs, downloads a newer build in the background,
+/// and installs it when Lucent closes, or straight away with a restart if asked. Lucent run from the zip isn't installed and never updates.
 /// </summary>
 public sealed class AppUpdater
 {
@@ -19,22 +19,38 @@ public sealed class AppUpdater
     private VelopackAsset? _downloaded;
     private bool _applying;
 
-    /// <summary>Raised on a background thread once a newer build has downloaded and is ready to install.</summary>
+    // GitHub allows 60 unsigned requests an hour from one address, and a check uses one or two.
+    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Raised on a background thread once a newer build has downloaded and is ready to install. It's
+    /// raised again if an even newer build arrives before that one is installed.
+    /// </summary>
     public event Action<string>? UpdateReady;
 
-    public async Task CheckAsync()
+    /// <summary>Checks for updates until Lucent closes. Returns at once if Lucent isn't installed.</summary>
+    public async Task RunAsync()
     {
         if (!_manager.IsInstalled)
         {
             return;
         }
 
+        // Let the first visuals compile before using the network and disk.
+        await Task.Delay(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+        while (!_applying)
+        {
+            await CheckOnceAsync().ConfigureAwait(false);
+            await Task.Delay(CheckInterval).ConfigureAwait(false);
+        }
+    }
+
+    private async Task CheckOnceAsync()
+    {
         try
         {
-            // Let the first visuals compile before using the network and disk.
-            await Task.Delay(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
             var update = await _manager.CheckForUpdatesAsync().ConfigureAwait(false);
-            if (update is null)
+            if (update is null || _applying || update.TargetFullRelease.Version == _downloaded?.Version)
             {
                 return;
             }
@@ -45,7 +61,7 @@ public sealed class AppUpdater
         }
         catch (Exception)
         {
-            // Offline, GitHub unreachable or mid-publish: try again next time Lucent starts.
+            // Offline, GitHub unreachable or mid-publish: try again at the next check.
         }
     }
 
