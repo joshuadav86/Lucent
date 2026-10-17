@@ -31,7 +31,13 @@
             </Setter>
         </Style>
 
-        <!-- A vertical equalizer slider: a thin groove with a mark at 0 dB and a pill-shaped thumb. -->
+        <!-- A vertical equalizer slider drawn like a mixing desk fader: a dark slot cut into the panel,
+             a scale of marks every 3 dB (longer at 0), and a metal cap with a coloured line across it. -->
+        <Style x:Key="FaderMark" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="BorderThickness" Value="0,1,0,0" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
         <Style x:Key="BandSlider" TargetType="Slider">
             <Setter Property="Orientation" Value="Vertical" />
             <Setter Property="Minimum" Value="-12" />
@@ -48,9 +54,34 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
-                        <Grid Width="18" Background="Transparent">
-                            <Border Width="3" Margin="0,4" CornerRadius="1.5" Background="{DynamicResource HairlineBrush}" />
-                            <Border Width="11" Height="1" VerticalAlignment="Center" Background="{DynamicResource FaintTextBrush}" />
+                        <Grid Width="30" Background="Transparent">
+                            <!-- The scale: eight 3 dB steps between the cap's highest and lowest centre. -->
+                            <Grid Width="26" Margin="0,7" HorizontalAlignment="Center">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Style="{StaticResource FaderMark}" />
+                                <Border Grid.Row="1" Style="{StaticResource FaderMark}" Margin="4,0" />
+                                <Border Grid.Row="2" Style="{StaticResource FaderMark}" />
+                                <Border Grid.Row="3" Style="{StaticResource FaderMark}" Margin="4,0" />
+                                <Border Grid.Row="4" Style="{StaticResource FaderMark}" Margin="-2,0" BorderThickness="0,1.5,0,0"
+                                        BorderBrush="{DynamicResource MutedTextBrush}" Opacity="1" />
+                                <Border Grid.Row="5" Style="{StaticResource FaderMark}" Margin="4,0" />
+                                <Border Grid.Row="6" Style="{StaticResource FaderMark}" />
+                                <Border Grid.Row="7" Style="{StaticResource FaderMark}" Margin="4,0" BorderThickness="0,1,0,1" />
+                            </Grid>
+                            <!-- The slot the cap slides in. -->
+                            <Border Width="6" Margin="0,3" CornerRadius="3" Background="#B0000000"
+                                    BorderBrush="#30FFFFFF" BorderThickness="0,0,0,1">
+                                <Border CornerRadius="3" BorderBrush="#C0000000" BorderThickness="0,1,0,0" />
+                            </Border>
                             <Track x:Name="PART_Track">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Style="{StaticResource BandSliderEdge}" Command="Slider.DecreaseLarge" />
@@ -62,14 +93,33 @@
                                     <Thumb>
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="Cap" Width="16" Height="8" CornerRadius="4"
-                                                        Background="{DynamicResource AccentBrush}" />
+                                                <Grid Width="28" Height="14">
+                                                    <Border x:Name="Cap" CornerRadius="2.5" BorderBrush="#99000000" BorderThickness="1">
+                                                        <Border.Background>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                <GradientStop Offset="0" Color="#F4F4F8" />
+                                                                <GradientStop Offset="0.45" Color="#C9C9D2" />
+                                                                <GradientStop Offset="0.55" Color="#B4B4BF" />
+                                                                <GradientStop Offset="1" Color="#7E7E8A" />
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                        <Border.Effect>
+                                                            <DropShadowEffect BlurRadius="5" ShadowDepth="1.5" Direction="270" Opacity="0.6" />
+                                                        </Border.Effect>
+                                                    </Border>
+                                                    <!-- Grip ridges above and below the line, and the line itself. -->
+                                                    <Border Height="1" Margin="4,3,4,0" VerticalAlignment="Top" Background="#40000000" />
+                                                    <Border Height="1" Margin="4,0,4,3" VerticalAlignment="Bottom" Background="#40000000" />
+                                                    <Border x:Name="Line" Height="2" Margin="2,0" VerticalAlignment="Center"
+                                                            Background="{DynamicResource AccentBrush}" />
+                                                </Grid>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Cap" Property="Background" Value="{DynamicResource TextBrush}" />
+                                                        <Setter TargetName="Cap" Property="Opacity" Value="0.85" />
                                                     </Trigger>
                                                     <Trigger Property="IsDragging" Value="True">
-                                                        <Setter TargetName="Cap" Property="Background" Value="{DynamicResource TextBrush}" />
+                                                        <Setter TargetName="Cap" Property="Opacity" Value="0.75" />
+                                                        <Setter TargetName="Line" Property="Height" Value="3" />
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
