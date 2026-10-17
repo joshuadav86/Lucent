@@ -57,7 +57,7 @@ Double-click the visuals (or press F11) to go fullscreen. Click once to pause or
 - **Built-in audio editor:** trim, fade, normalize, change pitch and more, with undo
 - **Converter and tag editor:** make MP3, FLAC or WAV, and edit titles, artists and cover art safely
 - **Graphics options:** up to 4K supersampling, Ultra detail, adjustable glow and HDR
-- **Eight themes**, from Midnight to Glacier (light)
+- **Five skins and eight themes:** skins change the shape, type and finish of every window (Classic's bevels and LCD, Glass, Neon, brushed-metal Studio), themes change the colours, and any skin goes with any theme
 - **Make your own visuals:** each one is a single shader file (see below)
 
 ## Download and run
@@ -112,7 +112,8 @@ Nothing needs installing. If Windows SmartScreen warns about an unknown app, cli
   - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown under the visuals)
 - A Winamp-style equalizer under the player, the same width, open from the start (the EQ switch in the player, or E, shows or hides it, and the queue moves to make room): choose 3, 4, 5, 8, 10, 16, 24 or 31 bands, drag the sliders (double-click one to put it back to 0) with the response curve drawn live above them, set the preamp, and pick from 15 presets such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own. Changing the band count keeps your curve (the new sliders rise into place one after another, and presets and Reset glide the sliders and curve to their new settings), the visuals react to the equalized sound, and Lucid turns the volume down a touch when you boost so the music doesn't distort
 - Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
-- Remembers the last visual, your options and your theme
+- Five skins that change the whole look: Lucid, Classic, Glass, Neon and Studio. Each comes with a theme it was made for, and you can pick another theme to go with it
+- Remembers the last visual, your options, your skin and your theme
 - Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11. To leave, press Esc, double-click again, click the × that appears in the top-right corner when you move the mouse, or right-click and choose Leave fullscreen
 - Click the visuals once to pause or play the music, in a window or fullscreen
