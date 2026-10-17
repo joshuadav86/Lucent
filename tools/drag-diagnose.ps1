@@ -79,18 +79,19 @@ function Windows() { if ($script:proc.HasExited) { return "EXITED code $($script
 function Press($k) { $pl = Find 'Lucid'; if (-not $pl) { $script:log += " || key ${k}: no player [$(Windows)]"; return }; [void][W]::SetForegroundWindow($pl); Start-Sleep 1; [W]::Key($k); Start-Sleep 2 }
 function Run($label, [scriptblock]$steps) {
   Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucid') -ErrorAction SilentlyContinue
+  $script:started = Get-Date
   $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
   Start-Sleep 35
   try { & $steps } catch { $script:log += " || ERROR $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
   Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
   Write-Host "::notice::$label $($script:log)"; $script:log = ""
+  $crash = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = '.NET Runtime'; StartTime = $script:started } -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($crash) { Write-Host "::warning::CRASH $label :: $(($crash.Message -replace "`r?`n", ' | ').Substring(0, [Math]::Min(3500, $crash.Message.Length)))" }
 }
-foreach ($pct in 150, 175) {
+foreach ($pct in 150) {
   Write-Host "::notice::dpi $pct -> $([W]::SetDpi($pct))"; Start-Sleep 4
   Run "dpi $pct normal" {
     TestDrag 'fresh'; [W]::Shot("$out/$pct-a-fresh.png")
-    Press 0x4C; Press 0x4C; TestDrag 'L twice'
-    Press 0x51; Press 0x51; TestDrag 'Q twice'
     Press 0x45; Press 0x45; TestDrag 'E twice'
     Press 0x57; Press 0x57; TestDrag 'W twice'
     Press 0x44; TestDrag 'D'; [W]::Shot("$out/$pct-b-after.png")
