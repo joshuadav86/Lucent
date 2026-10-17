@@ -1,5 +1,7 @@
 // Name: Hyperspace Rings
 // Diving through an endless corridor of spinning hexagonal gates, each tuned to part of the spectrum.
+// Family: Fly-through
+// Tags: Intense, Neon, Geometric
 
 static const float GateSpacing = 1.2;
 

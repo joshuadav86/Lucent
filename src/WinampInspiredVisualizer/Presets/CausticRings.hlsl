@@ -1,5 +1,7 @@
 // Name: Caustic Rings
 // Each beat drops a ring of ripples into clear water; the light they bend draws shimmering caustic rings on the floor below, shaped by that beat's spectrum.
+// Family: Music-shaped
+// Tags: Water, Neon, Dark
 
 // Memory: the first 109 pixels of the top row of the feedback buffer, stored far too dim to see.
 // Pixel 0 holds the beat detector; then 12 ring slots of 9 pixels each: a header (birth time,

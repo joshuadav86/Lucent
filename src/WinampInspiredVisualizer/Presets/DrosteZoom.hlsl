@@ -1,6 +1,8 @@
 // Name: Droste Zoom
 // An endless Escher-style spiral staircase of interlaced eight-pointed stars: the pattern holds a smaller
 // copy of itself, which holds another, falling forever inward along a logarithmic spiral that pulses with the beat.
+// Family: Kaleidoscope
+// Tags: Calm, Geometric
 
 float dzLine(float d, float halfWidth, float px)
 {

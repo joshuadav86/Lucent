@@ -1,6 +1,8 @@
 // Name: Julia Kaleidoscope
 // A Julia set fractal folded into five mirrored petals. Its shape drifts along the edge
 // of the Mandelbrot set, so endless spirals and seahorse tails unfold.
+// Family: Fractal
+// Tags: Calm, Colourful
 
 float3 Render(float2 uv, float2 p)
 {

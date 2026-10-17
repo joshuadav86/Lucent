@@ -1,5 +1,7 @@
 // Name: Mandelbrot Dive
 // An endless dive into the Mandelbrot set: seahorse spirals, star-shaped dendrites and hidden tiny copies of itself, traced in razor-thin light.
+// Family: Fractal
+// Tags: Calm, Dark
 
 static const float DiveLength = 26.0;     // seconds per dive
 static const float DiveDoublings = 9.8;   // how many times the view halves during one dive (stays within float precision)

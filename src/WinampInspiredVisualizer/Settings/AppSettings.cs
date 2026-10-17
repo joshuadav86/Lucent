@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Library;
 
 namespace WinampInspiredVisualizer.Settings;
@@ -87,11 +88,27 @@ public sealed class AppSettings
     /// </summary>
     public string? ActiveVisualList { get; set; }
 
+    /// <summary>Whether the visual picker lists visuals in folders by family (Fractal, Cosmic and so on).</summary>
+    public bool GroupVisualsByFamily { get; set; } = true;
+
+    /// <summary>Family folders in the visual picker the user has closed.</summary>
+    public List<string> CollapsedVisualFamilies { get; set; } = new();
+
+    /// <summary>
+    /// Tags ticked in the visual picker. When any are ticked, the picker shows (and Auto, N and B play) only
+    /// the visuals with at least one of them. Empty means no filter.
+    /// </summary>
+    public List<string> VisualTagFilter { get; set; } = new();
+
     /// <summary>Songs marked as favourites, by file path.</summary>
     public List<string> FavoriteTracks { get; set; } = new();
 
     /// <summary>The name the favourites go by in lists of visuals; no list of the user's can take it.</summary>
     public const string FavoritesListName = "Favorites";
+
+    // ---- Sound ----
+
+    public EqualizerSettings Equalizer { get; set; } = new();
 
     // ---- Look ----
 
@@ -115,6 +132,11 @@ public sealed class AppSettings
     public double ArtworkWindowHeight { get; set; } = 456;
 
     public bool ArtworkWindowOnTop { get; set; }
+
+    // ---- Audio tools ----
+
+    /// <summary>The format and quality last picked in the converter, offered again next time.</summary>
+    public ExportOptions ConvertOptions { get; set; } = new();
 
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "settings.json");

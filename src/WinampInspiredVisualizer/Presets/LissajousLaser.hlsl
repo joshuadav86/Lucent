@@ -1,5 +1,7 @@
 // Name: Lissajous Laser
 // A laser traces a slowly turning 3D Lissajous knot that shivers with the waveform, leaving phosphor ghosts behind.
+// Family: Music-shaped
+// Tags: Dark, Neon, Retro
 
 float laserSegment(float2 p, float2 a, float2 b)
 {

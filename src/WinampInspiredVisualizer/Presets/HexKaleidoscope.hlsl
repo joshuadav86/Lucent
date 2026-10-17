@@ -1,6 +1,8 @@
 // Name: Hex Kaleidoscope
 // A real three-mirror tube kaleidoscope: tumbling cut gems, glass canes and millefiori beads are mirrored
 // into an endless hexagonal jewel pattern that turns, jolts on the beat and sparkles with the treble.
+// Family: Kaleidoscope
+// Tags: Colourful, Geometric
 
 // Per piece: orbit phase x, orbit speed y, size z, spectrum band w.
 static const float4 HK_PIECE[12] = {

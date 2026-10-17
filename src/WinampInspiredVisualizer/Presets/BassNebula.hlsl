@@ -1,5 +1,7 @@
 // Name: Bass Nebula
 // Swirling clouds that billow with the bass and flare on every beat.
+// Family: Cosmic
+// Tags: Calm, Space
 
 float3 Render(float2 uv, float2 p)
 {

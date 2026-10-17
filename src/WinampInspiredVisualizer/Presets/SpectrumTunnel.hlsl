@@ -1,5 +1,7 @@
 // Name: Spectrum Tunnel
 // A ring of frequencies whose trail spins and falls away into a tunnel.
+// Family: Music-shaped
+// Tags: Colourful, Dark
 
 float3 Render(float2 uv, float2 p)
 {

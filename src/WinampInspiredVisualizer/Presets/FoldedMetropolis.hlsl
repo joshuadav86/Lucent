@@ -1,5 +1,7 @@
 // Name: Folded Metropolis
 // Flying down an impossible city folded into a twisting square tunnel, its towers reaching in from all four sides with windows full of flowing colour.
+// Family: Cyberpunk
+// Tags: Intense, Colourful, 3D
 
 static const float CityHalfWidth = 3.0;   // from the tunnel's axis to each street level
 static const float BlockSize = 1.0;

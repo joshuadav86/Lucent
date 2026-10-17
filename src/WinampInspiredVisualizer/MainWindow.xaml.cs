@@ -8,10 +8,12 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Interop;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
@@ -34,7 +36,6 @@ public partial class MainWindow : Window
     private readonly AudioPlayer _player = new();
     private readonly ObservableCollection<PlaylistEntry> _playlist = new();
     private readonly DispatcherTimer _positionTimer;
-    private readonly DispatcherTimer _meterTimer;
     private readonly VisualizerHost _visualizer;
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly MusicLibrary _library = new();
@@ -83,6 +84,7 @@ public partial class MainWindow : Window
 
         VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
         _player.Volume = (float)VolumeSlider.Value;
+        _player.Equalizer.Apply(_settings.Equalizer);
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
@@ -92,15 +94,9 @@ public partial class MainWindow : Window
 
         _meter = new SpectrumMeter(_player.Capture) { Mode = _settings.Meter };
         MeterHost.Child = _meter;
-        _meterTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
-        _meterTimer.Tick += (_, _) =>
-        {
-            if (WindowState != WindowState.Minimized)
-            {
-                _meter.Tick();
-            }
-        };
-        _meterTimer.Start();
+        // The meter redraws with every frame the screen shows (usually 60 a second or more),
+        // so it moves as smoothly as the visuals; a timer would hold it to about 20.
+        CompositionTarget.Rendering += OnMeterFrame;
 
         _visualizer = new VisualizerHost(_player.Capture);
         _visualizer.DisplayChanged += (_, display) =>
@@ -140,8 +136,18 @@ public partial class MainWindow : Window
         UpdateShuffleRepeatButtons();
         TrackInfoWindow.TagsSaved += OnTagsSaved;
         ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
+        AudioTools.MainPlayerChanged += (_, _) => UpdatePlayPauseButton();
+        AudioTools.FilesReplaced += OnTagsSaved;
         UpdatePlayPauseButton();
         ShowNowPlaying(null);
+    }
+
+    private void OnMeterFrame(object? sender, EventArgs e)
+    {
+        if (WindowState != WindowState.Minimized)
+        {
+            _meter.Tick();
+        }
     }
 
     /// <summary>True once the player is closing, so the other windows close for real instead of hiding.</summary>
@@ -178,14 +184,24 @@ public partial class MainWindow : Window
             _visuals.Show();
         }
 
+        // The queue and library always open docked to the player (they keep the size they had).
         if (_settings.ShowQueue)
         {
+            DockToPlayer(_queue);
             _queue.Show();
         }
 
         if (_settings.ShowLibrary)
         {
+            DockToPlayer(_libraryWindow);
             _libraryWindow.Show();
+        }
+
+        // Every window gets its real (hidden) window now, so ones that start switched off still move
+        // with the player while it's dragged, and turn up docked where they belong.
+        foreach (var window in ToolWindows)
+        {
+            new WindowInteropHelper(window).EnsureHandle();
         }
 
         UpdateWindowToggles();
@@ -245,6 +261,140 @@ public partial class MainWindow : Window
         window.Top = Math.Clamp(Top, work.Top, Math.Max(work.Top, work.Bottom - window.Height));
     }
 
+    /// <summary>Docks a window back against the player: the queue under it, the visuals to its right, the library to its left.</summary>
+    private void PlaceBesidePlayer(ToolWindow window)
+    {
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        if (window == _queue)
+        {
+            window.Left = Left;
+            window.Top = Top + ActualHeight;
+            window.Width = ActualWidth;
+        }
+        else if (window == _visuals)
+        {
+            window.Left = Left + ActualWidth;
+            window.Top = Top;
+            window.Height = Math.Max(window.Height, ActualHeight + (_queue.IsVisible ? _queue.ActualHeight : 0));
+        }
+        else
+        {
+            window.Left = Left - (window.ActualWidth > 0 ? window.ActualWidth : window.Width);
+            window.Top = Top;
+        }
+    }
+
+    /// <summary>
+    /// Docks the queue or library against the player: the queue underneath (or above, if there's
+    /// no room below), the library to the left (or the right, past the visuals, if there's no room).
+    /// </summary>
+    private void DockToPlayer(ToolWindow window)
+    {
+        var area = ScreenArea.Of(this);
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.WindowState = WindowState.Normal;
+        var playerBottom = Top + ActualHeight;
+
+        if (window == _queue)
+        {
+            var height = SizeOf(window).Height;
+            var roomBelow = area.Bottom - playerBottom;
+            var roomAbove = Top - area.Top;
+            var below = roomBelow >= height || roomBelow >= roomAbove;
+            height = Math.Max(window.MinHeight, Math.Min(height, below ? roomBelow : roomAbove));
+            window.Width = ActualWidth;
+            window.Height = height;
+            window.Left = Left;
+            window.Top = below ? playerBottom : Top - height;
+            return;
+        }
+
+        // The library runs the height of the player and the queue, if the queue's docked to it.
+        var top = Top;
+        var bottom = playerBottom;
+        if (_queue.IsVisible && Math.Abs(_queue.Left - Left) < 2)
+        {
+            if (Math.Abs(_queue.Top - playerBottom) < 2)
+            {
+                bottom = _queue.Top + _queue.ActualHeight;
+            }
+            else if (Math.Abs(_queue.Top + _queue.ActualHeight - Top) < 2)
+            {
+                top = _queue.Top;
+            }
+        }
+
+        var width = SizeOf(window).Width;
+        var left = Left - width;
+        if (left < area.Left)
+        {
+            // No room on the left: go on the right, beyond the visuals if they're docked there.
+            left = Left + ActualWidth;
+            if (_visuals.IsVisible && !_visuals.IsFullscreen && Math.Abs(_visuals.Left - left) < 2)
+            {
+                left = _visuals.Left + _visuals.ActualWidth;
+            }
+
+            if (left + width > area.Right)
+            {
+                left = Math.Max(area.Left, Left - width);
+            }
+        }
+
+        window.Left = left;
+        window.Top = top;
+        window.Height = Math.Max(window.MinHeight, Math.Min(bottom - top, area.Height));
+    }
+
+    private bool IsDockedLeft(Window window) =>
+        Math.Abs(window.Left + window.ActualWidth - Left) < 2 && window.Top < Top + ActualHeight && window.Top + window.ActualHeight > Top;
+
+    // A window that hasn't been shown yet has no actual size, only the one it's been given.
+    private static Size SizeOf(Window window) => new(
+        window.ActualWidth > 0 ? window.ActualWidth : window.Width,
+        window.ActualHeight > 0 ? window.ActualHeight : window.Height);
+
+    private void OnArrangeWindows(object sender, RoutedEventArgs e) => ArrangeWindows();
+
+    /// <summary>Puts every window back together around the player, as on the first run, and remembers it.</summary>
+    private void ArrangeWindows()
+    {
+        foreach (var window in ToolWindows)
+        {
+            if (window.WindowState != WindowState.Normal && !(window == _visuals && _visuals.IsFullscreen))
+            {
+                window.WindowState = WindowState.Normal;
+            }
+        }
+
+        if (_visuals.IsFullscreen)
+        {
+            _visuals.ToggleFullscreen();
+        }
+
+        WindowState = WindowState.Normal;
+        ArrangeFirstTime();
+        SavePlacements();
+    }
+
+    private static bool IsOnScreen(Window window) =>
+        IsOnScreen(new Rect(window.Left, window.Top, window.ActualWidth > 0 ? window.ActualWidth : window.Width,
+            window.ActualHeight > 0 ? window.ActualHeight : window.Height));
+
+    /// <summary>True when enough of the rectangle is on the screens to grab its title bar.</summary>
+    private static bool IsOnScreen(Rect bounds)
+    {
+        if (double.IsNaN(bounds.Left) || double.IsNaN(bounds.Top) || double.IsNaN(bounds.Width) || double.IsNaN(bounds.Height))
+        {
+            return false;
+        }
+
+        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+            SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+        var visible = Rect.Intersect(screen, bounds);
+        return !visible.IsEmpty && visible.Width >= 100 && visible.Height >= 40;
+    }
+
     /// <summary>A saved position, if it's still on one of the screens.</summary>
     private WindowBounds? Saved(string name)
     {
@@ -253,10 +403,7 @@ public partial class MainWindow : Window
             return null;
         }
 
-        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
-            SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
-        var visible = Rect.Intersect(screen, new Rect(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
-        return visible.IsEmpty || visible.Width < 100 || visible.Height < 40 ? null : bounds;
+        return IsOnScreen(new Rect(bounds.Left, bounds.Top, bounds.Width, bounds.Height)) ? bounds : null;
     }
 
     private void SavePlacements()
@@ -290,6 +437,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnToggleEqualizer(object sender, RoutedEventArgs e) => ToggleEqualizer();
+
+    private void ToggleEqualizer() =>
+        EqualizerWindow.Toggle(this, _player, _settings, isOpen => EqualizerToggle.IsChecked = isOpen);
+
     private void OnToggleVisuals(object sender, RoutedEventArgs e) => ToggleWindow(_visuals);
 
     private void OnToggleQueue(object sender, RoutedEventArgs e) => ToggleWindow(_queue);
@@ -309,7 +461,24 @@ public partial class MainWindow : Window
             RestorePlacement(window);
         }
 
+        if (window != _visuals)
+        {
+            // The queue and library always open docked to the player, wherever they were left.
+            DockToPlayer(window);
+        }
+        else if (!IsOnScreen(window))
+        {
+            // The visuals open where they were left, unless that's on a screen that's since been unplugged.
+            PlaceBesidePlayer(window);
+        }
+
         window.Show();
+
+        // A library docked to the player's left grows to match when the queue opens underneath.
+        if (window == _queue && _libraryWindow.IsVisible && IsDockedLeft(_libraryWindow))
+        {
+            DockToPlayer(_libraryWindow);
+        }
     }
 
     private void OnToolWindowVisibilityChanged()
@@ -984,6 +1153,9 @@ public partial class MainWindow : Window
             case Key.Q:
                 ToggleWindow(_queue);
                 break;
+            case Key.D:
+                ArrangeWindows();
+                break;
             case Key.L:
                 ToggleWindow(_libraryWindow);
                 break;
@@ -995,6 +1167,9 @@ public partial class MainWindow : Window
                 break;
             case Key.C:
                 ToggleArtwork();
+                break;
+            case Key.E:
+                ToggleEqualizer();
                 break;
             case Key.O:
                 Activate();
@@ -1198,7 +1373,7 @@ public partial class MainWindow : Window
         _settings.Save();
         _library.Dispose();
         _positionTimer.Stop();
-        _meterTimer.Stop();
+        CompositionTarget.Rendering -= OnMeterFrame;
         _visualizer.Dispose();
         _player.Dispose();
     }

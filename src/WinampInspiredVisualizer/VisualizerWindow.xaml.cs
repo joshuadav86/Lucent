@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -21,6 +22,9 @@ public partial class VisualizerWindow : ToolWindow
     private IReadOnlyList<string> _presetNames = Array.Empty<string>();
     private List<VisualChoice> _choices = new();
     private List<VisualChoice> _shown = new();
+    private List<VisualTag> _tags = new();
+    private HashSet<string> _tickedTags = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _collapsedFamilies = new(StringComparer.OrdinalIgnoreCase);
     private DateTime _presetPopupClosedAt;
     private bool _isFullscreen;
     private WindowState _stateBeforeFullscreen;
@@ -39,6 +43,7 @@ public partial class VisualizerWindow : ToolWindow
     {
         _host = host;
         _settings = settings;
+        _collapsedFamilies = new HashSet<string>(settings.CollapsedVisualFamilies, StringComparer.OrdinalIgnoreCase);
         host.PresetsLoaded += (_, names) =>
         {
             _presetNames = names;
@@ -55,6 +60,7 @@ public partial class VisualizerWindow : ToolWindow
             FrameRateText.Text = $"{stats.FramesPerSecond:0} fps · {stats.Width} × {stats.Height}" + (stats.Hdr ? " · HDR" : string.Empty);
         VisualizerFrame.Child = host;
         UpdateAutoCycleButton();
+        UpdateGroupFamiliesButton();
     }
 
     /// <summary>Shows or hides the frame rate readout, following the setting in Options.</summary>
@@ -184,7 +190,25 @@ public partial class VisualizerWindow : ToolWindow
     private void BuildChoices()
     {
         var favorites = new HashSet<string>(_settings.FavoriteVisuals, StringComparer.OrdinalIgnoreCase);
-        _choices = _presetNames.Select((name, index) => new VisualChoice(name, index) { IsFavorite = favorites.Contains(name) }).ToList();
+        var presets = _host?.Presets ?? Array.Empty<PresetSource>();
+        _choices = _presetNames.Select((name, index) =>
+        {
+            // Presets and names come from the same load, so they line up; the fallback is just in case.
+            var preset = index < presets.Count ? presets[index] : null;
+            var tags = (preset?.Tags ?? Array.Empty<string>()).OrderBy(VisualStyles.TagOrder).ThenBy(tag => tag, StringComparer.OrdinalIgnoreCase).ToList();
+            return new VisualChoice(name, index, preset?.Family ?? VisualStyles.OtherFamily, tags) { IsFavorite = favorites.Contains(name) };
+        }).ToList();
+
+        // One tick box for every tag some visual uses. Ticks saved for tags no visual has any more are dropped,
+        // so they can't quietly hide everything.
+        var ticked = new HashSet<string>(_settings.VisualTagFilter, StringComparer.OrdinalIgnoreCase);
+        _tags = _choices.SelectMany(choice => choice.Tags)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(VisualStyles.TagOrder).ThenBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .Select(tag => new VisualTag(tag) { IsChecked = ticked.Contains(tag) })
+            .ToList();
+        TagList.ItemsSource = _tags;
+        _tickedTags = TickedTags();
         ShowActiveList();
     }
 
@@ -195,7 +219,10 @@ public partial class VisualizerWindow : ToolWindow
         : _settings.VisualLists.TryGetValue(list, out var names) ? names
         : null;
 
-    /// <summary>Fills the picker with the chosen list and has Auto play from it.</summary>
+    /// <summary>
+    /// Fills the picker with the chosen list, narrowed to the ticked tags and sorted into family folders,
+    /// and has Auto (and N and B) play from exactly what it shows.
+    /// </summary>
     private void ShowActiveList()
     {
         var list = _settings.ActiveVisualList;
@@ -206,34 +233,87 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         var names = NamesInList(list);
+        List<VisualChoice> inList;
         if (names is null)
         {
-            _shown = _choices.ToList();
+            inList = _choices;
         }
         else
         {
             var wanted = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
-            _shown = _choices.Where(choice => wanted.Contains(choice.Name)).ToList();
+            inList = _choices.Where(choice => wanted.Contains(choice.Name)).ToList();
         }
 
-        PresetList.ItemsSource = _shown;
-        ListPickerLabel.Text = list is null ? "All visuals" : $"{list} ({_shown.Count})";
+        // Each tick box counts the visuals in this list that have its tag.
+        foreach (var tag in _tags)
+        {
+            tag.Count = inList.Count(choice => choice.Tags.Contains(tag.Name, StringComparer.OrdinalIgnoreCase));
+        }
 
-        // An empty list can't drive Auto, so it plays from everything until something is added.
+        _shown = InPickerOrder(inList.Where(MatchesTags));
+        var view = new ListCollectionView(_shown);
+        if (_settings.GroupVisualsByFamily)
+        {
+            view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(VisualChoice.Family)));
+        }
+
+        PresetList.ItemsSource = view;
+        ListPickerLabel.Text = list is null ? "All visuals" : $"{list} ({inList.Count})";
+
+        // Narrowed by a list or by tags, Auto plays from what's shown. If nothing is shown it plays from everything.
+        var narrowed = names is not null || _tickedTags.Count > 0;
         if (_host is not null)
         {
-            _host.AutoCycleNames = names is null || _shown.Count == 0 ? null : _shown.Select(choice => choice.Name).ToList();
+            _host.AutoCycleNames = !narrowed || _shown.Count == 0 ? null : _shown.Select(choice => choice.Name).ToList();
         }
 
-        ListHint.Text = list is null
-            ? string.Empty
-            : _shown.Count == 0
-                ? list == AppSettings.FavoritesListName
-                    ? "No favourites yet. Click a visual's star to add it here."
-                    : "This list is empty. Right-click any visual in All visuals to add it."
-                : "Auto plays from this list, and N and B step through it.";
-        ListHint.Visibility = list is null ? Visibility.Collapsed : Visibility.Visible;
+        ShowListHint(list, inList.Count, narrowed);
         ShowPreset();
+    }
+
+    /// <summary>
+    /// The visuals in the order the picker lists them, which is also the order N and B step through them:
+    /// folder by folder when grouped, A to Z within each.
+    /// </summary>
+    private List<VisualChoice> InPickerOrder(IEnumerable<VisualChoice> choices) =>
+        _settings.GroupVisualsByFamily
+            ? choices.OrderBy(choice => VisualStyles.FamilyOrder(choice.Family))
+                .ThenBy(choice => choice.Family, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(choice => choice.Index)
+                .ToList()
+            : choices.OrderBy(choice => choice.Index).ToList();
+
+    /// <summary>Whether a visual has any of the ticked tags (every visual does when none are ticked).</summary>
+    private bool MatchesTags(VisualChoice choice) =>
+        _tickedTags.Count == 0 || choice.Tags.Any(_tickedTags.Contains);
+
+    private HashSet<string> TickedTags() =>
+        new(_tags.Where(tag => tag.IsChecked).Select(tag => tag.Name), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The line under the picker's heading saying what it's showing, and the tag panel's controls.</summary>
+    private void ShowListHint(string? list, int inListCount, bool narrowed)
+    {
+        var tagNames = _tags.Where(tag => tag.IsChecked).Select(tag => tag.Name).ToList();
+        var tagText = string.Join(" or ", tagNames);
+
+        ListHint.Text = list is not null && inListCount == 0
+            ? list == AppSettings.FavoritesListName
+                ? "No favourites yet. Click a visual's star to add it here."
+                : "This list is empty. Right-click any visual in All visuals to add it."
+            : _shown.Count == 0
+                ? $"None of these visuals are tagged {tagText}. Tick other tags, or click Clear."
+                : tagNames.Count > 0
+                    ? $"Showing {_shown.Count} of {inListCount}, tagged {tagText}. Auto plays from these, and N and B step through them."
+                    : "Auto plays from this list, and N and B step through it.";
+        ListHint.Visibility = narrowed ? Visibility.Visible : Visibility.Collapsed;
+
+        ClearTagsButton.Visibility = tagNames.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        TagHint.Visibility = _tags.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+        // A reminder on the visual's name in the bar, since the picker is closed most of the time.
+        PresetPickerButton.ToolTip = tagNames.Count > 0
+            ? $"Choose a visual (V). Showing only visuals tagged {tagText}."
+            : "Choose a visual (V)";
     }
 
     private void UseList(string? list)
@@ -298,7 +378,8 @@ public partial class VisualizerWindow : ToolWindow
             if (PresetPopup.IsOpen && !favorite)
             {
                 ListPickerLabel.Text = $"{AppSettings.FavoritesListName} ({_settings.FavoriteVisuals.Count})";
-                _host!.AutoCycleNames = _settings.FavoriteVisuals.Count == 0 ? null : _settings.FavoriteVisuals.ToList();
+                var playable = _choices.Where(other => other.IsFavorite && MatchesTags(other)).Select(other => other.Name).ToList();
+                _host!.AutoCycleNames = playable.Count == 0 ? null : playable;
             }
             else
             {
@@ -465,6 +546,77 @@ public partial class VisualizerWindow : ToolWindow
     }
 
     private void OnPresetMenuClosed(object sender, RoutedEventArgs e) => PresetPopup.StaysOpen = false;
+
+    // ---- Family folders and tags ----
+
+    private void OnToggleGroupFamilies(object sender, RoutedEventArgs e)
+    {
+        _settings.GroupVisualsByFamily = !_settings.GroupVisualsByFamily;
+        _settings.Save();
+        UpdateGroupFamiliesButton();
+        ShowActiveList();
+        if (PresetList.SelectedItem is not null)
+        {
+            PresetList.ScrollIntoView(PresetList.SelectedItem);
+        }
+    }
+
+    private void UpdateGroupFamiliesButton() =>
+        GroupFamiliesButton.SetResourceReference(ForegroundProperty, _settings.GroupVisualsByFamily ? "AccentBrush" : "FaintTextBrush");
+
+    // Family folders remember whether they were left open or closed.
+    private void OnFamilyFolderLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is Expander { DataContext: CollectionViewGroup group } expander)
+        {
+            expander.IsExpanded = !_collapsedFamilies.Contains(group.Name?.ToString() ?? string.Empty);
+        }
+    }
+
+    private void OnFamilyFolderExpanded(object sender, RoutedEventArgs e)
+    {
+        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true }
+            && _collapsedFamilies.Remove(group.Name?.ToString() ?? string.Empty))
+        {
+            SaveCollapsedFamilies();
+        }
+    }
+
+    private void OnFamilyFolderCollapsed(object sender, RoutedEventArgs e)
+    {
+        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true }
+            && _collapsedFamilies.Add(group.Name?.ToString() ?? string.Empty))
+        {
+            SaveCollapsedFamilies();
+        }
+    }
+
+    private void SaveCollapsedFamilies()
+    {
+        _settings.CollapsedVisualFamilies = _collapsedFamilies.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+        _settings.Save();
+    }
+
+    private void OnTagClick(object sender, RoutedEventArgs e) => TagsChanged();
+
+    private void OnClearTags(object sender, RoutedEventArgs e)
+    {
+        foreach (var tag in _tags)
+        {
+            tag.IsChecked = false;
+        }
+
+        TagsChanged();
+    }
+
+    /// <summary>Saves the ticked tags and shows (and has Auto play) only the visuals with any of them.</summary>
+    private void TagsChanged()
+    {
+        _tickedTags = TickedTags();
+        _settings.VisualTagFilter = _tags.Where(tag => tag.IsChecked).Select(tag => tag.Name).ToList();
+        _settings.Save();
+        ShowActiveList();
+    }
 
     // ---- Auto ----
 

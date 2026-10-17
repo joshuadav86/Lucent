@@ -1,5 +1,7 @@
 // Name: Waveform Tunnel
 // Flying down a twisting tunnel whose every ring is a moment of the waveform, rushing past in flowing colour.
+// Family: Music-shaped
+// Tags: Intense, Neon
 
 // The waveform's recent history is kept in the top two pixel rows of the feedback buffer
 // (224 pixels each, three rings per pixel in r, g and b), stored far too dim to see.

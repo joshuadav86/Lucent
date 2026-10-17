@@ -7,8 +7,17 @@ namespace WinampInspiredVisualizer.Windows;
 /// <summary>
 /// Makes Lucid's windows behave like Winamp's: their edges snap to each other and to the
 /// edges of the screen, and dragging the player window carries every window docked to it.
+/// Drop a window beside others with one corner lined up and the other corner nearly lined up,
+/// and it stretches to line that one up too.
 /// Works on the raw window rectangles (physical pixels) while Windows moves them.
 /// </summary>
+/// <remarks>
+/// Windows works out each step of a drag from where the window was after the previous step, so
+/// snapping that rectangle directly makes a window stick: once it has jumped to an edge, every small
+/// mouse movement lands it back inside the snap distance and it jumps back again. So the snapper
+/// works out where the window would be without snapping (from how far the mouse has moved since
+/// the drag began) and snaps that. Pull the mouse further than the snap distance and the window lets go.
+/// </remarks>
 public sealed class WindowSnapper
 {
     private const int WM_SIZING = 0x0214;
@@ -26,17 +35,26 @@ public sealed class WindowSnapper
     private const int WMSZ_BOTTOMRIGHT = 8;
 
     private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
     private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
     /// <summary>How close (in pixels at 100% scaling) an edge has to come before it snaps.</summary>
-    private const double SnapDistance = 12;
+    private const double SnapDistance = 16;
+
+    /// <summary>How far (in pixels at 100% scaling) a dropped window will stretch to line up its other corner.</summary>
+    private const double CornerDistance = 40;
 
     private readonly Window _main;
     private readonly List<Window> _windows = new();
     private readonly List<(IntPtr Handle, int OffsetX, int OffsetY)> _carried = new();
     private IntPtr _moving;
+    private Point _startCursor;
+    private Rect _startRect;
+    private Rect _startMargins;
+    private bool _resized;
 
     public WindowSnapper(Window main)
     {
@@ -66,7 +84,11 @@ public sealed class WindowSnapper
         {
             case WM_ENTERSIZEMOVE:
                 _moving = hwnd;
+                _resized = false;
                 _carried.Clear();
+                GetCursorPos(out _startCursor);
+                GetWindowRect(hwnd, out _startRect);
+                _startMargins = Margins(hwnd);
                 if (hwnd == Handle(_main))
                 {
                     FindDocked(hwnd);
@@ -75,8 +97,19 @@ public sealed class WindowSnapper
                 break;
             case WM_MOVING when hwnd == _moving:
             {
-                var rect = Marshal.PtrToStructure<Rect>(lParam);
-                var (dx, dy) = SnapMove(hwnd, rect);
+                // Dragging a maximized window restores it first, at a new size under the mouse;
+                // start counting the mouse's movement again from there.
+                var proposed = Marshal.PtrToStructure<Rect>(lParam);
+                if (proposed.Right - proposed.Left != _startRect.Right - _startRect.Left
+                    || proposed.Bottom - proposed.Top != _startRect.Bottom - _startRect.Top)
+                {
+                    _startRect = proposed;
+                    GetCursorPos(out _startCursor);
+                    _startMargins = Margins(hwnd);
+                }
+
+                var rect = UnsnappedMove();
+                var (dx, dy) = SnapMove(hwnd, Visible(rect, _startMargins));
                 rect.Left += dx;
                 rect.Right += dx;
                 rect.Top += dy;
@@ -92,12 +125,19 @@ public sealed class WindowSnapper
             }
             case WM_SIZING when hwnd == _moving:
             {
-                var rect = Marshal.PtrToStructure<Rect>(lParam);
+                _resized = true;
+                var rect = Visible(UnsnappedSize(hwnd, wParam.ToInt32()), _startMargins);
                 SnapSize(hwnd, ref rect, wParam.ToInt32());
+                rect = Outer(rect, _startMargins);
                 Marshal.StructureToPtr(rect, lParam, false);
                 break;
             }
             case WM_EXITSIZEMOVE:
+                if (hwnd == _moving && !_resized && _carried.Count == 0)
+                {
+                    MatchCorners(hwnd);
+                }
+
                 _moving = IntPtr.Zero;
                 _carried.Clear();
                 MoveFinished?.Invoke(this, EventArgs.Empty);
@@ -107,12 +147,151 @@ public sealed class WindowSnapper
         return IntPtr.Zero;
     }
 
-    /// <summary>Every window touching the player, or touching a window that touches it, moves with it.</summary>
+    /// <summary>
+    /// After a window is dropped beside others with one corner lined up, stretches it so the
+    /// other corner lines up too, if it's close: a window dropped beside the player and the queue
+    /// takes the height of the two together. Only for windows that can be resized.
+    /// </summary>
+    private void MatchCorners(IntPtr hwnd)
+    {
+        if (HwndSource.FromHwnd(hwnd)?.RootVisual is not Window { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip } window
+            || window.WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        const int flush = 2;
+        var reach = (int)Math.Round(CornerDistance * Scale(hwnd));
+        var rect = VisibleRect(hwnd);
+        var others = OtherWindows(hwnd).Select(other => other.Rect).ToList();
+        var minWidth = (int)Math.Ceiling(window.MinWidth * Scale(hwnd));
+        var minHeight = (int)Math.Ceiling(window.MinHeight * Scale(hwnd));
+
+        // The windows touching each side, taken together as one column or row.
+        Rect? Together(Func<Rect, bool> touching)
+        {
+            var side = others.Where(touching).ToList();
+            return side.Count == 0
+                ? null
+                : new Rect { Left = side.Min(r => r.Left), Top = side.Min(r => r.Top), Right = side.Max(r => r.Right), Bottom = side.Max(r => r.Bottom) };
+        }
+
+        static bool Near(int gap, int reach) => gap != 0 && Math.Abs(gap) <= reach;
+
+        var target = rect;
+        foreach (var column in new[]
+                 {
+                     Together(r => Math.Abs(r.Right - rect.Left) <= flush && r.Top < rect.Bottom && rect.Top < r.Bottom),
+                     Together(r => Math.Abs(r.Left - rect.Right) <= flush && r.Top < rect.Bottom && rect.Top < r.Bottom),
+                 })
+        {
+            if (column is not { } c || target.Top != rect.Top || target.Bottom != rect.Bottom)
+            {
+                continue;
+            }
+
+            if (Math.Abs(c.Top - rect.Top) <= flush && Near(c.Bottom - rect.Bottom, reach) && c.Bottom - rect.Top >= minHeight)
+            {
+                target.Top = c.Top;
+                target.Bottom = c.Bottom;
+            }
+            else if (Math.Abs(c.Bottom - rect.Bottom) <= flush && Near(c.Top - rect.Top, reach) && rect.Bottom - c.Top >= minHeight)
+            {
+                target.Top = c.Top;
+                target.Bottom = c.Bottom;
+            }
+        }
+
+        foreach (var row in new[]
+                 {
+                     Together(r => Math.Abs(r.Bottom - rect.Top) <= flush && r.Left < rect.Right && rect.Left < r.Right),
+                     Together(r => Math.Abs(r.Top - rect.Bottom) <= flush && r.Left < rect.Right && rect.Left < r.Right),
+                 })
+        {
+            if (row is not { } w || target.Left != rect.Left || target.Right != rect.Right)
+            {
+                continue;
+            }
+
+            if (Math.Abs(w.Left - rect.Left) <= flush && Near(w.Right - rect.Right, reach) && w.Right - rect.Left >= minWidth)
+            {
+                target.Left = w.Left;
+                target.Right = w.Right;
+            }
+            else if (Math.Abs(w.Right - rect.Right) <= flush && Near(w.Left - rect.Left, reach) && rect.Right - w.Left >= minWidth)
+            {
+                target.Left = w.Left;
+                target.Right = w.Right;
+            }
+        }
+
+        if (target.Equals(rect))
+        {
+            return;
+        }
+
+        var outer = Outer(target, Margins(hwnd));
+        SetWindowPos(hwnd, IntPtr.Zero, outer.Left, outer.Top, outer.Right - outer.Left, outer.Bottom - outer.Top,
+            SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    /// <summary>Where the window being dragged would be with no snapping: where it started, plus how far the mouse has moved.</summary>
+    private Rect UnsnappedMove()
+    {
+        GetCursorPos(out var cursor);
+        var dx = cursor.X - _startCursor.X;
+        var dy = cursor.Y - _startCursor.Y;
+        return new Rect
+        {
+            Left = _startRect.Left + dx,
+            Top = _startRect.Top + dy,
+            Right = _startRect.Right + dx,
+            Bottom = _startRect.Bottom + dy,
+        };
+    }
+
+    /// <summary>The size the window would have with no snapping: the dragged edges follow the mouse, down to the window's minimum size.</summary>
+    private Rect UnsnappedSize(IntPtr hwnd, int edge)
+    {
+        GetCursorPos(out var cursor);
+        var dx = cursor.X - _startCursor.X;
+        var dy = cursor.Y - _startCursor.Y;
+        var scale = Scale(hwnd);
+        var window = HwndSource.FromHwnd(hwnd)?.RootVisual as Window;
+        var minWidth = (int)Math.Ceiling((window?.MinWidth ?? 0) * scale);
+        var minHeight = (int)Math.Ceiling((window?.MinHeight ?? 0) * scale);
+
+        var rect = _startRect;
+        if (edge is WMSZ_LEFT or WMSZ_TOPLEFT or WMSZ_BOTTOMLEFT)
+        {
+            rect.Left = Math.Min(_startRect.Left + dx, _startRect.Right - minWidth);
+        }
+        else if (edge is WMSZ_RIGHT or WMSZ_TOPRIGHT or WMSZ_BOTTOMRIGHT)
+        {
+            rect.Right = Math.Max(_startRect.Right + dx, _startRect.Left + minWidth);
+        }
+
+        if (edge is WMSZ_TOP or WMSZ_TOPLEFT or WMSZ_TOPRIGHT)
+        {
+            rect.Top = Math.Min(_startRect.Top + dy, _startRect.Bottom - minHeight);
+        }
+        else if (edge is WMSZ_BOTTOM or WMSZ_BOTTOMLEFT or WMSZ_BOTTOMRIGHT)
+        {
+            rect.Bottom = Math.Max(_startRect.Bottom + dy, _startRect.Top + minHeight);
+        }
+
+        return rect;
+    }
+
+    /// <summary>
+    /// Every window touching the player, or touching a window that touches it, moves with it.
+    /// Hidden windows count too, so a docked window that's switched off is still docked when it's switched back on.
+    /// </summary>
     private void FindDocked(IntPtr main)
     {
         GetWindowRect(main, out var mainRect);
-        var group = new List<(IntPtr Handle, Rect Rect)> { (main, mainRect) };
-        var others = OtherWindows(main).ToList();
+        var group = new List<(IntPtr Handle, Rect Rect)> { (main, VisibleRect(main)) };
+        var others = DockableWindows(main).ToList();
         for (var i = 0; i < group.Count; i++)
         {
             foreach (var other in others.ToList())
@@ -125,8 +304,9 @@ public sealed class WindowSnapper
             }
         }
 
-        foreach (var (handle, rect) in group.Skip(1))
+        foreach (var (handle, _) in group.Skip(1))
         {
+            GetWindowRect(handle, out var rect);
             _carried.Add((handle, rect.Left - mainRect.Left, rect.Top - mainRect.Top));
         }
     }
@@ -153,9 +333,19 @@ public sealed class WindowSnapper
                 continue;
             }
 
-            if (GetWindowRect(handle, out var rect))
+            yield return (handle, VisibleRect(handle));
+        }
+    }
+
+    /// <summary>Lucid's other windows that could be docked to the player, shown or hidden.</summary>
+    private IEnumerable<(IntPtr Handle, Rect Rect)> DockableWindows(IntPtr main)
+    {
+        foreach (var window in _windows)
+        {
+            var handle = Handle(window);
+            if (handle != IntPtr.Zero && handle != main && window.WindowState == WindowState.Normal)
             {
-                yield return (handle, rect);
+                yield return (handle, VisibleRect(handle));
             }
         }
     }
@@ -268,6 +458,52 @@ public sealed class WindowSnapper
         }
     }
 
+    /// <summary>
+    /// The part of the window you can see. Windows can pad a window's rectangle with invisible
+    /// borders, and snapping to those would leave gaps between windows, so edges are measured here.
+    /// </summary>
+    private static Rect VisibleRect(IntPtr hwnd)
+    {
+        GetWindowRect(hwnd, out var outer);
+        if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out var visible, Marshal.SizeOf<Rect>()) == 0
+            && visible.Right > visible.Left && visible.Bottom > visible.Top)
+        {
+            return visible;
+        }
+
+        return outer;
+    }
+
+    /// <summary>How far each visible edge sits inside the window's rectangle.</summary>
+    private static Rect Margins(IntPtr hwnd)
+    {
+        GetWindowRect(hwnd, out var outer);
+        var visible = VisibleRect(hwnd);
+        return new Rect
+        {
+            Left = visible.Left - outer.Left,
+            Top = visible.Top - outer.Top,
+            Right = outer.Right - visible.Right,
+            Bottom = outer.Bottom - visible.Bottom,
+        };
+    }
+
+    private static Rect Visible(Rect outer, Rect margins) => new()
+    {
+        Left = outer.Left + margins.Left,
+        Top = outer.Top + margins.Top,
+        Right = outer.Right - margins.Right,
+        Bottom = outer.Bottom - margins.Bottom,
+    };
+
+    private static Rect Outer(Rect visible, Rect margins) => new()
+    {
+        Left = visible.Left - margins.Left,
+        Top = visible.Top - margins.Top,
+        Right = visible.Right + margins.Right,
+        Bottom = visible.Bottom + margins.Bottom,
+    };
+
     private static double Scale(IntPtr hwnd)
     {
         var dpi = GetDpiForWindow(hwnd);
@@ -285,6 +521,13 @@ public sealed class WindowSnapper
         public int Top;
         public int Right;
         public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Point
+    {
+        public int X;
+        public int Y;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -313,4 +556,11 @@ public sealed class WindowSnapper
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out Point point);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out Rect value, int size);
 }

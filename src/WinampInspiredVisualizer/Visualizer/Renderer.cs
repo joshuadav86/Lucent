@@ -96,6 +96,7 @@ public sealed class Renderer : IDisposable
         _hwnd = hwnd;
         _analyzer = analyzer;
         _slots = PresetLibrary.LoadPresets().Select(source => new PresetSlot(source)).ToArray();
+        Presets = _slots.Select(slot => slot.Source).ToList();
         PresetNames = _slots.Select(slot => slot.Source.Name).ToList();
         _thread = new Thread(Run) { IsBackground = true, Name = "Visualizer renderer" };
     }
@@ -123,6 +124,9 @@ public sealed class Renderer : IDisposable
 
     /// <summary>Every visual, in the order <see cref="PresetIndex"/> counts them.</summary>
     public IReadOnlyList<string> PresetNames { get; }
+
+    /// <summary>Every visual's file (with its family and tags), in the same order as <see cref="PresetNames"/>.</summary>
+    public IReadOnlyList<PresetSource> Presets { get; }
 
     public int PresetIndex
     {

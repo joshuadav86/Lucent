@@ -1,5 +1,7 @@
 // Name: Firework Mandala
 // Fireworks burst on the beat and are mirrored six ways into a blooming mandala of peonies, rings and golden willows that drift outward as they fade.
+// Family: Particles
+// Tags: Intense, Dark, Fire
 // Particles: 262144
 
 // Every spark is drawn six times: three turns around the centre, each with its mirror image.

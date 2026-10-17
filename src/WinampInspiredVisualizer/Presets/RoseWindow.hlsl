@@ -1,6 +1,8 @@
 // Name: Rose Window
 // A gothic rose window of carved stone tracery and hundreds of jewel-toned panes, lit by a light show behind
 // it: spirals of light and waves of colour sweep through the glass and every beat ripples out from the heart.
+// Family: Kaleidoscope
+// Tags: Colourful, Geometric
 
 float rwHash(float2 p)
 {

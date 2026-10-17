@@ -1,6 +1,8 @@
 // Name: Metatron's Cube
 // The sacred figure of thirteen circles and seventy-eight lines, its hidden solids (cube, star tetrahedron,
 // octahedron) tumbling out in 3D and snapping back into place before a vast counter-turning echo of itself.
+// Family: Kaleidoscope
+// Tags: Neon, Geometric, 3D
 
 float mcStroke(float d, float halfWidth, float px)
 {

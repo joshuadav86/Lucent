@@ -1,5 +1,7 @@
 // Name: Knot Stream
 // Rivers of light pour endlessly around a glowing knot that reties itself into new shapes, swelling wherever its slice of the spectrum is loud.
+// Family: Particles
+// Tags: Colourful, Dark, Neon
 // Particles: 262144
 
 // Every so often the knot reties itself: the particles flow smoothly from one knot to the next.
