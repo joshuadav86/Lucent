@@ -192,6 +192,27 @@
                 </Border>
                 <TextBlock Style="{StaticResource OptionHint}"
                            Text="Keep is best. Pick 44.1 kHz (CD) or 48 kHz (video) only if a device or app needs it." />
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Channels" />
+                <Border Style="{StaticResource SegmentBar}">
+                    <UniformGrid Rows="1">
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Channels" Tag="Keep" Content="Keep" Click="OnOptionChosen" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Channels" Tag="Mono" Content="Mono" Click="OnOptionChosen" />
+                    </UniformGrid>
+                </Border>
+                <TextBlock Style="{StaticResource OptionHint}"
+                           Text="Mono mixes the channels into one: good for speech, podcasts and single speakers, in files about half the size." />
+
+                <!-- Converting: processing done to every song on the way -->
+                <StackPanel x:Name="StepsArea">
+                    <DockPanel Margin="0,14,0,6">
+                        <Button x:Name="AddStepButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Content="ADD STEP"
+                                Click="OnAddStep" ToolTip="Normalize, limit, trim silence, remove hum and more, done to every song" />
+                        <TextBlock Style="{StaticResource OptionLabel}" Margin="2,0,0,0" VerticalAlignment="Center" Text="Process each song" />
+                    </DockPanel>
+                    <StackPanel x:Name="StepsList" />
+                    <TextBlock x:Name="StepsHint" Style="{StaticResource OptionHint}" />
+                </StackPanel>
             </StackPanel>
 
             <!-- Converting: progress and results -->

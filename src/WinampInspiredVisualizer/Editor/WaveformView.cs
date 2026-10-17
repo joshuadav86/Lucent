@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
+using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer.Editor;
 
@@ -11,6 +13,11 @@ namespace WinampInspiredVisualizer.Editor;
 /// mouse (Shift+wheel or a middle-button drag pans). Drag a clip's tab to move the clip; click it to
 /// select the clip. The playhead is a separate layer, so moving it never redraws the waveform.
 /// </summary>
+/// <remarks>
+/// Also shows markers (flags in the ruler, which can be clicked or dragged), highlighted problem spots
+/// (clipping), and, instead of the waveform, a spectrogram. Alt+drag selects within one channel only.
+/// With <see cref="Snap"/> set, the cursor and selection edges snap to it; holding Ctrl places them freely.
+/// </remarks>
 public sealed class WaveformView : FrameworkElement
 {
     public const double RulerHeight = 22;
@@ -46,6 +53,19 @@ public sealed class WaveformView : FrameworkElement
     private int? _draggedClip;
     private double _dragX;
     private bool _draggingClip;
+    private IReadOnlyList<Marker> _markers = Array.Empty<Marker>();
+    private IReadOnlyList<FrameRange> _highlights = Array.Empty<FrameRange>();
+    private int? _channel;
+    // The marker whose flag was pressed, and where the mouse is while it's dragged.
+    private int? _pressedMarker;
+    private bool _draggingMarker;
+    private double _markerX;
+    private EditorView _view = EditorView.Waveform;
+    private SpectrogramRenderer.Image?[] _spectrogram = new SpectrogramRenderer.Image?[2];
+    private CancellationTokenSource? _spectrogramWork;
+    private readonly DispatcherTimer _spectrogramDelay;
+    private static readonly Brush HighlightBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0x4D, 0x4F)));
+    private static readonly Brush HighlightEdgeBrush = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0x4D, 0x4F)));
 
     public WaveformView()
     {
@@ -60,7 +80,21 @@ public sealed class WaveformView : FrameworkElement
             DrawPlayhead();
             RaiseViewChanged();
         };
+
+        // The spectrogram is worked out once the view settles for a moment, not on every step of a scroll.
+        _spectrogramDelay = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(40) };
+        _spectrogramDelay.Tick += (_, _) =>
+        {
+            _spectrogramDelay.Stop();
+            StartSpectrogram();
+        };
     }
+
+    /// <summary>A marker's flag was clicked (without dragging).</summary>
+    public event EventHandler<int>? MarkerClicked;
+
+    /// <summary>A marker's flag was dragged to a new frame.</summary>
+    public event EventHandler<(int Marker, int Frame)>? MarkerMoved;
 
     /// <summary>The view moved or zoomed.</summary>
     public event EventHandler? ViewChanged;
@@ -112,6 +146,54 @@ public sealed class WaveformView : FrameworkElement
     }
 
     public int Frames => _peaks?.Audio.Frames ?? 0;
+
+    /// <summary>Moves a frame the user picked to a better one nearby (a zero crossing), or null to leave frames as picked.</summary>
+    public Func<int, int>? Snap { get; set; }
+
+    /// <summary>The markers to show, in order.</summary>
+    public IReadOnlyList<Marker> Markers
+    {
+        get => _markers;
+        set
+        {
+            _markers = value;
+            InvalidateVisual();
+        }
+    }
+
+    /// <summary>Stretches to point out, such as where the audio clips.</summary>
+    public IReadOnlyList<FrameRange> Highlights
+    {
+        get => _highlights;
+        set
+        {
+            _highlights = value;
+            InvalidateVisual();
+        }
+    }
+
+    /// <summary>The only channel the selection covers (0 is left), or null for all of them.</summary>
+    public int? SelectedChannel
+    {
+        get => _peaks is { } peaks && _channel < peaks.Audio.ChannelCount && peaks.Audio.ChannelCount > 1 ? _channel : null;
+        set
+        {
+            _channel = value;
+            InvalidateVisual();
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>The waveform, or a spectrogram of each channel.</summary>
+    public EditorView View
+    {
+        get => _view;
+        set
+        {
+            _view = value;
+            InvalidateVisual();
+        }
+    }
 
     /// <summary>Where the audio is split into clips, in order.</summary>
     public IReadOnlyList<int> Splits
@@ -298,18 +380,21 @@ public sealed class WaveformView : FrameworkElement
 
         var channels = _peaks.Audio.ChannelCount;
         var lanesTop = RulerHeight + ClipBarHeight;
-        var laneHeight = (height - lanesTop - LaneGap * channels) / channels;
+        var laneHeight = LaneHeight(height, channels);
         var linePen = new Pen(LineBrush ?? Brushes.Gray, 1);
         linePen.Freeze();
+        var spectrogram = _view == EditorView.Spectrogram;
 
         for (var c = 0; c < channels; c++)
         {
-            var top = lanesTop + LaneGap + c * (laneHeight + LaneGap);
+            var top = LaneTop(c, laneHeight);
             dc.DrawRoundedRectangle(LaneBrush, null, new Rect(0, top, width, laneHeight), 6, 6);
         }
 
-        // Selection behind the waveform, across the ruler and every lane.
+        // Selection behind the waveform, across the ruler and every lane it covers (one, with Alt+drag).
         var selected = Rect.Empty;
+        var selectedChannel = SelectedChannel;
+        var selectionRects = new List<Rect>();
         if (!_selection.IsEmpty)
         {
             var x0 = Math.Max(0, FrameToX(_selection.Start));
@@ -317,7 +402,23 @@ public sealed class WaveformView : FrameworkElement
             if (x1 > x0 - 1)
             {
                 selected = new Rect(x0, 0, Math.Max(1, x1 - x0), height);
-                dc.DrawRectangle(SelectionBrush, null, selected);
+                if (selectedChannel is { } only)
+                {
+                    selectionRects.Add(new Rect(selected.X, 0, selected.Width, lanesTop));
+                    selectionRects.Add(new Rect(selected.X, LaneTop(only, laneHeight) - LaneGap / 2, selected.Width, laneHeight + LaneGap));
+                }
+                else
+                {
+                    selectionRects.Add(selected);
+                }
+
+                if (!spectrogram)
+                {
+                    foreach (var rect in selectionRects)
+                    {
+                        dc.DrawRectangle(SelectionBrush, null, rect);
+                    }
+                }
             }
         }
 
@@ -326,26 +427,45 @@ public sealed class WaveformView : FrameworkElement
 
         for (var c = 0; c < channels; c++)
         {
-            var top = lanesTop + LaneGap + c * (laneHeight + LaneGap);
+            var top = LaneTop(c, laneHeight);
             var lane = new Rect(0, top, width, laneHeight);
-            var middle = top + laneHeight / 2;
-            dc.DrawLine(linePen, new Point(0, Math.Round(middle) + 0.5), new Point(width, Math.Round(middle) + 0.5));
-            dc.PushClip(new RectangleGeometry(lane));
-            DrawWave(dc, c, top, laneHeight, width, WaveBrush);
-            dc.Pop();
-
-            // The selected part is drawn again over it in its own colour.
-            var selectedLane = Rect.Intersect(lane, selected);
-            if (!selectedLane.IsEmpty && SelectedWaveBrush is not null)
+            if (spectrogram)
             {
-                dc.PushClip(new RectangleGeometry(selectedLane));
-                DrawWave(dc, c, top, laneHeight, width, SelectedWaveBrush);
+                DrawSpectrogram(dc, c, lane);
+            }
+            else
+            {
+                var middle = top + laneHeight / 2;
+                dc.DrawLine(linePen, new Point(0, Math.Round(middle) + 0.5), new Point(width, Math.Round(middle) + 0.5));
+                dc.PushClip(new RectangleGeometry(lane));
+                DrawWave(dc, c, top, laneHeight, width, WaveBrush);
                 dc.Pop();
+
+                // The selected part is drawn again over it in its own colour.
+                var selectedLane = Rect.Intersect(lane, selected);
+                if (!selectedLane.IsEmpty && SelectedWaveBrush is not null && (selectedChannel is null || selectedChannel == c))
+                {
+                    dc.PushClip(new RectangleGeometry(selectedLane));
+                    DrawWave(dc, c, top, laneHeight, width, SelectedWaveBrush);
+                    dc.Pop();
+                }
             }
 
             var label = channels == 1 ? "Mono" : c == 0 ? "L" : "R";
-            dc.DrawText(Text(label, 10, LabelBrush), new Point(8, top + 4));
+            dc.DrawText(Text(label, 10, spectrogram ? SelectedWaveBrush : LabelBrush), new Point(8, top + 4));
         }
+
+        if (spectrogram)
+        {
+            // Over the picture, which would hide it underneath.
+            foreach (var rect in selectionRects)
+            {
+                dc.DrawRectangle(SelectionBrush, null, rect);
+            }
+        }
+
+        DrawHighlights(dc, width, lanesTop, height);
+        DrawMarkers(dc, width, height);
 
         // The cursor, when nothing is selected.
         if (_selection.IsEmpty)
@@ -369,6 +489,195 @@ public sealed class WaveformView : FrameworkElement
                 }
             }
         }
+    }
+
+    private static double LaneHeight(double height, int channels) =>
+        Math.Max(1, (height - RulerHeight - ClipBarHeight - LaneGap * channels) / channels);
+
+    private static double LaneTop(int channel, double laneHeight) =>
+        RulerHeight + ClipBarHeight + LaneGap + channel * (laneHeight + LaneGap);
+
+    /// <summary>The channel whose lane is at a height, or null above the lanes.</summary>
+    private int? LaneAt(double y)
+    {
+        if (_peaks is null || y < RulerHeight + ClipBarHeight)
+        {
+            return null;
+        }
+
+        var channels = _peaks.Audio.ChannelCount;
+        var laneHeight = LaneHeight(ActualHeight, channels);
+        return Math.Clamp((int)((y - RulerHeight - ClipBarHeight) / (laneHeight + LaneGap)), 0, channels - 1);
+    }
+
+    /// <summary>One channel's spectrogram, from the latest picture worked out (stretched to fit until a new one is ready).</summary>
+    private void DrawSpectrogram(DrawingContext dc, int channel, Rect lane)
+    {
+        var image = channel < _spectrogram.Length ? _spectrogram[channel] : null;
+        var current = image is not null && ReferenceEquals(image.Audio, _peaks?.Audio) && Math.Abs(image.ViewStart - _viewStart) < 0.5 &&
+                      Math.Abs(image.SamplesPerPixel - _samplesPerPixel) < 1e-9 && image.Width == (int)Math.Ceiling(lane.Width) &&
+                      image.Height == (int)Math.Ceiling(lane.Height);
+        if (!current)
+        {
+            _spectrogramDelay.Stop();
+            _spectrogramDelay.Start();
+        }
+
+        dc.PushClip(new RectangleGeometry(lane, 6, 6));
+        dc.DrawRectangle(Brushes.Black, null, lane);
+        if (image is not null && ReferenceEquals(image.Audio, _peaks?.Audio))
+        {
+            var x = FrameToX(image.ViewStart);
+            var w = image.Width * image.SamplesPerPixel / _samplesPerPixel;
+            dc.DrawImage(image.Bitmap, new Rect(x, lane.Top, w, lane.Height));
+        }
+
+        // A few frequencies up the side, so the picture can be read.
+        var highest = (_peaks?.Audio.SampleRate ?? 44100) / 2.0;
+        var pen = new Pen(new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)), 1);
+        pen.Freeze();
+        foreach (var hz in new[] { 50.0, 100, 200, 500, 1000, 2000, 5000, 10000, 20000 })
+        {
+            if (hz >= highest)
+            {
+                continue;
+            }
+
+            var y = Math.Round(lane.Bottom - SpectrogramRenderer.Height(hz, lane.Height, highest)) + 0.5;
+            if (y < lane.Top + 16 || y > lane.Bottom - 4)
+            {
+                continue;
+            }
+
+            dc.DrawLine(pen, new Point(0, y), new Point(lane.Width, y));
+            var text = hz >= 1000 ? $"{hz / 1000:0}k" : $"{hz:0}";
+            dc.DrawText(Text(text, 9, SelectedWaveBrush), new Point(lane.Width - 26, y - 12));
+        }
+
+        dc.Pop();
+    }
+
+    /// <summary>Works out the spectrogram for the view as it is now, in the background, then redraws.</summary>
+    private void StartSpectrogram()
+    {
+        _spectrogramWork?.Cancel();
+        if (_peaks is null || _view != EditorView.Spectrogram || ActualWidth < 1)
+        {
+            return;
+        }
+
+        var audio = _peaks.Audio;
+        var channels = audio.ChannelCount;
+        var laneHeight = LaneHeight(ActualHeight, channels);
+        var width = (int)Math.Ceiling(ActualWidth);
+        var height = (int)Math.Ceiling(laneHeight);
+        var viewStart = _viewStart;
+        var samplesPerPixel = _samplesPerPixel;
+        var work = new CancellationTokenSource();
+        _spectrogramWork = work;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var images = Enumerable.Range(0, channels)
+                    .Select(c => SpectrogramRenderer.Render(audio, c, viewStart, samplesPerPixel, width, height, work.Token)).ToArray();
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (!work.IsCancellationRequested)
+                    {
+                        _spectrogram = images;
+                        InvalidateVisual();
+                    }
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // A newer view is on its way.
+            }
+        });
+    }
+
+    /// <summary>The problem spots, as red bands over the lanes.</summary>
+    private void DrawHighlights(DrawingContext dc, double width, double lanesTop, double height)
+    {
+        var edge = new Pen(HighlightEdgeBrush, 1);
+        edge.Freeze();
+        foreach (var range in _highlights)
+        {
+            var x0 = FrameToX(range.Start);
+            var x1 = FrameToX(range.End);
+            if (x1 < 0 || x0 > width)
+            {
+                continue;
+            }
+
+            // At least a few pixels wide, so a clip of a few samples can still be seen zoomed out.
+            var middle = (x0 + x1) / 2;
+            var w = Math.Max(3, x1 - x0);
+            dc.DrawRectangle(HighlightBrush, null, new Rect(middle - w / 2, lanesTop, w, height - lanesTop));
+            dc.DrawRectangle(HighlightEdgeBrush, null, new Rect(middle - w / 2, lanesTop, w, 3));
+        }
+    }
+
+    /// <summary>Each marker: a flag with its name in the ruler, and a line down through the lanes.</summary>
+    private void DrawMarkers(DrawingContext dc, double width, double height)
+    {
+        var brush = CursorBrush ?? Brushes.White;
+        var line = new Pen(brush, 1) { DashStyle = new DashStyle(new double[] { 2, 2 }, 0) };
+        line.Freeze();
+        for (var i = 0; i < _markers.Count; i++)
+        {
+            var frame = _draggingMarker && _pressedMarker == i ? XToFrame(_markerX) : _markers[i].Frame;
+            var x = Math.Round(FrameToX(frame)) + 0.5;
+            if (x < -200 || x > width)
+            {
+                continue;
+            }
+
+            dc.DrawLine(line, new Point(x, RulerHeight), new Point(x, height));
+            var flag = new StreamGeometry();
+            using (var g = flag.Open())
+            {
+                g.BeginFigure(new Point(x, 2), true, true);
+                g.LineTo(new Point(x + 9, 2), true, false);
+                g.LineTo(new Point(x + 9, RulerHeight - 6), true, false);
+                g.LineTo(new Point(x, RulerHeight - 2), true, false);
+            }
+
+            flag.Freeze();
+            dc.DrawGeometry(brush, null, flag);
+            var name = _markers[i].Name.Length > 24 ? _markers[i].Name[..23] + "…" : _markers[i].Name;
+            var text = Text(name, 10, SelectedWaveBrush ?? Brushes.White);
+            // On a backing, so the ruler's times don't run through it.
+            dc.DrawRoundedRectangle(LaneBrush, null, new Rect(x + 11, 3, text.Width + 6, 15), 3, 3);
+            dc.DrawText(text, new Point(x + 14, 4));
+        }
+    }
+
+    /// <summary>The marker whose flag is at a point in the ruler, if any.</summary>
+    public int? MarkerAt(Point position)
+    {
+        if (position.Y > RulerHeight)
+        {
+            return null;
+        }
+
+        for (var i = _markers.Count - 1; i >= 0; i--)
+        {
+            var x = FrameToX(_markers[i].Frame);
+            if (position.X >= x - 3 && position.X <= x + 12)
+            {
+                return i;
+            }
+        }
+
+        return null;
+    }
+
+    private static T Frozen<T>(T freezable) where T : Freezable
+    {
+        freezable.Freeze();
+        return freezable;
     }
 
     /// <summary>The clip tabs under the ruler, the splits across the lanes, and the clip being dragged.</summary>
@@ -606,6 +915,17 @@ public sealed class WaveformView : FrameworkElement
         _pressedAt = position;
         _selecting = false;
 
+        if (MarkerAt(position) is { } marker)
+        {
+            // A marker's flag: dragging moves the marker, a click goes to it.
+            _pressedMarker = marker;
+            _draggingMarker = false;
+            _markerX = position.X;
+            _anchor = null;
+            e.Handled = true;
+            return;
+        }
+
         if (IsOnClipBar(position))
         {
             // A clip's tab: dragging moves the clip, a click selects it.
@@ -628,11 +948,17 @@ public sealed class WaveformView : FrameworkElement
         }
         else
         {
-            _anchor = frame;
+            // Alt+drag in a lane selects in that channel only.
+            _channel = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ? LaneAt(position.Y) : null;
+            _anchor = Snapped(frame);
         }
 
         e.Handled = true;
     }
+
+    /// <summary>A frame moved to the snap point near it, unless Ctrl is held.</summary>
+    private int Snapped(int frame) =>
+        Snap is { } snap && !Keyboard.Modifiers.HasFlag(ModifierKeys.Control) ? Math.Clamp(snap(frame), 0, Frames) : frame;
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
@@ -640,7 +966,20 @@ public sealed class WaveformView : FrameworkElement
         var position = e.GetPosition(this);
         if (!IsMouseCaptured && _panFrom is null)
         {
-            Cursor = IsOnClipBar(position) && Clips.Count > 1 ? Cursors.SizeWE : Cursors.IBeam;
+            Cursor = MarkerAt(position) is not null || (IsOnClipBar(position) && Clips.Count > 1) ? Cursors.SizeWE : Cursors.IBeam;
+        }
+
+        if (_pressedMarker is not null && IsMouseCaptured)
+        {
+            if (!_draggingMarker && Math.Abs(position.X - _pressedAt.X) < DragThreshold)
+            {
+                return;
+            }
+
+            _draggingMarker = true;
+            _markerX = Math.Clamp(position.X, FrameToX(0), FrameToX(Frames));
+            InvalidateVisual();
+            return;
         }
 
         if (_draggedClip is not null && IsMouseCaptured)
@@ -708,7 +1047,24 @@ public sealed class WaveformView : FrameworkElement
         // Letting go of the mouse forgets the drag, so read it first.
         var pressedClip = _draggedClip;
         var dragged = _draggingClip;
+        var pressedMarker = _pressedMarker;
+        var draggedMarker = _draggingMarker;
         ReleaseMouseCapture();
+        if (pressedMarker is { } marker)
+        {
+            if (draggedMarker)
+            {
+                MarkerMoved?.Invoke(this, (marker, Snapped(FrameAt(e.GetPosition(this).X))));
+            }
+            else
+            {
+                MarkerClicked?.Invoke(this, marker);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (pressedClip is { } clip)
         {
             var clips = Clips;
@@ -786,22 +1142,24 @@ public sealed class WaveformView : FrameworkElement
     protected override void OnLostMouseCapture(MouseEventArgs e)
     {
         base.OnLostMouseCapture(e);
-        // Esc, or another window taking the mouse, drops a clip back where it was.
-        if (_draggedClip is not null)
+        // Esc, or another window taking the mouse, drops a clip or marker back where it was.
+        if (_draggedClip is not null || _pressedMarker is not null)
         {
             _draggedClip = null;
             _draggingClip = false;
+            _pressedMarker = null;
+            _draggingMarker = false;
             InvalidateVisual();
         }
     }
 
-    /// <summary>True while a clip's tab is being dragged.</summary>
-    public bool IsDraggingClip => _draggingClip;
+    /// <summary>True while a clip's tab or a marker is being dragged.</summary>
+    public bool IsDraggingClip => _draggingClip || _draggingMarker;
 
-    /// <summary>Stops dragging a clip, leaving it where it was.</summary>
+    /// <summary>Stops dragging a clip or marker, leaving it where it was.</summary>
     public void CancelClipDrag()
     {
-        if (_draggedClip is not null && IsMouseCaptured)
+        if ((_draggedClip is not null || _pressedMarker is not null) && IsMouseCaptured)
         {
             ReleaseMouseCapture();
         }
@@ -818,6 +1176,7 @@ public sealed class WaveformView : FrameworkElement
 
     private void SetSelectionTo(int frame)
     {
+        frame = Snapped(frame);
         var anchor = _anchor ?? frame;
         _selection = new FrameRange(Math.Min(anchor, frame), Math.Abs(frame - anchor));
         _cursor = _selection.Start;

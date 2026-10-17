@@ -11,13 +11,20 @@ using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Editor.Effects;
 using WinampInspiredVisualizer.Export;
+using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer;
 
 /// <summary>
-/// A simple two-track (stereo) audio editor: shows a song's waveform, plays it, selects part of it,
-/// processes it, and saves it back or as a new file. Open it with <see cref="AudioTools.OpenEditor"/>.
+/// A stereo (or mono) audio editor: shows a song's waveform or spectrogram, plays it with meters, selects part
+/// of it (or of one channel), cuts, copies and pastes with crossfaded joins, processes it with built-in tools
+/// and VST3 plugins, and saves it back or as a new file. Open it with <see cref="AudioTools.OpenEditor"/>.
 /// </summary>
+/// <remarks>
+/// The rest of the window lives in partial files: EditorWindow.Clipboard.cs (cut, copy, paste),
+/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis)
+/// and EditorWindow.Plugins.cs (VST3 effects).
+/// </remarks>
 public partial class EditorWindow : Window
 {
     /// <summary>With nothing selected, fades cover this much at the start or end.</summary>
@@ -37,6 +44,7 @@ public partial class EditorWindow : Window
     private bool _closeWhenIdle;
     private bool _closeConfirmed;
     private string? _lastSavedPath;
+    private readonly EditorSettings _settings = EditorSettings.Load();
 
     public EditorWindow(string path, AudioPlayer mainPlayer)
     {
@@ -68,6 +76,8 @@ public partial class EditorWindow : Window
             }
         };
         Waveform.ClipMoveRequested += async (_, move) => await MoveClipAsync(move.Clip, move.ToIndex);
+        Waveform.MarkerClicked += (_, index) => GoToMarker(index);
+        Waveform.MarkerMoved += (_, move) => MoveMarker(move.Marker, move.Frame);
         Waveform.MouseRightButtonUp += OnWaveformRightClick;
         Overview.NavigateRequested += (_, frame) => Waveform.ScrollTo(frame);
         Overview.ZoomRequested += (_, notches) => Waveform.Zoom(Math.Pow(0.8, notches));
@@ -75,6 +85,12 @@ public partial class EditorWindow : Window
         PitchSlider.Value = 0;
         UpdatePitchText();
         UpdateGainText();
+        Waveform.View = _settings.View;
+        SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
+        SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
+        LoopToggle.IsChecked = _settings.Loop;
+        UpdateSnap();
+        InitTools();
         SetEditingEnabled(false);
         Loaded += async (_, _) => await LoadAsync();
     }
@@ -104,6 +120,7 @@ public partial class EditorWindow : Window
             var (audio, info, mixedDown) = await Task.Run(() => AudioFileLoader.Load(_path, progress, token));
             LoadingText.Text = "Drawing the waveform…";
             var session = await Task.Run(() => new EditSession(audio));
+            session.JoinFrames = JoinFrames(audio.SampleRate);
             _session = session;
             _info = info;
             Waveform.Peaks = session.Peaks;
@@ -182,6 +199,7 @@ public partial class EditorWindow : Window
                 AudioFileException => ex.Message,
                 OutOfMemoryException => "There isn't enough memory for that. Try a shorter selection, or close other programs.",
                 Editor.Plugins.PluginException => ex.Message,
+                EditException => ex.Message,
                 _ => FileConverter.FriendlyError(ex),
             };
             MessageBox.Show(this, text, "Audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -224,7 +242,11 @@ public partial class EditorWindow : Window
     /// Runs an effect over the selection (or the whole song) as one undoable step. Afterwards the processed
     /// part is selected, or <paramref name="selectAfter"/> if given.
     /// </summary>
-    private async Task ApplyAsync(IAudioEffect effect, FrameRange? range = null, FrameRange? selectAfter = null)
+    /// <remarks>
+    /// When the selection is in one channel only (Alt+drag), only that channel changes, unless
+    /// <paramref name="bothChannels"/> (swapping or widening needs both).
+    /// </remarks>
+    private async Task ApplyAsync(IAudioEffect effect, FrameRange? range = null, FrameRange? selectAfter = null, bool bothChannels = false)
     {
         if (_session is not { } session)
         {
@@ -233,10 +255,11 @@ public partial class EditorWindow : Window
 
         var target = range ?? Selection;
         var hadSelection = !target.IsEmpty;
+        var channel = bothChannels || !hadSelection ? null : Waveform.SelectedChannel;
         (FrameRange Range, string? Note) result = default;
         var done = await RunBusyAsync($"{effect.Description}…", async (progress, token) =>
         {
-            result = await Task.Run(() => session.Apply(effect, target, progress, token), token);
+            result = await Task.Run(() => session.Apply(effect, target, progress, token, channel), token);
         });
 
         if (done)
@@ -281,6 +304,9 @@ public partial class EditorWindow : Window
 
         Waveform.Peaks = _session.Peaks;
         Waveform.Splits = _session.Splits;
+        Waveform.Markers = _session.Markers;
+        // Problem spots found earlier may not be where they were any more.
+        Waveform.Highlights = Array.Empty<FrameRange>();
         Overview.Peaks = _session.Peaks;
         Overview.SetVisibleRange(Waveform.ViewStart, Waveform.ViewLength);
         UpdateHistory();
@@ -404,10 +430,20 @@ public partial class EditorWindow : Window
     private async Task DeleteSelectionAsync()
     {
         var selection = Selection;
-        if (!selection.IsEmpty)
+        if (selection.IsEmpty)
         {
-            await EditAsync("Delete", session => session.Delete(selection), () => new FrameRange(selection.Start, 0));
+            return;
         }
+
+        if (Waveform.SelectedChannel is not null)
+        {
+            // One channel can't get shorter than the other, so what's selected in it is silenced instead.
+            await ApplyAsync(new SilenceEffect());
+            ShowStatus("Only one channel is selected, so that part of it was silenced (both channels must stay the same length).");
+            return;
+        }
+
+        await EditAsync("Delete", session => session.Delete(selection), () => new FrameRange(selection.Start, 0));
     }
 
     // ---- Clips ----
@@ -422,7 +458,7 @@ public partial class EditorWindow : Window
     {
         var frames = !Selection.IsEmpty
             ? new[] { Selection.Start, Selection.End }
-            : new[] { _player.IsPlaying ? _player.PositionFrame : Waveform.CursorFrame };
+            : new[] { _player.IsPlaying ? SnapFrame(_player.PositionFrame) : Waveform.CursorFrame };
         Split(frames);
     }
 
@@ -476,6 +512,12 @@ public partial class EditorWindow : Window
         }
 
         e.Handled = true;
+        if (Waveform.MarkerAt(e.GetPosition(Waveform)) is { } marker)
+        {
+            ShowMarkerMenu(marker);
+            return;
+        }
+
         var frame = Waveform.FrameAt(e.GetPosition(Waveform).X);
         var onSelection = !Selection.IsEmpty && frame >= Selection.Start && frame <= Selection.End;
         if (!onSelection)
@@ -525,6 +567,16 @@ public partial class EditorWindow : Window
         {
             Add(menu, "Select clip", () => Run(() => Waveform.Selection = clip));
         }
+
+        menu.Items.Add(new Separator());
+        if (onSelection)
+        {
+            Add(menu, "Cut", CutAsync, "Ctrl+X");
+            Add(menu, "Copy", () => Run(Copy), "Ctrl+C");
+        }
+
+        Add(menu, onSelection ? "Paste over selection" : "Paste here", PasteAsync, "Ctrl+V", enabled: HasClip);
+        Add(menu, "Add marker here", () => Run(() => AddMarker(onSelection ? Selection.Start : frame)), "M");
 
         menu.Items.Add(new Separator());
         Add(menu, "Fade in", () => ApplyAsync(new FadeEffect(FadeDirection.In),
@@ -676,7 +728,7 @@ public partial class EditorWindow : Window
     }
 
     /// <summary>Plays part of the song, through <paramref name="through"/> (a plugin preview) if given.</summary>
-    private void PlayFrom(int from, int to, Func<NAudio.Wave.ISampleProvider, float, NAudio.Wave.ISampleProvider>? through = null)
+    private void PlayFrom(int from, int to, Func<NAudio.Wave.ISampleProvider, NAudio.Wave.ISampleProvider>? through = null)
     {
         if (_session is null || IsBusy)
         {
@@ -692,8 +744,9 @@ public partial class EditorWindow : Window
 
         try
         {
-            _player.Play(_session.Audio, from, to, _mainPlayer.Volume, through);
+            _player.Play(_session.Audio, from, to, _mainPlayer.Volume, through, _settings.Loop);
             _previewThrough = through;
+            Meter.Reset();
         }
         catch (Exception ex)
         {
@@ -704,7 +757,7 @@ public partial class EditorWindow : Window
         _playheadTimer.Start();
         PlayIcon.Data = (Geometry)FindResource("StopIcon");
         PlayIcon.Margin = new Thickness(0);
-        PluginPreviewButton.Content = through is null ? "Preview" : "Stop preview";
+        PluginPreviewButton.Content = through is null || _toolPreview is not null ? "Preview" : "Stop preview";
         UpdatePlayhead();
     }
 
@@ -720,7 +773,9 @@ public partial class EditorWindow : Window
         Waveform.PlayheadFrame = null;
         PlayIcon.Data = (Geometry)FindResource("PlayIcon");
         PlayIcon.Margin = new Thickness(2, 0, 0, 0);
+        Meter.Show(null);
         ShowPreviewStopped();
+        ShowToolPreviewStopped();
     }
 
     private void UpdatePlayhead()
@@ -735,6 +790,8 @@ public partial class EditorWindow : Window
         Waveform.PlayheadFrame = frame;
         Waveform.KeepInView(frame);
         PositionText.Text = Format(frame);
+        Meter.Show(_player.Meter?.Read());
+        ShowToolReduction();
     }
 
     // ---- Selection and position ----
@@ -756,7 +813,14 @@ public partial class EditorWindow : Window
         else
         {
             PositionText.Text = $"{Format(selection.Start)} – {Format(selection.End)}";
-            ScopeHint.Text = $"Effects change the selected {selection.Length / (double)rate:0.0#} seconds. Esc selects nothing.";
+            var which = Waveform.SelectedChannel switch
+            {
+                0 => " of the left channel",
+                1 => " of the right channel",
+                _ => string.Empty,
+            };
+            ScopeHint.Text = $"Effects change the selected {selection.Length / (double)rate:0.0#} seconds{which}. Esc selects nothing." +
+                             (which.Length == 0 && _session.Audio.ChannelCount > 1 ? " Alt+drag selects in one channel." : string.Empty);
         }
 
         LengthText.Text = $"Length {Format(_session.Audio.Frames)}  ·  {rate / 1000.0:0.#} kHz  ·  " +
@@ -936,8 +1000,8 @@ public partial class EditorWindow : Window
 
     private async void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // Typing in a box, or using the sliders in the gain and pitch cards, keeps its keys.
-        if (e.OriginalSource is TextBox || GainPopup.IsOpen || PitchPopup.IsOpen)
+        // Typing in a box, or using the sliders in the tool cards, keeps its keys.
+        if (e.OriginalSource is TextBox || ToolPopups.Any(popup => popup.IsOpen))
         {
             return;
         }
@@ -978,6 +1042,37 @@ public partial class EditorWindow : Window
                 return;
             case Key.S:
                 SplitAtCursor();
+                break;
+            case Key.C when ctrl:
+                Copy();
+                break;
+            case Key.X when ctrl:
+                e.Handled = true;
+                await CutAsync();
+                return;
+            case Key.V when ctrl:
+                e.Handled = true;
+                await PasteAsync();
+                return;
+            case Key.M:
+                AddMarker(_player.IsPlaying ? _player.PositionFrame : Selection.IsEmpty ? Waveform.CursorFrame : Selection.Start);
+                break;
+            case Key.OemOpenBrackets:
+                GoToNextMarker(forward: false);
+                break;
+            case Key.OemCloseBrackets:
+                GoToNextMarker(forward: true);
+                break;
+            case Key.L:
+                LoopToggle.IsChecked = LoopToggle.IsChecked != true;
+                SetLoop(LoopToggle.IsChecked == true);
+                break;
+            case Key.V:
+                SpectrogramToggle.IsChecked = SpectrogramToggle.IsChecked != true;
+                SetView(SpectrogramToggle.IsChecked == true ? EditorView.Spectrogram : EditorView.Waveform);
+                break;
+            case Key.F3:
+                GoToNextHighlight(forward: !shift);
                 break;
             case Key.Delete or Key.Back:
                 e.Handled = true;
