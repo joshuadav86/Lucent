@@ -14,6 +14,9 @@ public static class W {
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, int x, int y, uint d, IntPtr e);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, uint f, IntPtr e);
+  public static void Key(byte k) { keybd_event(k, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(60); keybd_event(k, 0, 2, IntPtr.Zero); System.Threading.Thread.Sleep(250); }
+  public static void RightClick(int x, int y) { SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(8, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(80); mouse_event(16, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(1200); }
   [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr h);
   public static List<IntPtr> Of(uint pid) { var l = new List<IntPtr>(); EnumWindows((h, p) => { uint q; GetWindowThreadProcessId(h, out q); if (q == pid && IsWindowVisible(h)) l.Add(h); return true; }, IntPtr.Zero); return l; }
   public static string Title(IntPtr h) { var s = new StringBuilder(256); GetWindowText(h, s, 256); return s.ToString(); }
@@ -61,6 +64,17 @@ if ($queue) {
   $q2 = Box $queue
   [W]::Drag($q2.L + 60, $q2.T + 18, 0, -140)
   Dump 'after dragging the queue back up 140 (should snap 10px)'; [W]::Shot("$out/4-queue-back.png")
+}
+$vis = Find 'Lucid visuals'
+if ($vis) {
+  $v = Box $vis
+  [W]::RightClick([int](($v.L + $v.Ri) / 2), [int](($v.T + $v.B) / 2))
+  [W]::Shot("$out/5-menu.png")
+  1..6 | ForEach-Object { [W]::Key(0x26) }
+  [W]::Key(0x27)
+  Start-Sleep 1
+  [W]::Shot("$out/6-submenu.png")
+  [W]::Key(0x1B); [W]::Key(0x1B)
 }
 Get-Process -Id $proc.Id -ErrorAction SilentlyContinue | Out-Null
 if ($proc.HasExited) { Write-Host "::notice::Lucid exited with $($proc.ExitCode)" }
