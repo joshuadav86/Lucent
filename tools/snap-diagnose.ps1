@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+trap { Write-Host "::warning::ERROR $($_.Exception.Message) at $($_.InvocationInfo.PositionMessage -replace "`n",' ')"; exit 1 }
 Add-Type -ReferencedAssemblies System.Drawing,System.Windows.Forms -TypeDefinition @"
 using System; using System.Text; using System.Collections.Generic; using System.Runtime.InteropServices; using System.Drawing;
 public static class W {
@@ -26,12 +27,13 @@ public static class W {
 }
 "@
 
+Write-Host '::notice::types loaded'
 $out = Join-Path $env:RUNNER_TEMP 'shots'; New-Item -ItemType Directory -Force $out | Out-Null
 $proc = Start-Process -FilePath (Resolve-Path 'app/Lucid.exe') -PassThru
 Start-Sleep 25
 function Dump($label) {
-  Write-Host "=== $label"
-  foreach ($h in [W]::Of([uint32]$proc.Id)) { Write-Host ("{0,-22} {1}" -f [W]::Title($h), [W]::Rects($h)) }
+  Write-Host "::notice::=== $label"
+  foreach ($h in [W]::Of([uint32]$proc.Id)) { Write-Host ("::notice::{0,-22} {1}" -f [W]::Title($h), [W]::Rects($h)) }
 }
 function Find($title) { [W]::Of([uint32]$proc.Id) | Where-Object { [W]::Title($_) -eq $title } | Select-Object -First 1 }
 function Box($h) { $r = New-Object W+R; [void][W]::GetWindowRect($h, [ref]$r); $r }
@@ -53,5 +55,5 @@ if ($queue) {
   Dump 'after dragging the queue back up 140 (should snap 10px)'; [W]::Shot("$out/4-queue-back.png")
 }
 Get-Process -Id $proc.Id -ErrorAction SilentlyContinue | Out-Null
-if ($proc.HasExited) { Write-Host "Lucid exited with $($proc.ExitCode)" }
+if ($proc.HasExited) { Write-Host "::notice::Lucid exited with $($proc.ExitCode)" }
 Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
