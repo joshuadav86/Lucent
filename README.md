@@ -199,11 +199,14 @@ Skins decide the shape, type and finish of every window. Themes decide the colou
 
 ## Download and run
 
-1. Go to the [Latest build](../../releases/tag/latest) release.
-2. Download `Lucid-win-x64.zip`, right-click it and choose **Extract All**.
-3. Double-click `Lucid.exe` in the extracted folder.
+1. Download [`Lucid-Setup.exe`](../../releases/download/latest/Lucid-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
+2. Run it. Lucid installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
 
-Nothing needs installing. If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**. Lucid.exe works on its own too, but keep the Presets folder beside it if you want to change or add visuals.
+Installed Lucid keeps itself up to date. Each time it starts it checks for a newer build, downloads it in the background and installs it when you close Lucid; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists and visuals are kept. Uninstall it from Windows' **Installed apps** list.
+
+If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
+
+Rather not install? Download `Lucid-win-x64.zip` from the same release, right-click it and choose **Extract All**, then double-click `Lucid.exe`. That copy doesn't update itself.
 
 ## Keyboard shortcuts
 
@@ -247,7 +250,7 @@ Shortcuts work from any Lucid window, and your keyboard's media keys work while 
 
 ## Make your own visuals
 
-Each visual is one HLSL pixel shader file in [`src/WinampInspiredVisualizer/Presets`](src/WinampInspiredVisualizer/Presets) (and in the `Presets` folder next to the app once downloaded). A preset defines one function:
+Each visual is one HLSL pixel shader file in [`src/WinampInspiredVisualizer/Presets`](src/WinampInspiredVisualizer/Presets) (and in the `Presets` folder next to the installed app). A preset defines one function:
 
 ```hlsl
 // Name: My Visual
@@ -261,7 +264,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/WinampInspiredVisualizer/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/WinampInspiredVisualizer/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into `%AppData%\Lucid\Presets` (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
 
 A particle visual also defines `Spawn`, `Simulate` and `Show`, which start, move and draw each of its particles. The engine runs them for every particle each frame on the graphics card and adds the glowing dots into a layer that `Render` reads with `particles(uv)`. A `// Particles: 300000` line sets how many run on Normal detail. Random numbers, 3D projection with lens blur, curl-noise flow and motion streaks are in [`Shaders/Particles.hlsli`](src/WinampInspiredVisualizer/Shaders/Particles.hlsli).
 

@@ -41,6 +41,10 @@
                                Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel x:Name="TitleButtons" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
+                    <!-- Shows once a newer build has downloaded. It installs when Lucid closes anyway; this restarts now. -->
+                    <Button x:Name="UpdateButton" Style="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
+                            Content="UPDATE" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"
+                            Click="OnInstallUpdate" WindowChrome.IsHitTestVisibleInChrome="True" />
                     <ToggleButton x:Name="AudioToolsButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
                                   ToolTip="Edit or convert songs" Click="OnAudioTools"
                                   WindowChrome.IsHitTestVisibleInChrome="True">

@@ -55,6 +55,13 @@ public static class PresetLibrary
 
     public static string ShadersFolder => Path.Combine(AppContext.BaseDirectory, "Shaders");
 
+    /// <summary>
+    /// The user's own visuals, in %AppData%\Lucid\Presets. They load alongside the built-in ones (one
+    /// with the same file name replaces it) and, unlike the app's folder, survive updates.
+    /// </summary>
+    public static string UserPresetsFolder => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Lucid", "Presets");
+
     public static string ReadShader(string fileName)
     {
         var path = Path.Combine(ShadersFolder, fileName);
@@ -73,6 +80,13 @@ public static class PresetLibrary
                 .Where(name => name.StartsWith("Presets/", StringComparison.Ordinal))
                 .Select(name => (Path: Path.Combine(PresetsFolder, name["Presets/".Length..]), Code: ReadBuiltIn(name)!))
                 .ToList();
+        }
+
+        if (Directory.Exists(UserPresetsFolder))
+        {
+            var own = Directory.EnumerateFiles(UserPresetsFolder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))).ToList();
+            var ownNames = own.Select(file => Path.GetFileName(file.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            files = files.Where(file => !ownNames.Contains(Path.GetFileName(file.Path))).Concat(own).ToList();
         }
 
         return files
