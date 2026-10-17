@@ -138,7 +138,7 @@ public partial class LibraryWindow : ToolWindow
 
         var noMatches = searching && shown == 0;
         EmptyLibraryHint.Visibility = shown == 0 && !_library.IsScanning ? Visibility.Visible : Visibility.Collapsed;
-        EmptyLibraryTitle.Text = noMatches ? "No songs match your search"
+        EmptyLibraryTitle.Text = noMatches ? "No sounds match your search"
             : favoritesOnly ? "No favorites here yet"
             : linked ? "No music found"
             : "Link a music folder";
@@ -147,10 +147,10 @@ public partial class LibraryWindow : ToolWindow
                 ? "Only your favorites are searched while FAVORITES is on. Try other words, or press Esc to clear the search."
                 : "Search looks in titles, artists, albums and file names. Try other words, or press Esc to clear the search."
             : favoritesOnly
-                ? "Click the heart in the player, or right-click songs here or in the queue, to make them favorites."
+                ? "Click the heart in the player, or right-click sounds here or in the queue, to make them favorites."
                 : linked
                     ? "None of your library folders have music Lucent can play yet. New files appear here on their own."
-                    : "Every song inside it shows up here, newest first, and new files appear on their own.";
+                    : "Every sound inside it shows up here, newest first, and new files appear on their own.";
         LinkFolderButton.Visibility = favoritesOnly || noMatches ? Visibility.Collapsed : Visibility.Visible;
     }
 

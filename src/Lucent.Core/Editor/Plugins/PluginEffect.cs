@@ -145,7 +145,7 @@ public sealed class PluginEffect : IAudioEffect
         // A few frames of ringing past the end isn't worth mentioning.
         if (length - input.Frames >= rate / 10)
         {
-            context.Note = $"{_host.Name}: done. Its tail made the song {(length - input.Frames) / (double)rate:0.0} seconds longer. Ctrl+Z undoes it.";
+            context.Note = $"{_host.Name}: done. Its tail made the sound {(length - input.Frames) / (double)rate:0.0} seconds longer. Ctrl+Z undoes it.";
         }
 
         context.Report(1);

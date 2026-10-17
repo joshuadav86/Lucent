@@ -832,14 +832,14 @@ public partial class TrackInfoWindow : Window
         SaveButton.Content = saving ? "Saving…" : "Save";
         if (saving)
         {
-            ShowStatus("Saving. If a song is playing it may pause for a moment.");
+            ShowStatus("Saving. If a sound is playing it may pause for a moment.");
         }
     }
 
     private void UpdateKeepDatesHint() =>
         KeepDatesHint.Text = KeepDatesSwitch.IsChecked == true
-            ? "Songs stay where they are in the library's newest-first order."
-            : "Edited songs will count as new and move to the top of the library's newest-first order.";
+            ? "Sounds stay where they are in the library's newest-first order."
+            : "Edited sounds will count as new and move to the top of the library's newest-first order.";
 
     // ---- Messages ----
 

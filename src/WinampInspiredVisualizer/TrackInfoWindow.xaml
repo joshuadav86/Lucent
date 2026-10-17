@@ -254,7 +254,7 @@
 
                 <Border Style="{StaticResource SegmentBar}" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal">
-                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="InfoTab" Tag="Song" Content="Song"
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="InfoTab" Tag="Song" Content="Sound"
                                      MinWidth="86" IsChecked="True" Click="OnTab" />
                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="InfoTab" Tag="Lyrics" Content="Lyrics"
                                      MinWidth="86" Click="OnTab" />
@@ -326,7 +326,7 @@
                             <StackPanel Margin="0,0,0,6">
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="BPM" />
                                 <TextBox x:Name="BpmBox" Style="{StaticResource FieldBox}" Width="64" MaxLength="3"
-                                         ToolTip="Beats per minute: how fast the song is" />
+                                         ToolTip="Beats per minute: how fast the sound is" />
                             </StackPanel>
                         </WrapPanel>
 

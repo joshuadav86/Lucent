@@ -58,7 +58,7 @@ public partial class MainWindow
         var favorite = _current is not null && IsFavoriteTrack(_current.Track.Path);
         TrackFavoriteButton.IsEnabled = _current is not null;
         TrackFavoriteButton.Opacity = _current is null ? 0.4 : 1;
-        TrackFavoriteButton.ToolTip = favorite ? "Remove this song from your favorites (H)" : "Add this song to your favorites (H)";
+        TrackFavoriteButton.ToolTip = favorite ? "Remove this sound from your favorites (H)" : "Add this sound to your favorites (H)";
         if (favorite)
         {
             TrackFavoriteIcon.SetResourceReference(Shape.FillProperty, "AccentBrush");
@@ -78,7 +78,7 @@ public partial class MainWindow
         var tracks = await Task.Run(() => paths.Where(File.Exists).Select(Track.FromFile).ToList());
         if (tracks.Count == 0)
         {
-            MessageBox.Show(this, "You haven't got any favorite songs yet. Click the heart in the player, or right-click songs in the queue or library, to add some.",
+            MessageBox.Show(this, "You haven't got any favorite sounds yet. Click the heart in the player, or right-click sounds in the queue or library, to add some.",
                 "Lucent", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -102,7 +102,7 @@ public partial class MainWindow
 
         if (tracks.Count == 0)
         {
-            MessageBox.Show(this, $"None of the songs in \"{name}\" could be found. They may have been moved or deleted.",
+            MessageBox.Show(this, $"None of the sounds in \"{name}\" could be found. They may have been moved or deleted.",
                 "Lucent", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -131,7 +131,7 @@ public partial class MainWindow
         }
 
         var tracks = _playlist.Select(entry => entry.Track).ToList();
-        if (AskForPlaylistName(owner, "Save the queue as a playlist", $"{tracks.Count} {(tracks.Count == 1 ? "song" : "songs")}. Playlists are .m3u8 files, so other players can open them too.", "Save") is { } name)
+        if (AskForPlaylistName(owner, "Save the queue as a playlist", $"{tracks.Count} {(tracks.Count == 1 ? "sound" : "sounds")}. Playlists are .m3u8 files, so other players can open them too.", "Save") is { } name)
         {
             SavePlaylist(() => SavedPlaylists.Write(name, tracks));
         }
@@ -162,7 +162,7 @@ public partial class MainWindow
         var create = new MenuItem { Header = "New playlist…" };
         create.Click += async (_, _) =>
         {
-            if (AskForPlaylistName(owner, "New playlist", "The songs you chose go in it first.", "Create") is { } name)
+            if (AskForPlaylistName(owner, "New playlist", "The sounds you chose go in it first.", "Create") is { } name)
             {
                 var tracks = await songs();
                 SavePlaylist(() => SavedPlaylists.Write(name, tracks));
@@ -191,7 +191,7 @@ public partial class MainWindow
     {
         menu.Items.Clear();
 
-        var favorites = new MenuItem { Header = $"Favorite songs  ({FavoriteTrackCount})" };
+        var favorites = new MenuItem { Header = $"Favorite sounds  ({FavoriteTrackCount})" };
         AddPlayItems(favorites, replace => PlayFavorites(replace));
         menu.Items.Add(favorites);
 
@@ -220,7 +220,7 @@ public partial class MainWindow
             var delete = new MenuItem { Header = "Delete" };
             delete.Click += (_, _) =>
             {
-                if (MessageBox.Show(owner, $"Delete the playlist \"{name}\"? The songs themselves aren't touched.", "Lucent",
+                if (MessageBox.Show(owner, $"Delete the playlist \"{name}\"? The sounds themselves aren't touched.", "Lucent",
                         MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
                 {
                     SavePlaylist(() => SavedPlaylists.Delete(name));

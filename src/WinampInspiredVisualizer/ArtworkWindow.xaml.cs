@@ -131,13 +131,13 @@ public partial class ArtworkWindow : Window
             PlaceholderTitle.Text = _track is null ? "Nothing playing" : "No artwork";
             PlaceholderText.Text = _track is null
                 ? "Artwork appears here when music plays."
-                : "Add a cover with Edit info (right-click here), or put a cover.jpg in the song's folder.";
+                : "Add a cover with Edit info (right-click here), or put a cover.jpg in the sound's folder.";
             return;
         }
 
         ArtImage.Source = cover.Image;
         ArtImage.ToolTip = $"{cover.SizeText} · {ImageFormats.Name(cover.MimeType)}"
-            + (cover.FilePath is null ? " · stored in the music file" : $" · {Path.GetFileName(cover.FilePath)} in the song's folder");
+            + (cover.FilePath is null ? " · stored in the music file" : $" · {Path.GetFileName(cover.FilePath)} in the sound's folder");
         ArtImage.Visibility = Visibility.Visible;
         Placeholder.Visibility = Visibility.Collapsed;
         if (changed)
