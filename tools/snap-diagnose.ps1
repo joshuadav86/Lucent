@@ -30,8 +30,15 @@ public static class W {
 
 Write-Host '::notice::types loaded'
 $out = Join-Path $env:RUNNER_TEMP 'shots'; New-Item -ItemType Directory -Force $out | Out-Null
-$proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
-Start-Sleep 40
+$exe = Resolve-Path 'publish/Lucid.exe'
+$proc = Start-Process -FilePath $exe -PassThru
+Start-Sleep 35
+[W]::Shot("$out/0-first-run.png")
+[void]$proc.CloseMainWindow(); Start-Sleep 5
+if (-not $proc.HasExited) { Stop-Process -Id $proc.Id }
+Add-Content (Join-Path $env:TEMP 'lucid-diag.txt') '--- second launch'
+$proc = Start-Process -FilePath $exe -PassThru
+Start-Sleep 30
 function Dump($label) {
   Write-Host "::notice::=== $label"
   foreach ($h in [W]::Of([uint32]$proc.Id)) { Write-Host ("::notice::{0,-22} {1}" -f [W]::Title($h), [W]::Rects($h)) }
