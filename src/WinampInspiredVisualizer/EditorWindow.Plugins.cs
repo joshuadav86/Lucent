@@ -180,7 +180,7 @@ public partial class EditorWindow
         await ClosePluginAsync();
         var audio = session.Audio;
         PluginHost? host = null;
-        var opened = await RunBusyAsync($"Opening {plugin.Name}…", async (_, token) =>
+        var opened = await RunBusyAsync($"Opening {plugin.Name}…", async (progress, token) =>
         {
             // Loading isn't interrupted part way; if Cancel was pressed, the plugin is closed once it's up.
             host = await Task.Run(() =>
