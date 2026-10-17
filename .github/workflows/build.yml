@@ -9,6 +9,13 @@ on:
 permissions:
   contents: write
 
+# Merging several pull requests close together starts several builds of main at once. Only the
+# newest one should publish the "latest" download, so a newer build of main cancels an older one
+# that's still running (pull request builds each keep their own group).
+concurrency:
+  group: ${{ github.event_name == 'push' && 'publish-latest' || format('build-{0}', github.run_id) }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
@@ -94,6 +101,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A build that finishes after a newer commit reached main mustn't replace that one's download.
+          newest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$newest" != "$GITHUB_SHA" ]; then
+            echo "main has moved on to $newest; leaving the latest download to that build."
+            exit 0
+          fi
           gh release delete latest --cleanup-tag --yes || true
           gh release create latest Lucid-win-x64.zip \
             --target "$GITHUB_SHA" --prerelease \
