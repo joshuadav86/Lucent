@@ -191,6 +191,12 @@ jobs:
           path: dxc-mac
           key: dxc-mac-universal-${{ env.DXC_VERSION }}-1
 
+      # DXC 1.8 and the VST3 SDK still set CMake policies that CMake 4 (on the Mac runners) no longer allows.
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
+
       - name: Build DXC's library for macOS
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -291,6 +297,11 @@ jobs:
 
       # The editor's native pieces, built before publishing so the publish copies them next to the Lucent
       # executable: libmp3lame (MP3 saving) and the VST3 plugin helper (src/PluginHost). Both are universal.
+      # DXC 1.8 and the VST3 SDK still set CMake policies that CMake 4 (on the Mac runners) no longer allows.
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
+
       - name: Build LAME for MP3 saving
         run: tools/build-lame-mac.sh
 
