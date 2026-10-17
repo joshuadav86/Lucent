@@ -97,10 +97,10 @@ function Run($skin, $theme) {
   if ($crash) { Write-Host "::warning::CRASH $tag :: $(($crash.Message -replace "`r?`n", ' | ').Substring(0, [Math]::Min(3500, $crash.Message.Length)))" }
 }
 
-Run 'Lucid' 'Midnight'
-Run 'Classic' 'Emerald'
+
+
 Run 'Glass' 'Deep Ocean'
 Run 'Neon' 'Ultraviolet'
-Run 'Studio' 'Graphite'
+
 Run 'Glass' 'Glacier'
-Run 'Classic' 'Ember'
+
