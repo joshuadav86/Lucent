@@ -1008,6 +1008,12 @@ public partial class MainWindow : Window
         SystemCommands.CloseWindow(this);
     }
 
+    private void OnBuyMeACoffee(object sender, RoutedEventArgs e)
+    {
+        OptionsPopup.IsOpen = false;
+        SupportLink.Open();
+    }
+
     // ---- Options ----
 
     /// <summary>Hands the graphics and visual-change settings to the visualizer.</summary>
