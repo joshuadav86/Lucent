@@ -20,6 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The translation rules, shared with the Mac app (which translates the user's own visuals as it runs). -->
+    <Compile Include="..\..\src\Lucent.Mac\Visuals\MetalTranslation.cs" Link="MetalTranslation.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Lucent.Core\Lucent.Core.csproj" />
   </ItemGroup>
 

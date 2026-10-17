@@ -682,6 +682,12 @@
                             <ToggleButton Name="Header" Focusable="False" Cursor="Hand" Background="Transparent"
                                           Tag="{TemplateBinding Tag}"
                                           IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
+                                <!-- (Here, as a style can't reach into a template inside a template.) -->
+                                <ToggleButton.Styles>
+                                    <Style Selector="ToggleButton:checked /template/ Path#Chevron">
+                                        <Setter Property="RenderTransform" Value="rotate(90deg)" />
+                                    </Style>
+                                </ToggleButton.Styles>
                                 <ToggleButton.Template>
                                     <ControlTemplate>
                                         <Border Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="{TemplateBinding Background}">
@@ -700,9 +706,6 @@
                         </StackPanel>
                     </ControlTemplate>
                 </Setter>
-                <Style Selector="^ /template/ ToggleButton#Header:checked /template/ Path#Chevron">
-                    <Setter Property="RenderTransform" Value="rotate(90deg)" />
-                </Style>
                 <Style Selector="^ /template/ ToggleButton#Header:pointerover">
                     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
                 </Style>

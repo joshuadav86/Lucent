@@ -152,7 +152,7 @@ jobs:
             --notes "Automatic build of the newest version on main. Download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself)."
 
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
-  # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac build.
+  # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
   metal-shaders:
     runs-on: ubuntu-latest
     steps:
@@ -177,8 +177,52 @@ jobs:
           name: metal-shaders
           path: artifacts/metal-shaders
 
+  # DXC has no Mac release either, but the Mac app needs it as it runs too: it translates the user's own
+  # visuals (and built-in ones they've edited) to Metal. So its library is built here for Apple silicon,
+  # once per DXC version (the result is cached), and ships inside Lucent.app.
+  dxc-mac:
+    runs-on: macos-latest
+    env:
+      DXC_VERSION: v1.8.2407
+    steps:
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: dxc-mac
+          key: dxc-mac-arm64-${{ env.DXC_VERSION }}-1
+
+      - name: Build DXC's library for macOS
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          command -v ninja > /dev/null || brew install ninja
+          git clone --depth 1 --branch "$DXC_VERSION" --recurse-submodules --shallow-submodules \
+            https://github.com/microsoft/DirectXShaderCompiler.git dxc-src
+          cmake -S dxc-src -B dxc-build -G Ninja -C dxc-src/cmake/caches/PredefinedParams.cmake \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DHLSL_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF -DSPIRV_BUILD_TESTS=OFF
+          ninja -C dxc-build dxcompiler
+          mkdir -p dxc-mac
+          cp -L dxc-build/lib/libdxcompiler.dylib dxc-mac/
+          cp dxc-src/LICENSE.TXT dxc-mac/LICENSE-DXC.txt
+          cp dxc-src/ThirdPartyNotices.txt dxc-mac/LICENSE-ThirdPartyNotices.txt 2> /dev/null || true
+
+      - name: Check the library
+        run: |
+          file dxc-mac/libdxcompiler.dylib
+          # It must stand alone: nothing but the system's own libraries.
+          otool -L dxc-mac/libdxcompiler.dylib
+          if otool -L dxc-mac/libdxcompiler.dylib | tail -n +2 | grep -v -e /usr/lib/ -e /System/ -e libdxcompiler; then
+            echo "::error::libdxcompiler.dylib needs libraries that won't be in Lucent.app."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dxc-mac
+          path: dxc-mac
+
   mac:
-    needs: metal-shaders
+    needs: [metal-shaders, dxc-mac]
     runs-on: macos-latest
     env:
       LUCENT_VERSION: 0.1.${{ github.run_number }}
@@ -193,6 +237,11 @@ jobs:
         with:
           name: metal-shaders
           path: artifacts/metal-shaders
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dxc-mac
+          path: artifacts/dxc-mac
 
       - name: Check the Metal shaders compile
         run: |

@@ -18,6 +18,13 @@ internal static partial class ObjC
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct CGPoint
+    {
+        public double X;
+        public double Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public struct CGRect
     {
         public double X;
@@ -64,6 +71,35 @@ internal static partial class ObjC
     public static void SendVoid(IntPtr receiver, string selector, CGSize argument) =>
         void_objc_msgSend_CGSize(receiver, Selector(selector), argument);
 
+    public static double SendDouble(IntPtr receiver, string selector) => double_objc_msgSend(receiver, Selector(selector));
+
+    public static bool SendBool(IntPtr receiver, string selector) => byte_objc_msgSend(receiver, Selector(selector)) != 0;
+
+    public static bool SendBool(IntPtr receiver, string selector, IntPtr argument) =>
+        byte_objc_msgSend_IntPtr(receiver, Selector(selector), argument) != 0;
+
+    /// <summary>
+    /// Makes (once) a subclass of an AppKit class, with some of its methods replaced by C# functions
+    /// (each an [UnmanagedCallersOnly] function pointer and its Objective-C type string).
+    /// </summary>
+    public static IntPtr Subclass(string name, string superclass, params (string Selector, IntPtr Function, string Types)[] methods)
+    {
+        var existing = objc_getClass(name);
+        if (existing != IntPtr.Zero)
+        {
+            return existing;
+        }
+
+        var subclass = objc_allocateClassPair(Class(superclass), name, 0);
+        foreach (var (selector, function, types) in methods)
+        {
+            class_addMethod(subclass, Selector(selector), function, types);
+        }
+
+        objc_registerClassPair(subclass);
+        return subclass;
+    }
+
     /// <summary>[[Class alloc] init].</summary>
     public static IntPtr New(string className) => Send(Send(Class(className), "alloc"), "init");
 
@@ -80,6 +116,25 @@ internal static partial class ObjC
 
     [LibraryImport(Runtime, StringMarshalling = StringMarshalling.Utf8)]
     private static partial IntPtr sel_registerName(string name);
+
+    [LibraryImport(Runtime, StringMarshalling = StringMarshalling.Utf8)]
+    private static partial IntPtr objc_allocateClassPair(IntPtr superclass, string name, nuint extraBytes);
+
+    [LibraryImport(Runtime)]
+    private static partial void objc_registerClassPair(IntPtr subclass);
+
+    [LibraryImport(Runtime, StringMarshalling = StringMarshalling.Utf8)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    private static partial bool class_addMethod(IntPtr subclass, IntPtr selector, IntPtr function, string types);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial double double_objc_msgSend(IntPtr receiver, IntPtr selector);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial byte byte_objc_msgSend(IntPtr receiver, IntPtr selector);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial byte byte_objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr argument);
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial IntPtr IntPtr_objc_msgSend(IntPtr receiver, IntPtr selector);
