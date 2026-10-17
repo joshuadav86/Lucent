@@ -203,9 +203,10 @@ jobs:
           command -v ninja > /dev/null || brew install ninja
           git clone --depth 1 --branch "$DXC_VERSION" --recurse-submodules --shallow-submodules \
             https://github.com/microsoft/DirectXShaderCompiler.git dxc-src
+          # DXC 1.8's LLVM specializes std traits, which the newest Xcode's libc++ rejects by default.
           cmake -S dxc-src -B dxc-build -G Ninja -C dxc-src/cmake/caches/PredefinedParams.cmake \
             -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_OSX_ARCHITECTURES='arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-            -DHLSL_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF -DSPIRV_BUILD_TESTS=OFF
+            -DCMAKE_CXX_FLAGS='-Wno-invalid-specialization' -DHLSL_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF -DSPIRV_BUILD_TESTS=OFF
           ninja -C dxc-build dxcompiler
           mkdir -p dxc-mac
           cp -L dxc-build/lib/libdxcompiler.dylib dxc-mac/
