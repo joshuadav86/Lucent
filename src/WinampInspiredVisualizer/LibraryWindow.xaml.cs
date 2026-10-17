@@ -119,13 +119,13 @@ public partial class LibraryWindow : ToolWindow
             // "12 of 1,234 tracks": how many match out of what's being searched.
             var favorites = new HashSet<string>(_settings.FavoriteTracks, StringComparer.OrdinalIgnoreCase);
             var searched = favoritesOnly ? _library.Items.Count(item => favorites.Contains(item.Path)) : count;
-            var noun = favoritesOnly ? (searched == 1 ? "favourite" : "favourites") : (searched == 1 ? "track" : "tracks");
+            var noun = favoritesOnly ? (searched == 1 ? "favorite" : "favorites") : (searched == 1 ? "track" : "tracks");
             countText = $"{shown:N0} of {searched:N0} {noun}{updating}";
         }
         else
         {
             countText = favoritesOnly
-                ? $"{shown:N0} {(shown == 1 ? "favourite" : "favourites")}{updating}"
+                ? $"{shown:N0} {(shown == 1 ? "favorite" : "favorites")}{updating}"
                 : $"{count:N0} {(count == 1 ? "track" : "tracks")}{updating}";
         }
 
@@ -138,15 +138,15 @@ public partial class LibraryWindow : ToolWindow
         var noMatches = searching && shown == 0;
         EmptyLibraryHint.Visibility = shown == 0 && !_library.IsScanning ? Visibility.Visible : Visibility.Collapsed;
         EmptyLibraryTitle.Text = noMatches ? "No songs match your search"
-            : favoritesOnly ? "No favourites here yet"
+            : favoritesOnly ? "No favorites here yet"
             : linked ? "No music found"
             : "Link a music folder";
         EmptyLibraryText.Text = noMatches
             ? favoritesOnly
-                ? "Only your favourites are searched while FAVOURITES is on. Try other words, or press Esc to clear the search."
+                ? "Only your favorites are searched while FAVORITES is on. Try other words, or press Esc to clear the search."
                 : "Search looks in titles, artists, albums and file names. Try other words, or press Esc to clear the search."
             : favoritesOnly
-                ? "Click the heart in the player, or right-click songs here or in the queue, to make them favourites."
+                ? "Click the heart in the player, or right-click songs here or in the queue, to make them favorites."
                 : linked
                     ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
                     : "Every song inside it shows up here, newest first, and new files appear on their own.";

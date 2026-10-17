@@ -58,7 +58,7 @@ public partial class MainWindow
         var favorite = _current is not null && IsFavoriteTrack(_current.Track.Path);
         TrackFavoriteButton.IsEnabled = _current is not null;
         TrackFavoriteButton.Opacity = _current is null ? 0.4 : 1;
-        TrackFavoriteButton.ToolTip = favorite ? "Remove this song from your favourites (H)" : "Add this song to your favourites (H)";
+        TrackFavoriteButton.ToolTip = favorite ? "Remove this song from your favorites (H)" : "Add this song to your favorites (H)";
         if (favorite)
         {
             TrackFavoriteIcon.SetResourceReference(Shape.FillProperty, "AccentBrush");
@@ -78,7 +78,7 @@ public partial class MainWindow
         var tracks = await Task.Run(() => paths.Where(File.Exists).Select(Track.FromFile).ToList());
         if (tracks.Count == 0)
         {
-            MessageBox.Show(this, "You haven't got any favourite songs yet. Click the heart in the player, or right-click songs in the queue or library, to add some.",
+            MessageBox.Show(this, "You haven't got any favorite songs yet. Click the heart in the player, or right-click songs in the queue or library, to add some.",
                 "Lucid", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -179,7 +179,7 @@ public partial class MainWindow
         var allFavorite = paths.Count > 0 && paths.All(IsFavoriteTrack);
         var item = new MenuItem
         {
-            Header = allFavorite ? "Remove from favourites" : "Add to favourites",
+            Header = allFavorite ? "Remove from favorites" : "Add to favorites",
             IsEnabled = paths.Count > 0,
         };
         item.Click += (_, _) => SetFavoriteTracks(paths, !allFavorite);
@@ -191,7 +191,7 @@ public partial class MainWindow
     {
         menu.Items.Clear();
 
-        var favorites = new MenuItem { Header = $"Favourite songs  ({FavoriteTrackCount})" };
+        var favorites = new MenuItem { Header = $"Favorite songs  ({FavoriteTrackCount})" };
         AddPlayItems(favorites, replace => PlayFavorites(replace));
         menu.Items.Add(favorites);
 
