@@ -244,7 +244,7 @@ public partial class EditorWindow
         _analysisRange = range;
         var whole = range.Start == 0 && range.Length == audio.Frames;
         AnalysisHeading.Text = whole
-            ? $"The whole song  ·  {Format(audio.Frames)}"
+            ? $"The whole sound  ·  {Format(audio.Frames)}"
             : $"The selection  ·  {Format(range.Start)} – {Format(range.End)}";
         AnalysisText.Text = Describe(stats, audio.ChannelCount);
         AnalysisSpectrum.SampleRate = audio.SampleRate;

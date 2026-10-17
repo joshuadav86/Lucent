@@ -173,7 +173,7 @@ public sealed class NoiseReductionEffect : IAudioEffect
     {
         if (Profile.SampleRate != input.SampleRate || Profile.Magnitudes.Length == 0)
         {
-            throw new EditException("The noise was learned from audio with a different sample rate. Learn it again from this song.");
+            throw new EditException("The noise was learned from audio with a different sample rate. Learn it again from this sound.");
         }
 
         return NoiseReducer.Process(input, Profile, ReductionDb, SensitivityDb, context.Report, context.Cancellation);

@@ -472,7 +472,7 @@ public partial class EditorWindow : Window
         if (!session.Split(frames))
         {
             ShowStatus(frames.All(f => f <= 0 || f >= session.Audio.Frames)
-                ? "Put the cursor inside the song to split it there."
+                ? "Put the cursor inside the sound to split it there."
                 : "It's already split there.");
             return;
         }
@@ -531,7 +531,7 @@ public partial class EditorWindow : Window
         clipIndex = Math.Min(clipIndex, clips.Count - 1);
         var clip = clips[clipIndex];
         var split = clips.Count > 1;
-        var noun = onSelection ? "selection" : split ? "clip" : "song";
+        var noun = onSelection ? "selection" : split ? "clip" : "sound";
         // Effects work on the selection, or on the clip; an empty range means the whole song.
         var target = onSelection ? Selection : split ? clip : new FrameRange(0, 0);
 
@@ -808,7 +808,7 @@ public partial class EditorWindow : Window
         if (selection.IsEmpty)
         {
             PositionText.Text = Format(Waveform.CursorFrame);
-            ScopeHint.Text = "Nothing is selected, so effects change the whole song. Drag across the waveform to choose a part.";
+            ScopeHint.Text = "Nothing is selected, so effects change the whole sound. Drag across the waveform to choose a part.";
         }
         else
         {

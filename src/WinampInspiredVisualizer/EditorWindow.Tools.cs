@@ -542,7 +542,7 @@ public partial class EditorWindow
         NoiseProfileText.Text = _noiseProfile is null
             ? "Select a stretch of just the noise (a pause, or the lead-in), then press Learn."
             : _noiseProfile.SampleRate != rate
-                ? "The noise was learned from another song. Learn it again from this one."
+                ? "The noise was learned from another sound. Learn it again from this one."
                 : "Learned. Press Learn again to learn from a different part.";
         NoiseApplyButton.IsEnabled = _noiseProfile is not null && _noiseProfile.SampleRate == rate;
     }
@@ -568,7 +568,7 @@ public partial class EditorWindow
         // The learned part is just noise, so the next thing to do is usually to clean the whole song.
         Waveform.ClearSelection();
         NoiseProfileText.Text = $"Learned from {selection.Length / (double)audio.SampleRate:0.0#} seconds. " +
-                                "Now select what to clean, or leave nothing selected for the whole song.";
+                                "Now select what to clean, or leave nothing selected for the whole sound.";
     }
 
     private async void OnApplyNoise(object sender, RoutedEventArgs e)
@@ -633,7 +633,7 @@ public partial class EditorWindow
                     Waveform.SelectedChannel = channel;
                     ShowStatus(channel is null
                         ? "Edits and effects now change both channels."
-                        : $"Select part of the song, and effects will change only the {(channel == 0 ? "left" : "right")} channel. Alt+drag does this too.");
+                        : $"Select part of the sound, and effects will change only the {(channel == 0 ? "left" : "right")} channel. Alt+drag does this too.");
                 };
                 menu.Items.Add(item);
             }

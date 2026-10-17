@@ -2,11 +2,12 @@
 
 <h1 align="center">Lucent</h1>
 
-<p align="center"><b>Winamp's soul, a 2026 graphics card's muscle.</b><br>
-A music player for Windows with 141 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
+<p align="center"><b>Built for audio nerds.</b><br>
+Winamp's soul, a 2026 graphics card's muscle: a player, editor and analyzer for Windows, with 141 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
 
 <p align="center">
   <a href="../../releases/tag/latest"><img src="https://img.shields.io/badge/download-latest%20build-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download the latest build"></a>
+  <a href="https://buymeacoffee.com/joshuadav86"><img src="https://img.shields.io/badge/buy%20me%20a%20coffee-support%20Lucent-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
 <p align="center">
@@ -40,7 +41,7 @@ A music player for Windows with 141 live GPU visuals, ray-traced scenes and part
 
 ## 141 visuals
 
-Every visual is drawn live on your graphics card and listens to the bass, mids, treble and beat of what's playing. Auto mode studies each song ahead of time and changes visual right on a downbeat, with morphs that melt, glow, fly or fold one visual into the next.
+Every visual is drawn live on your graphics card and listens to the bass, mids, treble and beat of what's playing. Auto mode studies each sound ahead of time and changes visual right on a downbeat, with morphs that melt, glow, fly or fold one visual into the next.
 
 ### Ray traced
 
@@ -190,19 +191,19 @@ Skins decide the shape, type and finish of every window. Themes decide the colou
 | | |
 |---|---|
 | 🎵 **Plays almost anything** | MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF |
-| 📚 **Library** | Link a folder and every song shows up, searchable as you type |
-| ❤️ **Favorites and playlists** | Heart songs, star visuals, and save .m3u8 playlists Winamp can open too |
+| 📚 **Library** | Link a folder and every sound shows up, searchable as you type |
+| ❤️ **Favorites and playlists** | Heart sounds, star visuals, and save .m3u8 playlists Winamp can open too |
 | ✂️ **Audio editor** | Cut, copy and paste with crossfades, a spectrogram view, meters and loudness analysis, EQ, compressor and limiter, hum, click and noise repair, tempo, mono conversion and your own VST3 effects, with undo |
 | 🔁 **Converter** | Make MP3, FLAC or WAV, in mono if you like, with tags and artwork carried across and optional processing for a whole batch |
 | 🏷️ **Tag editor** | Titles, artists, lyrics and cover art, saved safely to a checked copy first |
-| 🖼️ **Artwork window** | The playing song's cover, as big as you like |
+| 🖼️ **Artwork window** | The playing sound's cover, as big as you like |
 
 ## Download and run
 
 1. Download [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
 2. Run it. Lucent installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
 
-Installed Lucent keeps itself up to date. Each time it starts it checks for a newer build, downloads it in the background and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists and visuals are kept. Uninstall it from Windows' **Installed apps** list.
+Installed Lucent keeps itself up to date. It checks for a newer build when it starts and every hour while it runs, downloads it in the background and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists and visuals are kept. Uninstall it from Windows' **Installed apps** list.
 
 If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
 
@@ -218,8 +219,8 @@ Shortcuts work from any Lucent window, and your keyboard's media keys work while
 | `Z` / `X` | Previous or next track | `E` | Equalizer | `V` | Visual picker |
 | `S` | Shuffle | `Y` | Analyzer | `A` | Auto mode |
 | `R` | Repeat off, all or one | `C` | Artwork | `F` | Star the visual |
-| `H` | Favorite the song | `D` / `G` / `K` | Dock, fill, shrink | `F11` / `Esc` | Fullscreen, leave it |
-| `Enter` / `Delete` | Play or remove selected | `O` | Options | `Ctrl+I` | Edit song info |
+| `H` | Favorite the sound | `D` / `G` / `K` | Dock, fill, shrink | `F11` / `Esc` | Fullscreen, leave it |
+| `Enter` / `Delete` | Play or remove selected | `O` | Options | `Ctrl+I` | Edit sound info |
 
 <details>
 <summary><b>The full feature list</b></summary>
@@ -232,16 +233,16 @@ Shortcuts work from any Lucent window, and your keyboard's media keys work while
 - Add files or folders with the eject button, or drag them onto any Lucent window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library, newest first, with other sort orders and folder headings you can open or close. Search by title, artist, album or file name as you type (Ctrl+F); Esc clears it
-- Favorite songs: the heart in the player (or H), or right-click songs in the queue or library. The FAVORITES pill in the library shows only them
-- Playlists: save the queue, add songs from the queue or library, and play them from **Playlists** in the queue window. They're standard .m3u8 files
-- Edit a song's info (right-click it, or Ctrl+I): title, artist, album, album artist, year, track and disc, genre, composer, BPM, comment and lyrics. Edit several songs at once. Add, paste, remove or save cover art; very large pictures are shrunk to 1600 pixels. New info is written to a checked copy before it replaces the original, and songs keep their date so they stay put in the library
+- Favorite sounds: the heart in the player (or H), or right-click sounds in the queue or library. The FAVORITES pill in the library shows only them
+- Playlists: save the queue, add sounds from the queue or library, and play them from **Playlists** in the queue window. They're standard .m3u8 files
+- Edit a sound's info (right-click it, or Ctrl+I): title, artist, album, album artist, year, track and disc, genre, composer, BPM, comment and lyrics. Edit several sounds at once. Add, paste, remove or save cover art; very large pictures are shrunk to 1600 pixels. New info is written to a checked copy before it replaces the original, and sounds keep their date so they stay put in the library
 - An artwork window (Art in the player, or C) that uses the file's cover, or a folder.jpg, cover.jpg or front.jpg next to it. Pin it on top, copy or save the picture
-- An audio editor (the waveform button in the player, or **Open in editor…** on a song) showing both channels. Drag to select, the wheel zooms, Space plays. Normalize to a peak of −0.1, −1 or −3 dB or a loudness of −14, −16 or −23 LUFS, change pitch by up to 12 semitones in 0.1 steps (keeping the speed or like a record), gain, fade in and out, trim, delete, silence and reverse, with undo and redo. Right-click the waveform for all of these on the selection or the clip under the mouse. Press **S** to split at the cursor (or at the playhead while it plays, or around the selection), drag a clip's tab to move it, and add silence before, after or in the middle of a clip. Save over the original after asking, or as a new version; formats Lucent can't write are saved as FLAC
-- Editing tools in the editor: **cut, copy and paste** (Ctrl+X, C, V, between songs and to and from other programs) with every join crossfaded (0 to 50 ms, from the **Edit** menu); **Snap** to zero crossings (hold Ctrl to place exactly); a **Spectrogram** view (V); **Loop** playback of the selection (L); a level meter with true peak and momentary, short-term and integrated LUFS while it plays; and **Analyze…** for peak, true peak, RMS, DC offset, loudness, loudness range, stereo correlation, the average spectrum and a clipping finder that marks each clipped spot (F3 goes to the next)
+- An audio editor (the waveform button in the player, or **Open in editor…** on a sound) showing both channels. Drag to select, the wheel zooms, Space plays. Normalize to a peak of −0.1, −1 or −3 dB or a loudness of −14, −16 or −23 LUFS, change pitch by up to 12 semitones in 0.1 steps (keeping the speed or like a record), gain, fade in and out, trim, delete, silence and reverse, with undo and redo. Right-click the waveform for all of these on the selection or the clip under the mouse. Press **S** to split at the cursor (or at the playhead while it plays, or around the selection), drag a clip's tab to move it, and add silence before, after or in the middle of a clip. Save over the original after asking, or as a new version; formats Lucent can't write are saved as FLAC
+- Editing tools in the editor: **cut, copy and paste** (Ctrl+X, C, V, between sounds and to and from other programs) with every join crossfaded (0 to 50 ms, from the **Edit** menu); **Snap** to zero crossings (hold Ctrl to place exactly); a **Spectrogram** view (V); **Loop** playback of the selection (L); a level meter with true peak and momentary, short-term and integrated LUFS while it plays; and **Analyze…** for peak, true peak, RMS, DC offset, loudness, loudness range, stereo correlation, the average spectrum and a clipping finder that marks each clipped spot (F3 goes to the next)
 - Built-in processing: a 7-band parametric **EQ** drawn over the selection's spectrum and a **compressor** or true-peak **limiter**, all heard live while you set them up; **Tempo** from 50 to 200% keeping the pitch or not; **Repair** for 50 or 60 Hz hum, clicks and crackle, background noise (learned from a quiet part) and DC offset; and **Channels** to swap, mix, invert or widen, edit one channel alone (Alt+drag), or **convert to a mono file**
 - **Markers** (M, and [ and ] to go between them) to name spots, select between them or split at every one. Markers and clips aren't saved into the file
-- VST3 effects in the editor (**Plugins**): reverbs, EQs, compressors and anything else installed in the usual VST3 folder (or a folder you add). The plugin's own window opens; **Preview** plays the selection through it as you turn its knobs, and **Apply** changes the selection or the whole song as one step you can undo. Reverb and delay tails ring on into the audio that follows, or lengthen the song at the end. Each plugin runs in a helper program of its own, so one that crashes can't take Lucent or your edits with it, and its settings are remembered for next time. 64-bit VST3 effects only (not VST2, 32-bit plugins or instruments)
-- A converter (**Convert to…**): MP3 at 128 to 320 kbps or VBR V0 and V2, FLAC at 16 or 24-bit, WAV at 16, 24 or 32-bit float, at the original sample rate or 44.1 or 48 kHz, stereo or mono. Several songs at once, optionally processed on the way (normalize, limit, volume, the editor's EQ or compressor, remove hum, clicks or DC offset, trim silence, fade in and out; also **Batch…** in the editor), tags and artwork copied, nothing replaced without asking
+- VST3 effects in the editor (**Plugins**): reverbs, EQs, compressors and anything else installed in the usual VST3 folder (or a folder you add). The plugin's own window opens; **Preview** plays the selection through it as you turn its knobs, and **Apply** changes the selection or the whole sound as one step you can undo. Reverb and delay tails ring on into the audio that follows, or lengthen the sound at the end. Each plugin runs in a helper program of its own, so one that crashes can't take Lucent or your edits with it, and its settings are remembered for next time. 64-bit VST3 effects only (not VST2, 32-bit plugins or instruments)
+- A converter (**Convert to…**): MP3 at 128 to 320 kbps or VBR V0 and V2, FLAC at 16 or 24-bit, WAV at 16, 24 or 32-bit float, at the original sample rate or 44.1 or 48 kHz, stereo or mono. Several sounds at once, optionally processed on the way (normalize, limit, volume, the editor's EQ or compressor, remove hum, clicks or DC offset, trim silence, fade in and out; also **Batch…** in the editor), tags and artwork copied, nothing replaced without asking
 - A Direct3D 11 visualizer with MilkDrop-style feedback trails, and visuals that compile in the background and are kept on disk, so the app starts straight away
 - The visual picker lists visuals in family folders (switch them off with the FOLDERS pill) and filters by tag; CLEAR shows everything again. Enter shows the first match, Esc clears the search
 - Favorite visuals and lists: star a visual in the picker, under the visuals, or with F. The menu at the top of the picker switches between all visuals, favorites and your lists
@@ -288,6 +289,10 @@ VST3 plugins in the editor need the plugin helper, a small C++ program in [`src/
 cmake -S src/PluginHost -B build/PluginHost -A x64
 cmake --build build/PluginHost --config Release
 ```
+
+## Support Lucent
+
+Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86). The **☕ Buy me a coffee** button at the bottom of Lucent's options panel goes to the same page.
 
 ## License
 

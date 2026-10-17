@@ -95,7 +95,7 @@ public partial class EditorWindow
         var clip = TakeClip();
         if (clip is null)
         {
-            ShowStatus("There's nothing to paste. Copy part of a song first (Ctrl+C).");
+            ShowStatus("There's nothing to paste. Copy part of a sound first (Ctrl+C).");
             return;
         }
 

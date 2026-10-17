@@ -97,7 +97,7 @@ public static class AudioTools
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Choose a song to edit",
+            Title = "Choose a sound to edit",
             Filter = $"Music files|{Patterns()}|All files|*.*",
         };
         if (dialog.ShowDialog(owner) == true)
@@ -115,7 +115,7 @@ public static class AudioTools
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (files.Count == 0)
         {
-            MessageBox.Show(owner, paths.Count == 0 ? "Choose one or more songs to convert first." : "Those songs can't be found. They may have been moved or deleted.",
+            MessageBox.Show(owner, paths.Count == 0 ? "Choose one or more sounds to convert first." : "Those sounds can't be found. They may have been moved or deleted.",
                 "Convert", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -135,7 +135,7 @@ public static class AudioTools
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Choose songs to convert",
+            Title = "Choose sounds to convert",
             Multiselect = true,
             Filter = $"Music files|{Patterns()}|All files|*.*",
         };
@@ -154,11 +154,11 @@ public static class AudioTools
         var playing = currentPath is not null && File.Exists(currentPath);
         var name = playing ? $" ({Path.GetFileNameWithoutExtension(currentPath)})" : string.Empty;
         var menu = new ContextMenu { PlacementTarget = target, Placement = PlacementMode.Bottom };
-        menu.Items.Add(Item($"Edit the song that's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
-        menu.Items.Add(Item("Convert the song that's playing…", playing, () => Convert(owner, settings, new[] { currentPath! })));
+        menu.Items.Add(Item($"Edit the sound that's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
+        menu.Items.Add(Item("Convert the sound that's playing…", playing, () => Convert(owner, settings, new[] { currentPath! })));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Choose a song to edit…", true, () => ChooseFileToEdit(owner, player)));
-        menu.Items.Add(Item("Choose songs to convert…", true, () => ChooseFilesToConvert(owner, settings)));
+        menu.Items.Add(Item("Choose a sound to edit…", true, () => ChooseFileToEdit(owner, player)));
+        menu.Items.Add(Item("Choose sounds to convert…", true, () => ChooseFilesToConvert(owner, settings)));
         menu.Closed += (_, _) =>
         {
             // The button is lit while its menu is open, like the other title-bar buttons.

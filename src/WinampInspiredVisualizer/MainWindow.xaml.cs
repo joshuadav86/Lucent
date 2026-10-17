@@ -236,7 +236,7 @@ public partial class MainWindow : Window
             UpdateButton.ToolTip = $"Lucent {version} is ready. Click to restart into it now, or it installs when you close Lucent.";
             UpdateButton.Visibility = Visibility.Visible;
         });
-        _ = _updater.CheckAsync();
+        _ = _updater.RunAsync();
     }
 
     // True while the windows are being opened at start-up, when one window showing mustn't count
@@ -1006,6 +1006,12 @@ public partial class MainWindow : Window
     {
         _updater.InstallOnExit(restart: true);
         SystemCommands.CloseWindow(this);
+    }
+
+    private void OnBuyMeACoffee(object sender, RoutedEventArgs e)
+    {
+        OptionsPopup.IsOpen = false;
+        SupportLink.Open();
     }
 
     // ---- Options ----

@@ -165,7 +165,7 @@
                     <Button Style="{StaticResource IconButton}" Click="OnZoomIn" ToolTip="Zoom in (+, or the mouse wheel)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ZoomInIcon}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Click="OnZoomFit" ToolTip="Show the whole song (0)">
+                    <Button Style="{StaticResource IconButton}" Click="OnZoomFit" ToolTip="Show the whole sound (0)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ZoomFitIcon}" />
                     </Button>
                 </StackPanel>
@@ -193,7 +193,7 @@
                              BackgroundBrush="{DynamicResource SurfaceBrush}"
                              WindowBrush="{DynamicResource AccentBrush}"
                              WindowBorderBrush="{DynamicResource AccentBrush}"
-                             ToolTip="The whole song. Click or drag to move around; the wheel zooms." />
+                             ToolTip="The whole sound. Click or drag to move around; the wheel zooms." />
 
         <!-- The waveform -->
         <Grid Grid.Row="3" Margin="14,8,14,10">
@@ -207,7 +207,7 @@
                                  CursorBrush="{DynamicResource AccentBrush}"
                                  PlayheadBrush="{DynamicResource TextBrush}" />
             <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
-                <TextBlock x:Name="LoadingText" Text="Opening the song…" FontSize="13" HorizontalAlignment="Center"
+                <TextBlock x:Name="LoadingText" Text="Opening the sound…" FontSize="13" HorizontalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
                 <ProgressBar x:Name="LoadingProgress" Style="{StaticResource ThinProgress}" Margin="0,12,0,0" />
             </StackPanel>
@@ -223,7 +223,7 @@
                     <Button x:Name="PluginPreviewButton" Style="{StaticResource ToolButton}" Content="Preview" Click="OnPreviewPlugin"
                             ToolTip="Play the selection (or from the cursor) through the plugin. Changes in its window are heard straight away." />
                     <Button Style="{StaticResource ToolButton}" Click="OnApplyPlugin" Foreground="{DynamicResource AccentBrush}"
-                            ToolTip="Run the selection (or the whole song) through the plugin, as one step you can undo">
+                            ToolTip="Run the selection (or the whole sound) through the plugin, as one step you can undo">
                         <TextBlock Text="Apply" FontWeight="SemiBold" />
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnClosePlugin"
@@ -283,7 +283,7 @@
                         </StackPanel>
                     </Button>
                     <Button x:Name="AnalyzeButton" Style="{StaticResource ToolButton}" Content="Analyze…" Click="OnAnalyze"
-                            ToolTip="Peak, true peak, loudness, loudness range, DC offset, clipping and the spectrum of the selection (or the song)" />
+                            ToolTip="Peak, true peak, loudness, loudness range, DC offset, clipping and the spectrum of the selection (or the sound)" />
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
                     <Button Style="{StaticResource ToolButton}" Content="Split" Click="OnSplit"
                             ToolTip="Split into clips at the cursor, or around the selection, to move them around (S)" />
@@ -318,7 +318,7 @@
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Content="Batch…" Click="OnBatch"
-                            ToolTip="Process and convert many songs at once: normalize, limit, trim silence, remove hum and more" />
+                            ToolTip="Process and convert many sounds at once: normalize, limit, trim silence, remove hum and more" />
                 </WrapPanel>
                 <TextBlock x:Name="ScopeHint" Style="{StaticResource OptionHint}" Margin="2,4,0,0" />
             </StackPanel>
@@ -554,7 +554,7 @@
                                 Click="OnLearnNoise" ToolTip="Learn the noise from the selection" />
                         <TextBlock x:Name="NoiseProfileText" Style="{StaticResource OptionHint}" Margin="0" VerticalAlignment="Center" />
                     </DockPanel>
-                    <TextBlock Style="{StaticResource OptionLabel}" Text="2. Select what to clean (or nothing, for the whole song), then" />
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="2. Select what to clean (or nothing, for the whole sound), then" />
                     <DockPanel>
                         <TextBlock x:Name="NoiseAmountValue" DockPanel.Dock="Right" Style="{StaticResource CardValue}" />
                         <TextBlock Style="{StaticResource OptionHint}" Margin="0" Text="Turn the noise down by" />

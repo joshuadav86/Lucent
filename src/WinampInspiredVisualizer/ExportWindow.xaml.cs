@@ -97,7 +97,7 @@ public partial class ExportWindow : Window
         var options = settings.ConvertOptions.Format == ExportFormat.Aiff ? new ExportOptions() : settings.ConvertOptions;
         var window = new ExportWindow(saveMode: false, options, files, settings) { Owner = owner };
         window.Title = "Convert - Lucent";
-        window.Heading.Text = files.Count == 1 ? "CONVERT A SONG" : $"CONVERT {files.Count} SONGS";
+        window.Heading.Text = files.Count == 1 ? "CONVERT A SOUND" : $"CONVERT {files.Count} SOUNDS";
         window.PrimaryText.Text = "Convert";
         var names = files.Take(4).Select(Path.GetFileName).ToList();
         window.FilesSummary.Text = files.Count <= 4
@@ -275,8 +275,8 @@ public partial class ExportWindow : Window
         }
 
         StepsHint.Text = _steps.Count == 0
-            ? "Nothing: the songs are only converted. Add steps to clean up or level a whole album at once."
-            : "Done in this order, to every song, before it's saved in the new format.";
+            ? "Nothing: the sounds are only converted. Add steps to clean up or level a whole album at once."
+            : "Done in this order, to every sound, before it's saved in the new format.";
     }
 
     private void OnAddStep(object sender, RoutedEventArgs e)
@@ -465,7 +465,7 @@ public partial class ExportWindow : Window
         PrimaryButton.IsEnabled = false;
         SecondaryButton.Content = "Stop";
         ProgressArea.Visibility = Visibility.Visible;
-        ProgressText.Text = jobs.Count == 1 ? $"Converting {Path.GetFileName(jobs[0].Source)}…" : $"Converting {jobs.Count} songs…";
+        ProgressText.Text = jobs.Count == 1 ? $"Converting {Path.GetFileName(jobs[0].Source)}…" : $"Converting {jobs.Count} sounds…";
         var progress = new Progress<double>(value =>
         {
             Progress.Value = value;
@@ -505,7 +505,7 @@ public partial class ExportWindow : Window
             var example = Path.GetFileName(existing[0]);
             var what = existing.Count == 1 ? $"\"{example}\" already exists." : $"{existing.Count} of the new files already exist, like \"{example}\".";
             var answer = MessageBox.Show(this,
-                $"{what}\n\nYes: replace {(existing.Count == 1 ? "it" : "them")}.\nNo: keep both (the new {(existing.Count == 1 ? "file gets" : "files get")} a number, like \"Song (2)\").\nCancel: don't convert.",
+                $"{what}\n\nYes: replace {(existing.Count == 1 ? "it" : "them")}.\nNo: keep both (the new {(existing.Count == 1 ? "file gets" : "files get")} a number, like \"Sound (2)\").\nCancel: don't convert.",
                 "Convert", MessageBoxButton.YesNoCancel, MessageBoxImage.Question, MessageBoxResult.No);
             if (answer == MessageBoxResult.Cancel || answer == MessageBoxResult.None)
             {
@@ -546,8 +546,8 @@ public partial class ExportWindow : Window
         var lines = new List<string>
         {
             succeeded.Count == results.Count
-                ? results.Count == 1 ? $"Done: {Path.GetFileName(succeeded[0].Job.Destination)}" : $"Done: converted {results.Count} songs."
-                : $"Converted {succeeded.Count} of {results.Count} songs.",
+                ? results.Count == 1 ? $"Done: {Path.GetFileName(succeeded[0].Job.Destination)}" : $"Done: converted {results.Count} sounds."
+                : $"Converted {succeeded.Count} of {results.Count} sounds.",
         };
         if (cancelled > 0)
         {
