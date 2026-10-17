@@ -1,7 +1,9 @@
 using System.Runtime.Versioning;
 using Avalonia;
 using Lucent.Mac.Audio;
+using Lucent.Mac.Export;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Export;
 
 // Metal, Core Audio and AppKit: this app only runs on macOS.
 [assembly: SupportedOSPlatform("macos")]
@@ -16,6 +18,8 @@ public static class Program
         // The shared code leaves file decoding to each platform. On the Mac, Core Audio decodes
         // everything that isn't Ogg or Opus (those are decoded in Lucent.Core on every platform).
         AudioReaderFactory.OpenWithSystemDecoder = path => new MacAudioFileReader(path);
+        // MP3 encoding is left to each platform too: on the Mac it's LAME, shipped inside the app.
+        AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
 
         if (args.Length > 0 && args[0] == "--self-test")
         {

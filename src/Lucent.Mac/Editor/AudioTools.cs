@@ -1,0 +1,292 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using Lucent.Mac.Audio;
+using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Settings;
+
+namespace Lucent.Mac.Editor;
+
+/// <summary>
+/// The ways into the audio editor and the converter, kept here so the main window only needs a few
+/// one-line handlers. Also makes sure closing Lucent doesn't silently lose edits or half-written files.
+/// </summary>
+public static class AudioTools
+{
+    private static readonly List<EditorWindow> Editors = new();
+    private static readonly List<ExportWindow> Converters = new();
+    private static readonly HashSet<Window> WatchedOwners = new();
+
+    /// <summary>Set when the user asked to quit while something was still working: quit once it has stopped.</summary>
+    private static Window? _closeWhenIdle;
+
+    /// <summary>An owner whose closing has been checked (edits confirmed, nothing running), so it may close now.</summary>
+    private static Window? _closeApproved;
+
+    /// <summary>
+    /// Raised after the editor pauses the main player, or the player reopens a song that was saved over,
+    /// so the main window can refresh its play button.
+    /// </summary>
+    public static event EventHandler? MainPlayerChanged;
+
+    /// <summary>
+    /// Raised after songs have been saved over (by the editor's Save, or the converter replacing files), so the
+    /// queue, library and now playing display can show their new length and info.
+    /// </summary>
+    public static event EventHandler<TagsSavedEventArgs>? FilesReplaced;
+
+    internal static void NotifyMainPlayerChanged() => MainPlayerChanged?.Invoke(null, EventArgs.Empty);
+
+    internal static void NotifyFilesReplaced(IReadOnlyList<string> paths)
+    {
+        if (paths.Count > 0)
+        {
+            FilesReplaced?.Invoke(null, new TagsSavedEventArgs(paths));
+        }
+    }
+
+    /// <summary>The player window, for the editor's Batch button and window snapping.</summary>
+    internal static MainWindow? MainWindow =>
+        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
+
+    /// <summary>
+    /// Opens a song in the editor, or brings its editor to the front if it's already open.
+    /// <paramref name="player"/> is the main player: the editor pauses it while it plays, and has it let go of
+    /// the song for a moment when saving over it.
+    /// </summary>
+    public static void OpenEditor(Window owner, AudioPlayer player, string path)
+    {
+        if (!File.Exists(path))
+        {
+            _ = MessageWindow.ShowAsync(owner, $"\"{Path.GetFileName(path)}\" can't be found. It may have been moved or deleted.",
+                "Audio editor");
+            return;
+        }
+
+        var existing = Editors.FirstOrDefault(editor => SamePath(editor.FilePath, path));
+        if (existing is not null)
+        {
+            if (existing.WindowState == WindowState.Minimized)
+            {
+                existing.WindowState = WindowState.Normal;
+            }
+
+            existing.Activate();
+            return;
+        }
+
+        Watch(owner);
+        var window = new EditorWindow(path, player);
+        Editors.Add(window);
+        MainWindow?.AddToSnapping(window);
+        window.Closed += (_, _) =>
+        {
+            Editors.Remove(window);
+            QuitIfIdle();
+        };
+        window.Show(owner);
+    }
+
+    /// <summary>The user chose to keep an editor (and its unsaved edits) open, so Lucent shouldn't quit after all.</summary>
+    internal static void CancelQuit() => _closeWhenIdle = null;
+
+    /// <summary>Asks for a song and opens it in the editor.</summary>
+    public static async void ChooseFileToEdit(Window owner, AudioPlayer player)
+    {
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose a sound to edit",
+            FileTypeFilter = FileTypes(),
+        });
+        if (files.Count > 0 && files[0].TryGetLocalPath() is { } path)
+        {
+            OpenEditor(owner, player, path);
+        }
+    }
+
+    /// <summary>
+    /// Opens the converter for some songs. It stays open while it works, so the music can keep playing.
+    /// Missing files are left out; the format last used comes from <paramref name="settings"/> and is saved back to it.
+    /// </summary>
+    public static void Convert(Window owner, AppSettings settings, IReadOnlyList<string> paths)
+    {
+        var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (files.Count == 0)
+        {
+            _ = MessageWindow.ShowAsync(owner,
+                paths.Count == 0 ? "Choose one or more sounds to convert first." : "Those sounds can't be found. They may have been moved or deleted.",
+                "Convert");
+            return;
+        }
+
+        Watch(owner);
+        var window = ExportWindow.ShowConverter(owner, files, settings);
+        Converters.Add(window);
+        window.Closed += (_, _) =>
+        {
+            Converters.Remove(window);
+            QuitIfIdle();
+        };
+    }
+
+    /// <summary>Asks for songs and opens the converter for them.</summary>
+    public static async void ChooseFilesToConvert(Window owner, AppSettings settings)
+    {
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose sounds to convert",
+            AllowMultiple = true,
+            FileTypeFilter = FileTypes(),
+        });
+        var paths = files.Select(file => file.TryGetLocalPath()).OfType<string>().ToList();
+        if (paths.Count > 0)
+        {
+            Convert(owner, settings, paths);
+        }
+    }
+
+    /// <summary>
+    /// The menu under the title bar's Edit button: edit or convert the song that's playing, or choose files.
+    /// </summary>
+    public static void ShowMenu(Control target, Window owner, AudioPlayer player, AppSettings settings)
+    {
+        var currentPath = player.CurrentPath;
+        var playing = currentPath is not null && File.Exists(currentPath);
+        var name = playing ? $" ({Path.GetFileNameWithoutExtension(currentPath)})" : string.Empty;
+        var menu = new ContextMenu { Placement = PlacementMode.BottomEdgeAlignedLeft };
+        menu.Items.Add(Item($"Edit the sound that's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
+        menu.Items.Add(Item("Convert the sound that's playing…", playing, () => Convert(owner, settings, new[] { currentPath! })));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(Item("Choose a sound to edit…", true, () => ChooseFileToEdit(owner, player)));
+        menu.Items.Add(Item("Choose sounds to convert…", true, () => ChooseFilesToConvert(owner, settings)));
+        menu.Closed += (_, _) =>
+        {
+            // The button is lit while its menu is open, like the other title-bar buttons.
+            if (target is ToggleButton toggle)
+            {
+                toggle.IsChecked = false;
+            }
+        };
+        menu.Open(target);
+    }
+
+    private static MenuItem Item(string header, bool enabled, Action action)
+    {
+        var item = new MenuItem { Header = header, IsEnabled = enabled };
+        item.Click += (_, _) => action();
+        return item;
+    }
+
+    private static List<FilePickerFileType> FileTypes() => new()
+    {
+        new FilePickerFileType("Music files") { Patterns = AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext).ToList() },
+        new FilePickerFileType("All files") { Patterns = new[] { "*" } },
+    };
+
+    private static bool SamePath(string a, string b) =>
+        string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+
+    // ---- Closing Lucent ----
+
+    private static void Watch(Window owner)
+    {
+        if (WatchedOwners.Add(owner))
+        {
+            owner.Closing += OnOwnerClosing;
+            owner.Closed += (_, _) => WatchedOwners.Remove(owner);
+        }
+    }
+
+    /// <summary>
+    /// Owned windows close with the main window, so ask about unsaved edits first, and let running work
+    /// stop cleanly (removing its half-written temporary files) before Lucent actually quits.
+    /// </summary>
+    /// <remarks>
+    /// Avalonia can't wait in a Closing handler the way WPF's MessageBox does, so the close is held back,
+    /// the questions are asked, and the window is closed again once the answers allow it.
+    /// </remarks>
+    private static void OnOwnerClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (sender is not Window owner || e.Cancel)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(_closeApproved, owner))
+        {
+            _closeApproved = null;
+            return;
+        }
+
+        var unsaved = Editors.Where(editor => !editor.IsBusy && editor.NeedsCloseConfirmation).ToList();
+        var busyEditors = Editors.Where(editor => editor.IsBusy).ToList();
+        var busyConverters = Converters.Where(converter => converter.IsRunning).ToList();
+        if (unsaved.Count == 0 && busyEditors.Count == 0 && busyConverters.Count == 0)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (_closeWhenIdle is not null)
+        {
+            // Already winding down after the user said yes.
+            return;
+        }
+
+        Dispatcher.UIThread.Post(async () => await AskBeforeClosingAsync(owner, unsaved));
+    }
+
+    private static async Task AskBeforeClosingAsync(Window owner, IReadOnlyList<EditorWindow> unsaved)
+    {
+        foreach (var editor in unsaved)
+        {
+            if (!await editor.ConfirmCloseAsync())
+            {
+                _closeWhenIdle = null;
+                return;
+            }
+        }
+
+        var busyEditors = Editors.Where(editor => editor.IsBusy).ToList();
+        var busyConverters = Converters.Where(converter => converter.IsRunning).ToList();
+        if (busyEditors.Count == 0 && busyConverters.Count == 0)
+        {
+            _closeApproved = owner;
+            owner.Close();
+            return;
+        }
+
+        var what = busyConverters.Count > 0 ? "still converting" : "still working in the audio editor";
+        var answer = await MessageWindow.ShowAsync(owner, $"Lucent is {what}. Stop and close Lucent?", "Lucent",
+            MessageButtons.YesNo, MessageResult.No);
+        if (answer != MessageResult.Yes)
+        {
+            return;
+        }
+
+        // Each window cancels its work and closes once it has cleaned up; the last one closes Lucent.
+        _closeWhenIdle = owner;
+        foreach (var window in busyEditors.Cast<Window>().Concat(busyConverters))
+        {
+            window.Close();
+        }
+
+        QuitIfIdle();
+    }
+
+    private static void QuitIfIdle()
+    {
+        if (_closeWhenIdle is { } owner
+            && !Editors.Any(editor => editor.IsBusy)
+            && !Converters.Any(converter => converter.IsRunning))
+        {
+            _closeWhenIdle = null;
+            // Let the closing window finish first.
+            Dispatcher.UIThread.Post(owner.Close);
+        }
+    }
+}
