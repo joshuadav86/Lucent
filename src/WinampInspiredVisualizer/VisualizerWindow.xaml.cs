@@ -55,6 +55,7 @@ public partial class VisualizerWindow : ToolWindow
             VisualizerStatus.ToolTip = message;
         };
         host.DoubleClicked += (_, _) => ToggleFullscreen();
+        host.RightClicked += (_, _) => ShowVisualsMenu();
         host.PresetChanged += (_, _) => ShowPreset();
         host.FrameRateMeasured += (_, stats) =>
             FrameRateText.Text = $"{stats.FramesPerSecond:0} fps · {stats.Width} × {stats.Height}" + (stats.Hdr ? " · HDR" : string.Empty);
