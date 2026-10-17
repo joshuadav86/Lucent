@@ -36,4 +36,18 @@
     <None Include="Shaders\*.hlsl*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!--
+    The MP3 encoder (LAME, from NAudio.Lame) is a native DLL that NAudio.Lame loads from the app's folder.
+    Keep it out of the single-file bundle so it ships beside Lucid.exe, where it can be found (and,
+    as its LGPL licence asks, swapped for another build).
+  -->
+  <Target Name="KeepLameBesideTheApp" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Condition="'%(None.Filename)' == 'libmp3lame.32' Or '%(None.Filename)' == 'libmp3lame.64'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </None>
+    </ItemGroup>
+  </Target>
+
 </Project>
