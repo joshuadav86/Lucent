@@ -612,14 +612,14 @@ public sealed class Renderer : IDisposable
     private void DrawPreset(RenderTarget destination, RenderTarget source, int presetIndex)
     {
         var slot = _slots[presetIndex];
+        ID3D11ShaderResourceView? particleLayer = null;
         if (slot.Simulation is not null)
         {
             RunParticles(slot, source);
-            _context!.PSSetShaderResource(3, _particleLayer!.ShaderResource);
+            particleLayer = _particleLayer!.ShaderResource;
         }
 
-        DrawPass(destination.RenderTargetView, source.ShaderResource, slot.Shader!, null);
-        _context!.PSSetShaderResource(3, null!);
+        DrawPass(destination.RenderTargetView, source.ShaderResource, slot.Shader!, null, particleLayer);
     }
 
     /// <summary>
@@ -701,11 +701,19 @@ public sealed class Renderer : IDisposable
         }
     }
 
-    private void DrawPass(ID3D11RenderTargetView destination, ID3D11ShaderResourceView source, ID3D11PixelShader shader, ID3D11ShaderResourceView? extra)
+    /// <remarks>
+    /// Textures are bound for reading only after the destination is set: Direct3D quietly unbinds a
+    /// texture that's bound for reading while it's still the one being drawn into, as the particle
+    /// layer is until this pass switches away from it.
+    /// </remarks>
+    private void DrawPass(
+        ID3D11RenderTargetView destination, ID3D11ShaderResourceView source, ID3D11PixelShader shader,
+        ID3D11ShaderResourceView? extra, ID3D11ShaderResourceView? particleLayer = null)
     {
         var context = _context!;
         context.PSSetShaderResource(0, null!);
         context.PSSetShaderResource(2, null!);
+        context.PSSetShaderResource(3, null!);
         context.OMSetRenderTargets(destination, null);
         context.PSSetShaderResource(0, source);
         if (extra is not null)
@@ -713,10 +721,16 @@ public sealed class Renderer : IDisposable
             context.PSSetShaderResource(2, extra);
         }
 
+        if (particleLayer is not null)
+        {
+            context.PSSetShaderResource(3, particleLayer);
+        }
+
         context.PSSetShader(shader);
         context.Draw(3, 0);
         context.PSSetShaderResource(0, null!);
         context.PSSetShaderResource(2, null!);
+        context.PSSetShaderResource(3, null!);
     }
 
     private void Present()
