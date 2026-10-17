@@ -150,9 +150,10 @@ jobs:
             --title "Latest build ($LUCENT_VERSION)" \
             --notes "Automatic build of the newest version on main. Download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself)."
 
-  # Lucent.Core is shared with the coming Mac app, so it has to build without Windows.
-  core-on-mac:
-    runs-on: macos-latest
+  # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
+  # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac build.
+  metal-shaders:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -160,5 +161,97 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Build the shared code on macOS
-        run: dotnet build src/Lucent.Core/Lucent.Core.csproj -c Release
+      - name: Get the DXC shader compiler
+        run: |
+          curl -sSL -o dxc.tar.gz https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2407/linux_dxc_2024_07_31.x86_64.tar.gz
+          mkdir -p "$RUNNER_TEMP/dxc"
+          tar -xzf dxc.tar.gz -C "$RUNNER_TEMP/dxc"
+          echo "DXC=$RUNNER_TEMP/dxc/bin/dxc" >> "$GITHUB_ENV"
+
+      - name: Translate the visuals to Metal
+        run: dotnet run --project tools/MetalShaders -c Release -- src/WinampInspiredVisualizer artifacts/metal-shaders
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metal-shaders
+          path: artifacts/metal-shaders
+
+  mac:
+    needs: metal-shaders
+    runs-on: macos-latest
+    env:
+      LUCENT_VERSION: 0.1.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: metal-shaders
+          path: artifacts/metal-shaders
+
+      - name: Check the Metal shaders compile
+        run: |
+          # Xcode's offline Metal compiler, when this runner has it; the self-test below compiles
+          # them on the graphics card as well.
+          if ! xcrun -sdk macosx metal -v > /dev/null 2>&1; then
+            echo "::notice::No offline Metal compiler on this runner; the self-test compiles the shaders instead."
+            exit 0
+          fi
+          failed=0
+          while IFS= read -r -d '' file; do
+            if ! xcrun -sdk macosx metal -std=macos-metal2.1 -c "$file" -o "$RUNNER_TEMP/shader.air" 2> "$RUNNER_TEMP/metal.log"; then
+              echo "::error::$file didn't compile"
+              cat "$RUNNER_TEMP/metal.log"
+              failed=1
+            fi
+          done < <(find artifacts/metal-shaders -name '*.metal' -print0)
+          exit $failed
+
+      - name: Publish the Mac app
+        run: >
+          dotnet publish src/Lucent.Mac/Lucent.Mac.csproj
+          -c Release -r osx-arm64 --self-contained true
+          -p:Version=${{ env.LUCENT_VERSION }}
+          -o publish-mac
+
+      - name: Make test music
+        run: |
+          # A few seconds of tones as WAV, then the formats people's music comes in, made with macOS's own encoder.
+          python3 - << 'PY'
+          import math, struct, wave
+          with wave.open("test.wav", "wb") as f:
+              f.setnchannels(2); f.setsampwidth(2); f.setframerate(44100)
+              frames = bytearray()
+              for i in range(44100 * 3):
+                  v = int(12000 * math.sin(2 * math.pi * 220 * i / 44100) * (1 if (i // 11025) % 2 == 0 else 0.3))
+                  frames += struct.pack("<hh", v, v)
+              f.writeframes(bytes(frames))
+          PY
+          afconvert -f m4af -d aac test.wav test.m4a
+          afconvert -f m4af -d alac test.wav test-alac.m4a
+          afconvert -f flac -d flac test.wav test.flac
+          afconvert -f AIFF -d BEI16 test.wav test.aiff
+
+      - name: Self-test (decoding and every visual)
+        run: publish-mac/Lucent --self-test --sheet mac-visuals.png test.wav test.m4a test-alac.m4a test.flac test.aiff
+
+      - name: Make Lucent.app
+        run: |
+          tools/package-mac.sh publish-mac out "$LUCENT_VERSION"
+          ditto -c -k --keepParent out/Lucent.app Lucent-mac-arm64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lucent-mac-arm64
+          path: Lucent-mac-arm64.zip
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mac-visuals
+          path: mac-visuals.png
+          if-no-files-found: ignore
