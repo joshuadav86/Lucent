@@ -1,12 +1,16 @@
 name: EQ bands diagnose
 on:
   push:
-    branches: [eq-spectrum-check]
+    branches: [snap-check2]
 permissions:
   contents: write
 jobs:
   diagnose:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -23,5 +27,5 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
-          mkdir -p shots && cp "$RUNNER_TEMP"/shots/* shots/ || true
-          git add shots && git commit -m "Drag screenshots [skip ci]" && git push || true
+          mkdir -p shots/${{ matrix.os }} && cp "$RUNNER_TEMP"/shots/* shots/${{ matrix.os }}/ || true
+          git add shots && git commit -m "Drag screenshots [skip ci]" && (git push || (git pull --no-rebase --no-edit && git push)) || true

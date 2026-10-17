@@ -46,6 +46,9 @@ public static class W {
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
   [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr h, int a, out R r, int s);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out R r);
+  [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out R r);
+  public static string Rects(uint pid) { var sb = new StringBuilder(); foreach (var w in Of(pid)) { R d = Box(w); R o; GetWindowRect(w, out o); R c; GetClientRect(w, out c); sb.Append("'" + Title(w) + "' dwm=" + d.L + "," + d.T + "," + d.Ri + "," + d.B + " win=" + o.L + "," + o.T + "," + o.Ri + "," + o.B + " client=" + c.Ri + "x" + c.B + "; "); } return sb.ToString(); }
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, int x, int y, uint d, IntPtr e);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
@@ -56,6 +59,14 @@ public static class W {
   public static string Title(IntPtr h) { var s = new StringBuilder(256); GetWindowText(h, s, 256); return s.ToString(); }
   public static R Box(IntPtr h) { R v; DwmGetWindowAttribute(h, 9, out v, 16); return v; }
   public static void Click(int x, int y, int wait) { SetCursorPos(x, y); System.Threading.Thread.Sleep(80); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(40); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(wait); }
+  public static string All(uint pid) { var sb = new StringBuilder(); foreach (var w in Of(pid)) { var b = Box(w); var t = Title(w); sb.Append((t.Length > 6 ? t.Substring(6, 3) : "pla") + "=" + b.L + "," + b.T + "," + b.Ri + "," + b.B + " "); } return sb.ToString(); }
+  public static string Track(IntPtr h, uint pid, int x, int y, int dx, int dy, int steps, int stepMs) {
+    var sb = new StringBuilder(); sb.Append("start " + All(pid) + "\n");
+    SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
+    for (int i = 1; i <= steps; i++) { SetCursorPos(x + dx * i / steps, y + dy * i / steps); System.Threading.Thread.Sleep(stepMs); sb.Append("  " + (dx * i / steps) + ": " + All(pid) + "\n"); }
+    System.Threading.Thread.Sleep(300); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(800);
+    sb.Append("end " + All(pid) + "\n"); return sb.ToString();
+  }
   public static void Drag(int x, int y, int dx, int dy) {
     SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
     SetCursorPos(x + 3, y + 3); System.Threading.Thread.Sleep(400);
@@ -103,11 +114,58 @@ function Bands($order, $wait) {
   Start-Sleep 2; [W]::Shot("$out/eq-after-$wait.png")
   $script:log += " || wait ${wait}: alive=$(-not $script:proc.HasExited) [$(Windows)]"
 }
+Write-Host "::notice::full drag $([W]::SystemParametersInfo(0x0025, 1, [IntPtr]0, 3))"
 Write-Host "::notice::animations on $([W]::SystemParametersInfo(0x1043, 0, [IntPtr]1, 3))"
 Write-Host "::notice::dpi 100 -> $([W]::SetDpi(100))"; Start-Sleep 4
-$order = @(7, 0, 7, 1, 6, 0, 5, 2, 7, 3, 7, 0, 4, 1, 6, 3, 2, 5, 7, 0)
-Run "bands fast" { Bands $order 60 }
-Run "bands medium" { Bands $order 150 }
-Run "faders" { $eq = Find 'Equalizer'; $b = [W]::Box($eq); [W]::Click($b.L + 111 + 30 * 3, $b.T + 57, 1500); [W]::Drag($b.L + 120, $b.T + 258, 0, -50); [W]::Shot("$out/faders-8.png"); [W]::Click($b.L + 111 + 30 * 0, $b.T + 57, 1500); [W]::Shot("$out/faders-3.png") }
-Write-Host "::notice::dpi 150 -> $([W]::SetDpi(150))"; Start-Sleep 4
-Run "faders 150" { [W]::Shot("$out/faders-10-150.png") }
+function Fresh($settings) {
+  Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucid') -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force (Join-Path $env:APPDATA 'Lucid') | Out-Null
+  $settings | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $env:APPDATA 'Lucid\settings.json')
+}
+function RunWith($label, $settings, [scriptblock]$steps) {
+  Fresh $settings
+  $script:started = Get-Date
+  $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
+  Start-Sleep 35
+  try { & $steps } catch { $script:log += " || ERROR $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
+  Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
+  Add-Content "$out/log.txt" "#### $label $($script:log)"; $script:log = ""
+}
+function Boxes() { ([W]::Of([uint32]$script:proc.Id) | ForEach-Object { $b = [W]::Box($_); "'$([W]::Title($_))' $($b.L),$($b.T),$($b.Ri),$($b.B)" }) -join '; ' }
+function DragWin($title, $dx, $dy, $tag) {
+  $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
+  $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
+  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.L + 150, $b.T + 14, $dx, $dy, 40, 25)
+  [W]::Shot("$out/$tag.png")
+  Add-Content "$out/log.txt" "== $tag`n$t"
+  $script:log += " || ${tag}: [$(Boxes)]"
+}
+function SizeLeft($title, $dx, $tag) {
+  $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
+  $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
+  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.L - 3, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
+  [W]::Shot("$out/$tag.png")
+  Add-Content "$out/log.txt" "== $tag`n$t"
+}
+function SizeWin($title, $dx, $tag) {
+  $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
+  $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
+  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.Ri + 3, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
+  [W]::Shot("$out/$tag.png")
+  Add-Content "$out/log.txt" "== $tag`n$t"
+  $script:log += " || ${tag}: [$(Boxes)]"
+}
+$lib = @{ ShowLibrary = $true }
+Write-Host "::notice::os $([Environment]::OSVersion.VersionString) build $((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)"
+foreach ($dpi in 100, 125) {
+  Write-Host "::notice::dpi $dpi -> $([W]::SetDpi($dpi))"; Start-Sleep 4
+  RunWith "rest $dpi" $lib { [W]::Shot("$out/rest-$dpi.png"); Add-Content "$out/log.txt" "rects $dpi $([W]::Rects([uint32]$script:proc.Id))" }
+  RunWith "visuals $dpi" $lib {
+    DragWin 'Lucid visuals' 120 0 "v-away-$dpi"
+    DragWin 'Lucid visuals' -110 0 "v-gap10-$dpi"
+    Add-Content "$out/log.txt" "rects after $dpi $([W]::Rects([uint32]$script:proc.Id))"
+    DragWin 'Lucid library' -120 0 "l-away-$dpi"
+    DragWin 'Lucid library' 110 0 "l-gap10-$dpi"
+    Add-Content "$out/log.txt" "rects after lib $dpi $([W]::Rects([uint32]$script:proc.Id))"
+  }
+}
