@@ -1,8 +1,0 @@
-02:48:01.756 OnLoaded start: player L=252 T=101 W=520 H=246.90333333333334 startup=CenterScreen queue=True lib=True
-02:48:01.886 after ArrangeFirstTime: player L=360 T=0
-02:48:02.039 OnLoaded end: Lucid: L=360 T=0 W=520x246.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=639 W=0x0 vis=False Normal | Lucid library: L=0 T=0 W=0x0 vis=False Normal
-02:48:02.102 after load: Lucid: L=252 T=237 W=520x207.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=639 W=0x0 vis=False Normal | Lucid library: L=0 T=0 W=0x0 vis=False Normal | Equalizer: L=360 T=247 W=520x392 vis=True Normal
---- second launch
-02:48:41.815 OnLoaded start: player L=252 T=237 W=520 H=246.90333333333334 startup=Manual queue=False lib=False
-02:48:42.038 OnLoaded end: Lucid: L=252 T=237 W=520x246.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=504 T=237 W=0x0 vis=False Normal | Lucid library: L=644 T=160 W=0x0 vis=False Normal
-02:48:42.116 after load: Lucid: L=252 T=237 W=520x207.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=504 T=237 W=0x0 vis=False Normal | Lucid library: L=644 T=160 W=0x0 vis=False Normal | Equalizer: L=252 T=165 W=520x392 vis=True Normal

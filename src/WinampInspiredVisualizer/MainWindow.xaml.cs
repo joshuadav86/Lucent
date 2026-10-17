@@ -133,6 +133,7 @@ public partial class MainWindow : Window
         }
 
         Loaded += OnLoaded;
+        SizeChanged += OnPlayerSizeChanged;
         UpdateShuffleRepeatButtons();
         TrackInfoWindow.TagsSaved += OnTagsSaved;
         ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
@@ -159,6 +160,7 @@ public partial class MainWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        _openingWindows = true;
         // Owned windows minimize with the player and stay in front of it; this needs the player shown first.
         foreach (var window in ToolWindows)
         {
@@ -219,10 +221,57 @@ public partial class MainWindow : Window
             new WindowInteropHelper(window).EnsureHandle();
         }
 
+        _openingWindows = false;
         UpdateWindowToggles();
         Activate();
         Diag.Log("OnLoaded end: " + string.Join(" | ", new Window[] { this, _visuals, _queue, _libraryWindow }.Select(w => $"{w.Title}: L={w.Left} T={w.Top} W={w.ActualWidth}x{w.ActualHeight} vis={w.IsVisible} {w.WindowState}")));
         Dispatcher.BeginInvoke(() => Diag.Log("after load: " + string.Join(" | ", Application.Current.Windows.Cast<Window>().Select(w => $"{w.Title}: L={w.Left} T={w.Top} W={w.ActualWidth}x{w.ActualHeight} vis={w.IsVisible} {w.WindowState}"))), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+    }
+
+    // True while the windows are being opened at start-up, when one window showing mustn't count
+    // as the others being switched off.
+    private bool _openingWindows;
+
+    /// <summary>
+    /// The player's height can change after it opens: Windows takes its standard frame away once
+    /// the custom title bar is in place, and the player shrinks to fit. The windows stacked under
+    /// it (the equalizer and the queue) follow its bottom edge so they stay docked, and the last
+    /// one keeps its bottom edge where it was, in line with the windows beside it.
+    /// </summary>
+    private void OnPlayerSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!e.HeightChanged || e.PreviousSize.Height <= 0 || WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        var delta = e.NewSize.Height - e.PreviousSize.Height;
+        var candidates = new List<Window> { _queue, _libraryWindow, _visuals };
+        if (EqualizerWindow.Current is { } equalizer)
+        {
+            candidates.Add(equalizer);
+        }
+
+        var column = new List<Window>();
+        var edge = Top + e.PreviousSize.Height;
+        while (candidates.FirstOrDefault(window => !column.Contains(window) && window.WindowState == WindowState.Normal
+                   && Math.Abs(window.Top - edge) < 2
+                   && window.Left < Left + ActualWidth - 2 && window.Left + SizeOf(window).Width > Left + 2) is { } next)
+        {
+            column.Add(next);
+            edge = next.Top + SizeOf(next).Height;
+        }
+
+        for (var i = 0; i < column.Count; i++)
+        {
+            var window = column[i];
+            var height = SizeOf(window).Height;
+            window.Top += delta;
+            if (i == column.Count - 1 && window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip)
+            {
+                window.Height = Math.Max(window.MinHeight, height - delta);
+            }
+        }
     }
 
     /// <summary>
@@ -244,6 +293,8 @@ public partial class MainWindow : Window
         var left = work.Left + Math.Max(0, (work.Width - groupWidth) / 2);
         var top = work.Top + Math.Max(0, (work.Height - stackHeight) / 2);
 
+        // Placed by hand from here on, so Windows doesn't centre the player again when it settles its size.
+        WindowStartupLocation = WindowStartupLocation.Manual;
         Left = left + libraryWidth;
         Top = top;
         if (equalizer is not null)
@@ -781,7 +832,7 @@ public partial class MainWindow : Window
 
     private void OnToolWindowVisibilityChanged()
     {
-        if (IsShuttingDown)
+        if (IsShuttingDown || _openingWindows)
         {
             return;
         }
