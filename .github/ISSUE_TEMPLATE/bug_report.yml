@@ -1,0 +1,45 @@
+name: Bug report
+description: Something in Lucent doesn't work the way it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The **Report a bug** button at the bottom of Lucent's options panel opens this form with your Lucent version, Windows version, graphics card and recent errors already filled in.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we make it happen?
+      description: The steps that lead to it, if you know them. The file type you were playing or editing helps too.
+      placeholder: |
+        1. Open a FLAC file
+        2. Switch to the Crystal visual
+        3. ...
+  - type: input
+    id: version
+    attributes:
+      label: Lucent version
+      description: Filled in for you when you report from Lucent. Otherwise, the build you downloaded (for example 0.1.123).
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+  - type: input
+    id: gpu
+    attributes:
+      label: Graphics card
+  - type: textarea
+    id: log
+    attributes:
+      label: Recent errors
+      description: The last few errors Lucent recorded in %AppData%\Lucent\errors.log, if any. Nothing personal is in it, but have a look before you submit.
+      render: text

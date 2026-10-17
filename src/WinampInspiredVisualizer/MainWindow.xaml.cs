@@ -1014,6 +1014,12 @@ public partial class MainWindow : Window
         SupportLink.Open();
     }
 
+    private void OnReportBug(object sender, RoutedEventArgs e)
+    {
+        OptionsPopup.IsOpen = false;
+        BugReport.Open();
+    }
+
     // ---- Options ----
 
     /// <summary>Hands the graphics and visual-change settings to the visualizer.</summary>

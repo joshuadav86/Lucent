@@ -24,6 +24,7 @@ public static class Program
         AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
 
         var app = new App();
+        ErrorLog.Watch(app);
         app.InitializeComponent();
         app.Run();
     }

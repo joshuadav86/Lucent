@@ -157,15 +157,20 @@
                                     <UniformGrid x:Name="ThemeSwatches" Columns="2" Margin="-2,0,-8,-6" />
                                 </StackPanel>
 
-                                <!-- Under every tab: a way to chip in for Lucent. -->
+                                <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->
                                 <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Margin="0,16,0,0" Padding="0,12,0,0">
-                                    <DockPanel>
-                                        <Button DockPanel.Dock="Right" Style="{StaticResource PillButton}" Content="☕  Buy me a coffee"
-                                                Foreground="{DynamicResource AccentBrush}" ToolTip="Opens Lucent's Buy Me a Coffee page"
-                                                Click="OnBuyMeACoffee" />
-                                        <TextBlock Style="{StaticResource OptionHint}" Margin="2,0,10,0" VerticalAlignment="Center"
-                                                   Text="Enjoying Lucent? It's free, and tips keep it going." />
-                                    </DockPanel>
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource OptionHint}" Margin="2,0,0,10"
+                                                   Text="Enjoying Lucent? It's free, and tips keep it going. Something broken? Tell us." />
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Style="{StaticResource PillButton}" Content="🐞  Report a bug" Margin="0,0,8,0"
+                                                    ToolTip="Opens a bug report on GitHub with your Lucent version, Windows version, graphics card and recent errors filled in. You can check it before sending."
+                                                    Click="OnReportBug" />
+                                            <Button Style="{StaticResource PillButton}" Content="☕  Buy me a coffee"
+                                                    Foreground="{DynamicResource AccentBrush}" ToolTip="Opens Lucent's Buy Me a Coffee page"
+                                                    Click="OnBuyMeACoffee" />
+                                        </StackPanel>
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
                         </Border>

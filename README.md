@@ -290,6 +290,10 @@ cmake -S src/PluginHost -B build/PluginHost -A x64
 cmake --build build/PluginHost --config Release
 ```
 
+## Report a bug
+
+Found something broken? Click **🐞 Report a bug** at the bottom of Lucent's options panel. It opens a [bug report](https://github.com/joshuadav86/Lucid/issues/new?template=bug_report.yml) on GitHub with your Lucent version, Windows version, graphics card and the last few errors from `%AppData%\Lucent\errors.log` already filled in. Nothing is sent until you check it and click **Create**. You'll need a free GitHub account.
+
 ## Support Lucent
 
 Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86). The **☕ Buy me a coffee** button at the bottom of Lucent's options panel goes to the same page.
