@@ -111,6 +111,79 @@ public partial class MainWindow : Window
         ApplyPanels();
         _library.SetFolders(_settings.LibraryFolders);
         UpdateLibraryStatus();
+
+        TrackInfoWindow.TagsSaved += OnTagsSaved;
+        ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
+    }
+
+    // ---- Track info and artwork ----
+
+    private void OnToggleArtwork(object sender, RoutedEventArgs e) => ToggleArtwork();
+
+    private void ToggleArtwork() => ArtToggle.IsChecked = ArtworkWindow.Toggle(this, _player, _settings, _current?.Track);
+
+    private void OnArtworkOpenChanged(object? sender, EventArgs e) => ArtToggle.IsChecked = ArtworkWindow.IsOpen;
+
+    private void OnLibraryEditInfo(object sender, RoutedEventArgs e) => EditInfo(SelectedLibraryItems().Select(item => item.Path));
+
+    private void OnQueueEditInfo(object sender, RoutedEventArgs e) => EditInfo(SelectedQueuePaths());
+
+    private void OnQueueRemove(object sender, RoutedEventArgs e) => RemoveSelected();
+
+    private void OnNowPlayingEditInfo(object sender, RoutedEventArgs e)
+    {
+        if (_current is not null)
+        {
+            EditInfo(new[] { _current.Track.Path });
+        }
+    }
+
+    /// <summary>Ctrl+I: edits the tracks chosen in the list being used, or else the one playing.</summary>
+    private void EditInfoForSelection()
+    {
+        if (LibraryView.IsKeyboardFocusWithin && LibraryView.SelectedItems.Count > 0)
+        {
+            EditInfo(SelectedLibraryItems().Select(item => item.Path));
+        }
+        else if (PlaylistView.IsKeyboardFocusWithin && PlaylistView.SelectedItems.Count > 0)
+        {
+            EditInfo(SelectedQueuePaths());
+        }
+        else if (_current is not null)
+        {
+            EditInfo(new[] { _current.Track.Path });
+        }
+        else
+        {
+            EditInfo(SelectedQueuePaths());
+        }
+    }
+
+    private void EditInfo(IEnumerable<string> paths) => TrackInfoWindow.Open(this, _player, _settings, paths);
+
+    private List<string> SelectedQueuePaths()
+    {
+        var selected = new HashSet<PlaylistEntry>(PlaylistView.SelectedItems.Cast<PlaylistEntry>());
+        return _playlist.Where(selected.Contains).Select(entry => entry.Track.Path).ToList();
+    }
+
+    /// <summary>Shows edited info everywhere: queue rows, the now playing title, the artwork window and the library.</summary>
+    private async void OnTagsSaved(object? sender, TagsSavedEventArgs e)
+    {
+        var saved = new HashSet<string>(e.Paths, StringComparer.OrdinalIgnoreCase);
+        var entries = _playlist.Where(entry => saved.Contains(entry.Track.Path)).ToList();
+        var tracks = await Task.Run(() => entries.Select(entry => Track.FromFile(entry.Track.Path)).ToList());
+        for (var i = 0; i < entries.Count; i++)
+        {
+            entries[i].Refresh(tracks[i]);
+        }
+
+        if (_current is not null && saved.Contains(_current.Track.Path))
+        {
+            ShowNowPlaying(_current.Track);
+        }
+
+        await _library.RereadTagsAsync(saved);
     }
 
     // ---- Visuals ----
@@ -1059,6 +1132,13 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.I && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            EditInfoForSelection();
+            e.Handled = true;
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.Space:
@@ -1090,6 +1170,9 @@ public partial class MainWindow : Window
                 break;
             case Key.O:
                 ToggleOptions();
+                break;
+            case Key.C when Keyboard.Modifiers == ModifierKeys.None:
+                ToggleArtwork();
                 break;
             default:
                 return;
@@ -1158,6 +1241,7 @@ public partial class MainWindow : Window
 
     private void ShowNowPlaying(Track? track)
     {
+        ArtworkWindow.ShowTrack(track);
         if (track is null)
         {
             NowPlayingTitle.Text = "Nothing playing";
@@ -1180,6 +1264,8 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        TrackInfoWindow.TagsSaved -= OnTagsSaved;
+        ArtworkWindow.OpenChanged -= OnArtworkOpenChanged;
         _settings.CollapsedLibraryFolders = _collapsedFolders.ToList();
         _settings.Save();
         _library.Dispose();
