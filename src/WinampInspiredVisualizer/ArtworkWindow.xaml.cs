@@ -66,6 +66,7 @@ public partial class ArtworkWindow : Window
         }
 
         var window = new ArtworkWindow(player, settings) { Owner = owner };
+        (owner as MainWindow)?.DockNewWindow(window);
         _instance = window;
         window.Show();
         window.Display(track, force: true);

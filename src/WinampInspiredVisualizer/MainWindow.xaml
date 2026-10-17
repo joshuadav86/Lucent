@@ -282,6 +282,8 @@
                     <StackPanel.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Dock all windows to the player" InputGestureText="D" Click="OnArrangeWindows" />
+                            <MenuItem Header="Fill the screen" InputGestureText="G" Click="OnFillScreen" />
+                            <MenuItem Header="Shrink everything" InputGestureText="K" Click="OnShrinkWindows" />
                         </ContextMenu>
                     </StackPanel.ContextMenu>
                     <ToggleButton x:Name="VisualsToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"

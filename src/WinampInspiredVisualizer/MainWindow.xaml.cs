@@ -346,6 +346,101 @@ public partial class MainWindow : Window
         window.Height = Math.Max(window.MinHeight, Math.Min(bottom - top, area.Height));
     }
 
+    /// <summary>
+    /// Opens a small window (the artwork or the equalizer) docked to the outside of the player and
+    /// the windows docked to it, in the first spot where it fits on the screen without covering
+    /// anything, shrinking it a little if it has to. It then snaps and moves with them like the rest.
+    /// </summary>
+    public void DockNewWindow(Window window)
+    {
+        _snapper.Add(window);
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        var area = ScreenArea.Of(this);
+        var shown = Application.Current.Windows.Cast<Window>()
+            .Where(other => other != window && other.IsVisible && other.WindowState == WindowState.Normal
+                && (other == this || other.Owner == this) && !(other == _visuals && _visuals.IsFullscreen))
+            .Select(other => new Rect(other.Left, other.Top, other.ActualWidth, other.ActualHeight))
+            .ToList();
+
+        // The player and everything docked to it, and the bottom of the column under the player.
+        var player = new Rect(Left, Top, ActualWidth, ActualHeight);
+        var group = new List<Rect> { player };
+        var rest = shown.Where(rect => rect != player).ToList();
+        for (var i = 0; i < group.Count; i++)
+        {
+            foreach (var rect in rest.ToList())
+            {
+                if (Touches(group[i], rect))
+                {
+                    group.Add(rect);
+                    rest.Remove(rect);
+                }
+            }
+        }
+
+        var bounds = group.Aggregate(Rect.Union);
+        var columnBottom = group.Where(rect => Math.Abs(rect.Left - player.Left) < 2).Max(rect => rect.Bottom);
+
+        var want = SizeOf(window);
+        var resizable = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
+        // Each spot: where its top-left corner goes for a given size, and how much room there is.
+        var spots = new (Func<Size, Point> Corner, Size Room)[]
+        {
+            (size => new Point(bounds.Right, bounds.Top), new Size(area.Right - bounds.Right, area.Bottom - bounds.Top)),
+            (size => new Point(bounds.Left - size.Width, bounds.Top), new Size(bounds.Left - area.Left, area.Bottom - bounds.Top)),
+            (size => new Point(player.Left, columnBottom), new Size(area.Right - player.Left, area.Bottom - columnBottom)),
+            (size => new Point(bounds.Left, bounds.Bottom), new Size(area.Right - bounds.Left, area.Bottom - bounds.Bottom)),
+            (size => new Point(bounds.Left, bounds.Top - size.Height), new Size(area.Right - bounds.Left, bounds.Top - area.Top)),
+        };
+
+        foreach (var shrink in new[] { false, true })
+        {
+            if (shrink && !resizable)
+            {
+                break;
+            }
+
+            foreach (var (corner, room) in spots)
+            {
+                var size = new Size(Math.Min(want.Width, room.Width), Math.Min(want.Height, room.Height));
+                var fits = shrink
+                    ? size.Width >= window.MinWidth && size.Height >= window.MinHeight
+                    : size.Width >= want.Width && size.Height >= want.Height;
+                if (!fits)
+                {
+                    continue;
+                }
+
+                var spot = new Rect(corner(size), size);
+                if (shown.Any(rect => Overlap(rect, spot)))
+                {
+                    continue;
+                }
+
+                Place(window, spot.Left, spot.Top, spot.Width, spot.Height);
+                return;
+            }
+        }
+
+        // Nowhere free on this screen: over the player, as before.
+        window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+    }
+
+    private static bool Touches(Rect a, Rect b)
+    {
+        const double tolerance = 2;
+        var overlapX = a.Left < b.Right && b.Left < a.Right;
+        var overlapY = a.Top < b.Bottom && b.Top < a.Bottom;
+        return overlapY && (Math.Abs(a.Right - b.Left) <= tolerance || Math.Abs(b.Right - a.Left) <= tolerance)
+            || overlapX && (Math.Abs(a.Bottom - b.Top) <= tolerance || Math.Abs(b.Bottom - a.Top) <= tolerance);
+    }
+
+    private static bool Overlap(Rect a, Rect b)
+    {
+        var both = Rect.Intersect(a, b);
+        return !both.IsEmpty && both.Width > 2 && both.Height > 2;
+    }
+
     private bool IsDockedLeft(Window window) =>
         Math.Abs(window.Left + window.ActualWidth - Left) < 2 && window.Top < Top + ActualHeight && window.Top + window.ActualHeight > Top;
 
@@ -358,6 +453,85 @@ public partial class MainWindow : Window
 
     /// <summary>Puts every window back together around the player, as on the first run, and remembers it.</summary>
     private void ArrangeWindows()
+    {
+        RestoreAllWindows();
+        ArrangeFirstTime();
+        SavePlacements();
+    }
+
+    private void OnFillScreen(object sender, RoutedEventArgs e) => FillScreen();
+
+    /// <summary>
+    /// Docks the shown windows together and stretches them to fill the screen: the library down the
+    /// left, the player at the top with the queue under it to the bottom, and the visuals filling the rest.
+    /// </summary>
+    private void FillScreen()
+    {
+        RestoreAllWindows();
+        var area = ScreenArea.Of(this);
+        var library = _libraryWindow.IsVisible;
+        var visuals = _visuals.IsVisible;
+        var playerWidth = ActualWidth;
+        var playerHeight = ActualHeight;
+        var libraryWidth = 0.0;
+        if (library)
+        {
+            var room = area.Width - playerWidth;
+            libraryWidth = visuals
+                ? Math.Clamp(SizeOf(_libraryWindow).Width, _libraryWindow.MinWidth, Math.Max(_libraryWindow.MinWidth, room - _visuals.MinWidth))
+                : Math.Max(_libraryWindow.MinWidth, room);
+        }
+
+        Left = area.Left + libraryWidth;
+        Top = area.Top;
+        if (library)
+        {
+            Place(_libraryWindow, area.Left, area.Top, libraryWidth, area.Height);
+        }
+
+        if (_queue.IsVisible)
+        {
+            Place(_queue, Left, Top + playerHeight, playerWidth, Math.Max(_queue.MinHeight, area.Height - playerHeight));
+        }
+
+        if (visuals)
+        {
+            Place(_visuals, Left + playerWidth, area.Top, Math.Max(_visuals.MinWidth, area.Right - Left - playerWidth), area.Height);
+        }
+
+        SavePlacements();
+    }
+
+    private void OnShrinkWindows(object sender, RoutedEventArgs e) => ShrinkWindows();
+
+    /// <summary>Docks the shown windows around the player at their smallest sizes.</summary>
+    private void ShrinkWindows()
+    {
+        RestoreAllWindows();
+        var playerWidth = ActualWidth;
+        var playerHeight = ActualHeight;
+        var queueHeight = _queue.IsVisible ? _queue.MinHeight : 0;
+        var stackHeight = playerHeight + queueHeight;
+        if (_queue.IsVisible)
+        {
+            Place(_queue, Left, Top + playerHeight, playerWidth, queueHeight);
+        }
+
+        if (_visuals.IsVisible)
+        {
+            Place(_visuals, Left + playerWidth, Top, _visuals.MinWidth, Math.Max(_visuals.MinHeight, stackHeight));
+        }
+
+        if (_libraryWindow.IsVisible)
+        {
+            Place(_libraryWindow, Left - _libraryWindow.MinWidth, Top, _libraryWindow.MinWidth, Math.Max(_libraryWindow.MinHeight, stackHeight));
+        }
+
+        SavePlacements();
+    }
+
+    /// <summary>Brings every window, the visuals included, out of maximized or fullscreen.</summary>
+    private void RestoreAllWindows()
     {
         foreach (var window in ToolWindows)
         {
@@ -373,8 +547,6 @@ public partial class MainWindow : Window
         }
 
         WindowState = WindowState.Normal;
-        ArrangeFirstTime();
-        SavePlacements();
     }
 
     private static bool IsOnScreen(Window window) =>
@@ -1155,6 +1327,12 @@ public partial class MainWindow : Window
                 break;
             case Key.D:
                 ArrangeWindows();
+                break;
+            case Key.G:
+                FillScreen();
+                break;
+            case Key.K:
+                ShrinkWindows();
                 break;
             case Key.L:
                 ToggleWindow(_libraryWindow);
