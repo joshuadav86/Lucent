@@ -114,6 +114,32 @@ public sealed class MusicLibrary : IDisposable
         }
     }
 
+    /// <summary>
+    /// Reads these files' tags again and updates their rows, after their info was edited. Files that keep
+    /// their dates aren't picked up as changed by a rescan, so this is what shows the new info.
+    /// </summary>
+    public async Task RereadTagsAsync(IEnumerable<string> paths)
+    {
+        var items = paths
+            .Select(path => _byPath.TryGetValue(path, out var item) ? item : null)
+            .OfType<LibraryItem>()
+            .Distinct()
+            .ToList();
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var tracks = await Task.Run(() => items.Select(item => Track.FromFile(item.Path)).ToList());
+        for (var i = 0; i < items.Count; i++)
+        {
+            items[i].ApplyTags(tracks[i]);
+        }
+
+        // Lets the list re-sort when it's in title or artist order.
+        TagsLoaded?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Dispose()
     {
         _scan?.Cancel();
