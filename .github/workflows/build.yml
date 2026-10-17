@@ -88,13 +88,14 @@ jobs:
           -p:Version=${{ env.LUCENT_VERSION }}
           -o publish
 
-      - name: Check the MP3 encoder and plugin helper are next to Lucent.exe
+      - name: Check the MP3 encoder, plugin helper and WebView2 loader are next to Lucent.exe
         shell: pwsh
         run: |
           # The converter's MP3 encoder is a separate native DLL (LAME), and the plugin helper a separate
-          # program. They must sit beside Lucent.exe, not inside the single-file bundle, to be found.
+          # program, and WebView2's loader (the Bandcamp sign-in page) is native too. They must sit beside
+          # Lucent.exe, not inside the single-file bundle, to be found.
           Get-ChildItem publish | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
-          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll", "LucentPluginHost.exe") {
+          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll", "LucentPluginHost.exe", "WebView2Loader.dll") {
             if (-not (Test-Path "publish/$dll")) { Write-Host "::error::$dll is missing from the published app"; exit 1 }
           }
 

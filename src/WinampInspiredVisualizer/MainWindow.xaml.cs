@@ -17,6 +17,7 @@ using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Stores;
 using WinampInspiredVisualizer.Themes;
 using WinampInspiredVisualizer.Updates;
 using WinampInspiredVisualizer.Visualizer;
@@ -40,6 +41,7 @@ public partial class MainWindow : Window
     private readonly VisualizerHost _visualizer;
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly MusicLibrary _library = new();
+    private readonly StoreService _stores;
     private readonly AppUpdater _updater = new();
     private readonly VisualizerWindow _visuals;
     private readonly QueueWindow _queue;
@@ -119,6 +121,8 @@ public partial class MainWindow : Window
 
         _libraryWindow.Attach(_library, _settings);
         _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders);
+        _stores = new StoreService(_settings, LinkLibraryFolder);
+        _stores.Start();
 
         foreach (var window in ToolWindows)
         {
@@ -1922,6 +1926,22 @@ public partial class MainWindow : Window
             MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
+    /// <summary>Opens the Bandcamp and Beatport window: importing downloads, and syncing a Bandcamp collection.</summary>
+    public void ShowStores() => StoreWindow.Open(this, _stores, _settings);
+
+    /// <summary>Puts a folder into the library, if it isn't in it already (the Bandcamp folder, say).</summary>
+    private void LinkLibraryFolder(string folder)
+    {
+        var before = _settings.LibraryFolders.Count;
+        var hiddenBefore = _settings.HiddenLibraryFolders.Count;
+        LibraryFolderList.Add(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder);
+        if (_settings.LibraryFolders.Count != before || _settings.HiddenLibraryFolders.Count != hiddenBefore)
+        {
+            _settings.Save();
+            _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders);
+        }
+    }
+
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         SavePlacements();
@@ -1936,6 +1956,7 @@ public partial class MainWindow : Window
         _settings.CollapsedLibraryFolders = _libraryWindow.CollapsedFolders.ToList();
         _settings.Save();
         _library.Dispose();
+        _stores.Dispose();
         _positionTimer.Stop();
         CompositionTarget.Rendering -= OnMeterFrame;
         _visualizer.Dispose();
