@@ -300,6 +300,8 @@ float3 Render(float2 uv, float2 p)
             float mist = exp(-at.y * 1.4) * 0.6;
             float cloud = fbm(float2(at.x * 1.3 + sheetSeed * 10.0, at.y * 0.9 - Time * 0.45) + float2(Time * 0.05, 0.0));
             float density = saturate((plume * (1.0 + Beat * 1.2 + Bass * 0.8) + mist) * smoothstep(0.25, 0.7, cloud) * 1.1);
+            // Thin out against the walls and right in front of the camera, so no sheet shows an edge.
+            density *= smoothstep(0.0, 0.5, AlleyHalf - abs(at.x)) * smoothstep(0.4, 1.6, along) * smoothstep(0.0, 0.6, hitDistance - along);
             float3 litBy = alleyLight(at, float3(0.0, 0.0, -1.0)) * 0.8 + 0.04;
             steam += clear * density * litBy;
             clear *= 1.0 - density;
