@@ -457,9 +457,9 @@ public sealed class Renderer : IDisposable
             lastTime = now;
 
             var (width, height) = GetClientSize();
-            if (width <= 1 || height <= 1)
+            if (width <= 1 || height <= 1 || !IsWindowVisible(_hwnd))
             {
-                // Minimized or hidden: nothing to draw.
+                // Minimized or hidden (the visuals window can be closed while music plays): nothing to draw.
                 Thread.Sleep(50);
                 continue;
             }
@@ -934,6 +934,10 @@ public sealed class Renderer : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hwnd);
 
     private sealed class DeviceLostException : Exception
     {

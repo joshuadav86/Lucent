@@ -1,13 +1,14 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
@@ -16,29 +17,38 @@ using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Themes;
 using WinampInspiredVisualizer.Visualizer;
+using WinampInspiredVisualizer.Windows;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace WinampInspiredVisualizer;
 
+/// <summary>
+/// The player window, and the app's controller: it owns the audio, the queue and the
+/// library, and the windows around it (visuals, queue, library) call back into it.
+/// </summary>
 public partial class MainWindow : Window
 {
-    // How often Auto can change visual, offered in the menu next to the AUTO pill (and in Options).
-    private static readonly int[] AutoCycleChoices = { 10, 15, 25, 45, 90, 180 };
+    private const double MarqueeGap = 48;
+    private const double MarqueeSpeed = 36;
 
     private readonly AudioPlayer _player = new();
     private readonly ObservableCollection<PlaylistEntry> _playlist = new();
     private readonly DispatcherTimer _positionTimer;
+    private readonly DispatcherTimer _meterTimer;
     private readonly VisualizerHost _visualizer;
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly MusicLibrary _library = new();
-    private readonly HashSet<string> _collapsedFolders;
-    private ListCollectionView? _libraryView;
-    private IReadOnlyList<string> _presetNames = Array.Empty<string>();
-    private DateTime _presetPopupClosedAt;
+    private readonly VisualizerWindow _visuals;
+    private readonly QueueWindow _queue;
+    private readonly LibraryWindow _libraryWindow;
+    private readonly SpectrumMeter _meter;
+    private readonly WindowSnapper _snapper;
+    private readonly Random _random = new();
+    // Shuffle remembers what it has played, so it plays everything once before repeating,
+    // and so Previous can step back through it.
+    private readonly List<PlaylistEntry> _shuffleHistory = new();
     private DateTime _optionsClosedAt;
     private DisplayInfo _display = DisplayInfo.Standard;
-    private bool _isFullscreen;
-    private WindowState _windowStateBeforeFullscreen;
     private PlaylistEntry? _current;
     private bool _isDraggingSeek;
     private bool _updatingSeekBar;
@@ -47,168 +57,288 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        PlaylistView.ItemsSource = _playlist;
+        // The other windows are made after this one, so this stays the app's main window:
+        // closing it closes Lucid.
+        Application.Current.MainWindow = this;
+        _visuals = new VisualizerWindow();
+        _queue = new QueueWindow();
+        _libraryWindow = new LibraryWindow();
+
+        _snapper = new WindowSnapper(this);
+        _snapper.MoveFinished += (_, _) => SavePlacements();
+
+        _queue.PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>
         {
-            EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            QueueCount.Text = _playlist.Count switch
+            _queue.EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            _queue.QueueCount.Text = _playlist.Count switch
             {
                 0 => "Empty",
                 1 => "1 track",
                 var count => $"{count} tracks",
             };
+            _shuffleHistory.RemoveAll(entry => !_playlist.Contains(entry));
+            ShowNowPlaying(_current?.Track);
         };
 
+        VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
         _player.Volume = (float)VolumeSlider.Value;
-        _player.TrackEnded += (_, _) => PlayNext(wrap: false);
+        _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _positionTimer.Tick += (_, _) => UpdatePosition();
         _positionTimer.Start();
 
+        _meter = new SpectrumMeter(_player.Capture) { Mode = _settings.Meter };
+        MeterHost.Child = _meter;
+        _meterTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
+        _meterTimer.Tick += (_, _) =>
+        {
+            if (WindowState != WindowState.Minimized)
+            {
+                _meter.Tick();
+            }
+        };
+        _meterTimer.Start();
+
         _visualizer = new VisualizerHost(_player.Capture);
-        _visualizer.PresetsLoaded += (_, names) =>
-        {
-            _presetNames = names;
-            PresetList.ItemsSource = names;
-            ShowPreset();
-        };
-        _visualizer.ProblemReported += (_, message) =>
-        {
-            VisualizerStatus.Text = message;
-            VisualizerStatus.ToolTip = message;
-        };
-        _visualizer.DoubleClicked += (_, _) => ToggleFullscreen();
-        _visualizer.PresetChanged += (_, _) => ShowPreset();
-        _visualizer.FrameRateMeasured += (_, stats) => ShowFrameRate(stats);
         _visualizer.DisplayChanged += (_, display) =>
         {
             _display = display;
             UpdateHdrHint();
         };
         _visualizer.StartPresetName = _settings.LastVisual;
+        _visuals.Attach(_visualizer, _settings);
         ApplyVisualizerSettings();
-        VisualizerFrame.Child = _visualizer;
 
         ThemeManager.Apply(ThemeManager.Find(_settings.Theme));
         BuildThemeSwatches();
-        UpdateAutoCycleButton();
 
-        _collapsedFolders = new HashSet<string>(_settings.CollapsedLibraryFolders, StringComparer.OrdinalIgnoreCase);
-        _library.ItemsChanged += (_, _) => RebuildLibraryView();
-        _library.TagsLoaded += (_, _) =>
-        {
-            // Titles and artists only become known once tags are read, so re-sort by them now.
-            if (_settings.LibrarySort is LibrarySort.Title or LibrarySort.Artist)
-            {
-                _libraryView?.Refresh();
-            }
-        };
-        _library.ScanningChanged += (_, _) => UpdateLibraryStatus();
-        SortLabel.Text = LibrarySorts.Label(_settings.LibrarySort);
-        UpdateGroupFoldersButton();
-        ApplyPanels();
+        _libraryWindow.Attach(_library, _settings);
         _library.SetFolders(_settings.LibraryFolders);
-        UpdateLibraryStatus();
-    }
 
-    // ---- Visuals ----
-
-    private void OnNextPreset(object sender, RoutedEventArgs e) => ChangePreset(+1);
-
-    private void OnPreviousPreset(object sender, RoutedEventArgs e) => ChangePreset(-1);
-
-    private void OnToggleFullscreen(object sender, RoutedEventArgs e) => ToggleFullscreen();
-
-    private void OnToggleAutoCycle(object sender, RoutedEventArgs e)
-    {
-        _settings.AutoCycle = !_settings.AutoCycle;
-        ApplyVisualizerSettings();
-        UpdateAutoCycleButton();
-        _settings.Save();
-    }
-
-    private void UpdateAutoCycleButton()
-    {
-        var seconds = _settings.AutoCycleSeconds;
-        AutoCycleSwitch.IsChecked = _settings.AutoCycle;
-        AutoCycleButton.Content = $"AUTO · {ShortIntervalText(seconds)}";
-        AutoCycleButton.SetResourceReference(ForegroundProperty, _settings.AutoCycle ? "AccentBrush" : "FaintTextBrush");
-        AutoCycleButton.ToolTip = _settings.AutoCycle
-            ? $"Moving to a new visual on the beat every {IntervalText(seconds)} or so. Click to stop (A), right-click to change how often"
-            : $"Auto is off. Click to move to a new visual on the beat every {IntervalText(seconds)} or so (A), right-click to change how often";
-    }
-
-    // "25 seconds" / "3 minutes" for menus and tooltips, "25s" / "3m" for the pill.
-    private static string IntervalText(int seconds) =>
-        seconds >= 120 && seconds % 60 == 0 ? $"{seconds / 60} minutes" : $"{seconds} seconds";
-
-    private static string ShortIntervalText(int seconds) =>
-        seconds >= 120 && seconds % 60 == 0 ? $"{seconds / 60}m" : $"{seconds}s";
-
-    private void OnAutoCycleIntervalMenu(object sender, RoutedEventArgs e) => ShowAutoCycleMenu();
-
-    private void OnAutoCycleRightClick(object sender, MouseButtonEventArgs e)
-    {
-        ShowAutoCycleMenu();
-        e.Handled = true;
-    }
-
-    /// <summary>The menu above the AUTO pill for choosing how often the visuals change.</summary>
-    private void ShowAutoCycleMenu()
-    {
-        var menu = new ContextMenu { PlacementTarget = AutoCycleButton, Placement = PlacementMode.Top, VerticalOffset = -6 };
-        menu.Items.Add(new MenuItem { Header = "Change visual about every", IsEnabled = false });
-        foreach (var seconds in AutoCycleChoices)
+        foreach (var window in ToolWindows)
         {
-            var item = new MenuItem { Header = IntervalText(seconds), IsChecked = seconds == _settings.AutoCycleSeconds };
-            item.Click += (_, _) =>
-            {
-                // Choosing how often only makes sense with Auto on, so this turns it on too.
-                _settings.AutoCycleSeconds = seconds;
-                _settings.AutoCycle = true;
-                ApplyVisualizerSettings();
-                UpdateAutoCycleButton();
-                _settings.Save();
-            };
-            menu.Items.Add(item);
+            window.Player = this;
+            window.IsVisibleChanged += (_, _) => OnToolWindowVisibilityChanged();
         }
 
-        menu.IsOpen = true;
+        PreviewMouseWheel += OnPreviewMouseWheel;
+        if (Saved("Player") is { } placement)
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = placement.Left;
+            Top = placement.Top;
+        }
+        else
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        Loaded += OnLoaded;
+        UpdateShuffleRepeatButtons();
+        UpdatePlayPauseButton();
+        ShowNowPlaying(null);
     }
 
-    private void OnToggleQueue(object sender, RoutedEventArgs e) => ToggleQueue();
+    /// <summary>True once the player is closing, so the other windows close for real instead of hiding.</summary>
+    public bool IsShuttingDown { get; private set; }
 
-    private void ToggleQueue()
+    private IEnumerable<ToolWindow> ToolWindows => new ToolWindow[] { _visuals, _queue, _libraryWindow };
+
+    // ---- Windows ----
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _settings.ShowQueue = !_settings.ShowQueue;
-        ApplyPanels();
+        // Owned windows minimize with the player and stay in front of it; this needs the player shown first.
+        foreach (var window in ToolWindows)
+        {
+            window.Owner = this;
+            _snapper.Add(window);
+        }
+
+        if (Saved("Player") is null)
+        {
+            ArrangeFirstTime();
+        }
+        else
+        {
+            foreach (var window in ToolWindows)
+            {
+                RestorePlacement(window);
+            }
+        }
+
+        // The visuals open with the player, unless they were closed last time.
+        if (_settings.ShowVisuals)
+        {
+            _visuals.Show();
+        }
+
+        if (_settings.ShowQueue)
+        {
+            _queue.Show();
+        }
+
+        if (_settings.ShowLibrary)
+        {
+            _libraryWindow.Show();
+        }
+
+        UpdateWindowToggles();
+        Activate();
+    }
+
+    /// <summary>
+    /// The first layout, like Winamp's: the queue under the player, the visuals beside them both,
+    /// and the library (if it's open) on the other side, centred on the screen.
+    /// </summary>
+    private void ArrangeFirstTime()
+    {
+        var work = SystemParameters.WorkArea;
+        var playerWidth = ActualWidth;
+        var playerHeight = ActualHeight;
+        var queueHeight = Math.Clamp(work.Height * 0.36, 220, 360);
+        var stackHeight = playerHeight + queueHeight;
+        var libraryWidth = _settings.ShowLibrary ? 360.0 : 0.0;
+        var visualsWidth = Math.Clamp(work.Width - playerWidth - libraryWidth - 40, 420, 860);
+        var groupWidth = libraryWidth + playerWidth + visualsWidth;
+        var left = work.Left + Math.Max(0, (work.Width - groupWidth) / 2);
+        var top = work.Top + Math.Max(0, (work.Height - stackHeight) / 2);
+
+        Left = left + libraryWidth;
+        Top = top;
+        Place(_queue, Left, top + playerHeight, playerWidth, queueHeight);
+        Place(_visuals, Left + playerWidth, top, visualsWidth, stackHeight);
+        if (_settings.ShowLibrary)
+        {
+            Place(_libraryWindow, left, top, libraryWidth, stackHeight);
+        }
+    }
+
+    private static void Place(Window window, double left, double top, double width, double height)
+    {
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.Left = left;
+        window.Top = top;
+        window.Width = width;
+        window.Height = height;
+    }
+
+    private void RestorePlacement(ToolWindow window)
+    {
+        if (Saved(window.PlacementName) is { } placement)
+        {
+            Place(window, placement.Left, placement.Top, placement.Width, placement.Height);
+            return;
+        }
+
+        // Never placed before (the library, usually): beside the player where there's room.
+        var work = SystemParameters.WorkArea;
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        var height = Math.Max(window.Height, ActualHeight + (_queue.IsVisible ? _queue.ActualHeight : 0));
+        window.Height = Math.Min(height, work.Height);
+        window.Left = Left - window.Width >= work.Left ? Left - window.Width : Math.Min(Left + ActualWidth, work.Right - window.Width);
+        window.Top = Math.Clamp(Top, work.Top, Math.Max(work.Top, work.Bottom - window.Height));
+    }
+
+    /// <summary>A saved position, if it's still on one of the screens.</summary>
+    private WindowBounds? Saved(string name)
+    {
+        if (!_settings.Windows.TryGetValue(name, out var bounds) || bounds.Width < 50 || bounds.Height < 50)
+        {
+            return null;
+        }
+
+        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+            SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+        var visible = Rect.Intersect(screen, new Rect(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
+        return visible.IsEmpty || visible.Width < 100 || visible.Height < 40 ? null : bounds;
+    }
+
+    private void SavePlacements()
+    {
+        Remember("Player", this);
+        foreach (var window in ToolWindows)
+        {
+            // While fullscreen, keep the size the visuals will go back to.
+            if (window != _visuals || !_visuals.IsFullscreen)
+            {
+                Remember(window.PlacementName, window);
+            }
+        }
+
         _settings.Save();
     }
 
-    private void OnToggleLibrary(object sender, RoutedEventArgs e) => ToggleLibrary();
-
-    private void ToggleLibrary()
+    private void Remember(string name, Window window)
     {
-        _settings.ShowLibrary = !_settings.ShowLibrary;
-        ApplyPanels();
-        _settings.Save();
+        if (!window.IsLoaded)
+        {
+            return;
+        }
+
+        var bounds = window.WindowState == WindowState.Normal
+            ? new Rect(window.Left, window.Top, window.ActualWidth, window.ActualHeight)
+            : window.RestoreBounds;
+        if (!bounds.IsEmpty)
+        {
+            _settings.Windows[name] = new WindowBounds { Left = bounds.Left, Top = bounds.Top, Width = bounds.Width, Height = bounds.Height };
+        }
     }
 
-    /// <summary>Shows the library and queue drawers the user has open, unless the visuals are fullscreen.</summary>
-    private void ApplyPanels()
+    private void OnToggleVisuals(object sender, RoutedEventArgs e) => ToggleWindow(_visuals);
+
+    private void OnToggleQueue(object sender, RoutedEventArgs e) => ToggleWindow(_queue);
+
+    private void OnToggleLibrary(object sender, RoutedEventArgs e) => ToggleWindow(_libraryWindow);
+
+    private void ToggleWindow(ToolWindow window)
     {
-        LibraryPanel.Visibility = !_isFullscreen && _settings.ShowLibrary ? Visibility.Visible : Visibility.Collapsed;
-        PlaylistPanel.Visibility = !_isFullscreen && _settings.ShowQueue ? Visibility.Visible : Visibility.Collapsed;
-        LibraryToggle.IsChecked = _settings.ShowLibrary;
-        QueueToggle.IsChecked = _settings.ShowQueue;
+        if (window.IsVisible)
+        {
+            window.Hide();
+            return;
+        }
+
+        if (!window.IsLoaded && Saved(window.PlacementName) is null)
+        {
+            RestorePlacement(window);
+        }
+
+        window.Show();
     }
+
+    private void OnToolWindowVisibilityChanged()
+    {
+        if (IsShuttingDown)
+        {
+            return;
+        }
+
+        _settings.ShowVisuals = _visuals.IsVisible;
+        _settings.ShowQueue = _queue.IsVisible;
+        _settings.ShowLibrary = _libraryWindow.IsVisible;
+        UpdateWindowToggles();
+        SavePlacements();
+    }
+
+    private void UpdateWindowToggles()
+    {
+        VisualsToggle.IsChecked = _visuals.IsVisible;
+        QueueToggle.IsChecked = _queue.IsVisible;
+        LibraryToggle.IsChecked = _libraryWindow.IsVisible;
+    }
+
+    private void OnMinimize(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    private void OnCloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
 
     // ---- Options ----
 
     /// <summary>Hands the graphics and visual-change settings to the visualizer.</summary>
-    private void ApplyVisualizerSettings()
+    public void ApplyVisualizerSettings()
     {
         _visualizer.TargetPixels = GraphicsOptions.Pixels(_settings.Resolution);
         _visualizer.Quality = GraphicsOptions.Quality(_settings.Detail);
@@ -218,7 +348,9 @@ public partial class MainWindow : Window
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
         _visualizer.TransitionSeconds = GraphicsOptions.Seconds(_settings.TransitionSpeed);
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
-        FrameRateText.Visibility = _settings.ShowFrameRate ? Visibility.Visible : Visibility.Collapsed;
+        _visuals.ShowFrameRate(_settings.ShowFrameRate);
+        _visuals.UpdateAutoCycleButton();
+        AutoCycleSwitch.IsChecked = _settings.AutoCycle;
     }
 
     private void OnToggleOptions(object sender, RoutedEventArgs e) => ToggleOptions();
@@ -232,7 +364,7 @@ public partial class MainWindow : Window
         }
 
         // The click that closed the panel (by clicking outside it, on this button) shouldn't reopen it.
-        if (_isFullscreen || (DateTime.UtcNow - _optionsClosedAt).TotalMilliseconds < 250)
+        if (_visuals.IsFullscreen || (DateTime.UtcNow - _optionsClosedAt).TotalMilliseconds < 250)
         {
             OptionsButton.IsChecked = false;
             return;
@@ -283,7 +415,6 @@ public partial class MainWindow : Window
                 break;
             case "AutoCycleSeconds" when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds):
                 _settings.AutoCycleSeconds = seconds;
-                UpdateAutoCycleButton();
                 break;
             case "TransitionSpeed" when Enum.TryParse<TransitionSpeed>(value, out var speed):
                 _settings.TransitionSpeed = speed;
@@ -322,7 +453,6 @@ public partial class MainWindow : Window
         }
 
         ApplyVisualizerSettings();
-        UpdateAutoCycleButton();
         UpdateHdrHint();
         _settings.Save();
     }
@@ -379,12 +509,6 @@ public partial class MainWindow : Window
                 : "Your screen is in HDR mode, so highlights can shine far brighter than normal white.";
     }
 
-    /// <summary>Updates the frame rate readout in the player bar (about once a second while visuals draw).</summary>
-    private void ShowFrameRate(FrameStats stats)
-    {
-        FrameRateText.Text = $"{stats.FramesPerSecond:0} fps · {stats.Width} × {stats.Height}" + (stats.Hdr ? " · HDR" : string.Empty);
-    }
-
     private static IEnumerable<T> LogicalDescendants<T>(DependencyObject root)
         where T : DependencyObject
     {
@@ -402,142 +526,21 @@ public partial class MainWindow : Window
         }
     }
 
-    // ---- Window chrome ----
-
-    private void OnMinimize(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
-
-    private void OnMaximizeRestore(object sender, RoutedEventArgs e)
-    {
-        if (WindowState == WindowState.Maximized)
-        {
-            SystemCommands.RestoreWindow(this);
-        }
-        else
-        {
-            SystemCommands.MaximizeWindow(this);
-        }
-    }
-
-    private void OnCloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
-
-    private void OnWindowStateChanged(object? sender, EventArgs e)
-    {
-        var maximized = WindowState == WindowState.Maximized;
-        MaximizeIcon.Data = (Geometry)FindResource(maximized ? "RestoreIcon" : "MaximizeIcon");
-        MaximizeButton.ToolTip = maximized ? "Restore" : "Maximize";
-
-        // A maximized borderless window hangs slightly off-screen; pad it back in.
-        WindowRoot.Margin = maximized && !_isFullscreen ? new Thickness(7) : new Thickness(0);
-    }
-
-    private void ChangePreset(int step)
-    {
-        if (_presetNames.Count == 0)
-        {
-            return;
-        }
-
-        _visualizer.PresetIndex = ((_visualizer.PresetIndex + step) % _presetNames.Count + _presetNames.Count) % _presetNames.Count;
-        ShowPreset();
-    }
-
-    private void ShowPreset()
-    {
-        if (_presetNames.Count == 0)
-        {
-            PresetName.Text = "No visuals found";
-            return;
-        }
-
-        var index = Math.Clamp(_visualizer.PresetIndex, 0, _presetNames.Count - 1);
-        PresetName.Text = _presetNames[index];
-        PresetList.SelectedIndex = index;
-        _settings.LastVisual = _presetNames[index];
-    }
-
-    private void OnTogglePresetPicker(object sender, RoutedEventArgs e) => TogglePresetPicker();
-
-    private void TogglePresetPicker()
-    {
-        // Clicking the name while the picker is open closes it (the click outside already did),
-        // so don't immediately reopen it.
-        if (PresetPopup.IsOpen || DateTime.UtcNow - _presetPopupClosedAt < TimeSpan.FromMilliseconds(250))
-        {
-            PresetPopup.IsOpen = false;
-            return;
-        }
-
-        if (_presetNames.Count == 0)
-        {
-            return;
-        }
-
-        PresetPopup.IsOpen = true;
-        PresetList.ScrollIntoView(PresetList.SelectedItem);
-        PresetList.Focus();
-    }
-
-    private void OnPresetPopupClosed(object? sender, EventArgs e) => _presetPopupClosedAt = DateTime.UtcNow;
-
-    private void OnPresetListClick(object sender, MouseButtonEventArgs e)
-    {
-        if (ItemsControl.ContainerFromElement(PresetList, (DependencyObject)e.OriginalSource) is ListBoxItem item)
-        {
-            PickPreset(PresetList.ItemContainerGenerator.IndexFromContainer(item));
-        }
-    }
-
-    private void OnPresetListKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter)
-        {
-            PickPreset(PresetList.SelectedIndex);
-            e.Handled = true;
-        }
-    }
-
-    private void PickPreset(int index)
-    {
-        if (index >= 0 && index < _presetNames.Count)
-        {
-            _visualizer.PresetIndex = index;
-            ShowPreset();
-        }
-
-        PresetPopup.IsOpen = false;
-    }
-
-    /// <summary>Fills the screen with the visuals, hiding everything else (Esc or double-click to leave).</summary>
-    private void ToggleFullscreen()
-    {
-        _isFullscreen = !_isFullscreen;
-        var chrome = _isFullscreen ? Visibility.Collapsed : Visibility.Visible;
-        TitleBar.Visibility = chrome;
-        BottomBar.Visibility = chrome;
-        ApplyPanels();
-
-        if (_isFullscreen)
-        {
-            _windowStateBeforeFullscreen = WindowState;
-            // Leave Maximized first so Windows recalculates the size without the title bar.
-            WindowState = WindowState.Normal;
-            WindowStyle = WindowStyle.None;
-            ResizeMode = ResizeMode.NoResize;
-            WindowState = WindowState.Maximized;
-        }
-        else
-        {
-            WindowStyle = WindowStyle.SingleBorderWindow;
-            ResizeMode = ResizeMode.CanResize;
-            WindowState = _windowStateBeforeFullscreen;
-        }
-
-        OnWindowStateChanged(this, EventArgs.Empty);
-    }
-
     // ---- Adding music ----
 
-    private async void OnAddFiles(object sender, RoutedEventArgs e)
+    private void OnOpenMenu(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = OpenButton, Placement = PlacementMode.Bottom };
+        var files = new MenuItem { Header = "Add files…" };
+        files.Click += (_, _) => AddFilesFromDialog(this);
+        var folder = new MenuItem { Header = "Add a folder…" };
+        folder.Click += (_, _) => AddFolderFromDialog(this);
+        menu.Items.Add(files);
+        menu.Items.Add(folder);
+        menu.IsOpen = true;
+    }
+
+    public async void AddFilesFromDialog(Window owner)
     {
         var patterns = string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
         var dialog = new OpenFileDialog
@@ -547,28 +550,29 @@ public partial class MainWindow : Window
             Filter = $"Music files|{patterns}|All files|*.*",
         };
 
-        if (dialog.ShowDialog(this) == true)
+        if (dialog.ShowDialog(owner) == true)
         {
             await AddPathsAsync(dialog.FileNames);
         }
     }
 
-    private async void OnAddFolder(object sender, RoutedEventArgs e)
+    public async void AddFolderFromDialog(Window owner)
     {
         var dialog = new OpenFolderDialog { Title = "Add a music folder", Multiselect = true };
-        if (dialog.ShowDialog(this) == true)
+        if (dialog.ShowDialog(owner) == true)
         {
             await AddPathsAsync(dialog.FolderNames);
         }
     }
 
-    private void OnClearPlaylist(object sender, RoutedEventArgs e) => ClearQueue();
+    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(paths);
 
-    private void ClearQueue()
+    public void ClearQueue()
     {
         _player.Close();
         _current = null;
         _playlist.Clear();
+        _shuffleHistory.Clear();
         ShowNowPlaying(null);
         UpdatePlayPauseButton();
     }
@@ -595,7 +599,7 @@ public partial class MainWindow : Window
         AddToQueue(tracks);
     }
 
-    private void AddToQueue(IReadOnlyList<Track> tracks)
+    public void AddToQueue(IReadOnlyList<Track> tracks)
     {
         var wasEmpty = _playlist.Count == 0;
         foreach (var track in tracks)
@@ -606,7 +610,7 @@ public partial class MainWindow : Window
         // Start playing straight away when music is added to an empty, idle player.
         if (wasEmpty && _playlist.Count > 0 && !_player.HasTrack)
         {
-            PlayEntry(_playlist[0]);
+            PlayEntry(_settings.Shuffle ? _playlist[_random.Next(_playlist.Count)] : _playlist[0]);
         }
     }
 
@@ -642,242 +646,20 @@ public partial class MainWindow : Window
         }
     }
 
-    // ---- Library ----
-
-    private void RebuildLibraryView()
+    public void ShowInExplorer(string path)
     {
-        var view = new ListCollectionView(_library.Items.ToList())
+        try
         {
-            CustomSort = new LibraryItemComparer(_settings.LibrarySort),
-        };
-        if (_settings.GroupLibraryByFolder)
-        {
-            view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LibraryItem.Folder)));
+            Process.Start("explorer.exe", $"/select,\"{path}\"");
         }
-
-        _libraryView = view;
-        LibraryView.ItemsSource = view;
-        UpdateLibraryStatus();
-    }
-
-    private void UpdateLibraryStatus()
-    {
-        var count = _library.Items.Count;
-        var linked = _library.Folders.Count > 0;
-        LibraryCount.Text = !linked
-            ? "No folder linked"
-            : _library.IsScanning && count == 0
-                ? "Looking for music…"
-                : $"{count:N0} {(count == 1 ? "track" : "tracks")}{(_library.IsScanning ? "  ·  updating" : string.Empty)}";
-
-        EmptyLibraryHint.Visibility = count == 0 && !_library.IsScanning ? Visibility.Visible : Visibility.Collapsed;
-        EmptyLibraryTitle.Text = linked ? "No music found" : "Link a music folder";
-        EmptyLibraryText.Text = linked
-            ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
-            : "Every song inside it shows up here, newest first, and new files appear on their own.";
-    }
-
-    private void OnLinkLibraryFolder(object sender, RoutedEventArgs e) => LinkLibraryFolder();
-
-    private void LinkLibraryFolder()
-    {
-        var dialog = new OpenFolderDialog { Title = "Choose a music folder for your library", Multiselect = true };
-        if (dialog.ShowDialog(this) != true)
+        catch (Exception ex)
         {
-            return;
-        }
-
-        foreach (var folder in dialog.FolderNames)
-        {
-            if (!_settings.LibraryFolders.Contains(folder, StringComparer.OrdinalIgnoreCase))
-            {
-                _settings.LibraryFolders.Add(folder);
-            }
-        }
-
-        _settings.ShowLibrary = true;
-        _settings.Save();
-        ApplyPanels();
-        _library.SetFolders(_settings.LibraryFolders);
-        UpdateLibraryStatus();
-    }
-
-    private void OnLibraryFolders(object sender, RoutedEventArgs e)
-    {
-        var menu = new ContextMenu { PlacementTarget = LibraryFoldersButton, Placement = PlacementMode.Bottom };
-        foreach (var folder in _settings.LibraryFolders.ToList())
-        {
-            var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
-            var remove = new MenuItem { Header = $"Remove {(string.IsNullOrEmpty(name) ? folder : name)}", ToolTip = folder };
-            remove.Click += (_, _) =>
-            {
-                _settings.LibraryFolders.RemoveAll(f => string.Equals(f, folder, StringComparison.OrdinalIgnoreCase));
-                _settings.Save();
-                _library.SetFolders(_settings.LibraryFolders);
-                UpdateLibraryStatus();
-            };
-            menu.Items.Add(remove);
-        }
-
-        if (menu.Items.Count > 0)
-        {
-            menu.Items.Add(new Separator());
-        }
-
-        var add = new MenuItem { Header = _settings.LibraryFolders.Count == 0 ? "Link a music folder…" : "Link another folder…" };
-        add.Click += (_, _) => LinkLibraryFolder();
-        menu.Items.Add(add);
-        menu.IsOpen = true;
-    }
-
-    private async void OnRefreshLibrary(object sender, RoutedEventArgs e) => await _library.RescanAsync();
-
-    private void OnSortMenu(object sender, RoutedEventArgs e)
-    {
-        var menu = new ContextMenu { PlacementTarget = SortButton, Placement = PlacementMode.Bottom };
-        foreach (var sort in LibrarySorts.All)
-        {
-            var item = new MenuItem { Header = LibrarySorts.Label(sort), IsChecked = sort == _settings.LibrarySort };
-            item.Click += (_, _) =>
-            {
-                _settings.LibrarySort = sort;
-                _settings.Save();
-                SortLabel.Text = LibrarySorts.Label(sort);
-                RebuildLibraryView();
-            };
-            menu.Items.Add(item);
-        }
-
-        menu.IsOpen = true;
-    }
-
-    private void OnToggleGroupFolders(object sender, RoutedEventArgs e)
-    {
-        _settings.GroupLibraryByFolder = !_settings.GroupLibraryByFolder;
-        _settings.Save();
-        UpdateGroupFoldersButton();
-        RebuildLibraryView();
-    }
-
-    private void UpdateGroupFoldersButton() =>
-        GroupFoldersButton.SetResourceReference(ForegroundProperty, _settings.GroupLibraryByFolder ? "AccentBrush" : "FaintTextBrush");
-
-    // Folder headings remember whether they were left open or closed.
-    private void OnFolderGroupLoaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is Expander { DataContext: CollectionViewGroup group } expander)
-        {
-            expander.IsExpanded = !_collapsedFolders.Contains(group.Name?.ToString() ?? string.Empty);
-        }
-    }
-
-    private void OnFolderGroupExpanded(object sender, RoutedEventArgs e)
-    {
-        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
-        {
-            _collapsedFolders.Remove(group.Name?.ToString() ?? string.Empty);
-        }
-    }
-
-    private void OnFolderGroupCollapsed(object sender, RoutedEventArgs e)
-    {
-        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
-        {
-            _collapsedFolders.Add(group.Name?.ToString() ?? string.Empty);
-        }
-    }
-
-    /// <summary>The library as it's listed on screen: folder by folder when grouped.</summary>
-    private List<LibraryItem> LibraryInViewOrder()
-    {
-        if (_libraryView is null)
-        {
-            return new List<LibraryItem>();
-        }
-
-        if (_libraryView.Groups is { Count: > 0 } groups)
-        {
-            return groups.Cast<CollectionViewGroup>().SelectMany(group => group.Items.Cast<LibraryItem>()).ToList();
-        }
-
-        return _libraryView.Cast<LibraryItem>().ToList();
-    }
-
-    private List<LibraryItem> SelectedLibraryItems()
-    {
-        var selected = new HashSet<LibraryItem>(LibraryView.SelectedItems.Cast<LibraryItem>());
-        return LibraryInViewOrder().Where(selected.Contains).ToList();
-    }
-
-    private void OnLibraryDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        // Only rows count; double-clicking a folder heading or the scroll bar does nothing.
-        if (e.OriginalSource is DependencyObject source
-            && ItemsControl.ContainerFromElement(LibraryView, source) is ListBoxItem { DataContext: LibraryItem item })
-        {
-            PlayFromLibrary(item);
-        }
-    }
-
-    private void OnLibraryKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && SelectedLibraryItems().FirstOrDefault() is { } item)
-        {
-            PlayFromLibrary(item);
-            e.Handled = true;
-        }
-    }
-
-    private void OnLibraryPlayNow(object sender, RoutedEventArgs e)
-    {
-        if (SelectedLibraryItems().FirstOrDefault() is { } item)
-        {
-            PlayFromLibrary(item);
-        }
-    }
-
-    private async void OnLibraryAddToQueue(object sender, RoutedEventArgs e)
-    {
-        var items = SelectedLibraryItems();
-        AddToQueue(await Task.Run(() => items.Select(item => item.ToTrack()).ToList()));
-    }
-
-    private async void OnLibraryPlayFolder(object sender, RoutedEventArgs e)
-    {
-        if (SelectedLibraryItems().FirstOrDefault() is not { } chosen)
-        {
-            return;
-        }
-
-        var folder = LibraryInViewOrder().Where(item => item.Folder == chosen.Folder).ToList();
-        var tracks = await Task.Run(() => folder.Select(item => item.ToTrack()).ToList());
-        ReplaceQueue(tracks, folder.IndexOf(chosen));
-    }
-
-    private async void OnPlayLibrary(object sender, RoutedEventArgs e)
-    {
-        var items = LibraryInViewOrder();
-        var tracks = await Task.Run(() => items.Select(item => item.ToTrack()).ToList());
-        ReplaceQueue(tracks, 0);
-    }
-
-    private void OnLibraryShowInExplorer(object sender, RoutedEventArgs e)
-    {
-        if (SelectedLibraryItems().FirstOrDefault() is { } item)
-        {
-            try
-            {
-                Process.Start("explorer.exe", $"/select,\"{item.Path}\"");
-            }
-            catch (Exception ex)
-            {
-                ShowError("Couldn't open File Explorer.", ex);
-            }
+            ShowError("Couldn't open File Explorer.", ex);
         }
     }
 
     /// <summary>Plays a library track now, queueing it right after the current track if it isn't queued yet.</summary>
-    private void PlayFromLibrary(LibraryItem item)
+    public void PlayFromLibrary(LibraryItem item)
     {
         var entry = _playlist.FirstOrDefault(e => string.Equals(e.Track.Path, item.Path, StringComparison.OrdinalIgnoreCase));
         if (entry is null)
@@ -890,7 +672,7 @@ public partial class MainWindow : Window
         PlayEntry(entry);
     }
 
-    private void ReplaceQueue(IReadOnlyList<Track> tracks, int startIndex)
+    public void ReplaceQueue(IReadOnlyList<Track> tracks, int startIndex)
     {
         if (tracks.Count == 0)
         {
@@ -906,48 +688,26 @@ public partial class MainWindow : Window
         PlayEntry(_playlist[Math.Clamp(startIndex, 0, _playlist.Count - 1)]);
     }
 
-    // ---- Playlist ----
+    // ---- Queue ----
 
-    private void OnPlaylistDoubleClick(object sender, MouseButtonEventArgs e)
+    public void RemoveFromQueue(IEnumerable<PlaylistEntry> entries)
     {
-        if (PlaylistView.SelectedItem is PlaylistEntry entry)
-        {
-            PlayEntry(entry);
-        }
-    }
-
-    private void OnPlaylistKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && PlaylistView.SelectedItem is PlaylistEntry entry)
-        {
-            PlayEntry(entry);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Delete)
-        {
-            RemoveSelected();
-            e.Handled = true;
-        }
-    }
-
-    private void RemoveSelected()
-    {
-        foreach (var entry in PlaylistView.SelectedItems.Cast<PlaylistEntry>().ToList())
+        foreach (var entry in entries.ToList())
         {
             if (entry == _current)
             {
                 _player.Close();
                 _current = null;
-                ShowNowPlaying(null);
             }
 
             _playlist.Remove(entry);
         }
 
+        ShowNowPlaying(_current?.Track);
         UpdatePlayPauseButton();
     }
 
-    private void PlayEntry(PlaylistEntry entry)
+    public void PlayEntry(PlaylistEntry entry)
     {
         try
         {
@@ -966,12 +726,29 @@ public partial class MainWindow : Window
 
         _current = entry;
         _current.IsCurrent = true;
-        PlaylistView.SelectedItem = entry;
-        PlaylistView.ScrollIntoView(entry);
+        if (!_shuffleHistory.Contains(entry))
+        {
+            _shuffleHistory.Add(entry);
+        }
+
+        _queue.PlaylistView.SelectedItem = entry;
+        _queue.PlaylistView.ScrollIntoView(entry);
 
         _player.Play();
         ShowNowPlaying(entry.Track);
         UpdatePlayPauseButton();
+        UpdatePosition();
+    }
+
+    private void OnTrackEnded()
+    {
+        if (_settings.Repeat == RepeatMode.One && _current is not null)
+        {
+            PlayEntry(_current);
+            return;
+        }
+
+        PlayNext(wrap: _settings.Repeat == RepeatMode.All);
     }
 
     private void PlayNext(bool wrap)
@@ -981,15 +758,33 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_settings.Shuffle)
+        {
+            var unplayed = _playlist.Where(entry => !_shuffleHistory.Contains(entry)).ToList();
+            if (unplayed.Count == 0)
+            {
+                if (!wrap)
+                {
+                    StopAtEnd();
+                    return;
+                }
+
+                // Everything has played: start a fresh round, avoiding an instant repeat of this track.
+                _shuffleHistory.Clear();
+                unplayed = _playlist.Where(entry => entry != _current || _playlist.Count == 1).ToList();
+            }
+
+            PlayEntry(unplayed[_random.Next(unplayed.Count)]);
+            return;
+        }
+
         var index = _current is null ? -1 : _playlist.IndexOf(_current);
         var next = index + 1;
         if (next >= _playlist.Count)
         {
             if (!wrap)
             {
-                // End of the playlist: rewind the last track and stop.
-                _player.Stop();
-                UpdatePlayPauseButton();
+                StopAtEnd();
                 return;
             }
 
@@ -997,6 +792,13 @@ public partial class MainWindow : Window
         }
 
         PlayEntry(_playlist[next]);
+    }
+
+    /// <summary>End of the queue: rewind the last track and stop.</summary>
+    private void StopAtEnd()
+    {
+        _player.Stop();
+        UpdatePlayPauseButton();
     }
 
     private void PlayPrevious()
@@ -1013,15 +815,72 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_settings.Shuffle && _current is not null)
+        {
+            var at = _shuffleHistory.IndexOf(_current);
+            if (at > 0)
+            {
+                var previous = _shuffleHistory[at - 1];
+                _shuffleHistory.RemoveAt(at);
+                PlayEntry(previous);
+                return;
+            }
+        }
+
         var index = _current is null ? 0 : _playlist.IndexOf(_current);
         PlayEntry(_playlist[Math.Max(0, index - 1)]);
+    }
+
+    private void OnToggleShuffle(object sender, RoutedEventArgs e) => ToggleShuffle();
+
+    private void ToggleShuffle()
+    {
+        _settings.Shuffle = !_settings.Shuffle;
+        _shuffleHistory.Clear();
+        if (_current is not null)
+        {
+            _shuffleHistory.Add(_current);
+        }
+
+        UpdateShuffleRepeatButtons();
+        _settings.Save();
+    }
+
+    private void OnCycleRepeat(object sender, RoutedEventArgs e) => CycleRepeat();
+
+    private void CycleRepeat()
+    {
+        _settings.Repeat = _settings.Repeat switch
+        {
+            RepeatMode.Off => RepeatMode.All,
+            RepeatMode.All => RepeatMode.One,
+            _ => RepeatMode.Off,
+        };
+        UpdateShuffleRepeatButtons();
+        _settings.Save();
+    }
+
+    private void UpdateShuffleRepeatButtons()
+    {
+        ShuffleButton.IsChecked = _settings.Shuffle;
+        ShuffleButton.ToolTip = _settings.Shuffle ? "Shuffle is on (S)" : "Shuffle (S)";
+        RepeatButton.IsChecked = _settings.Repeat != RepeatMode.Off;
+        RepeatOneBadge.Visibility = _settings.Repeat == RepeatMode.One ? Visibility.Visible : Visibility.Collapsed;
+        RepeatButton.ToolTip = _settings.Repeat switch
+        {
+            RepeatMode.All => "Repeating the whole queue. Click to repeat just this track (R)",
+            RepeatMode.One => "Repeating this track. Click to stop repeating (R)",
+            _ => "Repeat is off. Click to repeat the whole queue (R)",
+        };
     }
 
     // ---- Transport ----
 
     private void OnPlayPause(object sender, RoutedEventArgs e) => TogglePlayPause();
 
-    private void OnStop(object sender, RoutedEventArgs e)
+    private void OnStop(object sender, RoutedEventArgs e) => StopPlayback();
+
+    private void StopPlayback()
     {
         _player.Stop();
         UpdatePlayPauseButton();
@@ -1036,7 +895,7 @@ public partial class MainWindow : Window
     {
         if (!_player.HasTrack)
         {
-            var entry = PlaylistView.SelectedItem as PlaylistEntry ?? _playlist.FirstOrDefault();
+            var entry = _queue.PlaylistView.SelectedItem as PlaylistEntry ?? _playlist.FirstOrDefault();
             if (entry is not null)
             {
                 PlayEntry(entry);
@@ -1057,38 +916,70 @@ public partial class MainWindow : Window
         UpdatePlayPauseButton();
     }
 
-    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e) => HandleShortcut(e);
+
+    /// <summary>The keyboard shortcuts, which work from any of Lucid's windows.</summary>
+    public void HandleShortcut(KeyEventArgs e)
     {
+        // Typing in a text box (or using Ctrl/Alt shortcuts) isn't a shortcut for the player.
+        if (e.OriginalSource is TextBoxBase || Keyboard.Modifiers is ModifierKeys.Control or ModifierKeys.Alt)
+        {
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.Space:
+            case Key.MediaPlayPause:
                 TogglePlayPause();
                 break;
-            case Key.F11:
-                ToggleFullscreen();
+            case Key.MediaStop:
+                StopPlayback();
                 break;
-            case Key.Escape when _isFullscreen:
-                ToggleFullscreen();
+            case Key.Z:
+            case Key.MediaPreviousTrack:
+                PlayPrevious();
+                break;
+            case Key.X:
+            case Key.MediaNextTrack:
+                PlayNext(wrap: true);
+                break;
+            case Key.F11:
+                _visuals.ToggleFullscreen();
+                break;
+            case Key.Escape when _visuals.IsFullscreen:
+                _visuals.ToggleFullscreen();
                 break;
             case Key.N:
-                ChangePreset(+1);
+                _visuals.ChangePreset(+1);
                 break;
             case Key.B:
-                ChangePreset(-1);
-                break;
-            case Key.Q:
-                ToggleQueue();
-                break;
-            case Key.L:
-                ToggleLibrary();
+                _visuals.ChangePreset(-1);
                 break;
             case Key.V:
-                TogglePresetPicker();
+                _visuals.TogglePresetPicker();
                 break;
             case Key.A:
-                OnToggleAutoCycle(this, new RoutedEventArgs());
+                _visuals.ToggleAutoCycle();
+                AutoCycleSwitch.IsChecked = _settings.AutoCycle;
+                break;
+            case Key.W:
+                ToggleWindow(_visuals);
+                break;
+            case Key.Q:
+                ToggleWindow(_queue);
+                break;
+            case Key.L:
+                ToggleWindow(_libraryWindow);
+                break;
+            case Key.S:
+                ToggleShuffle();
+                break;
+            case Key.R:
+                CycleRepeat();
                 break;
             case Key.O:
+                Activate();
                 ToggleOptions();
                 break;
             default:
@@ -1098,8 +989,27 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e) =>
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        // The mouse wheel anywhere over the player changes the volume, like Winamp.
+        if (OptionsPopup.IsOpen)
+        {
+            return;
+        }
+
+        VolumeSlider.Value = Math.Clamp(VolumeSlider.Value + Math.Sign(e.Delta) * 0.05, 0, 1);
+        e.Handled = true;
+    }
+
+    private void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
         _player.Volume = (float)e.NewValue;
+        _settings.Volume = e.NewValue;
+        if (VolumeText is not null)
+        {
+            VolumeText.Text = $"{e.NewValue * 100:0}%";
+        }
+    }
 
     private void OnSeekDragStarted(object sender, DragStartedEventArgs e) => _isDraggingSeek = true;
 
@@ -1118,7 +1028,7 @@ public partial class MainWindow : Window
 
         if (_isDraggingSeek)
         {
-            ElapsedText.Text = TimeFormat.Format(TimeSpan.FromSeconds(e.NewValue));
+            ShowTime(TimeSpan.FromSeconds(e.NewValue), _player.Duration);
             return;
         }
 
@@ -1127,6 +1037,25 @@ public partial class MainWindow : Window
     }
 
     // ---- Display ----
+
+    private void OnTimeClick(object sender, MouseButtonEventArgs e)
+    {
+        _settings.ShowRemainingTime = !_settings.ShowRemainingTime;
+        _settings.Save();
+        UpdatePosition();
+    }
+
+    private void OnMeterClick(object sender, MouseButtonEventArgs e)
+    {
+        _settings.Meter = _settings.Meter switch
+        {
+            MeterMode.Bars => MeterMode.Scope,
+            MeterMode.Scope => MeterMode.Off,
+            _ => MeterMode.Bars,
+        };
+        _meter.Mode = _settings.Meter;
+        _settings.Save();
+    }
 
     private void UpdatePosition()
     {
@@ -1144,8 +1073,15 @@ public partial class MainWindow : Window
         SeekBar.Value = Math.Min(position.TotalSeconds, SeekBar.Maximum);
         _updatingSeekBar = false;
 
-        ElapsedText.Text = TimeFormat.Format(position);
-        DurationText.Text = TimeFormat.Format(duration);
+        ShowTime(position, duration);
+        UpdatePlayState();
+    }
+
+    private void ShowTime(TimeSpan position, TimeSpan duration)
+    {
+        TimeText.Text = _settings.ShowRemainingTime && duration > TimeSpan.Zero
+            ? "-" + TimeFormat.Format(duration - position)
+            : TimeFormat.Format(position);
     }
 
     private void UpdatePlayPauseButton()
@@ -1154,21 +1090,71 @@ public partial class MainWindow : Window
         PlayPauseIcon.Data = (Geometry)FindResource(playing ? "PauseIcon" : "PlayIcon");
         // The play triangle looks centred when nudged slightly right.
         PlayPauseIcon.Margin = playing ? new Thickness(0) : new Thickness(2, 0, 0, 0);
+        UpdatePlayState();
+    }
+
+    /// <summary>The little play / pause / stop mark next to the time.</summary>
+    private void UpdatePlayState()
+    {
+        var icon = _player.IsPlaying ? "PlaySmallIcon" : _player.HasTrack && _player.Position > TimeSpan.Zero ? "PauseIcon" : "StopIcon";
+        PlayStateIcon.Data = (Geometry)FindResource(icon);
     }
 
     private void ShowNowPlaying(Track? track)
     {
         if (track is null)
         {
-            NowPlayingTitle.Text = "Nothing playing";
-            NowPlayingArtist.Text = "Add music to the queue to begin";
+            SetMarquee("Nothing playing");
+            TrackDetails.Text = _playlist.Count == 0 ? "Drop music on any Lucid window to begin" : $"{_playlist.Count} in the queue";
             Title = "Lucid";
             return;
         }
 
-        NowPlayingTitle.Text = track.Title;
-        NowPlayingArtist.Text = string.IsNullOrEmpty(track.Artist) ? Path.GetFileName(track.Path) : track.Artist;
-        Title = $"{track.Title} - Lucid";
+        var name = string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Artist} – {track.Title}";
+        var number = _current is null ? 0 : _playlist.IndexOf(_current) + 1;
+        SetMarquee(number > 0 ? $"{number}. {name}" + (track.Duration > TimeSpan.Zero ? $" ({track.DurationText})" : string.Empty) : name);
+        var details = track.AudioDetails;
+        TrackDetails.Text = string.IsNullOrEmpty(details) ? Path.GetFileName(track.Path) : details;
+        TrackDetails.ToolTip = track.Path;
+        Title = $"{name} - Lucid";
+    }
+
+    /// <summary>Shows the title, scrolling it sideways when it's too long to fit.</summary>
+    private void SetMarquee(string text)
+    {
+        NowPlayingText.Text = text;
+        NowPlayingRepeat.Text = text;
+        UpdateMarquee();
+    }
+
+    private void OnMarqueeSizeChanged(object sender, SizeChangedEventArgs e) => UpdateMarquee();
+
+    private void UpdateMarquee()
+    {
+        MarqueeStrip.BeginAnimation(Canvas.LeftProperty, null);
+        Canvas.SetLeft(MarqueeStrip, 0);
+
+        NowPlayingText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var textWidth = NowPlayingText.DesiredSize.Width;
+        var room = MarqueeArea.ActualWidth;
+        if (room <= 0 || textWidth <= room)
+        {
+            NowPlayingRepeat.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        // Two copies side by side: once the first has scrolled out, the second is exactly where it started.
+        // Each lap pauses at the start so the beginning of the title can be read.
+        NowPlayingRepeat.Visibility = Visibility.Visible;
+        NowPlayingRepeat.Margin = new Thickness(MarqueeGap, 0, 0, 0);
+        var distance = textWidth + MarqueeGap;
+        var pause = TimeSpan.FromSeconds(2);
+        var lap = pause + TimeSpan.FromSeconds(distance / MarqueeSpeed);
+        var scroll = new DoubleAnimationUsingKeyFrames { RepeatBehavior = RepeatBehavior.Forever, Duration = lap };
+        scroll.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        scroll.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(pause)));
+        scroll.KeyFrames.Add(new LinearDoubleKeyFrame(-distance, KeyTime.FromTimeSpan(lap)));
+        MarqueeStrip.BeginAnimation(Canvas.LeftProperty, scroll);
     }
 
     private void ShowError(string message, Exception ex)
@@ -1178,12 +1164,19 @@ public partial class MainWindow : Window
             MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        SavePlacements();
+        IsShuttingDown = true;
+    }
+
     private void OnClosed(object? sender, EventArgs e)
     {
-        _settings.CollapsedLibraryFolders = _collapsedFolders.ToList();
+        _settings.CollapsedLibraryFolders = _libraryWindow.CollapsedFolders.ToList();
         _settings.Save();
         _library.Dispose();
         _positionTimer.Stop();
+        _meterTimer.Stop();
         _visualizer.Dispose();
         _player.Dispose();
     }

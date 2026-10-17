@@ -28,6 +28,24 @@ public sealed class AppSettings
 
     public bool ShowQueue { get; set; } = true;
 
+    public bool ShowVisuals { get; set; } = true;
+
+    // ---- Player ----
+
+    public bool Shuffle { get; set; }
+
+    public RepeatMode Repeat { get; set; } = RepeatMode.Off;
+
+    /// <summary>Show the time left in the track instead of the time played.</summary>
+    public bool ShowRemainingTime { get; set; }
+
+    public MeterMode Meter { get; set; } = MeterMode.Bars;
+
+    public double Volume { get; set; } = 0.8;
+
+    /// <summary>Where each window was last left, by name ("Player", "Visuals", "Queue", "Library").</summary>
+    public Dictionary<string, WindowBounds> Windows { get; set; } = new();
+
     // ---- Graphics ----
 
     public RenderResolution Resolution { get; set; } = RenderResolution.Window;
@@ -90,4 +108,31 @@ public sealed class AppSettings
             // Not being able to save preferences shouldn't interrupt the music.
         }
     }
+}
+
+public enum RepeatMode
+{
+    Off,
+    All,
+    One,
+}
+
+/// <summary>What the little meter in the player window shows.</summary>
+public enum MeterMode
+{
+    Bars,
+    Scope,
+    Off,
+}
+
+/// <summary>A window's position and size, in device-independent pixels.</summary>
+public sealed class WindowBounds
+{
+    public double Left { get; set; }
+
+    public double Top { get; set; }
+
+    public double Width { get; set; }
+
+    public double Height { get; set; }
 }
