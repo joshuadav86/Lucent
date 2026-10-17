@@ -172,7 +172,7 @@ function WiggleWin($title, $dx, $dy, $tag) {
   Add-Content "$out/log.txt" "== $tag`n$t"
 }
 Write-Host "::notice::os $((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)"
-foreach ($dpi in 100) {
+foreach ($dpi in 175, 125) {
   Write-Host "::notice::dpi $dpi -> $([W]::SetDpi($dpi))"; Start-Sleep 4
   RunWith "player $dpi" $lib {
     DragWin 'Lucid visuals' 120 0 "v-away-$dpi"

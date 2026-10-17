@@ -1,7 +1,7 @@
 name: EQ bands diagnose
 on:
   push:
-    branches: [snap-check2]
+    branches: [snap-check2, snap-check3]
 permissions:
   contents: write
 jobs:
@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, windows-2025]
+        os: [windows-2025]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
