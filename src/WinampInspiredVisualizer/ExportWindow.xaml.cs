@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
+using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Settings;
 
@@ -396,6 +397,7 @@ public partial class ExportWindow : Window
         _finished = true;
         Progress.Value = 1;
         var succeeded = results.Where(r => r.Succeeded).ToList();
+        AudioTools.NotifyFilesReplaced(succeeded.Where(r => r.Job.ReplaceExisting).Select(r => r.Job.Destination).ToList());
         var failed = results.Where(r => !r.Succeeded && r.Error != "Cancelled").ToList();
         var cancelled = results.Count(r => r.Error == "Cancelled");
         var lines = new List<string>

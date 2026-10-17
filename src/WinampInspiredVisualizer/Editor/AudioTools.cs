@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer.Editor;
@@ -22,8 +23,34 @@ public static class AudioTools
     /// <summary>Set when the user asked to quit while something was still working: quit once it has stopped.</summary>
     private static Window? _closeWhenIdle;
 
-    /// <summary>Opens a song in the editor, or brings its editor to the front if it's already open.</summary>
-    public static void OpenEditor(Window owner, string path, EditorHost host)
+    /// <summary>
+    /// Raised after the editor pauses the main player, or the player reopens a song that was saved over,
+    /// so the main window can refresh its play button.
+    /// </summary>
+    public static event EventHandler? MainPlayerChanged;
+
+    /// <summary>
+    /// Raised after songs have been saved over (by the editor's Save, or the converter replacing files), so the
+    /// queue, library and now playing display can show their new length and info.
+    /// </summary>
+    public static event EventHandler<TagsSavedEventArgs>? FilesReplaced;
+
+    internal static void NotifyMainPlayerChanged() => MainPlayerChanged?.Invoke(null, EventArgs.Empty);
+
+    internal static void NotifyFilesReplaced(IReadOnlyList<string> paths)
+    {
+        if (paths.Count > 0)
+        {
+            FilesReplaced?.Invoke(null, new TagsSavedEventArgs(paths));
+        }
+    }
+
+    /// <summary>
+    /// Opens a song in the editor, or brings its editor to the front if it's already open.
+    /// <paramref name="player"/> is the main player: the editor pauses it while it plays, and has it let go of
+    /// the song for a moment when saving over it.
+    /// </summary>
+    public static void OpenEditor(Window owner, AudioPlayer player, string path)
     {
         if (!File.Exists(path))
         {
@@ -45,7 +72,7 @@ public static class AudioTools
         }
 
         Watch(owner);
-        var window = new EditorWindow(path, host) { Owner = owner };
+        var window = new EditorWindow(path, player) { Owner = owner };
         Editors.Add(window);
         window.Closing += (_, e) =>
         {
@@ -65,7 +92,7 @@ public static class AudioTools
     }
 
     /// <summary>Asks for a song and opens it in the editor.</summary>
-    public static void ChooseFileToEdit(Window owner, EditorHost host)
+    public static void ChooseFileToEdit(Window owner, AudioPlayer player)
     {
         var dialog = new OpenFileDialog
         {
@@ -74,12 +101,15 @@ public static class AudioTools
         };
         if (dialog.ShowDialog(owner) == true)
         {
-            OpenEditor(owner, dialog.FileName, host);
+            OpenEditor(owner, player, dialog.FileName);
         }
     }
 
-    /// <summary>Opens the converter for some songs. It stays open while it works, so the music can keep playing.</summary>
-    public static void Convert(Window owner, IReadOnlyList<string> paths, AppSettings settings)
+    /// <summary>
+    /// Opens the converter for some songs. It stays open while it works, so the music can keep playing.
+    /// Missing files are left out; the format last used comes from <paramref name="settings"/> and is saved back to it.
+    /// </summary>
+    public static void Convert(Window owner, AppSettings settings, IReadOnlyList<string> paths)
     {
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (files.Count == 0)
@@ -110,23 +140,23 @@ public static class AudioTools
         };
         if (dialog.ShowDialog(owner) == true)
         {
-            Convert(owner, dialog.FileNames, settings);
+            Convert(owner, settings, dialog.FileNames);
         }
     }
 
     /// <summary>
-    /// The menu under the title bar's Edit button. <paramref name="currentPath"/> is the song in the
-    /// main player, if any, so it can be edited or converted in one click.
+    /// The menu under the title bar's Edit button: edit or convert the song that's playing, or choose files.
     /// </summary>
-    public static void ShowMenu(FrameworkElement target, Window owner, EditorHost host, AppSettings settings, string? currentPath)
+    public static void ShowMenu(FrameworkElement target, Window owner, AudioPlayer player, AppSettings settings)
     {
+        var currentPath = player.CurrentPath;
         var playing = currentPath is not null && File.Exists(currentPath);
         var name = playing ? $" ({Path.GetFileNameWithoutExtension(currentPath)})" : string.Empty;
         var menu = new ContextMenu { PlacementTarget = target, Placement = PlacementMode.Bottom };
-        menu.Items.Add(Item($"Edit the song that's playing{name}", playing, () => OpenEditor(owner, currentPath!, host)));
-        menu.Items.Add(Item("Convert the song that's playing…", playing, () => Convert(owner, new[] { currentPath! }, settings)));
+        menu.Items.Add(Item($"Edit the song that's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
+        menu.Items.Add(Item("Convert the song that's playing…", playing, () => Convert(owner, settings, new[] { currentPath! })));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Choose a song to edit…", true, () => ChooseFileToEdit(owner, host)));
+        menu.Items.Add(Item("Choose a song to edit…", true, () => ChooseFileToEdit(owner, player)));
         menu.Items.Add(Item("Choose songs to convert…", true, () => ChooseFilesToConvert(owner, settings)));
         menu.Closed += (_, _) =>
         {

@@ -13,14 +13,17 @@ namespace WinampInspiredVisualizer.Visualizer;
 /// the previous frame (feedback) and draws on top of it. When drawing above window resolution the
 /// result is shrunk to the window (supersampling), then it's bloomed and tone-mapped onto the
 /// window, in HDR on HDR screens. Visuals compile in the background (and are cached on disk),
-/// so the first one appears straight away.
+/// so the first one appears straight away. Particle visuals also move hundreds of thousands of
+/// particles with a compute shader each frame and draw them as glowing dots before their own pass.
 /// </summary>
 public sealed class Renderer : IDisposable
 {
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
     private const Format HdrBackBufferFormat = Format.R16G16B16A16_Float;
-    private const int ConstantCount = 20;
+    private const int ConstantCount = 24;
+    private const int ParticleStride = 48;
+    private const int MaxParticleCount = 4 * 1024 * 1024;
     private const double MaxRenderScale = 4.0;
     private const double MinRenderScale = 0.25;
     private const int MaxTextureSize = 16384;
@@ -49,6 +52,7 @@ public sealed class Renderer : IDisposable
     private volatile float _bloomStrength = 1f;
     private volatile float _transitionSeconds = 3f;
     private volatile float _autoCycleSeconds = 25f;
+    private volatile int[]? _autoCycleChoices;
     private volatile bool _morphsOnly;
     private volatile bool _hdrRequested;
     private int _compilersRunning;
@@ -74,6 +78,10 @@ public sealed class Renderer : IDisposable
     private ID3D11PixelShader? _presentShader;
     private ID3D11PixelShader? _blendShader;
     private ID3D11PixelShader? _downsampleShader;
+    private ID3D11PixelShader? _spriteShader;
+    private ID3D11BlendState? _additiveBlend;
+    private ID3D11RasterizerState? _noCulling;
+    private RenderTarget? _particleLayer;
     private int _windowWidth;
     private int _windowHeight;
     private int _renderWidth;
@@ -157,6 +165,13 @@ public sealed class Renderer : IDisposable
     {
         get => _transitionSeconds;
         set => _transitionSeconds = Math.Clamp(value, 0.25f, 30f);
+    }
+
+    /// <summary>The visuals Auto picks from (by index), or null for all of them.</summary>
+    public IReadOnlyCollection<int>? AutoCycleChoices
+    {
+        get => _autoCycleChoices;
+        set => _autoCycleChoices = value?.ToArray();
     }
 
     public float AutoCycleSeconds
@@ -303,6 +318,10 @@ public sealed class Renderer : IDisposable
         _audioView = device.CreateShaderResourceView(_audioTexture, null);
 
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
+
+        // Particles are glowing dots added on top of each other, drawn from both sides.
+        _additiveBlend = device.CreateBlendState(new BlendDescription(Blend.One, Blend.One));
+        _noCulling = device.CreateRasterizerState(RasterizerDescription.CullNone);
     }
 
     private void CompileEngineShaders()
@@ -313,6 +332,8 @@ public sealed class Renderer : IDisposable
         _presentShader = CreatePixelShader(device, engine, "PSPresent", "Engine.hlsl");
         _blendShader = CreatePixelShader(device, engine, "PSBlend", "Engine.hlsl");
         _downsampleShader = CreatePixelShader(device, engine, "PSDownsample", "Engine.hlsl");
+        var sprites = PresetLibrary.ReadShader("Common.hlsli") + "\n" + PresetLibrary.ReadShader("Particles.hlsli");
+        _spriteShader = CreatePixelShader(device, sprites, "PSSprite", "Particles.hlsli");
     }
 
     private ID3D11PixelShader CreatePixelShader(ID3D11Device device, string source, string entryPoint, string sourceName)
@@ -337,13 +358,16 @@ public sealed class Renderer : IDisposable
         _stopCompiling = false;
         _compileInterrupted = false;
         var device = _device!;
-        var common = PresetLibrary.ReadShader("Common.hlsli");
-        var presetMain = PresetLibrary.ReadShader("PresetMain.hlsli");
+        var shaders = new EngineSources(
+            PresetLibrary.ReadShader("Common.hlsli"),
+            PresetLibrary.ReadShader("PresetMain.hlsli"),
+            PresetLibrary.ReadShader("Particles.hlsli"),
+            PresetLibrary.ReadShader("ParticleMain.hlsli"));
         var count = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
         _compilersRunning = count;
         for (var i = 0; i < count; i++)
         {
-            var thread = new Thread(() => CompileLoop(device, common, presetMain))
+            var thread = new Thread(() => CompileLoop(device, shaders))
             {
                 IsBackground = true,
                 Name = "Visual compiler",
@@ -354,7 +378,7 @@ public sealed class Renderer : IDisposable
         }
     }
 
-    private void CompileLoop(ID3D11Device device, string common, string presetMain)
+    private void CompileLoop(ID3D11Device device, EngineSources shaders)
     {
         while (!_stopCompiling)
         {
@@ -367,8 +391,18 @@ public sealed class Renderer : IDisposable
             var slot = _slots[index];
             try
             {
-                var source = common + "\n#line 1\n" + slot.Source.Code + "\n" + presetMain;
-                slot.Shader = CreatePixelShader(device, source, "PSMain", Path.GetFileName(slot.Source.FilePath));
+                // Same assembly as the build's shader check (.github/workflows/build.yml).
+                var fileName = Path.GetFileName(slot.Source.FilePath);
+                var api = slot.Source.IsParticles ? shaders.Common + "\n" + shaders.Particles : shaders.Common;
+                var code = api + "\n#line 1\n" + slot.Source.Code + "\n";
+                if (slot.Source.IsParticles)
+                {
+                    var particleCode = code + shaders.ParticleMain;
+                    slot.Simulation = device.CreateComputeShader(_shaderCache.GetOrCompile(particleCode, "CSMain", fileName, "cs_5_0"), null);
+                    slot.SpriteVertices = device.CreateVertexShader(_shaderCache.GetOrCompile(particleCode, "VSParticle", fileName, "vs_5_0"), null);
+                }
+
+                slot.Shader = CreatePixelShader(device, code + shaders.PresetMain, "PSMain", fileName);
                 Volatile.Write(ref slot.State, PresetSlot.Ready);
             }
             catch (Exception ex) when (IsDeviceLost(ex))
@@ -457,9 +491,9 @@ public sealed class Renderer : IDisposable
             lastTime = now;
 
             var (width, height) = GetClientSize();
-            if (width <= 1 || height <= 1)
+            if (width <= 1 || height <= 1 || !IsWindowVisible(_hwnd))
             {
-                // Minimized or hidden: nothing to draw.
+                // Minimized or hidden (the visuals window can be closed while music plays): nothing to draw.
                 Thread.Sleep(50);
                 continue;
             }
@@ -573,7 +607,94 @@ public sealed class Renderer : IDisposable
 
     private void DrawPreset(RenderTarget destination, RenderTarget source, int presetIndex)
     {
-        DrawPass(destination.RenderTargetView, source.ShaderResource, _slots[presetIndex].Shader!, null);
+        var slot = _slots[presetIndex];
+        if (slot.Simulation is not null)
+        {
+            RunParticles(slot, source);
+            _context!.PSSetShaderResource(3, _particleLayer!.ShaderResource);
+        }
+
+        DrawPass(destination.RenderTargetView, source.ShaderResource, slot.Shader!, null);
+        _context!.PSSetShaderResource(3, null!);
+    }
+
+    /// <summary>
+    /// Moves a particle visual's particles on by a frame (compute shader), then draws each one as a
+    /// soft dot, all added together into the particle layer that the visual's own pass reads.
+    /// </summary>
+    private void RunParticles(PresetSlot slot, RenderTarget previous)
+    {
+        var context = _context!;
+        var count = ParticleCountFor(slot.Source);
+        if (slot.Particles is null || slot.Particles.Count != count)
+        {
+            slot.Particles?.Dispose();
+            slot.Particles = new ParticleBuffer(_device!, count);
+        }
+
+        var particles = slot.Particles;
+        _constants[20] = count;
+        _constants[21] = particles.Fresh ? 1f : 0f;
+        _constants[22] = (float)slot.Source.NormalParticleCount / count;
+        particles.Fresh = false;
+        context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
+
+        context.CSSetShader(slot.Simulation);
+        context.CSSetConstantBuffer(0, _constantBuffer);
+        context.CSSetSampler(0, _sampler);
+        context.CSSetShaderResource(0, previous.ShaderResource);
+        context.CSSetShaderResource(1, _audioView!);
+        context.CSSetUnorderedAccessView(0, particles.Writer);
+        context.Dispatch((uint)((count + 255) / 256), 1, 1);
+        context.CSSetUnorderedAccessView(0, null!);
+        context.CSSetShaderResource(0, null!);
+
+        var layer = _particleLayer!;
+        context.PSSetShaderResource(0, null!);
+        context.PSSetShaderResource(3, null!);
+        context.OMSetRenderTargets(layer.RenderTargetView, null);
+        context.ClearRenderTargetView(layer.RenderTargetView, new Color4(0f, 0f, 0f, 0f));
+        context.OMSetBlendState(_additiveBlend);
+        context.RSSetState(_noCulling);
+        context.IASetPrimitiveTopology(PrimitiveTopology.TriangleStrip);
+        context.VSSetShader(slot.SpriteVertices);
+        context.VSSetConstantBuffer(0, _constantBuffer);
+        context.VSSetSampler(0, _sampler);
+        context.VSSetShaderResource(1, _audioView!);
+        context.VSSetShaderResource(4, particles.Reader);
+        context.PSSetShader(_spriteShader);
+        context.DrawInstanced(4, (uint)count, 0, 0);
+
+        // Back to the full-screen passes.
+        context.VSSetShaderResource(4, null!);
+        context.OMSetBlendState(null);
+        context.RSSetState(null);
+        context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+        context.VSSetShader(_vertexShader);
+    }
+
+    /// <summary>The visual's own particle count on Normal detail: half on Low, twice on High, four times on Ultra.</summary>
+    private int ParticleCountFor(PresetSource source)
+    {
+        var factor = _quality switch
+        {
+            < 0.5f => 0.5,
+            < 1.5f => 1.0,
+            < 2.5f => 2.0,
+            _ => 4.0,
+        };
+        var count = (long)Math.Ceiling(source.NormalParticleCount * factor / 256.0) * 256;
+        return (int)Math.Clamp(count, 256, MaxParticleCount);
+    }
+
+    /// <summary>Frees a visual's particles once it's no longer on screen; they start afresh next time.</summary>
+    private void ReleaseParticles(int presetIndex)
+    {
+        if (presetIndex >= 0 && presetIndex != _activePreset)
+        {
+            _slots[presetIndex].Particles?.Dispose();
+            _slots[presetIndex].Particles = null;
+        }
     }
 
     private void DrawPass(ID3D11RenderTargetView destination, ID3D11ShaderResourceView source, ID3D11PixelShader shader, ID3D11ShaderResourceView? extra)
@@ -676,6 +797,7 @@ public sealed class Renderer : IDisposable
         var t = Math.Clamp((now - _transitionStart) / _transitionSeconds, 0.0, 1.0);
         if (t >= 1.0)
         {
+            ReleaseParticles(_fromPreset);
             _fromPreset = -1;
             return 1f;
         }
@@ -700,9 +822,10 @@ public sealed class Renderer : IDisposable
     private int RandomReadyPreset()
     {
         var ready = new List<int>();
+        var choices = _autoCycleChoices;
         for (var index = 0; index < _slots.Length; index++)
         {
-            if (index != _activePreset && IsReady(index))
+            if (index != _activePreset && IsReady(index) && (choices is null || Array.IndexOf(choices, index) >= 0))
             {
                 ready.Add(index);
             }
@@ -713,8 +836,15 @@ public sealed class Renderer : IDisposable
 
     private void StartTransition(int presetIndex, double now)
     {
+        // Cutting a transition short: the visual it was leaving is gone straight away.
+        var leaving = _fromPreset;
         _fromPreset = _activePreset;
         _activePreset = presetIndex;
+        if (leaving != _fromPreset)
+        {
+            ReleaseParticles(leaving);
+        }
+
         _transitionStart = now;
         _lastSwitch = now;
         var styles = _morphsOnly ? MorphTransitionStyles : AllTransitionStyles;
@@ -825,6 +955,7 @@ public sealed class Renderer : IDisposable
             _windowTarget = new RenderTarget(device, _context, _windowWidth, _windowHeight);
         }
 
+        _particleLayer = new RenderTarget(device, _context, width, height);
         _renderWidth = width;
         _renderHeight = height;
     }
@@ -841,6 +972,8 @@ public sealed class Renderer : IDisposable
 
         _windowTarget?.Dispose();
         _windowTarget = null;
+        _particleLayer?.Dispose();
+        _particleLayer = null;
     }
 
     /// <summary>What the screen under the window can do, or null if Windows couldn't say this time.</summary>
@@ -888,6 +1021,12 @@ public sealed class Renderer : IDisposable
         {
             slot.Shader?.Dispose();
             slot.Shader = null;
+            slot.Simulation?.Dispose();
+            slot.Simulation = null;
+            slot.SpriteVertices?.Dispose();
+            slot.SpriteVertices = null;
+            slot.Particles?.Dispose();
+            slot.Particles = null;
             if (Volatile.Read(ref slot.State) != PresetSlot.Failed)
             {
                 Volatile.Write(ref slot.State, PresetSlot.Pending);
@@ -902,6 +1041,12 @@ public sealed class Renderer : IDisposable
         _blendShader = null;
         _downsampleShader?.Dispose();
         _downsampleShader = null;
+        _spriteShader?.Dispose();
+        _spriteShader = null;
+        _additiveBlend?.Dispose();
+        _additiveBlend = null;
+        _noCulling?.Dispose();
+        _noCulling = null;
         _vertexShader?.Dispose();
         _vertexShader = null;
         _sampler?.Dispose();
@@ -935,6 +1080,10 @@ public sealed class Renderer : IDisposable
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hwnd);
+
     private sealed class DeviceLostException : Exception
     {
         public DeviceLostException()
@@ -954,9 +1103,49 @@ public sealed class Renderer : IDisposable
         public int State;
         public ID3D11PixelShader? Shader;
 
+        // Particle visuals only: the shaders that move and place the particles, and the particles.
+        public ID3D11ComputeShader? Simulation;
+        public ID3D11VertexShader? SpriteVertices;
+        public ParticleBuffer? Particles;
+
         public PresetSlot(PresetSource source) => Source = source;
 
         public PresetSource Source { get; }
+    }
+
+    /// <summary>The shared shader files a visual is assembled from.</summary>
+    private sealed record EngineSources(string Common, string PresetMain, string Particles, string ParticleMain);
+
+    /// <summary>A particle visual's particles, on the graphics card: written by its compute shader, read to draw them.</summary>
+    private sealed class ParticleBuffer : IDisposable
+    {
+        public ParticleBuffer(ID3D11Device device, int count)
+        {
+            Count = count;
+            Buffer = device.CreateBuffer(new BufferDescription(
+                (uint)(count * ParticleStride), BindFlags.UnorderedAccess | BindFlags.ShaderResource, ResourceUsage.Default,
+                CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, ParticleStride));
+            Writer = device.CreateUnorderedAccessView(Buffer, new UnorderedAccessViewDescription(Buffer, Format.Unknown, 0, (uint)count));
+            Reader = device.CreateShaderResourceView(Buffer, new ShaderResourceViewDescription(Buffer, Format.Unknown, 0, (uint)count));
+        }
+
+        public int Count { get; }
+
+        /// <summary>True until the first frame has spawned every particle.</summary>
+        public bool Fresh { get; set; } = true;
+
+        public ID3D11Buffer Buffer { get; }
+
+        public ID3D11UnorderedAccessView Writer { get; }
+
+        public ID3D11ShaderResourceView Reader { get; }
+
+        public void Dispose()
+        {
+            Reader.Dispose();
+            Writer.Dispose();
+            Buffer.Dispose();
+        }
     }
 
     /// <summary>A texture the visualizer draws into and reads back from (feedback, transitions, supersampling).</summary>

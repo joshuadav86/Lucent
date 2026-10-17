@@ -1,3 +1,4 @@
+using System.IO;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -14,6 +15,10 @@ public sealed class AudioPlayer : IDisposable
     private VolumeSampleProvider? _volumeProvider;
     private float _volume = 0.8f;
     private bool _stopRequested;
+    private bool _disposed;
+
+    // Counts every Load and Close, so a file reopened after being released doesn't replace one the user chose meanwhile.
+    private int _generation;
 
     /// <summary>Raised on the UI thread when a track plays through to the end.</summary>
     public event EventHandler? TrackEnded;
@@ -24,7 +29,13 @@ public sealed class AudioPlayer : IDisposable
     /// <summary>The audio being played, for the visualizer to analyze.</summary>
     public AudioCapture Capture { get; } = new();
 
+    /// <summary>The equalizer every track plays through. Its settings carry over from track to track.</summary>
+    public Equalizer Equalizer { get; } = new();
+
     public bool HasTrack => _reader is not null;
+
+    /// <summary>The file that's loaded, or null when nothing is.</summary>
+    public string? CurrentPath { get; private set; }
 
     public bool IsPlaying => _output?.PlaybackState == PlaybackState.Playing;
 
@@ -63,17 +74,21 @@ public sealed class AudioPlayer : IDisposable
     public void Load(string path)
     {
         Close();
+        _generation++;
 
         var reader = AudioReaderFactory.Open(path);
         try
         {
-            // Capture before the volume control so visuals don't shrink when the music is turned down.
-            var captured = new CapturingSampleProvider(reader.ToSampleProvider(), Capture);
+            // Equalize before capturing, so the visuals respond to what you hear, and capture before
+            // the volume control so visuals don't shrink when the music is turned down.
+            var equalized = Equalizer.Attach(reader.ToSampleProvider());
+            var captured = new CapturingSampleProvider(equalized, Capture);
             _volumeProvider = new VolumeSampleProvider(captured) { Volume = _volume };
             _output = new WaveOutEvent { DesiredLatency = OutputLatencyMs };
             _output.PlaybackStopped += OnPlaybackStopped;
             _output.Init(_volumeProvider);
             _reader = reader;
+            CurrentPath = path;
         }
         catch
         {
@@ -110,6 +125,8 @@ public sealed class AudioPlayer : IDisposable
 
     public void Close()
     {
+        _generation++;
+        CurrentPath = null;
         if (_output is not null)
         {
             _output.PlaybackStopped -= OnPlaybackStopped;
@@ -121,9 +138,68 @@ public sealed class AudioPlayer : IDisposable
         _reader?.Dispose();
         _reader = null;
         _volumeProvider = null;
+        Equalizer.Detach();
     }
 
-    public void Dispose() => Close();
+    public void Dispose()
+    {
+        _disposed = true;
+        Close();
+    }
+
+    /// <summary>True when <paramref name="path"/> is the file that's loaded.</summary>
+    public bool IsCurrentFile(string path) =>
+        CurrentPath is not null && string.Equals(Path.GetFullPath(CurrentPath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Runs <paramref name="work"/> with <paramref name="path"/> closed, if it's the file being played, then opens
+    /// it again at the same place and carries on playing (or stays paused). Windows doesn't let a file be
+    /// replaced while it's open, so this is how its tags get saved; the music only stops for a moment.
+    /// For any other file the work just runs. Call it from the UI thread.
+    /// </summary>
+    public async Task RunWithFileReleasedAsync(string path, Func<Task> work)
+    {
+        if (!IsCurrentFile(path))
+        {
+            await work();
+            return;
+        }
+
+        var reopenPath = CurrentPath!;
+        var position = Position;
+        var wasPlaying = IsPlaying;
+        Close();
+        var released = _generation;
+        try
+        {
+            await work();
+        }
+        finally
+        {
+            // If another track was loaded (or the queue cleared) in the meantime, leave that be.
+            if (!_disposed && _generation == released)
+            {
+                Reopen(reopenPath, position, wasPlaying);
+            }
+        }
+    }
+
+    private void Reopen(string path, TimeSpan position, bool play)
+    {
+        try
+        {
+            Load(path);
+            Position = position;
+            if (play)
+            {
+                Play();
+            }
+        }
+        catch (Exception ex)
+        {
+            PlaybackFailed?.Invoke(this, ex);
+        }
+    }
 
     private void OnPlaybackStopped(object? sender, StoppedEventArgs e)
     {

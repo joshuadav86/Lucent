@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Editor.Effects;
 using WinampInspiredVisualizer.Export;
@@ -22,7 +23,8 @@ public partial class EditorWindow : Window
     /// <summary>With nothing selected, fades cover this much at the start or end.</summary>
     private static readonly TimeSpan DefaultFadeLength = TimeSpan.FromSeconds(3);
 
-    private readonly EditorHost _host;
+    /// <summary>The main player: paused while the editor plays, and asked to let go of a file being saved over.</summary>
+    private readonly AudioPlayer _mainPlayer;
     private readonly EditorPlayer _player = new();
     private readonly DispatcherTimer _playheadTimer;
     private string _path;
@@ -33,11 +35,11 @@ public partial class EditorWindow : Window
     private bool _closeConfirmed;
     private string? _lastSavedPath;
 
-    public EditorWindow(string path, EditorHost host)
+    public EditorWindow(string path, AudioPlayer mainPlayer)
     {
         InitializeComponent();
         _path = path;
-        _host = host;
+        _mainPlayer = mainPlayer;
         FileTitle.Text = Path.GetFileName(path);
         Title = $"{Path.GetFileName(path)} - Audio editor - Lucid";
 
@@ -471,10 +473,16 @@ public partial class EditorWindow : Window
             return;
         }
 
-        _host.PauseMainPlayer();
+        // Two songs playing over each other would be confusing.
+        if (_mainPlayer.IsPlaying)
+        {
+            _mainPlayer.Pause();
+            AudioTools.NotifyMainPlayerChanged();
+        }
+
         try
         {
-            _player.Play(_session.Audio, from, to, _host.Volume);
+            _player.Play(_session.Audio, from, to, _mainPlayer.Volume);
         }
         catch (Exception ex)
         {
@@ -573,7 +581,7 @@ public partial class EditorWindow : Window
         var warning = format == ExportFormat.Mp3
             ? "\n\nMP3s lose a little quality every time they are saved. To keep the original as it is, use Save as new version."
             : string.Empty;
-        var playing = _host.IsOpenInPlayer(_path) ? "\n\nIt's open in the player, which will pause for a moment while it's replaced." : string.Empty;
+        var playing = _mainPlayer.IsCurrentFile(_path) ? "\n\nIt's open in the player, which will pause for a moment while it's replaced." : string.Empty;
         var answer = MessageBox.Show(this,
             $"Replace \"{name}\" with your edited version?\n\nThe original can't be brought back afterwards.{warning}{playing}",
             "Save", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
@@ -644,10 +652,18 @@ public partial class EditorWindow : Window
             prepared = await Task.Run(() => ExportPipeline.Prepare(new AudioBufferSampleProvider(audio), audio.Frames, target,
                 tagSource, audioChanged: true, options, progress.Report, token), token);
 
-            // The last step is instant: swap the file into place, with the main player letting go of it if needed.
-            using (_host.ReleaseFile(target))
+            // The last step is instant: swap the file into place. Windows won't replace a file that's open,
+            // so if the main player has it, it lets go for a moment and then carries on from the same spot.
+            var ready = prepared;
+            await _mainPlayer.RunWithFileReleasedAsync(target, () =>
             {
-                prepared.Commit(replaceExisting);
+                ready.Commit(replaceExisting);
+                return Task.CompletedTask;
+            });
+            AudioTools.NotifyMainPlayerChanged();
+            if (replaceExisting)
+            {
+                AudioTools.NotifyFilesReplaced(new[] { target });
             }
         });
 

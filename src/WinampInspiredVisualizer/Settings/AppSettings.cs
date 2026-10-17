@@ -22,12 +22,33 @@ public sealed class AppSettings
 
     public bool GroupLibraryByFolder { get; set; } = true;
 
+    /// <summary>Whether the library lists only the favourite songs.</summary>
+    public bool LibraryFavoritesOnly { get; set; }
+
     /// <summary>Library folder headings the user has closed.</summary>
     public List<string> CollapsedLibraryFolders { get; set; } = new();
 
     public bool ShowLibrary { get; set; } = true;
 
     public bool ShowQueue { get; set; } = true;
+
+    public bool ShowVisuals { get; set; } = true;
+
+    // ---- Player ----
+
+    public bool Shuffle { get; set; }
+
+    public RepeatMode Repeat { get; set; } = RepeatMode.Off;
+
+    /// <summary>Show the time left in the track instead of the time played.</summary>
+    public bool ShowRemainingTime { get; set; }
+
+    public MeterMode Meter { get; set; } = MeterMode.Bars;
+
+    public double Volume { get; set; } = 0.8;
+
+    /// <summary>Where each window was last left, by name ("Player", "Visuals", "Queue", "Library").</summary>
+    public Dictionary<string, WindowBounds> Windows { get; set; } = new();
 
     // ---- Graphics ----
 
@@ -55,9 +76,50 @@ public sealed class AppSettings
     /// <summary>The visual showing when the app last closed.</summary>
     public string? LastVisual { get; set; }
 
+    /// <summary>Visuals starred as favourites, by name.</summary>
+    public List<string> FavoriteVisuals { get; set; } = new();
+
+    /// <summary>The user's own lists of visuals: list name to visual names.</summary>
+    public Dictionary<string, List<string>> VisualLists { get; set; } = new();
+
+    /// <summary>
+    /// Which visuals the picker shows and Auto plays from: null for all of them,
+    /// <see cref="FavoritesListName"/> for the favourites, or the name of one of <see cref="VisualLists"/>.
+    /// </summary>
+    public string? ActiveVisualList { get; set; }
+
+    /// <summary>Songs marked as favourites, by file path.</summary>
+    public List<string> FavoriteTracks { get; set; } = new();
+
+    /// <summary>The name the favourites go by in lists of visuals; no list of the user's can take it.</summary>
+    public const string FavoritesListName = "Favorites";
+
+    // ---- Sound ----
+
+    public EqualizerSettings Equalizer { get; set; } = new();
+
     // ---- Look ----
 
     public string Theme { get; set; } = "Midnight";
+
+    // ---- Track info and artwork ----
+
+    /// <summary>
+    /// Put files' modified dates back after editing their info. The library lists newest first by date,
+    /// so this keeps edited songs where they were instead of jumping to the top.
+    /// </summary>
+    public bool KeepFileDatesWhenEditing { get; set; } = true;
+
+    /// <summary>Where the artwork window was last placed (null until it has been opened).</summary>
+    public double? ArtworkWindowLeft { get; set; }
+
+    public double? ArtworkWindowTop { get; set; }
+
+    public double ArtworkWindowWidth { get; set; } = 420;
+
+    public double ArtworkWindowHeight { get; set; } = 456;
+
+    public bool ArtworkWindowOnTop { get; set; }
 
     // ---- Audio tools ----
 
@@ -96,4 +158,31 @@ public sealed class AppSettings
             // Not being able to save preferences shouldn't interrupt the music.
         }
     }
+}
+
+public enum RepeatMode
+{
+    Off,
+    All,
+    One,
+}
+
+/// <summary>What the little meter in the player window shows.</summary>
+public enum MeterMode
+{
+    Bars,
+    Scope,
+    Off,
+}
+
+/// <summary>A window's position and size, in device-independent pixels.</summary>
+public sealed class WindowBounds
+{
+    public double Left { get; set; }
+
+    public double Top { get; set; }
+
+    public double Width { get; set; }
+
+    public double Height { get; set; }
 }
