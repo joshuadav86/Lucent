@@ -29,6 +29,10 @@ cbuffer Params : register(b0)
     float HdrWhite;            // that screen's normal white, where 1 = 80 nits (used by the engine)
     float HdrPeak;             // that screen's brightest white, same units (used by the engine)
     float FrameCount;          // frames drawn so far
+    float ParticleCount;       // how many particles a particle visual has (see Particles.hlsli)
+    float ParticleReset;       // 1 on a particle visual's first frame, when every particle spawns
+    float ParticleWeight;      // how bright each particle is drawn: 1 on Normal detail, less with more particles
+    float Reserved;
 };
 
 Texture2D PreviousFrame : register(t0);
