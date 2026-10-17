@@ -58,6 +58,14 @@
                         <TextBlock Text="Queue" Margin="8,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </ToggleButton>
+                <ToggleButton x:Name="ArtToggle" Style="{StaticResource PanelToggle}" Margin="2,0,0,0"
+                              ToolTip="Show the playing song's artwork in its own window (C)" Click="OnToggleArtwork"
+                              WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ArtworkIcon}" />
+                        <TextBlock Text="Art" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </ToggleButton>
                 <ToggleButton x:Name="OptionsButton" Style="{StaticResource PanelToggle}" Margin="2,0,0,0"
                               ToolTip="Graphics, visual changes and themes (O)" Click="OnToggleOptions"
                               WindowChrome.IsHitTestVisibleInChrome="True">
@@ -254,6 +262,15 @@
                                 <MenuItem Header="Add to queue" Click="OnLibraryAddToQueue" />
                                 <MenuItem Header="Play this folder" Click="OnLibraryPlayFolder" />
                                 <Separator />
+                                <MenuItem Click="OnLibraryEditInfo">
+                                    <MenuItem.Header>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="Ctrl+I" Margin="28,0,0,0"
+                                                       Foreground="{DynamicResource FaintTextBrush}" />
+                                            <TextBlock Text="Edit info…" />
+                                        </DockPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
                                 <MenuItem Header="Show in File Explorer" Click="OnLibraryShowInExplorer" />
                             </ContextMenu>
                         </ListBox.ContextMenu>
@@ -361,6 +378,20 @@
                              SelectionMode="Extended"
                              MouseDoubleClick="OnPlaylistDoubleClick"
                              KeyDown="OnPlaylistKeyDown">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Click="OnQueueEditInfo">
+                                    <MenuItem.Header>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="Ctrl+I" Margin="28,0,0,0"
+                                                       Foreground="{DynamicResource FaintTextBrush}" />
+                                            <TextBlock Text="Edit info…" />
+                                        </DockPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem Header="Remove from queue" Click="OnQueueRemove" />
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -428,7 +459,20 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Now playing -->
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0" Background="Transparent">
+                        <StackPanel.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Click="OnNowPlayingEditInfo">
+                                    <MenuItem.Header>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="Ctrl+I" Margin="28,0,0,0"
+                                                       Foreground="{DynamicResource FaintTextBrush}" />
+                                            <TextBlock Text="Edit info…" />
+                                        </DockPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
                         <TextBlock x:Name="NowPlayingTitle" Text="Nothing playing" FontSize="14" FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
                         <TextBlock x:Name="NowPlayingArtist" Text="Add music to the queue to begin" FontSize="12"

@@ -11,11 +11,23 @@ public sealed class PlaylistEntry : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public Track Track { get; }
+    /// <summary>The track's file and tags. Replaced by <see cref="Refresh"/> when its info is edited.</summary>
+    public Track Track { get; private set; }
 
     public string ArtistSuffix => string.IsNullOrEmpty(Track.Artist) ? string.Empty : $"  ·  {Track.Artist}";
 
     public string Indicator => _isCurrent ? "▶" : string.Empty;
+
+    /// <summary>
+    /// Shows freshly read tags for the same file, after its info was edited. The row itself stays, so it
+    /// keeps its place in the queue and, if it's the one playing, carries on being the current track.
+    /// </summary>
+    public void Refresh(Track track)
+    {
+        Track = track;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Track)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ArtistSuffix)));
+    }
 
     public bool IsCurrent
     {
