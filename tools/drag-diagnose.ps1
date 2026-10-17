@@ -105,9 +105,30 @@ function Bands($order, $wait) {
 }
 Write-Host "::notice::animations on $([W]::SystemParametersInfo(0x1043, 0, [IntPtr]1, 3))"
 Write-Host "::notice::dpi 100 -> $([W]::SetDpi(100))"; Start-Sleep 4
-$order = @(7, 0, 7, 1, 6, 0, 5, 2, 7, 3, 7, 0, 4, 1, 6, 3, 2, 5, 7, 0)
-Run "bands fast" { Bands $order 60 }
-Run "bands medium" { Bands $order 150 }
-Run "faders" { $eq = Find 'Equalizer'; $b = [W]::Box($eq); [W]::Click($b.L + 111 + 30 * 3, $b.T + 57, 1500); [W]::Drag($b.L + 120, $b.T + 258, 0, -50); [W]::Shot("$out/faders-8.png"); [W]::Click($b.L + 111 + 30 * 0, $b.T + 57, 1500); [W]::Shot("$out/faders-3.png") }
-Write-Host "::notice::dpi 150 -> $([W]::SetDpi(150))"; Start-Sleep 4
-Run "faders 150" { [W]::Shot("$out/faders-10-150.png") }
+function RunMusic($label, $bands, [scriptblock]$steps) {
+  Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucid') -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force (Join-Path $env:APPDATA 'Lucid') | Out-Null
+  $music = (Resolve-Path 'testmusic').Path
+  @{ LibraryFolders = @($music); ShowLibrary = $true; GroupLibraryByFolder = $false; Equalizer = @{ BandCount = $bands; Enabled = $true } } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $env:APPDATA 'Lucid\settings.json')
+  $script:started = Get-Date
+  $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
+  Start-Sleep 35
+  try { & $steps } catch { $script:log += " || ERROR $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
+  Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
+  Write-Host "::notice::$label $($script:log)"; $script:log = ""
+  $crash = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = '.NET Runtime'; StartTime = $script:started } -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($crash) { Write-Host "::warning::CRASH $label :: $(($crash.Message -replace "`r?`n", ' | ').Substring(0, [Math]::Min(3500, $crash.Message.Length)))" }
+}
+function PlayFirst() {
+  $lib = Find 'Lucid library'
+  if (-not $lib) { $script:log += " || no library [$(Windows)]"; return }
+  $b = [W]::Box($lib); [W]::Shot("$out/library.png")
+  [void][W]::SetForegroundWindow($lib); Start-Sleep 1
+  foreach ($y in 140, 160) { [W]::Click($b.L + 120, $b.T + $y, 60); [W]::Click($b.L + 120, $b.T + $y, 1500) }
+  Start-Sleep 4
+  $script:log += " || audio devices: $((Get-CimInstance Win32_SoundDevice | Measure-Object).Count) [$(Windows)]"
+}
+Get-PnpDevice -Class AudioEndpoint -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "::notice::endpoint $($_.FriendlyName) $($_.Status)" }
+RunMusic "spectrum 16" 16 { PlayFirst; [W]::Shot("$out/spectrum-16a.png"); Start-Sleep 2; [W]::Shot("$out/spectrum-16b.png") }
+RunMusic "spectrum 32" 32 { PlayFirst; [W]::Shot("$out/spectrum-32.png") }
+RunMusic "spectrum 4" 4 { PlayFirst; [W]::Shot("$out/spectrum-4.png") }
