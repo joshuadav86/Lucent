@@ -44,6 +44,9 @@ foreach (var path in Directory.EnumerateFiles(Path.Combine(appFolder, "Presets")
     }
 }
 
+// Load SPIRV-Cross up front, so if it can't load that fails once, with the whole error.
+_ = ShaderTranslator.Dxc;
+
 var failures = 0;
 var translated = jobs.AsParallel().AsOrdered().Select(job =>
 {
@@ -53,7 +56,7 @@ var translated = jobs.AsParallel().AsOrdered().Select(job =>
     }
     catch (Exception ex)
     {
-        return (job, Metal: (string?)null, Error: ex.Message);
+        return (job, Metal: (string?)null, Error: ex.GetBaseException().Message);
     }
 }).ToList();
 
