@@ -60,7 +60,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 2. Download `Lucid-win-x64.zip` and unzip it.
 3. Double-click `Lucid.exe`.
 
-Nothing needs installing. If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
+Keep the files together: Lucid.exe works on its own too, but the Presets folder beside it is where you can change or add visuals. Nothing needs installing. If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
 
 ## Roadmap
 

@@ -34,6 +34,9 @@
     <!-- Shaders are compiled when the app starts, so they ship as plain files people can edit. -->
     <None Include="Presets\*.hlsl" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="Shaders\*.hlsl*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Copies inside Lucid.exe too, for when it's run without its folder (say, straight from the zip). -->
+    <EmbeddedResource Include="Presets\*.hlsl" LogicalName="Presets/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Shaders\*.hlsl*" LogicalName="Shaders/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!--
