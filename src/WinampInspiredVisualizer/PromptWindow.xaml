@@ -12,7 +12,8 @@
     </WindowChrome.WindowChrome>
 
     <!-- Asks for one line of text, e.g. a playlist's name. -->
-    <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Padding="18,16,18,16">
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}" Padding="18,16,18,16">
         <StackPanel>
             <TextBlock x:Name="Heading" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
             <TextBlock x:Name="Hint" Style="{StaticResource OptionHint}" Margin="0,4,0,12" />

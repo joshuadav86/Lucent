@@ -17,7 +17,8 @@
                       CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
-    <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
         <Grid x:Name="WindowRoot">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -27,7 +28,7 @@
             </Grid.RowDefinitions>
 
             <!-- Title bar -->
-            <Grid x:Name="TitleBar" Grid.Row="0" Height="34">
+            <Grid x:Name="TitleBar" Grid.Row="0" Height="34" Background="{DynamicResource TitleBarBrush}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -46,7 +47,7 @@
                         <Path Style="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
                     </ToggleButton>
                     <ToggleButton x:Name="OptionsButton" Style="{StaticResource PanelToggle}" Padding="7,0"
-                                  ToolTip="Options: graphics, visual changes and themes (O)" Click="OnToggleOptions"
+                                  ToolTip="Options: graphics, visual changes, skins and themes (O)" Click="OnToggleOptions"
                                   WindowChrome.IsHitTestVisibleInChrome="True">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource OptionsIcon}" StrokeThickness="1.3" />
                     </ToggleButton>
@@ -54,7 +55,7 @@
                     <Popup x:Name="OptionsPopup" PlacementTarget="{Binding ElementName=OptionsButton}" Placement="Bottom"
                            VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
                            Opened="OnOptionsOpened" Closed="OnOptionsClosed">
-                        <Border Margin="16" Width="340" Padding="14,14,14,16" CornerRadius="12"
+                        <Border Margin="16" Width="340" Padding="14,14,14,16" CornerRadius="{DynamicResource CardCorner}"
                                 Background="{DynamicResource SurfaceRaisedBrush}"
                                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <Border.Effect>
@@ -65,7 +66,7 @@
                                     <UniformGrid Rows="1">
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Graphics" Content="Graphics" Click="OnOptionsTab" IsChecked="True" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visual changes" Click="OnOptionsTab" />
-                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Theme" Click="OnOptionsTab" />
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
                                     </UniformGrid>
                                 </Border>
 
@@ -144,7 +145,11 @@
                                 </StackPanel>
 
                                 <StackPanel x:Name="ThemeTab" Visibility="Collapsed">
-                                    <TextBlock Style="{StaticResource OptionLabel}" Text="Colours for everything around the visuals" />
+                                    <TextBlock Style="{StaticResource OptionLabel}" Text="Skin: the shape, type and finish of every window" />
+                                    <UniformGrid x:Name="SkinSwatches" Columns="2" Margin="-2,0,-8,-6" />
+                                    <TextBlock Style="{StaticResource OptionHint}"
+                                               Text="Each skin comes with a theme it was made for. Pick another theme below to mix and match." />
+                                    <TextBlock Style="{StaticResource OptionLabel}" Text="Theme: colours for everything around the visuals" />
                                     <UniformGrid x:Name="ThemeSwatches" Columns="2" Margin="-2,0,-8,-6" />
                                 </StackPanel>
                             </StackPanel>
@@ -164,14 +169,23 @@
             </Grid>
 
             <!-- The display: time and meter on the left, the scrolling title and track details on the right. -->
-            <Border Grid.Row="1" Margin="10,0,10,0" Padding="14,10,14,10" CornerRadius="10"
-                    Background="{DynamicResource BackgroundBrush}"
-                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+            <!-- The skin decides how the display looks: its fill and edge, a glow, a shadow along the top
+                 and left (an inset look), and scan lines over the top. -->
+            <Border Grid.Row="1" Margin="10,0,10,0" CornerRadius="{DynamicResource PanelCorner}"
+                    BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1"
+                    Effect="{DynamicResource DisplayGlowEffect}" IsHitTestVisible="False" />
+            <Border Grid.Row="1" Margin="10,0,10,0" Padding="14,10,14,10" CornerRadius="{DynamicResource PanelCorner}"
+                    Background="{DynamicResource DisplayBrush}"
+                    BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="138" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
+                    <Border Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}" BorderThickness="2,2,0,0"
+                            BorderBrush="{DynamicResource DisplayInsetBrush}" IsHitTestVisible="False" />
+                    <Border Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}"
+                            Background="{DynamicResource DisplayLinesBrush}" IsHitTestVisible="False" Panel.ZIndex="1" />
 
                     <StackPanel Grid.Column="0">
                         <Border Background="Transparent" Cursor="Hand" HorizontalAlignment="Left"
@@ -180,8 +194,9 @@
                             <StackPanel Orientation="Horizontal">
                                 <Path x:Name="PlayStateIcon" Data="{StaticResource StopIcon}" Width="10" Height="10" Stretch="Uniform"
                                       Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,4,10,0" />
-                                <TextBlock x:Name="TimeText" Text="0:00" FontSize="30" FontWeight="SemiBold"
-                                           Typography.NumeralAlignment="Tabular" Foreground="{DynamicResource TextBrush}"
+                                <TextBlock x:Name="TimeText" Text="0:00" FontSize="30" FontFamily="{DynamicResource DisplayFont}"
+                                           FontWeight="{DynamicResource DisplayWeight}"
+                                           Typography.NumeralAlignment="Tabular" Foreground="{DynamicResource DisplayTimeBrush}"
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
@@ -209,9 +224,10 @@
                             <Canvas x:Name="MarqueeArea" Height="20" ClipToBounds="True" SizeChanged="OnMarqueeSizeChanged">
                                 <StackPanel x:Name="MarqueeStrip" Orientation="Horizontal">
                                     <TextBlock x:Name="NowPlayingText" Text="Nothing playing" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextBrush}" />
+                                               FontFamily="{DynamicResource DisplayFont}" Foreground="{DynamicResource DisplayTitleBrush}" />
                                     <TextBlock x:Name="NowPlayingRepeat" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextBrush}" Visibility="Collapsed" />
+                                               FontFamily="{DynamicResource DisplayFont}" Foreground="{DynamicResource DisplayTitleBrush}"
+                                               Visibility="Collapsed" />
                                 </StackPanel>
                             </Canvas>
                         </DockPanel>
@@ -243,7 +259,7 @@
             <!-- Transport, shuffle and repeat, and the switches for the other windows -->
             <DockPanel Grid.Row="3" Margin="10,2,10,10">
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Previous track (Z)" Click="OnPrevious">
+                    <Button Style="{StaticResource TransportButton}" Width="32" Height="32" ToolTip="Previous track (Z)" Click="OnPrevious">
                         <Path Style="{StaticResource SolidIcon}" Data="{StaticResource PreviousTrackIcon}" />
                     </Button>
                     <Button x:Name="PlayPauseButton" Style="{StaticResource PlayButton}" Width="40" Height="40" Margin="2,0"
@@ -251,13 +267,13 @@
                         <Path x:Name="PlayPauseIcon" Style="{StaticResource SolidIcon}" Data="{StaticResource PlayIcon}"
                               Margin="2,0,0,0" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Stop" Click="OnStop">
+                    <Button Style="{StaticResource TransportButton}" Width="32" Height="32" ToolTip="Stop" Click="OnStop">
                         <Path Style="{StaticResource SolidIcon}" Data="{StaticResource StopIcon}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Next track (X)" Click="OnNext">
+                    <Button Style="{StaticResource TransportButton}" Width="32" Height="32" ToolTip="Next track (X)" Click="OnNext">
                         <Path Style="{StaticResource SolidIcon}" Data="{StaticResource NextTrackIcon}" />
                     </Button>
-                    <Button x:Name="OpenButton" Style="{StaticResource IconButton}" Width="32" Height="32" Margin="2,0,0,0"
+                    <Button x:Name="OpenButton" Style="{StaticResource TransportButton}" Width="32" Height="32" Margin="2,0,0,0"
                             ToolTip="Add music" Click="OnOpenMenu">
                         <Path Style="{StaticResource SolidIcon}" Data="{StaticResource EjectIcon}" />
                     </Button>

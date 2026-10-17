@@ -11,7 +11,8 @@
                       CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
-    <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
         <Grid Margin="6,6,4,8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -20,7 +21,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34">
+            <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34" Background="{DynamicResource TitleBarBrush}">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource IconButton}" Width="32" Height="32" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Play the whole library in this order"
                             Click="OnPlayLibrary">

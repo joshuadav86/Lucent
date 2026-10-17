@@ -97,26 +97,29 @@ public static class ThemeManager
         row.Children.Add(accent);
         row.Children.Add(name);
 
-        return new Border
+        var preview = new Border
         {
             Height = 38,
             Padding = new Thickness(10, 0, 10, 0),
-            CornerRadius = new CornerRadius(9),
             Background = Solid(theme.Surface),
             BorderBrush = Solid(theme.Hairline),
             BorderThickness = new Thickness(1),
             Child = row,
         };
+        // Shaped and lettered by the skin that's on, so the picker matches the rest of the window.
+        preview.SetResourceReference(Border.CornerRadiusProperty, "BarCorner");
+        name.SetResourceReference(TextBlock.FontFamilyProperty, "UiFont");
+        return preview;
     }
 
-    private static SolidColorBrush Solid(string colour)
+    internal static SolidColorBrush Solid(string colour)
     {
         var brush = new SolidColorBrush(Parse(colour));
         brush.Freeze();
         return brush;
     }
 
-    private static LinearGradientBrush Gradient(Theme theme)
+    internal static LinearGradientBrush Gradient(Theme theme)
     {
         var brush = new LinearGradientBrush(Parse(theme.GradientStart), Parse(theme.GradientEnd), new Point(0, 0), new Point(1, 1));
         brush.Freeze();
