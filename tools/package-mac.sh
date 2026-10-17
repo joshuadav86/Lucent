@@ -1,6 +1,12 @@
 #!/bin/bash
-# Wraps a published Lucent.Mac folder into Lucent.app, with its icon. Runs on a Mac (it uses sips
-# and iconutil). Usage: tools/package-mac.sh <published folder> <output folder> <version>
+# Wraps a published Lucent.Mac folder into Lucent.app, with its icon, and signs it. Runs on a Mac (it
+# uses sips, iconutil and codesign). Usage: tools/package-mac.sh <published folder> <output folder> <version>
+#
+# Signing: ad hoc by default (Apple silicon Macs won't run unsigned code at all). To sign with a
+# Developer ID instead, set MAC_SIGN_IDENTITY to the certificate's name, e.g.
+# "Developer ID Application: Your Name (TEAMID)" (and MAC_KEYCHAIN if it isn't in the default keychain);
+# it's then signed with the hardened runtime and tools/mac/Lucent.entitlements, ready to notarize.
+# CI does the same, and Velopack (vpk pack) signs the installable copy again after adding its updater.
 set -euo pipefail
 published="$1"
 output="$2"
@@ -44,6 +50,16 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Not signed with a Developer ID yet, so sign it ad hoc: Apple silicon Macs won't run unsigned code at all.
-codesign --force --deep --sign - "$app"
+identity="${MAC_SIGN_IDENTITY:--}"
+if [ "$identity" = "-" ]; then
+  # Not signed with a Developer ID, so sign it ad hoc.
+  codesign --force --deep --sign - "$app"
+else
+  keychain=()
+  if [ -n "${MAC_KEYCHAIN:-}" ]; then
+    keychain=(--keychain "$MAC_KEYCHAIN")
+  fi
+  codesign --force --deep --timestamp --options runtime --entitlements "$root/tools/mac/Lucent.entitlements" \
+    ${keychain[@]+"${keychain[@]}"} --sign "$identity" "$app"
+fi
 echo "Made $app"

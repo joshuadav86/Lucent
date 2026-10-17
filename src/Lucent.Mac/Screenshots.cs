@@ -46,6 +46,10 @@ public static class Screenshots
         ("ArtworkEmpty", TrackInfoPreviews.ArtworkEmpty),
         ("Equalizer", () => PreviewEqualizer()),
         ("Analyzer", () => PreviewAnalyzer()),
+        ("Stores", () => PreviewStores(signedIn: false)),
+        ("StoresSyncing", () => PreviewStores(signedIn: true, syncing: true)),
+        ("StoresFirstSync", () => PreviewStores(signedIn: true, firstSync: true)),
+        ("BandcampSignIn", () => new Lucent.Mac.Stores.BandcampSignInWindow()),
     };
 
     public static int Run(string[] args)
@@ -240,6 +244,41 @@ public static class Screenshots
             window.UpdateLayout();
             AnalyzerSampleMusic.Play(player.Capture, 11, seconds => window.Picture.Advance(seconds));
         });
+        return window;
+    }
+
+    private static Window PreviewStores(bool signedIn, bool syncing = false, bool firstSync = false)
+    {
+        var settings = new AppSettings
+        {
+            BandcampImport = true,
+            BeatportImport = !signedIn,
+            DownloadsWatchFolder = "/Users/sam/Downloads",
+            StoreMusicFolder = "/Users/sam/Music",
+            BandcampUsername = signedIn ? "nightdrive" : null,
+            BandcampSync = syncing,
+            BandcampFormat = "flac",
+        };
+        Lucent.Mac.Stores.BandcampSignIn.UseForPreview(signedIn ? "identity=preview" : null);
+
+        var service = new Lucent.Mac.Stores.StoreService(settings, _ => { });
+        var window = new StoreWindow(service, settings);
+        if (syncing)
+        {
+            service.PreviewSync(new WinampInspiredVisualizer.Stores.BandcampSyncProgress(3, 12, "Kiasmos - Blurred EP", 0.4));
+        }
+        else if (firstSync)
+        {
+            service.PreviewStatus("12 purchases aren't in your library yet.");
+            window.PreviewFirstSync(Enumerable.Range(1, 12)
+                .Select(i => new WinampInspiredVisualizer.Stores.BandcampPurchase($"{i}", "Artist", $"Release {i}", "https://bandcamp.com/download", false))
+                .ToList());
+        }
+        else
+        {
+            service.PreviewStatus("Added Burial - Antidawn to your library.");
+        }
+
         return window;
     }
 }
