@@ -22,6 +22,10 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
   - Saving is safe: the new info is written to a copy that's checked before it replaces the original, so a problem can't damage your music. Files that can't be saved are listed with the reason. The song playing only pauses for a moment
   - Songs keep their date when edited, so they stay put in the library's newest-first order (switch "Keep the files' dates" off if you'd rather they move to the top)
 - An artwork window: click **Art** in the player, or press C, to see the playing song's cover as big as you like. It uses the cover stored in the file, or a folder.jpg, cover.jpg or front.jpg next to it. Pin it on top of other windows, and right-click it to copy or save the picture or edit the song's info
+- An audio editor: click the waveform button in the player's title bar, or right-click a song in the queue or library and choose **Open in editor**. It shows the song's left and right channels; drag to select part of it (Shift extends, Ctrl+A selects everything), the wheel zooms and Shift+wheel scrolls, and Space plays from the cursor or plays the selection
+  - Effects change the selection, or the whole song when nothing is selected: normalize (to a peak of −0.1, −1 or −3 dB, or to a loudness of −14, −16 or −23 LUFS), change the pitch by up to 12 semitones either way in 0.1 steps (keeping the speed, or like a faster or slower record), gain, fade in and out, trim, delete, silence and reverse. Ctrl+Z undoes and Ctrl+Y redoes
+  - **Save** replaces the original after asking (formats Lucid can't write, like M4A or OGG, are saved as a new FLAC file instead). **Save as new version** keeps the original and suggests "Song (edited)". The tags and artwork come along, and the new file is checked before it replaces anything
+- A converter: right-click songs and choose **Convert to…**, or use the waveform button. Make MP3 (128 to 320 kbps, or VBR V0 and V2), FLAC (16 or 24-bit) or WAV (16, 24 or 32-bit float), keep the sample rate or change it to 44.1 or 48 kHz, and put the new files next to the originals or in a folder you choose. Several songs convert at once, tags and artwork are copied, and nothing is replaced without asking
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
 - 71 visuals in six families:
   - **Fly-through worlds:** Menger Voyage, Gyroid Caverns, Hyperspace Rings, Mandelbox Tunnel, Fractal Temple, Crystal Cavern, Wormhole Transit, Folded Metropolis, Kleinian Reef, Fibre Optic Braid and more
@@ -91,3 +95,5 @@ dotnet run --project src/WinampInspiredVisualizer
 ## License
 
 [MIT](LICENSE). Not affiliated with or endorsed by Winamp.
+
+MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucid.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).

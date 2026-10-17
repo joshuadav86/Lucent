@@ -69,6 +69,16 @@ jobs:
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
           -o publish
 
+      - name: Check the MP3 encoder is next to Lucid.exe
+        shell: pwsh
+        run: |
+          # The converter's MP3 encoder is a separate native DLL (LAME). It must sit beside Lucid.exe,
+          # not inside the single-file bundle, for it to load.
+          Get-ChildItem publish | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
+          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll") {
+            if (-not (Test-Path "publish/$dll")) { Write-Host "::error::$dll is missing from the published app"; exit 1 }
+          }
+
       - name: Zip app
         shell: pwsh
         run: Compress-Archive -Path publish/* -DestinationPath Lucid-win-x64.zip
