@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Library;
@@ -253,14 +254,27 @@ public partial class LibraryWindow : ToolWindow
 
         foreach (var folder in dialog.FolderNames)
         {
-            if (!_settings.LibraryFolders.Contains(folder, StringComparer.OrdinalIgnoreCase))
-            {
-                _settings.LibraryFolders.Add(folder);
-            }
+            LibraryFolderList.Add(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder);
         }
 
+        ApplyLibraryFolders();
+    }
+
+    /// <summary>Takes folders out of the library. Only the library forgets them; the files stay on disk.</summary>
+    private void RemoveLibraryFolders(IEnumerable<string> folders)
+    {
+        foreach (var folder in folders)
+        {
+            LibraryFolderList.Remove(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder);
+        }
+
+        ApplyLibraryFolders();
+    }
+
+    private void ApplyLibraryFolders()
+    {
         _settings.Save();
-        _library.SetFolders(_settings.LibraryFolders);
+        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders);
         UpdateLibraryStatus();
     }
 
@@ -269,16 +283,21 @@ public partial class LibraryWindow : ToolWindow
         var menu = new ContextMenu { PlacementTarget = LibraryFoldersButton, Placement = PlacementMode.Bottom };
         foreach (var folder in _settings.LibraryFolders.ToList())
         {
-            var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
-            var remove = new MenuItem { Header = $"Remove {(string.IsNullOrEmpty(name) ? folder : name)}", ToolTip = folder };
-            remove.Click += (_, _) =>
-            {
-                _settings.LibraryFolders.RemoveAll(f => string.Equals(f, folder, StringComparison.OrdinalIgnoreCase));
-                _settings.Save();
-                _library.SetFolders(_settings.LibraryFolders);
-                UpdateLibraryStatus();
-            };
+            var remove = new MenuItem { Header = $"Remove {LibraryFolderList.Name(folder)}", ToolTip = folder };
+            remove.Click += (_, _) => RemoveLibraryFolders(new[] { folder });
             menu.Items.Add(remove);
+        }
+
+        // Folders taken out from inside a linked one can be brought back from here.
+        foreach (var folder in _settings.HiddenLibraryFolders.ToList())
+        {
+            var show = new MenuItem { Header = $"Bring back {LibraryFolderList.Name(folder)}", ToolTip = folder };
+            show.Click += (_, _) =>
+            {
+                LibraryFolderList.Add(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder);
+                ApplyLibraryFolders();
+            };
+            menu.Items.Add(show);
         }
 
         if (menu.Items.Count > 0)
@@ -290,6 +309,26 @@ public partial class LibraryWindow : ToolWindow
         add.Click += (_, _) => LinkLibraryFolder();
         menu.Items.Add(add);
         menu.IsOpen = true;
+    }
+
+    private MenuItem AddFolderMenuItem()
+    {
+        var add = new MenuItem { Header = "Add a folder to the library…" };
+        add.Click += (_, _) => LinkLibraryFolder();
+        return add;
+    }
+
+    private MenuItem RemoveFoldersMenuItem(IReadOnlyList<string> folders)
+    {
+        var remove = new MenuItem
+        {
+            Header = folders.Count == 1
+                ? $"Remove “{LibraryFolderList.Name(folders[0])}” from library"
+                : $"Remove {folders.Count} folders from library",
+            ToolTip = "Takes the folder, and the folders inside it, out of the library. The files stay on your computer.",
+        };
+        remove.Click += (_, _) => RemoveLibraryFolders(folders);
+        return remove;
     }
 
     private async void OnRefreshLibrary(object sender, RoutedEventArgs e) => await _library.RescanAsync();
@@ -344,7 +383,7 @@ public partial class LibraryWindow : ToolWindow
         }
     }
 
-    // Favourite and Add to playlist depend on what's selected, so they're made fresh each time.
+    // Favourite, Add to playlist and the folder items depend on what's selected, so they're made fresh each time.
     private readonly List<object> _songMenuItems = new();
 
     private void OnLibraryMenuOpening(object sender, ContextMenuEventArgs e)
@@ -355,6 +394,15 @@ public partial class LibraryWindow : ToolWindow
         }
 
         _songMenuItems.Clear();
+        var source = e.OriginalSource as DependencyObject;
+        if (Ancestor<ListBoxItem>(source) is null)
+        {
+            // A folder heading, or the empty space below the songs, gets the folder menu instead.
+            e.Handled = true;
+            OpenFolderMenu(Ancestor<GroupItem>(source)?.DataContext as CollectionViewGroup);
+            return;
+        }
+
         var items = SelectedLibraryItems();
         if (Player is null || items.Count == 0)
         {
@@ -370,6 +418,65 @@ public partial class LibraryWindow : ToolWindow
         {
             LibraryMenu.Items.Insert(at++, item);
         }
+
+        // The folders the chosen songs are in, at the bottom.
+        var folders = items.Select(item => item.Directory).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var folderItems = new object[] { new Separator(), AddFolderMenuItem(), RemoveFoldersMenuItem(folders) };
+        foreach (var item in folderItems)
+        {
+            LibraryMenu.Items.Add(item);
+            _songMenuItems.Add(item);
+        }
+    }
+
+    /// <summary>The menu for a folder heading: play it, or add and remove library folders.</summary>
+    private void OpenFolderMenu(CollectionViewGroup? group)
+    {
+        var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.MousePoint };
+        var songs = group?.Items.OfType<LibraryItem>().ToList() ?? new List<LibraryItem>();
+        if (songs.Count > 0)
+        {
+            var play = new MenuItem { Header = "Play this folder" };
+            play.Click += async (_, _) =>
+            {
+                var tracks = await Task.Run(() => songs.Select(item => item.ToTrack()).ToList());
+                Player?.ReplaceQueue(tracks, 0);
+            };
+            var queue = new MenuItem { Header = "Add to queue" };
+            queue.Click += async (_, _) =>
+            {
+                var tracks = await Task.Run(() => songs.Select(item => item.ToTrack()).ToList());
+                Player?.AddToQueue(tracks);
+            };
+            menu.Items.Add(play);
+            menu.Items.Add(queue);
+            menu.Items.Add(new Separator());
+        }
+
+        menu.Items.Add(AddFolderMenuItem());
+        if (songs.Count > 0)
+        {
+            var directory = songs[0].Directory;
+            menu.Items.Add(RemoveFoldersMenuItem(new[] { directory }));
+            menu.Items.Add(new Separator());
+            var show = new MenuItem { Header = "Show in File Explorer" };
+            show.Click += (_, _) => Player?.ShowInExplorer(directory);
+            menu.Items.Add(show);
+        }
+
+        menu.IsOpen = true;
+    }
+
+    private static T? Ancestor<T>(DependencyObject? element) where T : DependencyObject
+    {
+        while (element is not null and not T)
+        {
+            element = element is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(element)
+                : LogicalTreeHelper.GetParent(element);
+        }
+
+        return element as T;
     }
 
     // Folder headings remember whether they were left open or closed.

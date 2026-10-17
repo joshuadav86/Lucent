@@ -12,10 +12,11 @@ public sealed class LibraryItem : INotifyPropertyChanged
     private string _durationText = string.Empty;
     private string? _searchKey;
 
-    public LibraryItem(string path, string folder, DateTime added)
+    public LibraryItem(string path, string folder, string directory, DateTime added)
     {
         Path = path;
         Folder = folder;
+        Directory = directory;
         Added = added;
         FileName = System.IO.Path.GetFileNameWithoutExtension(path);
         _title = FileName;
@@ -29,6 +30,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     /// <summary>The folder heading this file is listed under, relative to its library folder.</summary>
     public string Folder { get; }
+
+    /// <summary>The full path of the folder the file is in.</summary>
+    public string Directory { get; }
 
     /// <summary>When the file arrived: the later of its created and modified times.</summary>
     public DateTime Added { get; }

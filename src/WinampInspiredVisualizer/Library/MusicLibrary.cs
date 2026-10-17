@@ -19,6 +19,7 @@ public sealed class MusicLibrary : IDisposable
     private readonly DispatcherTimer _rescanDelay;
     private CancellationTokenSource? _scan;
     private IReadOnlyList<string> _folders = Array.Empty<string>();
+    private IReadOnlyList<string> _hidden = Array.Empty<string>();
 
     public MusicLibrary()
     {
@@ -46,11 +47,15 @@ public sealed class MusicLibrary : IDisposable
 
     public bool IsScanning { get; private set; }
 
-    public void SetFolders(IEnumerable<string> folders)
+    /// <summary>Lists the music in these folders, leaving out what's in the hidden folders inside them.</summary>
+    public void SetFolders(IEnumerable<string> folders, IEnumerable<string> hidden)
     {
         _folders = folders
             .Where(folder => !string.IsNullOrWhiteSpace(folder))
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _hidden = hidden
+            .Where(folder => !string.IsNullOrWhiteSpace(folder))
             .ToList();
         WatchFolders();
         _ = RescanAsync();
@@ -66,7 +71,8 @@ public sealed class MusicLibrary : IDisposable
         try
         {
             var folders = _folders;
-            var found = await Task.Run(() => FindFiles(folders, scan.Token), scan.Token);
+            var hidden = _hidden;
+            var found = await Task.Run(() => FindFiles(folders, hidden, scan.Token), scan.Token);
             if (scan.IsCancellationRequested)
             {
                 return;
@@ -76,9 +82,10 @@ public sealed class MusicLibrary : IDisposable
             foreach (var file in found)
             {
                 // Keep items (and their tags) for files that haven't changed since the last scan.
-                if (!_byPath.TryGetValue(file.Path, out var item) || item.Added != file.Added || item.Folder != file.Folder)
+                if (!_byPath.TryGetValue(file.Path, out var item) || item.Added != file.Added || item.Folder != file.Folder
+                    || item.Directory != file.Directory)
                 {
-                    item = new LibraryItem(file.Path, file.Folder, file.Added);
+                    item = new LibraryItem(file.Path, file.Folder, file.Directory, file.Added);
                     _byPath[file.Path] = item;
                 }
 
@@ -177,7 +184,7 @@ public sealed class MusicLibrary : IDisposable
         }
     }
 
-    private static List<FoundFile> FindFiles(IReadOnlyList<string> folders, CancellationToken token)
+    private static List<FoundFile> FindFiles(IReadOnlyList<string> folders, IReadOnlyList<string> hidden, CancellationToken token)
     {
         var options = new EnumerationOptions
         {
@@ -194,12 +201,14 @@ public sealed class MusicLibrary : IDisposable
                 continue;
             }
 
+            var hiddenHere = LibraryFolderList.HiddenIn(root, hidden);
             try
             {
                 foreach (var path in Directory.EnumerateFiles(root, "*", options))
                 {
                     token.ThrowIfCancellationRequested();
-                    if (!AudioReaderFactory.IsSupported(path) || results.ContainsKey(path))
+                    if (!AudioReaderFactory.IsSupported(path) || results.ContainsKey(path)
+                        || LibraryFolderList.IsInsideAny(path, hiddenHere))
                     {
                         continue;
                     }
@@ -216,7 +225,7 @@ public sealed class MusicLibrary : IDisposable
                     }
 
                     var directory = System.IO.Path.GetDirectoryName(path) ?? root;
-                    results[path] = new FoundFile(path, FolderLabel(root, directory), added);
+                    results[path] = new FoundFile(path, FolderLabel(root, directory), directory, added);
                 }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -284,5 +293,5 @@ public sealed class MusicLibrary : IDisposable
         _rescanDelay.Start();
     });
 
-    private sealed record FoundFile(string Path, string Folder, DateTime Added);
+    private sealed record FoundFile(string Path, string Folder, string Directory, DateTime Added);
 }
