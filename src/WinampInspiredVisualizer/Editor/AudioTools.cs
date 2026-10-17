@@ -12,7 +12,7 @@ namespace WinampInspiredVisualizer.Editor;
 
 /// <summary>
 /// The ways into the audio editor and the converter, kept here so the main window only needs a few
-/// one-line handlers. Also makes sure closing Lucid doesn't silently lose edits or half-written files.
+/// one-line handlers. Also makes sure closing Lucent doesn't silently lose edits or half-written files.
 /// </summary>
 public static class AudioTools
 {
@@ -78,7 +78,7 @@ public static class AudioTools
         window.Closing += (_, e) =>
         {
             // This runs after the editor's own check. Refused while idle means the user chose to keep
-            // their unsaved edits, so Lucid shouldn't quit after all.
+            // their unsaved edits, so Lucent shouldn't quit after all.
             if (e.Cancel && !window.IsBusy)
             {
                 _closeWhenIdle = null;
@@ -183,7 +183,7 @@ public static class AudioTools
     private static bool SamePath(string a, string b) =>
         string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 
-    // ---- Closing Lucid ----
+    // ---- Closing Lucent ----
 
     private static void Watch(Window owner)
     {
@@ -195,7 +195,7 @@ public static class AudioTools
 
     /// <summary>
     /// Owned windows close with the main window, so ask about unsaved edits first, and let running work
-    /// stop cleanly (removing its half-written temporary files) before Lucid actually quits.
+    /// stop cleanly (removing its half-written temporary files) before Lucent actually quits.
     /// </summary>
     private static void OnOwnerClosing(object? sender, CancelEventArgs e)
     {
@@ -229,14 +229,14 @@ public static class AudioTools
         }
 
         var what = busyConverters.Count > 0 ? "still converting" : "still working in the audio editor";
-        var answer = MessageBox.Show(owner, $"Lucid is {what}. Stop and close Lucid?", "Lucid",
+        var answer = MessageBox.Show(owner, $"Lucent is {what}. Stop and close Lucent?", "Lucent",
             MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes)
         {
             return;
         }
 
-        // Each window cancels its work and closes once it has cleaned up; the last one closes Lucid.
+        // Each window cancels its work and closes once it has cleaned up; the last one closes Lucent.
         _closeWhenIdle = owner;
         foreach (var window in busyEditors.Cast<Window>().Concat(busyConverters))
         {

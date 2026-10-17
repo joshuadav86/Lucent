@@ -154,10 +154,10 @@ public partial class TrackInfoWindow : Window
         {
             ShowProblems(
                 result.Tracks.Count == 0
-                    ? paths.Count == 1 ? "Lucid can't edit this file:" : "Lucid can't edit these files:"
+                    ? paths.Count == 1 ? "Lucent can't edit this file:" : "Lucent can't edit these files:"
                     : result.Failed.Count == 1
-                        ? "Lucid can't edit one of these files, so it's been left out:"
-                        : $"Lucid can't edit {result.Failed.Count} of these files, so they've been left out:",
+                        ? "Lucent can't edit one of these files, so it's been left out:"
+                        : $"Lucent can't edit {result.Failed.Count} of these files, so they've been left out:",
                 result.Failed);
         }
 
@@ -178,7 +178,7 @@ public partial class TrackInfoWindow : Window
         }
 
         SubtitleText.Text = _tracks.Count == 1 ? Path.GetFileName(_tracks[0].Path) : $"{_tracks.Count} tracks";
-        Title = _tracks.Count == 1 ? $"{Path.GetFileNameWithoutExtension(_tracks[0].Path)} - Edit info - Lucid" : "Edit info - Lucid";
+        Title = _tracks.Count == 1 ? $"{Path.GetFileNameWithoutExtension(_tracks[0].Path)} - Edit info - Lucent" : "Edit info - Lucent";
         FillFields();
         FillPictures(result.Pictures, result.PicturesDiffer);
         FillDetails();
@@ -196,7 +196,7 @@ public partial class TrackInfoWindow : Window
         {
             if (!TagWriter.CanWrite(path))
             {
-                failed.Add((path, "Lucid can't write info into this kind of file."));
+                failed.Add((path, "Lucent can't write info into this kind of file."));
                 continue;
             }
 
@@ -962,7 +962,7 @@ public partial class TrackInfoWindow : Window
 
         if (!_closeConfirmed && HasChanges)
         {
-            var answer = MessageBox.Show(this, "Close without saving your changes?", "Lucid",
+            var answer = MessageBox.Show(this, "Close without saving your changes?", "Lucent",
                 MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
             e.Cancel = answer != MessageBoxResult.Yes;
         }

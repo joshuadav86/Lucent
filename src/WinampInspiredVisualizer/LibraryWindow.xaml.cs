@@ -149,7 +149,7 @@ public partial class LibraryWindow : ToolWindow
             : favoritesOnly
                 ? "Click the heart in the player, or right-click songs here or in the queue, to make them favorites."
                 : linked
-                    ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
+                    ? "None of your library folders have music Lucent can play yet. New files appear here on their own."
                     : "Every song inside it shows up here, newest first, and new files appear on their own.";
         LinkFolderButton.Visibility = favoritesOnly || noMatches ? Visibility.Collapsed : Visibility.Visible;
     }

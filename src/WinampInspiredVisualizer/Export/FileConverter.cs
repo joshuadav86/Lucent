@@ -115,8 +115,8 @@ public static class FileConverter
     /// <summary>Plain-English wording for the usual reasons a conversion fails.</summary>
     public static string FriendlyError(Exception ex) => ex switch
     {
-        UnauthorizedAccessException => "Lucid isn't allowed to write to that folder.",
-        IOException io when SafeFile.IsFileInUse(io) => "The file is open in another program, or playing in Lucid.",
+        UnauthorizedAccessException => "Lucent isn't allowed to write to that folder.",
+        IOException io when SafeFile.IsFileInUse(io) => "The file is open in another program, or playing in Lucent.",
         IOException io when (io.HResult & 0xFFFF) == 112 => "The disk is full.", // ERROR_DISK_FULL
         IOException => $"The file couldn't be written ({ex.Message}).",
         _ => $"The file couldn't be read or converted ({ex.Message}).",

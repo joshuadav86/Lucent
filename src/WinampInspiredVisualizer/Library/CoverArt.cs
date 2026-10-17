@@ -155,7 +155,7 @@ public static class CoverArt
             return new EmbeddableImage(data, mime, width, height, width, height);
         }
 
-        var decoded = Decode(data, MaxEmbeddedPixels) ?? throw new InvalidDataException("That isn't a picture Lucid can read.");
+        var decoded = Decode(data, MaxEmbeddedPixels) ?? throw new InvalidDataException("That isn't a picture Lucent can read.");
         var jpeg = EncodeJpeg(decoded.Image);
         return new EmbeddableImage(jpeg, "image/jpeg", decoded.Image.PixelWidth, decoded.Image.PixelHeight, width, height);
     }

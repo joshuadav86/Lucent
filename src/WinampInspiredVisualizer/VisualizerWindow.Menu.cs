@@ -87,7 +87,7 @@ public partial class VisualizerWindow
     /// <summary>
     /// A left click on the visuals plays or pauses the music, in a window or fullscreen. It waits
     /// out the double-click time first, so double-clicking still just switches fullscreen, and the
-    /// click that brings Lucid to the front doesn't count.
+    /// click that brings Lucent to the front doesn't count.
     /// </summary>
     private void OnVisualsClicked()
     {

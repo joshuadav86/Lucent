@@ -110,8 +110,8 @@ public sealed class TagSaveException : Exception
 /// </summary>
 public static class TagWriter
 {
-    private const string TempSuffix = ".lucid-saving";
-    private const string BackupSuffix = ".lucid-backup";
+    private const string TempSuffix = ".lucent-saving";
+    private const string BackupSuffix = ".lucent-backup";
 
     static TagWriter()
     {
@@ -127,7 +127,7 @@ public static class TagWriter
 
     /// <summary>
     /// The type name TagLib uses for a file. It's passed explicitly so the temporary copy, whose name ends
-    /// in ".lucid-saving", is still read as the right format.
+    /// in ".lucent-saving", is still read as the right format.
     /// </summary>
     public static string TagLibMimeType(string path) => System.IO.Path.GetExtension(path).ToLowerInvariant() switch
     {
@@ -150,7 +150,7 @@ public static class TagWriter
 
         if (!CanWrite(path))
         {
-            throw new TagSaveException("Lucid can't write info into this kind of file.");
+            throw new TagSaveException("Lucent can't write info into this kind of file.");
         }
 
         if (info.IsReadOnly)
@@ -194,7 +194,7 @@ public static class TagWriter
 
     /// <summary>
     /// Step two, which is quick: swaps the checked copy in for the original. Windows won't allow this while
-    /// another program (or Lucid's own player) has the file open; see AudioPlayer.RunWithFileReleasedAsync.
+    /// another program (or Lucent's own player) has the file open; see AudioPlayer.RunWithFileReleasedAsync.
     /// </summary>
     public static void Commit(PreparedSave save)
     {
@@ -268,19 +268,19 @@ public static class TagWriter
     {
         TagSaveException => ex.Message,
         FileNotFoundException or DirectoryNotFoundException => "The file has been moved or deleted.",
-        UnauthorizedAccessException => "Windows didn't let Lucid change it. The file may be read-only, or in a folder that needs administrator permission.",
+        UnauthorizedAccessException => "Windows didn't let Lucent change it. The file may be read-only, or in a folder that needs administrator permission.",
         IOException io when IsInUse(io) => "Another program is using the file. Close it there and try again.",
         IOException io when IsDiskFull(io) => "The drive is full. Free up some space and try again.",
         PathTooLongException => "The file's location is too long for Windows to handle.",
-        UnsupportedFormatException => "Lucid can't write info into this kind of file.",
-        CorruptFileException => "The file looks damaged, so Lucid didn't change it.",
+        UnsupportedFormatException => "Lucent can't write info into this kind of file.",
+        CorruptFileException => "The file looks damaged, so Lucent didn't change it.",
         _ => $"Something unexpected went wrong ({ex.Message}).",
     };
 
     /// <summary>Makes sure the file has the tag type that players expect for its format.</summary>
     private static void EnsureTags(TagLib.File file, string originalPath)
     {
-        // The extension comes from the original: the copy being written ends in ".lucid-saving".
+        // The extension comes from the original: the copy being written ends in ".lucent-saving".
         switch (System.IO.Path.GetExtension(originalPath).ToLowerInvariant())
         {
             case ".mp3" or ".aac" or ".aif" or ".aiff" or ".aifc":

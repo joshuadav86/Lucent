@@ -4,12 +4,14 @@ using Velopack.Sources;
 namespace WinampInspiredVisualizer.Updates;
 
 /// <summary>
-/// Keeps an installed Lucid up to date from the "Latest build" release on GitHub. It checks once
-/// at startup, downloads a newer build in the background, and installs it when Lucid closes, or
-/// straight away with a restart if asked. Lucid run from the zip isn't installed and never updates.
+/// Keeps an installed Lucent up to date from the "Latest build" release on GitHub. It checks once
+/// at startup, downloads a newer build in the background, and installs it when Lucent closes, or
+/// straight away with a restart if asked. Lucent run from the zip isn't installed and never updates.
 /// </summary>
 public sealed class AppUpdater
 {
+    // The repository kept its old name when the app became Lucent. GitHub redirects the old name if the
+    // repository is ever renamed, so this can stay as it is.
     private const string RepositoryUrl = "https://github.com/joshuadav86/Lucid";
 
     // The "Latest build" release is a pre-release, so pre-releases have to be included.
@@ -43,13 +45,13 @@ public sealed class AppUpdater
         }
         catch (Exception)
         {
-            // Offline, GitHub unreachable or mid-publish: try again next time Lucid starts.
+            // Offline, GitHub unreachable or mid-publish: try again next time Lucent starts.
         }
     }
 
     /// <summary>
-    /// Hands the downloaded build to Velopack's updater, which waits for Lucid to exit, installs it
-    /// and, if <paramref name="restart"/>, opens Lucid again. Does nothing if there's nothing to install.
+    /// Hands the downloaded build to Velopack's updater, which waits for Lucent to exit, installs it
+    /// and, if <paramref name="restart"/>, opens Lucent again. Does nothing if there's nothing to install.
     /// </summary>
     public void InstallOnExit(bool restart)
     {
@@ -65,7 +67,7 @@ public sealed class AppUpdater
         }
         catch (Exception)
         {
-            // The update stays downloaded; Velopack installs it the next time Lucid starts.
+            // The update stays downloaded; Velopack installs it the next time Lucent starts.
         }
     }
 }

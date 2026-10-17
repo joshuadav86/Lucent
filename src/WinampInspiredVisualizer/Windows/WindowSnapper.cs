@@ -5,7 +5,7 @@ using System.Windows.Interop;
 namespace WinampInspiredVisualizer.Windows;
 
 /// <summary>
-/// Makes Lucid's windows behave like Winamp's: their edges snap to each other and to the
+/// Makes Lucent's windows behave like Winamp's: their edges snap to each other and to the
 /// edges of the screen, and dragging the player window carries every window docked to it.
 /// Drop a window beside others with one corner lined up and the other corner nearly lined up,
 /// and it stretches to line that one up too. Resizing a window resizes the windows docked to it
@@ -608,7 +608,7 @@ public sealed class WindowSnapper
         return sideBySide || stacked;
     }
 
-    /// <summary>The visible Lucid windows other than this one (and the ones it's carrying), plus the screen it's on.</summary>
+    /// <summary>The visible Lucent windows other than this one (and the ones it's carrying), plus the screen it's on.</summary>
     private IEnumerable<(IntPtr Handle, Rect Rect)> OtherWindows(IntPtr self)
     {
         foreach (var window in _windows)
@@ -624,7 +624,7 @@ public sealed class WindowSnapper
         }
     }
 
-    /// <summary>Lucid's other windows that could be docked to the player, shown or hidden.</summary>
+    /// <summary>Lucent's other windows that could be docked to the player, shown or hidden.</summary>
     private IEnumerable<(IntPtr Handle, Rect Rect)> DockableWindows(IntPtr main)
     {
         foreach (var window in _windows)
@@ -667,7 +667,7 @@ public sealed class WindowSnapper
     }
 
     /// <summary>
-    /// When the window has been pushed a little way into another of Lucid's windows, moves it back
+    /// When the window has been pushed a little way into another of Lucent's windows, moves it back
     /// out against that window's nearest edge. Pushed further in than that, it's meant to go over it.
     /// </summary>
     private (int Dx, int Dy) KeepApart(IntPtr hwnd, Rect rect, int dx, int dy)

@@ -6,7 +6,7 @@ using NAudio.Wave.SampleProviders;
 namespace WinampInspiredVisualizer.Export;
 
 /// <summary>
-/// Encodes MP3 with LAME (libmp3lame.64.dll, shipped next to Lucid.exe by the NAudio.Lame package).
+/// Encodes MP3 with LAME (libmp3lame.64.dll, shipped next to Lucent.exe by the NAudio.Lame package).
 /// If LAME can't be loaded, constant-bitrate files fall back to the MP3 encoder built into Windows
 /// (Media Foundation, Windows 8 and later), which has no VBR mode.
 /// </summary>

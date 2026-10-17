@@ -79,7 +79,7 @@ public partial class MainWindow
         if (tracks.Count == 0)
         {
             MessageBox.Show(this, "You haven't got any favorite songs yet. Click the heart in the player, or right-click songs in the queue or library, to add some.",
-                "Lucid", MessageBoxButton.OK, MessageBoxImage.Information);
+                "Lucent", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -103,7 +103,7 @@ public partial class MainWindow
         if (tracks.Count == 0)
         {
             MessageBox.Show(this, $"None of the songs in \"{name}\" could be found. They may have been moved or deleted.",
-                "Lucid", MessageBoxButton.OK, MessageBoxImage.Information);
+                "Lucent", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -220,7 +220,7 @@ public partial class MainWindow
             var delete = new MenuItem { Header = "Delete" };
             delete.Click += (_, _) =>
             {
-                if (MessageBox.Show(owner, $"Delete the playlist \"{name}\"? The songs themselves aren't touched.", "Lucid",
+                if (MessageBox.Show(owner, $"Delete the playlist \"{name}\"? The songs themselves aren't touched.", "Lucent",
                         MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
                 {
                     SavePlaylist(() => SavedPlaylists.Delete(name));

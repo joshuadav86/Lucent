@@ -57,7 +57,7 @@ public static class ExportPipeline
         }
     }
 
-    /// <summary>Opens the new file with the same decoders Lucid plays with, and checks its length looks right.</summary>
+    /// <summary>Opens the new file with the same decoders Lucent plays with, and checks its length looks right.</summary>
     private static void Verify(string path, TimeSpan? expected)
     {
         try

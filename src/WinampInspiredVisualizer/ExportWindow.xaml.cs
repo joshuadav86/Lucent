@@ -61,7 +61,7 @@ public partial class ExportWindow : Window
     public static (string Path, ExportOptions Options)? ShowSaveDialog(Window owner, string sourcePath, ExportOptions initial, string? note)
     {
         var window = new ExportWindow(saveMode: true, initial, new[] { sourcePath }, settings: null) { Owner = owner };
-        window.Title = "Save as new version - Lucid";
+        window.Title = "Save as new version - Lucent";
         window.Heading.Text = "SAVE AS NEW VERSION";
         window.PrimaryText.Text = "Save";
         window._saveFolder = Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory;
@@ -89,7 +89,7 @@ public partial class ExportWindow : Window
     {
         var options = settings.ConvertOptions.Format == ExportFormat.Aiff ? new ExportOptions() : settings.ConvertOptions;
         var window = new ExportWindow(saveMode: false, options, files, settings) { Owner = owner };
-        window.Title = "Convert - Lucid";
+        window.Title = "Convert - Lucent";
         window.Heading.Text = files.Count == 1 ? "CONVERT A SONG" : $"CONVERT {files.Count} SONGS";
         window.PrimaryText.Text = "Convert";
         var names = files.Take(4).Select(Path.GetFileName).ToList();

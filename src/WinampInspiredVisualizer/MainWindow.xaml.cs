@@ -61,7 +61,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // The other windows are made after this one, so this stays the app's main window:
-        // closing it closes Lucid.
+        // closing it closes Lucent.
         Application.Current.MainWindow = this;
         _visuals = new VisualizerWindow();
         _queue = new QueueWindow();
@@ -233,7 +233,7 @@ public partial class MainWindow : Window
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
         {
-            UpdateButton.ToolTip = $"Lucid {version} is ready. Click to restart into it now, or it installs when you close Lucid.";
+            UpdateButton.ToolTip = $"Lucent {version} is ready. Click to restart into it now, or it installs when you close Lucent.";
             UpdateButton.Visibility = Visibility.Visible;
         });
         _ = _updater.CheckAsync();
@@ -784,7 +784,7 @@ public partial class MainWindow : Window
     private void OnEqualizerOpenChanged(bool isOpen)
     {
         EqualizerToggle.IsChecked = isOpen;
-        // Closing Lucid closes the equalizer too; that shouldn't count as switching it off.
+        // Closing Lucent closes the equalizer too; that shouldn't count as switching it off.
         if (!IsShuttingDown)
         {
             _settings.ShowEqualizer = isOpen;
@@ -1631,7 +1631,7 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e) => HandleShortcut(e);
 
-    /// <summary>The keyboard shortcuts, which work from any of Lucid's windows.</summary>
+    /// <summary>The keyboard shortcuts, which work from any of Lucent's windows.</summary>
     public void HandleShortcut(KeyEventArgs e)
     {
         if (e.Key == Key.I && Keyboard.Modifiers == ModifierKeys.Control)
@@ -1851,8 +1851,8 @@ public partial class MainWindow : Window
         if (track is null)
         {
             SetMarquee("Nothing playing");
-            TrackDetails.Text = _playlist.Count == 0 ? "Drop music on any Lucid window to begin" : $"{_playlist.Count} in the queue";
-            Title = "Lucid";
+            TrackDetails.Text = _playlist.Count == 0 ? "Drop music on any Lucent window to begin" : $"{_playlist.Count} in the queue";
+            Title = "Lucent";
             return;
         }
 
@@ -1862,7 +1862,7 @@ public partial class MainWindow : Window
         var details = track.AudioDetails;
         TrackDetails.Text = string.IsNullOrEmpty(details) ? Path.GetFileName(track.Path) : details;
         TrackDetails.ToolTip = track.Path;
-        Title = $"{name} - Lucid";
+        Title = $"{name} - Lucent";
     }
 
     /// <summary>Shows the title, scrolling it sideways when it's too long to fit.</summary>
@@ -1906,7 +1906,7 @@ public partial class MainWindow : Window
     private void ShowError(string message, Exception ex)
     {
         UpdatePlayPauseButton();
-        MessageBox.Show(this, $"{message}\n\nDetails: {ex.Message}", "Lucid",
+        MessageBox.Show(this, $"{message}\n\nDetails: {ex.Message}", "Lucent",
             MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 

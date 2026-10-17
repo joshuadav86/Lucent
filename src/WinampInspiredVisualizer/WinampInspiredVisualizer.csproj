@@ -7,9 +7,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <AssemblyName>Lucid</AssemblyName>
-    <Product>Lucid</Product>
-    <ApplicationIcon>Assets\Lucid.ico</ApplicationIcon>
+    <AssemblyName>Lucent</AssemblyName>
+    <Product>Lucent</Product>
+    <ApplicationIcon>Assets\Lucent.ico</ApplicationIcon>
     <RootNamespace>WinampInspiredVisualizer</RootNamespace>
     <!-- CI sets the last number to the build number, so every build installs over the one before. -->
     <Version>0.1.0</Version>
@@ -30,22 +30,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\Lucid.ico" />
-    <Resource Include="Assets\Lucid-64.png" />
+    <Resource Include="Assets\Lucent.ico" />
+    <Resource Include="Assets\Lucent-64.png" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Shaders are compiled when the app starts, so they ship as plain files people can edit. -->
     <None Include="Presets\*.hlsl" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="Shaders\*.hlsl*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <!-- Copies inside Lucid.exe too, for when it's run without its folder (say, straight from the zip). -->
+    <!-- Copies inside Lucent.exe too, for when it's run without its folder (say, straight from the zip). -->
     <EmbeddedResource Include="Presets\*.hlsl" LogicalName="Presets/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Shaders\*.hlsl*" LogicalName="Shaders/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!--
     The MP3 encoder (LAME, from NAudio.Lame) is a native DLL that NAudio.Lame loads from the app's folder.
-    Keep it out of the single-file bundle so it ships beside Lucid.exe, where it can be found (and,
+    Keep it out of the single-file bundle so it ships beside Lucent.exe, where it can be found (and,
     as its LGPL licence asks, swapped for another build).
   -->
   <Target Name="KeepLameBesideTheApp" BeforeTargets="AssignTargetPaths">

@@ -89,7 +89,7 @@ public partial class ArtworkWindow : Window
         TrackText.Text = track is null
             ? string.Empty
             : string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Title}  ·  {track.Artist}";
-        Title = track is null ? "Artwork - Lucid" : $"{track.Title} - Artwork - Lucid";
+        Title = track is null ? "Artwork - Lucent" : $"{track.Title} - Artwork - Lucent";
         LoadCover();
     }
 
@@ -265,7 +265,7 @@ public partial class ArtworkWindow : Window
     }
 
     private void ShowProblem(string message, Exception ex) =>
-        MessageBox.Show(this, $"{message}\n\nDetails: {ex.Message}", "Lucid", MessageBoxButton.OK, MessageBoxImage.Warning);
+        MessageBox.Show(this, $"{message}\n\nDetails: {ex.Message}", "Lucent", MessageBoxButton.OK, MessageBoxImage.Warning);
 
     // ---- Window ----
 

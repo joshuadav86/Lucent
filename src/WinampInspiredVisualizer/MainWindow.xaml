@@ -1,8 +1,8 @@
 <Window x:Class="WinampInspiredVisualizer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Lucid"
-        Icon="Assets/Lucid.ico"
+        Title="Lucent"
+        Icon="Assets/Lucent.ico"
         Width="520" SizeToContent="Height" ResizeMode="CanMinimize"
         Background="{DynamicResource SurfaceBrush}"
         AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver"
@@ -35,13 +35,13 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
-                    <Image Source="Assets/Lucid-64.png" Width="14" Height="14" VerticalAlignment="Center"
+                    <Image Source="Assets/Lucent-64.png" Width="14" Height="14" VerticalAlignment="Center"
                            RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="LUCID" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Text="LUCENT" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel x:Name="TitleButtons" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
-                    <!-- Shows once a newer build has downloaded. It installs when Lucid closes anyway; this restarts now. -->
+                    <!-- Shows once a newer build has downloaded. It installs when Lucent closes anyway; this restarts now. -->
                     <Button x:Name="UpdateButton" Style="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
                             Content="UPDATE" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"
                             Click="OnInstallUpdate" WindowChrome.IsHitTestVisibleInChrome="True" />
@@ -165,7 +165,7 @@
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMinimize">
                         <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource MinimizeIcon}" />
                     </Button>
-                    <Button Style="{StaticResource CloseCaptionButton}" Height="34" Width="40" ToolTip="Close Lucid"
+                    <Button Style="{StaticResource CloseCaptionButton}" Height="34" Width="40" ToolTip="Close Lucent"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseWindow">
                         <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
                     </Button>
@@ -235,7 +235,7 @@
                                 </StackPanel>
                             </Canvas>
                         </DockPanel>
-                        <TextBlock x:Name="TrackDetails" Text="Drop music on any Lucid window to begin" FontSize="11" Margin="0,3,0,0"
+                        <TextBlock x:Name="TrackDetails" Text="Drop music on any Lucent window to begin" FontSize="11" Margin="0,3,0,0"
                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                         <DockPanel Margin="0,10,0,0">
                             <Grid DockPanel.Dock="Left" VerticalAlignment="Center">

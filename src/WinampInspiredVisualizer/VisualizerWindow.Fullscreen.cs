@@ -69,7 +69,7 @@ public partial class VisualizerWindow
             }
         }
 
-        // A popup stays above every other app, so it goes as soon as Lucid isn't the active window.
+        // A popup stays above every other app, so it goes as soon as Lucent isn't the active window.
         if (!IsVisible || !IsActive)
         {
             HideExitButton(fade: false);

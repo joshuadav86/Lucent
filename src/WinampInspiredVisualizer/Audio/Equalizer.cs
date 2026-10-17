@@ -121,7 +121,7 @@ public sealed class Equalizer : ISampleProvider
     /// <summary>
     /// The slider gains saved settings describe for a layout: the saved gains when they match it,
     /// otherwise the named preset, otherwise the saved sliders redrawn for the new layout when they
-    /// came from a band count Lucid no longer offers, otherwise flat.
+    /// came from a band count Lucent no longer offers, otherwise flat.
     /// </summary>
     public static double[] SliderGains(EqualizerSettings settings, EqualizerBands bands)
     {
