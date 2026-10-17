@@ -202,7 +202,7 @@ Skins decide the shape, type and finish of every window. Themes decide the colou
 1. Download [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
 2. Run it. Lucent installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
 
-Installed Lucent keeps itself up to date. Each time it starts it checks for a newer build, downloads it in the background and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists and visuals are kept. Uninstall it from Windows' **Installed apps** list.
+Installed Lucent keeps itself up to date. It checks for a newer build when it starts and every hour while it runs, downloads it in the background and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists and visuals are kept. Uninstall it from Windows' **Installed apps** list.
 
 If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
 
