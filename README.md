@@ -9,10 +9,11 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 ## Features
 
 - Plays MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
-- Add files or whole folders, or drag them onto the window
-- Playlist with play, pause, stop, previous, next, seek and volume
+- A small player window like Winamp's, with a big time display, a spectrum meter (click it for a waveform, or to hide it), a scrolling title, and the bitrate and sample rate
+- The visuals, the queue and the library each have their own window. Their edges snap to each other and to the screen, and dragging the player carries every window docked to it. The visuals open with the player; the Visuals, Queue and Library switches in the player show or hide each one, and Lucid remembers where you left them
+- Add files or whole folders with the eject button, or drag them onto any Lucid window
+- Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library: link a folder and every song inside it is listed, newest first, with other sort orders and folder headings you can open or close
-- Library and Queue switches in the title bar show or hide each side panel, for a bigger view of the visuals
 - Shows track title, artist and length from the file's tags
 - GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
 - 72 visuals in six families:
@@ -22,20 +23,20 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
   - **Music-shaped:** Spectrum Tunnel, Neon Oscilloscope, Cymatic Plate, Pulsar Ridges, Spectral Sunflower, Spectrum Galaxy, Lissajous Laser, Plasma Orb, Caustic Rings, Beat Shards and more
   - **Cosmic and organic:** Bass Nebula, Aurora Veil, Black Hole, Cosmic Jellyfish, Supernova Remnant, Electric Storm, Ink Flow, Chrome Blobs, Shot Silk, Living Cells and more
   - **Particles:** hundreds of thousands of glowing particles moving on the graphics card every frame: Strange Attractors, Galaxy Collision, Firework Mandala, Silk Currents, Sonic Dandelion and Knot Stream
-- A visual picker: click the visual's name in the player bar (the button with the screen-and-spark icon), or press V, to choose any visual from a list
-- Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so. The AUTO pill in the player bar shows how often; click the arrow beside it (or right-click the pill) to choose anything from 10 seconds to 3 minutes
-- Options (the gear in the title bar, or O):
+- A visual picker: click the visual's name under the visuals (the button with the screen-and-spark icon), or press V, to choose any visual from a list
+- Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so. The AUTO pill under the visuals shows how often; click the arrow beside it (or right-click the pill) to choose anything from 10 seconds to 3 minutes
+- Options (the gear in the player's title bar, or O):
   - **Resolution:** draw visuals at the window's size, or at 1080p, 1440p or 4K. Above the window's size they're drawn bigger and shrunk to fit (supersampling), for smoother, finer detail
   - **Detail:** Low to Ultra, for more ray-marching steps and deeper fractals in the 3D and fractal visuals, and up to four times as many particles in the particle visuals
   - **Glow:** how strongly bright parts bloom, from off to strong
   - **HDR:** on screens with HDR turned on in Windows, highlights shine brighter than normal white
-  - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown in the player bar, next to the visuals)
+  - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown under the visuals)
 - Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
 - Remembers the last visual, your options and your theme
 - Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11
 
-**Shortcuts:** Space plays or pauses, Enter plays the selected track, Delete removes selected tracks from the playlist, N and B switch to the next or previous visual, V opens the visual picker, L and Q show or hide the library and queue, O opens options, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it.
+**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, O opens options, A turns Auto mode on or off, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
 
 ## Download and run
 
