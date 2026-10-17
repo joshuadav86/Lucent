@@ -6,13 +6,15 @@ using System.Windows.Media;
 namespace WinampInspiredVisualizer.Editor;
 
 /// <summary>
-/// The editor's main view: a time ruler, then one lane per channel with its waveform. Click to
-/// place the cursor, drag to select (Shift extends), the wheel zooms around the mouse (Shift+wheel
-/// or a middle-button drag pans). The playhead is a separate layer, so moving it never redraws the waveform.
+/// The editor's main view: a time ruler, a bar with a tab for each clip, then one lane per channel with
+/// its waveform. Click to place the cursor, drag to select (Shift extends), the wheel zooms around the
+/// mouse (Shift+wheel or a middle-button drag pans). Drag a clip's tab to move the clip; click it to
+/// select the clip. The playhead is a separate layer, so moving it never redraws the waveform.
 /// </summary>
 public sealed class WaveformView : FrameworkElement
 {
     public const double RulerHeight = 22;
+    private const double ClipBarHeight = 20;
     private const double LaneGap = 6;
     private const double DragThreshold = 3;
 
@@ -39,6 +41,11 @@ public sealed class WaveformView : FrameworkElement
     private bool _selecting;
     private Point? _panFrom;
     private double _panStartView;
+    private IReadOnlyList<int> _splits = Array.Empty<int>();
+    // The clip whose tab was pressed, and where the mouse is while it's dragged.
+    private int? _draggedClip;
+    private double _dragX;
+    private bool _draggingClip;
 
     public WaveformView()
     {
@@ -63,6 +70,9 @@ public sealed class WaveformView : FrameworkElement
 
     /// <summary>The user clicked (without dragging) to put the cursor somewhere.</summary>
     public event EventHandler? CursorPlaced;
+
+    /// <summary>A clip's tab was dragged and dropped: move clip <c>Clip</c> so it becomes clip number <c>ToIndex</c>.</summary>
+    public event EventHandler<(int Clip, int ToIndex)>? ClipMoveRequested;
 
     public Brush? WaveBrush { get => (Brush?)GetValue(WaveBrushProperty); set => SetValue(WaveBrushProperty, value); }
 
@@ -102,6 +112,34 @@ public sealed class WaveformView : FrameworkElement
     }
 
     public int Frames => _peaks?.Audio.Frames ?? 0;
+
+    /// <summary>Where the audio is split into clips, in order.</summary>
+    public IReadOnlyList<int> Splits
+    {
+        get => _splits;
+        set
+        {
+            _splits = value;
+            InvalidateVisual();
+        }
+    }
+
+    /// <summary>The clips between the splits, in order.</summary>
+    public IReadOnlyList<FrameRange> Clips
+    {
+        get
+        {
+            var clips = new List<FrameRange>(_splits.Count + 1);
+            var start = 0;
+            foreach (var split in _splits.Where(s => s > 0 && s < Frames).Append(Frames))
+            {
+                clips.Add(new FrameRange(start, split - start));
+                start = split;
+            }
+
+            return clips;
+        }
+    }
 
     public int SampleRate => _peaks?.Audio.SampleRate ?? 44100;
 
@@ -259,13 +297,14 @@ public sealed class WaveformView : FrameworkElement
         }
 
         var channels = _peaks.Audio.ChannelCount;
-        var laneHeight = (height - RulerHeight - LaneGap * channels) / channels;
+        var lanesTop = RulerHeight + ClipBarHeight;
+        var laneHeight = (height - lanesTop - LaneGap * channels) / channels;
         var linePen = new Pen(LineBrush ?? Brushes.Gray, 1);
         linePen.Freeze();
 
         for (var c = 0; c < channels; c++)
         {
-            var top = RulerHeight + LaneGap + c * (laneHeight + LaneGap);
+            var top = lanesTop + LaneGap + c * (laneHeight + LaneGap);
             dc.DrawRoundedRectangle(LaneBrush, null, new Rect(0, top, width, laneHeight), 6, 6);
         }
 
@@ -283,10 +322,11 @@ public sealed class WaveformView : FrameworkElement
         }
 
         DrawRuler(dc, width, linePen);
+        DrawClips(dc, width, height, lanesTop);
 
         for (var c = 0; c < channels; c++)
         {
-            var top = RulerHeight + LaneGap + c * (laneHeight + LaneGap);
+            var top = lanesTop + LaneGap + c * (laneHeight + LaneGap);
             var lane = new Rect(0, top, width, laneHeight);
             var middle = top + laneHeight / 2;
             dc.DrawLine(linePen, new Point(0, Math.Round(middle) + 0.5), new Point(width, Math.Round(middle) + 0.5));
@@ -314,7 +354,7 @@ public sealed class WaveformView : FrameworkElement
             if (x >= 0 && x <= width)
             {
                 var pen = new Pen(CursorBrush ?? Brushes.White, 1);
-                dc.DrawLine(pen, new Point(x, RulerHeight), new Point(x, height));
+                dc.DrawLine(pen, new Point(x, lanesTop), new Point(x, height));
             }
         }
         else
@@ -329,6 +369,84 @@ public sealed class WaveformView : FrameworkElement
                 }
             }
         }
+    }
+
+    /// <summary>The clip tabs under the ruler, the splits across the lanes, and the clip being dragged.</summary>
+    private void DrawClips(DrawingContext dc, double width, double height, double lanesTop)
+    {
+        var clips = Clips;
+        var tabTop = RulerHeight + 2;
+        var tabHeight = ClipBarHeight - 3;
+        for (var i = 0; i < clips.Count; i++)
+        {
+            var x0 = Math.Max(-8, FrameToX(clips[i].Start)) + 1;
+            var x1 = Math.Min(width + 8, FrameToX(clips[i].End)) - 1;
+            if (x1 <= 0 || x0 >= width || x1 - x0 < 2)
+            {
+                continue;
+            }
+
+            var tab = new Rect(x0, tabTop, x1 - x0, tabHeight);
+            dc.PushOpacity(_draggingClip && _draggedClip == i ? 0.35 : 1);
+            dc.DrawRoundedRectangle(LaneBrush, null, tab, 4, 4);
+            var label = clips.Count == 1
+                ? "Press S to split at the cursor"
+                : $"Clip {i + 1}  ·  {FormatTime(clips[i].Length / (double)SampleRate, 0.1)}";
+            dc.PushClip(new RectangleGeometry(tab));
+            dc.DrawText(Text(label, 10, LabelBrush), new Point(Math.Max(x0, 0) + 6, tabTop + 2));
+            dc.Pop();
+            dc.Pop();
+        }
+
+        var splitPen = new Pen(LabelBrush ?? Brushes.Gray, 1) { DashStyle = new DashStyle(new double[] { 3, 3 }, 0) };
+        splitPen.Freeze();
+        foreach (var split in _splits)
+        {
+            var x = Math.Round(FrameToX(split)) + 0.5;
+            if (x >= 0 && x <= width)
+            {
+                dc.DrawLine(splitPen, new Point(x, RulerHeight), new Point(x, height));
+            }
+        }
+
+        if (!_draggingClip || _draggedClip is not { } dragged || dragged >= clips.Count)
+        {
+            return;
+        }
+
+        // The dragged clip follows the mouse, and a bright line shows where it will land.
+        var clip = clips[dragged];
+        var ghostWidth = Math.Max(4, clip.Length / _samplesPerPixel);
+        var ghostX = _dragX - Math.Min(ghostWidth, Math.Max(0, _pressedAt.X - FrameToX(clip.Start)));
+        dc.PushOpacity(0.8);
+        dc.DrawRoundedRectangle(SelectionBrush, new Pen(SelectedWaveBrush ?? Brushes.White, 1),
+            new Rect(ghostX, tabTop, ghostWidth, height - tabTop), 4, 4);
+        dc.Pop();
+        var toIndex = DropIndex(dragged, XToFrame(_dragX));
+        if (toIndex != dragged)
+        {
+            var others = clips.Where((_, i) => i != dragged).ToList();
+            // The gap it drops into, in today's layout: the end of the clip that will be before it.
+            var frame = toIndex == 0 ? 0 : others[toIndex - 1].End;
+            var x = Math.Round(FrameToX(frame)) + 0.5;
+            dc.DrawLine(new Pen(CursorBrush ?? Brushes.White, 3), new Point(x, RulerHeight), new Point(x, height));
+        }
+    }
+
+    /// <summary>Which clip number a dragged clip becomes when dropped at a frame: after every other clip whose middle it's past.</summary>
+    private int DropIndex(int dragged, double frame)
+    {
+        var clips = Clips;
+        var index = 0;
+        for (var i = 0; i < clips.Count; i++)
+        {
+            if (i != dragged && frame > clips[i].Start + clips[i].Length / 2.0)
+            {
+                index++;
+            }
+        }
+
+        return index;
     }
 
     private void DrawWave(DrawingContext dc, int channel, double top, double laneHeight, double width, Brush? brush)
@@ -488,6 +606,17 @@ public sealed class WaveformView : FrameworkElement
         _pressedAt = position;
         _selecting = false;
 
+        if (IsOnClipBar(position))
+        {
+            // A clip's tab: dragging moves the clip, a click selects it.
+            _draggedClip = ClipIndexAt(frame);
+            _draggingClip = false;
+            _dragX = position.X;
+            _anchor = null;
+            e.Handled = true;
+            return;
+        }
+
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
         {
             // Extend from the end of the selection (or the cursor) furthest from the click.
@@ -509,6 +638,33 @@ public sealed class WaveformView : FrameworkElement
     {
         base.OnMouseMove(e);
         var position = e.GetPosition(this);
+        if (!IsMouseCaptured && _panFrom is null)
+        {
+            Cursor = IsOnClipBar(position) && Clips.Count > 1 ? Cursors.SizeWE : Cursors.IBeam;
+        }
+
+        if (_draggedClip is not null && IsMouseCaptured)
+        {
+            if (!_draggingClip && Math.Abs(position.X - _pressedAt.X) < DragThreshold)
+            {
+                return;
+            }
+
+            // A song in one piece has nowhere to move to.
+            _draggingClip = Clips.Count > 1;
+            _dragX = position.X;
+            if (position.X < 0 || position.X > ActualWidth)
+            {
+                var overshoot = position.X < 0 ? position.X : position.X - ActualWidth;
+                _viewStart += overshoot * _samplesPerPixel * 0.5;
+                ClampView();
+                RaiseViewChanged();
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
         if (_panFrom is { } from)
         {
             _viewStart = _panStartView - (position.X - from.X) * _samplesPerPixel;
@@ -549,7 +705,26 @@ public sealed class WaveformView : FrameworkElement
             return;
         }
 
+        // Letting go of the mouse forgets the drag, so read it first.
+        var pressedClip = _draggedClip;
+        var dragged = _draggingClip;
         ReleaseMouseCapture();
+        if (pressedClip is { } clip)
+        {
+            var clips = Clips;
+            if (!dragged && clip < clips.Count)
+            {
+                Selection = clips[clip];
+            }
+            else if (dragged && DropIndex(clip, XToFrame(e.GetPosition(this).X)) is var toIndex && toIndex != clip)
+            {
+                ClipMoveRequested?.Invoke(this, (clip, toIndex));
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (!_selecting && _anchor is { } frame)
         {
             // A plain click: drop the selection and put the cursor here.
@@ -608,7 +783,38 @@ public sealed class WaveformView : FrameworkElement
         e.Handled = true;
     }
 
-    private int FrameAt(double x) => (int)Math.Clamp(Math.Round(XToFrame(x)), 0, Frames);
+    protected override void OnLostMouseCapture(MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        // Esc, or another window taking the mouse, drops a clip back where it was.
+        if (_draggedClip is not null)
+        {
+            _draggedClip = null;
+            _draggingClip = false;
+            InvalidateVisual();
+        }
+    }
+
+    /// <summary>True while a clip's tab is being dragged.</summary>
+    public bool IsDraggingClip => _draggingClip;
+
+    /// <summary>Stops dragging a clip, leaving it where it was.</summary>
+    public void CancelClipDrag()
+    {
+        if (_draggedClip is not null && IsMouseCaptured)
+        {
+            ReleaseMouseCapture();
+        }
+    }
+
+    /// <summary>The frame under an x position, inside the audio.</summary>
+    public int FrameAt(double x) => (int)Math.Clamp(Math.Round(XToFrame(x)), 0, Frames);
+
+    /// <summary>The number of the clip a frame is in (a frame on a split belongs to the clip after it).</summary>
+    public int ClipIndexAt(int frame) => _splits.Count(split => split <= frame);
+
+    private static bool IsOnClipBar(Point position) =>
+        position.Y >= RulerHeight && position.Y < RulerHeight + ClipBarHeight;
 
     private void SetSelectionTo(int frame)
     {
