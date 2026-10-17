@@ -84,7 +84,7 @@ public static class LoudnessMeter
     /// The two-stage K-weighting filter (a high shelf for the head's effect, then a high pass),
     /// with coefficients derived for any sample rate the same way libebur128 does.
     /// </summary>
-    private sealed class KWeighting
+    internal sealed class KWeighting
     {
         private readonly Biquad _shelf;
         private readonly Biquad _highPass;

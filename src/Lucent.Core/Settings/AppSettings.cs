@@ -163,6 +163,9 @@ public sealed class AppSettings
     /// <summary>The format and quality last picked in the converter, offered again next time.</summary>
     public ExportOptions ConvertOptions { get; set; } = new();
 
+    /// <summary>The processing the converter last did to every song (normalizing, trimming silence…), in order.</summary>
+    public List<ProcessingStep> ConvertSteps { get; set; } = new();
+
     private static string FilePath => Path.Combine(AppDataFolder.Path, "settings.json");
 
     public static AppSettings Load()
