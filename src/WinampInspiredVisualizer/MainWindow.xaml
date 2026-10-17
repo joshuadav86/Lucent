@@ -215,7 +215,7 @@
                             <!-- Heart: make the song that's playing a favourite. -->
                             <Button x:Name="TrackFavoriteButton" DockPanel.Dock="Right" Style="{StaticResource IconButton}"
                                     Width="24" Height="24" Margin="6,-2,-6,-2" IsEnabled="False"
-                                    ToolTip="Add this song to your favourites (H)" Click="OnToggleTrackFavorite">
+                                    ToolTip="Add this song to your favorites (H)" Click="OnToggleTrackFavorite">
                                 <Path x:Name="TrackFavoriteIcon" Data="{StaticResource HeartIcon}" Width="13" Height="13" Stretch="Uniform"
                                       Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.3" StrokeLineJoin="Round"
                                       Fill="Transparent" />

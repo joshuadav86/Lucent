@@ -39,7 +39,7 @@ Fly through fractal worlds, kaleidoscopes, galaxies made of hundreds of thousand
 
 ## Find the right visual in seconds
 
-Press V and start typing. Visuals are sorted into families and tagged (Calm, Intense, Neon, Space, 3D and more), and you can star favourites or make your own lists for Auto mode to play from.
+Press V and start typing. Visuals are sorted into families and tagged (Calm, Intense, Neon, Space, 3D and more), and you can star favorites or make your own lists for Auto mode to play from.
 
 ![The visual picker, searching for Kaleido Cathedral](assets/screenshots/visual-picker.jpg)
 
@@ -52,7 +52,7 @@ Double-click the visuals (or press F11) to go fullscreen. Click once to pause or
 ## Highlights
 
 - **Plays almost anything:** MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
-- **A real library:** link a folder and every song shows up, searchable as you type, with favourites and playlists that Winamp can open too
+- **A real library:** link a folder and every song shows up, searchable as you type, with favorites and playlists that Winamp can open too
 - **Equalizer:** 4 to 32 bands, 15 presets, and a live response curve over the music's spectrum
 - **Analyzer:** a scrolling heatmap of every frequency over time with the waveform underneath, like the Vision plugin
 - **Built-in audio editor:** trim, fade, normalize, change pitch and more, with undo
@@ -80,7 +80,7 @@ Nothing needs installing. If Windows SmartScreen warns about an unknown app, cli
 - Add files or whole folders with the eject button, or drag them onto any Lucid window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library: link a folder and every song inside it is listed, newest first, with other sort orders and folder headings you can open or close. Type in the search box at the top (or press Ctrl+F) to find songs by title, artist, album or file name as you type; Esc clears it
-- Favourite songs: click the heart in the player (or press H), or right-click songs in the queue or library. The FAVOURITES pill in the library shows only them
+- Favorite songs: click the heart in the player (or press H), or right-click songs in the queue or library. The FAVORITES pill in the library shows only them
 - Playlists: save the queue as a playlist, add songs to one from the queue or library (right-click), and play them or add them to the queue from **Playlists** in the queue window. They're saved as standard .m3u8 files, so Winamp and other players can open them too
 - Shows track title, artist and length from the file's tags
 - Edit a song's info: right-click it in the queue or library (or the song name in the player) and choose **Edit info…**, or press Ctrl+I. Change the title, artist, album, album artist, year, track and disc numbers, genre, composer, BPM, comment and lyrics, and see the file's format, quality and size. Choose several songs to change them all at once (fields that differ say "several values" and stay as they are unless you type in them)
@@ -103,7 +103,7 @@ Nothing needs installing. If Windows SmartScreen warns about an unknown app, cli
   - **Cyberpunk:** rain-soaked neon cities and retro-futurist worlds: Neon Downpour, Sunset Highway, Hologram Billboards, Neon Alley and Circuit City
   - **Ray traced:** clean, physically lit 3D scenes with real reflections, glass that bends light, and soft shadows: Glass and Chrome, Newton's Cradle, Glass Prism, Sunlit Pool, Hall of Mirrors and Gyroscope
 - A visual picker: click the visual's name under the visuals (the button with the screen-and-spark icon), or press V, to choose any visual from a list. Just start typing to search it by name, family or tag: Enter shows the first match, Esc clears the search, and N and B, and Auto mode, stick to the matches
-- Favourite visuals and lists of visuals: star a visual in the picker, with the star under the visuals, or with F. The menu at the top of the picker switches between all visuals, your favourites and lists you make (right-click a visual to add it to one). The picker, N and B, and Auto mode then stick to that list
+- Favorite visuals and lists of visuals: star a visual in the picker, with the star under the visuals, or with F. The menu at the top of the picker switches between all visuals, your favorites and lists you make (right-click a visual to add it to one). The picker, N and B, and Auto mode then stick to that list
 - Folders and tags in the visual picker: visuals are listed in folders by family (Fractal, Cosmic, Particles and so on) that you can open or close, or switch off with the FOLDERS pill. Tick tags on the left (Calm, Intense, Neon, Space, 3D and more) to show only visuals with any of those tags; CLEAR shows everything again. N and B, and Auto mode, stick to what the picker shows
 - Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so. Lucid listens to each song ahead of time to find its bars, so Auto's changes land right on a downbeat, at the start of a phrase where it can. The AUTO pill under the visuals shows how often; click the arrow beside it (or right-click the pill) to choose anything from 10 seconds to 3 minutes
 - Options (the gear in the player's title bar, or O):
@@ -120,7 +120,7 @@ Nothing needs installing. If Windows SmartScreen warns about an unknown app, cli
 - Visuals compile in the background and are kept on disk, so the app starts straight away
 - Fullscreen visuals: double-click the visualizer or press F11. To leave, press Esc, double-click again, click the × that appears in the top-right corner when you move the mouse, or right-click and choose Leave fullscreen
 - Click the visuals once to pause or play the music, in a window or fullscreen
-- Right-click the visuals for a menu: fullscreen, a bar to move through the song, play or pause, stop, next and previous track and a volume slider (in fullscreen, where the player is hidden), the next or previous visual, the picker, favourite, Auto and how often it changes, and the graphics options (resolution, detail, glow, HDR and the frame rate readout), in fullscreen too
+- Right-click the visuals for a menu: fullscreen, a bar to move through the song, play or pause, stop, next and previous track and a volume slider (in fullscreen, where the player is hidden), the next or previous visual, the picker, favorite, Auto and how often it changes, and the graphics options (resolution, detail, glow, HDR and the frame rate readout), in fullscreen too
 
 **Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, D docks them all back around the player, G stretches them to fill the screen, K shrinks them all to their smallest, O opens options, E opens the equalizer, Y opens the analyzer, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, C opens the artwork window, Ctrl+I edits the selected (or playing) song's info, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
 

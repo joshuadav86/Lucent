@@ -44,7 +44,7 @@ public partial class VisualizerWindow
 
         if (CurrentChoice() is { } current)
         {
-            var favourite = Item("Favourite", "F", ToggleFavorite);
+            var favourite = Item("Favorite", "F", ToggleFavorite);
             favourite.IsChecked = current.IsFavorite;
             menu.Items.Add(favourite);
         }

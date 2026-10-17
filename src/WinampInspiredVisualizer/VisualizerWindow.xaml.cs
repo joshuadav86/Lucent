@@ -338,7 +338,7 @@ public partial class VisualizerWindow : ToolWindow
 
         ListHint.Text = list is not null && inListCount == 0
             ? list == AppSettings.FavoritesListName
-                ? "No favourites yet. Click a visual's star to add it here."
+                ? "No favorites yet. Click a visual's star to add it here."
                 : "This list is empty. Right-click any visual in All visuals to add it."
             : _shown.Count == 0
                 ? searching
@@ -369,7 +369,7 @@ public partial class VisualizerWindow : ToolWindow
     {
         var favorite = CurrentChoice()?.IsFavorite == true;
         FavoriteButton.IsChecked = favorite;
-        FavoriteButton.ToolTip = favorite ? "Remove this visual from your favourites (F)" : "Make this visual a favourite (F)";
+        FavoriteButton.ToolTip = favorite ? "Remove this visual from your favorites (F)" : "Make this visual a favorite (F)";
         if (favorite)
         {
             FavoriteIcon.SetResourceReference(Shape.FillProperty, "AccentBrush");
@@ -534,7 +534,7 @@ public partial class VisualizerWindow : ToolWindow
         play.Click += (_, _) => PickPreset(choice);
         menu.Items.Add(play);
 
-        var favorite = new MenuItem { Header = choice.IsFavorite ? "Remove from favourites" : "Add to favourites" };
+        var favorite = new MenuItem { Header = choice.IsFavorite ? "Remove from favorites" : "Add to favorites" };
         favorite.Click += (_, _) => SetFavorite(choice, !choice.IsFavorite);
         menu.Items.Add(favorite);
 
