@@ -18,6 +18,9 @@ public sealed class AppSettings
     /// <summary>Folders whose music is listed in the library.</summary>
     public List<string> LibraryFolders { get; set; } = new();
 
+    /// <summary>Folders inside the library folders that were taken out of the library.</summary>
+    public List<string> HiddenLibraryFolders { get; set; } = new();
+
     public LibrarySort LibrarySort { get; set; } = LibrarySort.Newest;
 
     public bool GroupLibraryByFolder { get; set; } = true;

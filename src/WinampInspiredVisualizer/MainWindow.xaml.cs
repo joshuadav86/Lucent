@@ -118,7 +118,7 @@ public partial class MainWindow : Window
         BuildThemeSwatches();
 
         _libraryWindow.Attach(_library, _settings);
-        _library.SetFolders(_settings.LibraryFolders);
+        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders);
 
         foreach (var window in ToolWindows)
         {
