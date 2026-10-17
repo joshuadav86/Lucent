@@ -291,6 +291,26 @@ cmake -S src/PluginHost -B build/PluginHost -A x64
 cmake --build build/PluginHost --config Release
 ```
 
+### Mac (early preview)
+
+`src/Lucent.Mac` is a first Mac version: one window that plays music (MP3, AAC, ALAC, FLAC, WAV, AIFF) and shows the visuals with Metal. The playlist, library, equalizer window, editor and skins come over in later steps. It needs macOS 12 or later and the .NET 8 SDK.
+
+The visuals are written in HLSL, so they're translated to Metal when the app is built. That needs Microsoft's [DirectX Shader Compiler](https://github.com/microsoft/DirectXShaderCompiler/releases) (`dxc`) on your PATH, or set `DXC` to it:
+
+```
+dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders
+dotnet run --project src/Lucent.Mac
+```
+
+To make `Lucent.app`, publish and package it:
+
+```
+dotnet publish src/Lucent.Mac -c Release -r osx-arm64 --self-contained -o publish-mac
+tools/package-mac.sh publish-mac . 0.1.0
+```
+
+The app isn't signed by Apple yet, so the first time, right-click it and choose **Open**. Your own HLSL visuals and HDR aren't supported on the Mac yet. `Lucent --self-test music.m4a` checks decoding and draws every visual without a window; CI runs it on a Mac on every push.
+
 ## Report a bug
 
 Found something broken? Click **🐞 Report a bug** at the bottom of Lucent's options panel. It opens a [bug report](https://github.com/joshuadav86/Lucid/issues/new?template=bug_report.yml) on GitHub with your Lucent version, Windows version, graphics card and the last few errors from `%AppData%\Lucent\errors.log` already filled in. Nothing is sent until you check it and click **Create**. You'll need a free GitHub account.

@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lucent for macOS: an Avalonia window, the visuals drawn with Metal, and playback through Core
+    Audio. It shares Lucent.Core with the Windows app. The visuals' Metal shaders are made from the
+    same HLSL files by tools/MetalShaders (it needs DXC, so it runs on Windows or Linux); point
+    MetalShadersFolder at its output, or put it in artifacts/metal-shaders.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Lucent</AssemblyName>
+    <Product>Lucent</Product>
+    <RootNamespace>Lucent.Mac</RootNamespace>
+    <Version>0.1.0</Version>
+    <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
+    <MetalShadersFolder Condition="'$(MetalShadersFolder)' == ''">$(MSBuildThisFileDirectory)../../artifacts/metal-shaders</MetalShadersFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="SharpMetal" Version="1.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lucent.Core\Lucent.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The visuals' HLSL files, for their names, families, tags and particle counts. -->
+    <None Include="..\WinampInspiredVisualizer\Presets\*.hlsl" Link="Presets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Their Metal translations, from tools/MetalShaders. -->
+    <None Include="$(MetalShadersFolder)\**\*.metal" Link="Shaders\Metal\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\WinampInspiredVisualizer\Assets\Lucent-64.png" Link="Assets\Lucent-64.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="WarnWithoutMetalShaders" BeforeTargets="Build" Condition="!Exists('$(MetalShadersFolder)')">
+    <Warning Text="No Metal shaders in $(MetalShadersFolder), so the app will have no visuals. Make them with: dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders" />
+  </Target>
+
+</Project>
