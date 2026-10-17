@@ -51,6 +51,7 @@ public partial class MainWindow
             VerticalAlignment = VerticalAlignment.Center,
             Focusable = false,
             IsMoveToPointEnabled = true,
+            Style = (Style)FindResource("SeekSlider"),
         };
 
         var dragging = false;
@@ -114,6 +115,7 @@ public partial class MainWindow
             Width = 150,
             VerticalAlignment = VerticalAlignment.Center,
             Focusable = false,
+            Style = (Style)FindResource("VolumeSlider"),
         };
 
         void ShowVolume() => label.Text = $"Volume {Math.Round(slider.Value * 100)}%";
