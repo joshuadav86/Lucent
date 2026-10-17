@@ -33,6 +33,7 @@ public sealed class VisualizerHost : HwndHost
     private float _autoCycleSeconds = 25f;
     private bool _morphTransitionsOnly;
     private bool _hdr;
+    private IReadOnlyCollection<string>? _autoCycleNames;
 
     public VisualizerHost(AudioCapture capture)
     {
@@ -55,6 +56,31 @@ public sealed class VisualizerHost : HwndHost
 
     /// <summary>Raised on the UI thread when the screen's HDR support is found or changes.</summary>
     public event EventHandler<DisplayInfo>? DisplayChanged;
+
+    /// <summary>The visuals Auto picks from (by name), or null for all of them.</summary>
+    public IReadOnlyCollection<string>? AutoCycleNames
+    {
+        get => _autoCycleNames;
+        set
+        {
+            _autoCycleNames = value;
+            if (_renderer is not null)
+            {
+                _renderer.AutoCycleChoices = IndicesOf(_renderer.PresetNames, value);
+            }
+        }
+    }
+
+    private static IReadOnlyCollection<int>? IndicesOf(IReadOnlyList<string> names, IReadOnlyCollection<string>? chosen)
+    {
+        if (chosen is null)
+        {
+            return null;
+        }
+
+        var wanted = new HashSet<string>(chosen, StringComparer.OrdinalIgnoreCase);
+        return Enumerable.Range(0, names.Count).Where(index => wanted.Contains(names[index])).ToList();
+    }
 
     /// <summary>The visual to start with (by name), usually the one showing when the app last closed.</summary>
     public string? StartPresetName { get; set; }
@@ -208,6 +234,7 @@ public sealed class VisualizerHost : HwndHost
         _renderer.AutoCycleSeconds = _autoCycleSeconds;
         _renderer.MorphTransitionsOnly = _morphTransitionsOnly;
         _renderer.Hdr = _hdr;
+        _renderer.AutoCycleChoices = IndicesOf(_renderer.PresetNames, _autoCycleNames);
         _renderer.PresetChanged += index => dispatcher.InvokeAsync(() =>
         {
             _presetIndex = index;

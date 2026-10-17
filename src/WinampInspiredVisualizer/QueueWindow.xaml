@@ -20,6 +20,18 @@
 
             <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Favourite songs and saved playlists: play them, or save the queue as one. -->
+                    <Button x:Name="PlaylistsButton" Style="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
+                            ToolTip="Play your favourite songs or a saved playlist, or save the queue as a playlist"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnPlaylistsMenu">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ListIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
+                            <TextBlock Text="Playlists" FontSize="12" VerticalAlignment="Center" />
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Add files"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnAddFiles">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" />
@@ -49,12 +61,13 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionMode="Extended"
                      MouseDoubleClick="OnPlaylistDoubleClick"
-                     KeyDown="OnPlaylistKeyDown">
+                     KeyDown="OnPlaylistKeyDown"
+                     ContextMenuOpening="OnQueueMenuOpening">
                 <ListBox.ContextMenu>
                     <ContextMenu x:Name="QueueMenu">
                         <MenuItem Header="Play" Click="OnPlaySelected" />
                         <MenuItem Header="Remove from the queue" InputGestureText="Del" Click="OnRemoveSelected" />
-                        <Separator />
+                        <Separator x:Name="SongMenuItemsStart" />
                         <MenuItem Header="Show in File Explorer" Click="OnShowInExplorer" />
                     </ContextMenu>
                 </ListBox.ContextMenu>

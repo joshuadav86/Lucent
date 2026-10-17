@@ -60,6 +60,12 @@ public partial class LibraryWindow : ToolWindow
             view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LibraryItem.Folder)));
         }
 
+        if (_settings.LibraryFavoritesOnly)
+        {
+            var favorites = new HashSet<string>(_settings.FavoriteTracks, StringComparer.OrdinalIgnoreCase);
+            view.Filter = item => favorites.Contains(((LibraryItem)item).Path);
+        }
+
         _libraryView = view;
         LibraryView.ItemsSource = view;
         UpdateLibraryStatus();
@@ -69,17 +75,24 @@ public partial class LibraryWindow : ToolWindow
     {
         var count = _library.Items.Count;
         var linked = _library.Folders.Count > 0;
+        var favoritesOnly = _settings.LibraryFavoritesOnly && linked && count > 0;
+        var shown = favoritesOnly ? _libraryView?.Count ?? 0 : count;
         LibraryCount.Text = !linked
             ? "No folder linked"
             : _library.IsScanning && count == 0
                 ? "Looking for music…"
-                : $"{count:N0} {(count == 1 ? "track" : "tracks")}{(_library.IsScanning ? "  ·  updating" : string.Empty)}";
+                : favoritesOnly
+                    ? $"{shown:N0} {(shown == 1 ? "favourite" : "favourites")}{(_library.IsScanning ? "  ·  updating" : string.Empty)}"
+                    : $"{count:N0} {(count == 1 ? "track" : "tracks")}{(_library.IsScanning ? "  ·  updating" : string.Empty)}";
 
-        EmptyLibraryHint.Visibility = count == 0 && !_library.IsScanning ? Visibility.Visible : Visibility.Collapsed;
-        EmptyLibraryTitle.Text = linked ? "No music found" : "Link a music folder";
-        EmptyLibraryText.Text = linked
-            ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
-            : "Every song inside it shows up here, newest first, and new files appear on their own.";
+        EmptyLibraryHint.Visibility = shown == 0 && !_library.IsScanning ? Visibility.Visible : Visibility.Collapsed;
+        EmptyLibraryTitle.Text = favoritesOnly ? "No favourites here yet" : linked ? "No music found" : "Link a music folder";
+        EmptyLibraryText.Text = favoritesOnly
+            ? "Click the heart in the player, or right-click songs here or in the queue, to make them favourites."
+            : linked
+                ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
+                : "Every song inside it shows up here, newest first, and new files appear on their own.";
+        LinkFolderButton.Visibility = favoritesOnly ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void OnLinkLibraryFolder(object sender, RoutedEventArgs e) => LinkLibraryFolder();
@@ -162,8 +175,56 @@ public partial class LibraryWindow : ToolWindow
         RebuildLibraryView();
     }
 
-    private void UpdateGroupFoldersButton() =>
+    private void UpdateGroupFoldersButton()
+    {
         GroupFoldersButton.SetResourceReference(ForegroundProperty, _settings.GroupLibraryByFolder ? "AccentBrush" : "FaintTextBrush");
+        FavoritesOnlyButton.SetResourceReference(ForegroundProperty, _settings.LibraryFavoritesOnly ? "AccentBrush" : "FaintTextBrush");
+    }
+
+    private void OnToggleFavoritesOnly(object sender, RoutedEventArgs e)
+    {
+        _settings.LibraryFavoritesOnly = !_settings.LibraryFavoritesOnly;
+        _settings.Save();
+        UpdateGroupFoldersButton();
+        RebuildLibraryView();
+    }
+
+    /// <summary>Called by the player when songs become favourites or stop being them.</summary>
+    public void FavoritesChanged()
+    {
+        if (_settings.LibraryFavoritesOnly)
+        {
+            RebuildLibraryView();
+        }
+    }
+
+    // Favourite and Add to playlist depend on what's selected, so they're made fresh each time.
+    private readonly List<object> _songMenuItems = new();
+
+    private void OnLibraryMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        foreach (var item in _songMenuItems)
+        {
+            LibraryMenu.Items.Remove(item);
+        }
+
+        _songMenuItems.Clear();
+        var items = SelectedLibraryItems();
+        if (Player is null || items.Count == 0)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        _songMenuItems.Add(Player.FavoriteMenuItem(items.Select(item => item.Path).ToList()));
+        _songMenuItems.Add(Player.AddToPlaylistMenu(this, () => Task.Run(() => items.Select(item => item.ToTrack()).ToList())));
+        _songMenuItems.Add(new Separator());
+        var at = LibraryMenu.Items.IndexOf(SongMenuItemsStart) + 1;
+        foreach (var item in _songMenuItems)
+        {
+            LibraryMenu.Items.Insert(at++, item);
+        }
+    }
 
     // Folder headings remember whether they were left open or closed.
     private void OnFolderGroupLoaded(object sender, RoutedEventArgs e)

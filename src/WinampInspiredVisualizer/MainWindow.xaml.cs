@@ -963,6 +963,12 @@ public partial class MainWindow : Window
                 _visuals.ToggleAutoCycle();
                 AutoCycleSwitch.IsChecked = _settings.AutoCycle;
                 break;
+            case Key.F:
+                _visuals.ToggleFavorite();
+                break;
+            case Key.H:
+                ToggleTrackFavorite();
+                break;
             case Key.W:
                 ToggleWindow(_visuals);
                 break;
@@ -1102,6 +1108,7 @@ public partial class MainWindow : Window
 
     private void ShowNowPlaying(Track? track)
     {
+        UpdateTrackFavoriteButton();
         if (track is null)
         {
             SetMarquee("Nothing playing");
