@@ -17,4 +17,7 @@ public partial class MainWindow
 
     /// <summary>Opens the converter for some songs, for the queue and library menus.</summary>
     public void ConvertFiles(Window owner, IReadOnlyList<string> paths) => AudioTools.Convert(owner, _settings, paths);
+
+    /// <summary>Asks for songs and opens the converter for them (the editor's Batch button).</summary>
+    public void ChooseFilesToConvert(Window owner) => AudioTools.ChooseFilesToConvert(owner, _settings);
 }

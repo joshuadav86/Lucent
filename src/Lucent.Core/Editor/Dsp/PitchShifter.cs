@@ -47,6 +47,30 @@ public static class PitchShifter
     }
 
     /// <summary>
+    /// Changes the length by <paramref name="ratio"/> (2 = twice as long, half the tempo) without changing the pitch.
+    /// </summary>
+    public static AudioBuffer TimeStretch(AudioBuffer input, double ratio, Action<double>? progress = null,
+        CancellationToken cancellation = default)
+    {
+        if (Math.Abs(ratio - 1) < 1e-6 || input.Frames == 0)
+        {
+            return input;
+        }
+
+        var stretched = Stretch(input, ratio, progress ?? (_ => { }), cancellation, out var padding);
+        // Input frame i landed at (i + padding) * ratio.
+        var start = (int)Math.Round(padding * ratio);
+        var frames = (int)Math.Round(input.Frames * ratio);
+        var output = stretched.Select(channel =>
+        {
+            var result = new float[frames];
+            Array.Copy(channel, start, result, 0, Math.Min(frames, channel.Length - start));
+            return result;
+        }).ToArray();
+        return new AudioBuffer(output, input.SampleRate);
+    }
+
+    /// <summary>
     /// Time-stretches by <paramref name="ratio"/> (2 = twice as long) without changing pitch.
     /// The input is treated as having <paramref name="padding"/> frames of silence in front, so
     /// input frame i lands at output position (i + padding) * ratio.

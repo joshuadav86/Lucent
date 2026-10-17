@@ -71,6 +71,9 @@ public sealed class ExportOptions
 
     public SampleRateChoice SampleRate { get; set; } = SampleRateChoice.Keep;
 
+    /// <summary>Mix every channel down to one, for a mono file (speech, old recordings, half the size).</summary>
+    public bool Mono { get; set; }
+
     /// <summary>Where the converter puts new files, or null to put each one next to its original.</summary>
     public string? OutputFolder { get; set; }
 
@@ -109,13 +112,13 @@ public sealed class ExportOptions
 
     /// <summary>A short summary for the user, like "MP3 · 320 kbps" or "FLAC · 24-bit".</summary>
     [JsonIgnore]
-    public string Summary => Format switch
+    public string Summary => (Format switch
     {
         ExportFormat.Mp3 => $"MP3 · {Mp3Label(Mp3Quality)}",
         ExportFormat.Flac => $"FLAC · {FlacBitDepth}-bit",
         ExportFormat.Wav => $"WAV · {DepthLabel(WavDepth)}",
         _ => $"AIFF · {DepthLabel(WavDepth)}",
-    };
+    }) + (Mono ? " · mono" : string.Empty);
 
     public static string Mp3Label(Mp3Quality quality) => quality switch
     {

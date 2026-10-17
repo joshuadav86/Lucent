@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Editor;
+using WinampInspiredVisualizer.Editor.Dsp;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Settings;
 
@@ -37,6 +38,9 @@ public partial class ExportWindow : Window
     private bool _finished;
     private string? _resultFolder;
 
+    /// <summary>What's done to every song on the way through, in order (converting only).</summary>
+    private readonly List<ProcessingStep> _steps;
+
     private ExportWindow(bool saveMode, ExportOptions options, IReadOnlyList<string> files, AppSettings? settings)
     {
         InitializeComponent();
@@ -46,6 +50,9 @@ public partial class ExportWindow : Window
         _settings = settings;
         SaveTarget.Visibility = saveMode ? Visibility.Visible : Visibility.Collapsed;
         ConvertTarget.Visibility = saveMode ? Visibility.Collapsed : Visibility.Visible;
+        StepsArea.Visibility = saveMode ? Visibility.Collapsed : Visibility.Visible;
+        _steps = settings?.ConvertSteps.Select(step => step.Clone()).ToList() ?? new List<ProcessingStep>();
+        ShowSteps();
     }
 
     /// <summary>True while files are being converted.</summary>
@@ -117,6 +124,7 @@ public partial class ExportWindow : Window
                 "FlacCompression" => tag == _options.FlacCompression.ToString(),
                 "WavDepth" => tag == _options.WavDepth.ToString(),
                 "SampleRate" => tag == _options.SampleRate.ToString(),
+                "Channels" => tag == (_options.Mono ? "Mono" : "Keep"),
                 _ => radio.IsChecked,
             };
         }
@@ -176,6 +184,9 @@ public partial class ExportWindow : Window
             case "SampleRate":
                 _options.SampleRate = Enum.Parse<SampleRateChoice>(tag);
                 break;
+            case "Channels":
+                _options.Mono = tag == "Mono";
+                break;
         }
 
         ShowChoices();
@@ -228,6 +239,136 @@ public partial class ExportWindow : Window
             SaveFolderText.Text = _saveFolder;
             SaveFolderText.ToolTip = _saveFolder;
         }
+    }
+
+    // ---- Processing steps ----
+
+    /// <summary>Lists the steps, each with a button to take it out.</summary>
+    private void ShowSteps()
+    {
+        StepsList.Children.Clear();
+        for (var i = 0; i < _steps.Count; i++)
+        {
+            var step = _steps[i];
+            var row = new DockPanel { Margin = new Thickness(2, 2, 0, 2) };
+            var remove = new Button
+            {
+                Style = (Style)FindResource("PillButton"),
+                Content = "REMOVE",
+                ToolTip = "Take this step out",
+            };
+            DockPanel.SetDock(remove, Dock.Right);
+            remove.Click += (_, _) =>
+            {
+                _steps.Remove(step);
+                ShowSteps();
+            };
+            row.Children.Add(remove);
+            row.Children.Add(new TextBlock
+            {
+                Text = $"{i + 1}.  {step.Description}",
+                FontSize = 13,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = (System.Windows.Media.Brush)FindResource("TextBrush"),
+            });
+            StepsList.Children.Add(row);
+        }
+
+        StepsHint.Text = _steps.Count == 0
+            ? "Nothing: the sounds are only converted. Add steps to clean up or level a whole album at once."
+            : "Done in this order, to every sound, before it's saved in the new format.";
+    }
+
+    private void OnAddStep(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = AddStepButton, Placement = PlacementMode.Bottom };
+        void Add(ItemsControl parent, string header, Func<ProcessingStep> make, string? tip = null)
+        {
+            var item = new MenuItem { Header = header, ToolTip = tip };
+            item.Click += (_, _) =>
+            {
+                _steps.Add(make());
+                ShowSteps();
+            };
+            parent.Items.Add(item);
+        }
+
+        ProcessingStep Step(ProcessingKind kind, double? value = null)
+        {
+            var step = ProcessingStep.Create(kind);
+            if (value is { } v)
+            {
+                step.Value = v;
+            }
+
+            return step;
+        }
+
+        MenuItem Group(string header, string? tip = null)
+        {
+            var group = new MenuItem { Header = header, ToolTip = tip };
+            menu.Items.Add(group);
+            return group;
+        }
+
+        var peak = Group("Normalize peaks to");
+        foreach (var db in new[] { -0.1, -1, -3 })
+        {
+            Add(peak, $"{db:0.0#} dB".Replace("-", "−"), () => Step(ProcessingKind.NormalizePeak, db));
+        }
+
+        var loudness = Group("Normalize loudness to", "Measured the way streaming services do (ITU BS.1770); peaks are kept below −1 dB");
+        Add(loudness, "−14 LUFS  (Spotify, YouTube)", () => Step(ProcessingKind.NormalizeLoudness, -14));
+        Add(loudness, "−16 LUFS  (Apple Music, podcasts)", () => Step(ProcessingKind.NormalizeLoudness, -16));
+        Add(loudness, "−23 LUFS  (TV and radio)", () => Step(ProcessingKind.NormalizeLoudness, -23));
+
+        var limit = Group("Limit peaks to", "A true-peak limiter: nothing goes over, even after converting to MP3");
+        Add(limit, "−1 dBTP  (recommended)", () => Step(ProcessingKind.Limit, -1));
+        Add(limit, "−0.3 dBTP", () => Step(ProcessingKind.Limit, -0.3));
+
+        var volume = Group("Volume");
+        foreach (var db in new[] { 6, 3, -3, -6 })
+        {
+            Add(volume, $"{db:+0;−0} dB", () => Step(ProcessingKind.Volume, db));
+        }
+
+        menu.Items.Add(new Separator());
+        Add(menu, "Equalizer, as set up in the editor", () =>
+        {
+            var step = Step(ProcessingKind.Equalizer);
+            step.Bands = EqBand.CloneAll(EditorSettings.Load().EqBands);
+            return step;
+        }, "Uses the bands from the editor's EQ card as they were last left");
+        Add(menu, "Compressor, as set up in the editor", () =>
+        {
+            var step = Step(ProcessingKind.Compress);
+            step.Compressor = EditorSettings.Load().Compressor.Clone();
+            return step;
+        }, "Uses the settings from the editor's Dynamics card as they were last left");
+
+        menu.Items.Add(new Separator());
+        var hum = Group("Remove hum");
+        Add(hum, "Find 50 or 60 Hz", () => Step(ProcessingKind.RemoveHum, 0));
+        Add(hum, "50 Hz  (Europe, Asia, Africa)", () => Step(ProcessingKind.RemoveHum, 50));
+        Add(hum, "60 Hz  (the Americas)", () => Step(ProcessingKind.RemoveHum, 60));
+        Add(menu, "Remove clicks", () => Step(ProcessingKind.RemoveClicks), "Vinyl crackle and digital clicks, at a medium sensitivity");
+        Add(menu, "Remove DC offset", () => Step(ProcessingKind.RemoveDcOffset));
+        Add(menu, "Trim silence from the start and end", () => Step(ProcessingKind.TrimSilence), "Anything quieter than −60 dB");
+
+        menu.Items.Add(new Separator());
+        var fadeIn = Group("Fade in over");
+        foreach (var seconds in new[] { 1, 2, 5 })
+        {
+            Add(fadeIn, $"{seconds} s", () => Step(ProcessingKind.FadeIn, seconds));
+        }
+
+        var fadeOut = Group("Fade out over");
+        foreach (var seconds in new[] { 2, 3, 5, 10 })
+        {
+            Add(fadeOut, $"{seconds} s", () => Step(ProcessingKind.FadeOut, seconds));
+        }
+
+        menu.IsOpen = true;
     }
 
     // ---- Buttons ----
@@ -309,6 +450,7 @@ public partial class ExportWindow : Window
         if (_settings is not null)
         {
             _settings.ConvertOptions = _options.Clone();
+            _settings.ConvertSteps = _steps.Select(step => step.Clone()).ToList();
             _settings.Save();
         }
 
@@ -336,7 +478,8 @@ public partial class ExportWindow : Window
         IReadOnlyList<ConvertResult> results;
         try
         {
-            results = await FileConverter.ConvertAsync(jobs, _options.Clone(), progress, _running.Token);
+            results = await FileConverter.ConvertAsync(jobs, _options.Clone(), progress, _running.Token,
+                _steps.Select(step => step.Clone()).ToList());
         }
         finally
         {

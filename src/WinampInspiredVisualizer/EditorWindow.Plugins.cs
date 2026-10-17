@@ -22,7 +22,8 @@ public partial class EditorWindow
     private PluginCatalog? _catalog;
     private PluginHost? _plugin;
     private PluginPreviewProvider? _preview;
-    private Func<ISampleProvider, float, ISampleProvider>? _previewThrough;
+    /// <summary>What playback is going through (a plugin or a tool), so a click while playing carries on through it.</summary>
+    private Func<ISampleProvider, ISampleProvider>? _previewThrough;
 
     // ---- Choosing a plugin ----
 
@@ -254,7 +255,7 @@ public partial class EditorWindow
 
     private async void OnPreviewPlugin(object sender, RoutedEventArgs e)
     {
-        if (_previewThrough is not null && _player.IsPlaying)
+        if (_preview is not null && _player.IsPlaying)
         {
             StopPlayback();
             return;
@@ -274,7 +275,8 @@ public partial class EditorWindow
         {
             // Starting again clears what's left in the plugin from before (an echo still ringing).
             var (_, _, generation) = await Task.Run(() => host.Start(offline: false));
-            PlayFrom(from, to, (source, volume) => _preview = new PluginPreviewProvider(source, host, generation, volume));
+            // The listening volume is applied after the meters, so the plugin gets the audio at its own level.
+            PlayFrom(from, to, source => _preview = new PluginPreviewProvider(source, host, generation, 1f));
         }
         catch (PluginException ex)
         {
@@ -328,7 +330,7 @@ public partial class EditorWindow
             return;
         }
 
-        if (_previewThrough is not null)
+        if (_preview is not null)
         {
             StopPlayback();
         }

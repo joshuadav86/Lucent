@@ -1,6 +1,8 @@
 using System.IO;
 using NAudio.Wave;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Editor;
+using WinampInspiredVisualizer.Editor.Effects;
 
 namespace WinampInspiredVisualizer.Export;
 
@@ -57,9 +59,11 @@ public static class FileConverter
     /// Converts every job, reporting overall progress (0 to 1) and each finished file. Cancelling stops
     /// the files in progress and skips the rest; finished files are kept.
     /// </summary>
+    /// <param name="steps">Processing to do to every song before it's written (normalizing, say); none for a plain conversion.</param>
     public static async Task<IReadOnlyList<ConvertResult>> ConvertAsync(IReadOnlyList<ConvertJob> jobs, ExportOptions options,
-        IProgress<double>? progress, CancellationToken cancellation)
+        IProgress<double>? progress, CancellationToken cancellation, IReadOnlyList<ProcessingStep>? steps = null)
     {
+        steps ??= Array.Empty<ProcessingStep>();
         var fractions = new double[jobs.Count];
         var results = new ConvertResult?[jobs.Count];
         var gate = new object();
@@ -73,12 +77,17 @@ public static class FileConverter
             }
         }
 
-        var parallel = new ParallelOptions { MaxDegreeOfParallelism = Parallelism, CancellationToken = cancellation };
+        // Processing holds each whole song in memory, so fewer at once.
+        var parallel = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = steps.Count > 0 ? Math.Min(2, Parallelism) : Parallelism,
+            CancellationToken = cancellation,
+        };
         try
         {
             await Parallel.ForEachAsync(Enumerable.Range(0, jobs.Count), parallel, (index, token) =>
             {
-                results[index] = ConvertOne(jobs[index], options, fraction => Report(index, fraction), token);
+                results[index] = ConvertOne(jobs[index], options, steps, fraction => Report(index, fraction), token);
                 Report(index, 1);
                 return ValueTask.CompletedTask;
             });
@@ -91,11 +100,25 @@ public static class FileConverter
         return jobs.Select((job, i) => results[i] ?? new ConvertResult(job, "Cancelled", null)).ToList();
     }
 
-    private static ConvertResult ConvertOne(ConvertJob job, ExportOptions options, Action<double> progress, CancellationToken cancellation)
+    private static ConvertResult ConvertOne(ConvertJob job, ExportOptions options, IReadOnlyList<ProcessingStep> steps,
+        Action<double> progress, CancellationToken cancellation)
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(job.Destination)!);
+            if (steps.Count > 0)
+            {
+                var (audio, notes) = Process(job.Source, steps, fraction => progress(fraction * 0.6), cancellation);
+                var written = ExportPipeline.Write(new AudioBufferSampleProvider(audio), audio.Frames, job.Destination, job.Source,
+                    audioChanged: true, options, job.ReplaceExisting, fraction => progress(0.6 + fraction * 0.4), cancellation);
+                if (written is not null)
+                {
+                    notes.Add(written);
+                }
+
+                return new ConvertResult(job, null, notes.Count > 0 ? string.Join(" ", notes.Distinct()) : null);
+            }
+
             using var reader = AudioReaderFactory.Open(job.Source);
             var frames = reader.WaveFormat.BlockAlign > 0 ? reader.Length / reader.WaveFormat.BlockAlign : 0;
             var note = ExportPipeline.Write(reader.ToSampleProvider(), frames, job.Destination, job.Source, audioChanged: false,
@@ -112,6 +135,33 @@ public static class FileConverter
         }
     }
 
+    /// <summary>Decodes a song and runs the steps over it, in order. Returns the result and anything the steps had to say.</summary>
+    public static (AudioBuffer Audio, List<string> Notes) Process(string path, IReadOnlyList<ProcessingStep> steps, Action<double>? progress,
+        CancellationToken cancellation)
+    {
+        var (audio, _, _) = AudioFileLoader.Load(path, new Reporter(f => progress?.Invoke(f * 0.3)), cancellation);
+        var notes = new List<string>();
+        for (var i = 0; i < steps.Count; i++)
+        {
+            var (effect, range) = steps[i].ToEffect(audio.Frames, audio.SampleRate);
+            if (range.IsEmpty)
+            {
+                range = new FrameRange(0, audio.Frames);
+            }
+
+            var step = i;
+            var context = new EffectContext(new Reporter(f => progress?.Invoke(0.3 + 0.7 * (step + f) / steps.Count)), cancellation);
+            var result = effect.Process(audio.Slice(range.Start, range.Length), context);
+            audio = audio.Splice(range.Start, range.Length, result);
+            if (context.Note is { } note && effect is not ClickRemovalEffect)
+            {
+                notes.Add(note);
+            }
+        }
+
+        return (audio, notes);
+    }
+
     /// <summary>Plain-English wording for the usual reasons a conversion fails.</summary>
     public static string FriendlyError(Exception ex) => ex switch
     {
@@ -121,4 +171,14 @@ public static class FileConverter
         IOException => $"The file couldn't be written ({ex.Message}).",
         _ => $"The file couldn't be read or converted ({ex.Message}).",
     };
+
+    /// <summary>Passes progress straight on, on the same thread (Progress&lt;T&gt; would post it elsewhere, out of order).</summary>
+    private sealed class Reporter : IProgress<double>
+    {
+        private readonly Action<double> _report;
+
+        public Reporter(Action<double> report) => _report = report;
+
+        public void Report(double value) => _report(value);
+    }
 }

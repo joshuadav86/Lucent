@@ -34,6 +34,11 @@ public static class ExportPipeline
         try
         {
             var sourceRate = source.WaveFormat.SampleRate;
+            if (options.Mono && source.WaveFormat.Channels > 1)
+            {
+                source = new MonoMixdown(source);
+            }
+
             var note = AudioEncoder.Encode(source, temporary, options, expectedFrames, fraction => progress?.Invoke(fraction * 0.95),
                 cancellation);
             SafeFile.Hide(temporary);
@@ -82,6 +87,44 @@ public static class ExportPipeline
     }
 
     private static string? Join(string? first, string second) => first is null ? second : $"{first} {second}";
+}
+
+/// <summary>Mixes every channel into one, at the average of their levels, so nothing clips that didn't before.</summary>
+public sealed class MonoMixdown : ISampleProvider
+{
+    private readonly ISampleProvider _source;
+    private float[] _buffer = Array.Empty<float>();
+
+    public MonoMixdown(ISampleProvider source)
+    {
+        _source = source;
+        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(source.WaveFormat.SampleRate, 1);
+    }
+
+    public WaveFormat WaveFormat { get; }
+
+    public int Read(float[] buffer, int offset, int count)
+    {
+        var channels = _source.WaveFormat.Channels;
+        if (_buffer.Length < count * channels)
+        {
+            _buffer = new float[count * channels];
+        }
+
+        var frames = _source.Read(_buffer, 0, count * channels) / channels;
+        for (var i = 0; i < frames; i++)
+        {
+            var sum = 0f;
+            for (var c = 0; c < channels; c++)
+            {
+                sum += _buffer[i * channels + c];
+            }
+
+            buffer[offset + i] = sum / channels;
+        }
+
+        return frames;
+    }
 }
 
 /// <summary>A finished, checked file waiting in a hidden temporary file to be moved into place.</summary>
