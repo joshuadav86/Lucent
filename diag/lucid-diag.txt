@@ -1,0 +1,9 @@
+02:45:07.584 OnLoaded start: player L=252 T=101 W=520 H=246.90333333333334 startup=CenterScreen queue=True lib=True
+02:45:07.758 after ArrangeFirstTime: player L=360 T=0
+02:45:07.970 OnLoaded end: Lucid: L=360 T=0 W=520x246.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=639 W=0x0 vis=False Normal | Lucid library: L=0 T=0 W=0x0 vis=False Normal
+02:45:08.077 after load: Lucid: L=252 T=237 W=520x207.90333333333334 vis=True Normal | Lucid visuals: L=880 T=0 W=420x788 vis=True Normal | Lucid queue: L=360 T=639 W=0x0 vis=False Normal | Lucid library: L=0 T=0 W=0x0 vis=False Normal | Equalizer: L=360 T=247 W=520x392 vis=True Normal
+02:45:49.380 ENTERSIZEMOVE Lucid rect=252,237,772,445 carried=0 windows=5 others=[Lucid visuals 880,0,1300,788; 262654 360,639,880,799; 131564 0,0,360,788; Equalizer 360,247,880,639]
+02:45:49.394 MOVING Lucid proposed=257,241 unsnapped=252,237 snap=0,10 targets=3
+02:45:49.438 MOVING Lucid proposed=255,249 unsnapped=255,239 snap=0,8 targets=3
+02:45:49.485 MOVING Lucid proposed=257,249 unsnapped=257,241 snap=0,6 targets=3
+02:45:52.219 EXITSIZEMOVE Lucid moving=True end=327,293
