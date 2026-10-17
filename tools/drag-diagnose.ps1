@@ -172,18 +172,20 @@ function WiggleWin($title, $dx, $dy, $tag) {
   Add-Content "$out/log.txt" "== $tag`n$t"
 }
 Write-Host "::notice::os $((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)"
-foreach ($dpi in 175, 125) {
-  Write-Host "::notice::dpi $dpi -> $([W]::SetDpi($dpi))"; Start-Sleep 4
-  RunWith "player $dpi" $lib {
-    DragWin 'Lucid visuals' 120 0 "v-away-$dpi"
-    DragWin 'Lucid' 110 0 "p-to-visuals-$dpi"
-    DragWin 'Lucid' -60 30 "p-move-$dpi"
-    DragWin 'Lucid visuals' -50 -20 "v-back-$dpi"
-  }
-  RunWith "wiggle $dpi" $lib {
-    DragWin 'Lucid visuals' 120 40 "w-away-$dpi"
-    WiggleWin 'Lucid visuals' -112 -38 "w-near-$dpi"
-    DragWin 'Lucid library' -120 30 "w-lib-away-$dpi"
-    WiggleWin 'Lucid library' 114 -26 "w-lib-near-$dpi"
-  }
-}
+# Lucid starts at 100% and the display then changes to 175%, like a second display with a
+# different scale: Windows stretches Lucid's windows and scales its coordinates.
+Write-Host "::notice::dpi 100 -> $([W]::SetDpi(100))"; Start-Sleep 4
+Fresh $lib
+$script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
+Start-Sleep 35
+Write-Host "::notice::dpi 175 -> $([W]::SetDpi(175))"; Start-Sleep 8
+[W]::Shot("$out/mixed-rest.png"); Add-Content "$out/log.txt" "rects mixed $([W]::Rects([uint32]$script:proc.Id))"
+try {
+  DragWin 'Lucid visuals' 120 40 "m-away"
+  WiggleWin 'Lucid visuals' -112 -38 "m-near"
+  DragWin 'Lucid visuals' 120 0 "m-away2"
+  DragWin 'Lucid visuals' -110 0 "m-gap10"
+  DragWin 'Lucid library' -100 30 "m-lib-away"
+  WiggleWin 'Lucid library' 94 -26 "m-lib-near"
+} catch { Add-Content "$out/log.txt" "ERROR $($_.Exception.Message)" }
+Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue
