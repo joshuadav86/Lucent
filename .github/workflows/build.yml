@@ -19,6 +19,10 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # Every build gets a higher version than the last, so the installer and in-app updates can
+      # tell which is newer.
+      LUCID_VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -74,6 +78,7 @@ jobs:
           dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:Version=${{ env.LUCID_VERSION }}
           -o publish
 
       - name: Check the MP3 encoder is next to Lucid.exe
@@ -90,10 +95,30 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path publish/* -DestinationPath Lucid-win-x64.zip
 
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          # Velopack makes Lucid-Setup.exe (installs for the current user, no admin needed) and the
+          # update package and feed that installed copies check for new builds.
+          dotnet tool install vpk --version 1.2.161 --tool-path .vpk
+          .vpk/vpk pack --packId Lucid --packVersion $env:LUCID_VERSION --packDir publish --mainExe Lucid.exe `
+            --packTitle Lucid --packAuthors joshuadav86 `
+            --icon src/WinampInspiredVisualizer/Assets/Lucid.ico `
+            --splashImage assets/lucid-icon.png --splashProgressColor "#8B5CF6" `
+            --outputDir releases
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item releases/Lucid-win-Setup.exe Lucid-Setup.exe
+          Get-ChildItem releases | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
+
       - uses: actions/upload-artifact@v4
         with:
           name: Lucid-win-x64
           path: Lucid-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lucid-Setup
+          path: Lucid-Setup.exe
 
       - name: Update "latest" download
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -108,7 +133,9 @@ jobs:
             exit 0
           fi
           gh release delete latest --cleanup-tag --yes || true
-          gh release create latest Lucid-win-x64.zip \
+          # The .nupkg and the releases/assets files are what installed copies of Lucid update from.
+          gh release create latest Lucid-Setup.exe Lucid-win-x64.zip \
+            releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES \
             --target "$GITHUB_SHA" --prerelease \
-            --title "Latest build" \
-            --notes "Automatic build of the newest version on main. Download the zip, unzip it, and run Lucid.exe."
+            --title "Latest build ($LUCID_VERSION)" \
+            --notes "Automatic build of the newest version on main. Download Lucid-Setup.exe and run it to install Lucid; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucid.exe without installing (that copy doesn't update itself)."

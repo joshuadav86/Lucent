@@ -18,6 +18,7 @@ using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Themes;
+using WinampInspiredVisualizer.Updates;
 using WinampInspiredVisualizer.Visualizer;
 using WinampInspiredVisualizer.Windows;
 using Track = WinampInspiredVisualizer.Playlist.Track;
@@ -39,6 +40,7 @@ public partial class MainWindow : Window
     private readonly VisualizerHost _visualizer;
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly MusicLibrary _library = new();
+    private readonly AppUpdater _updater = new();
     private readonly VisualizerWindow _visuals;
     private readonly QueueWindow _queue;
     private readonly LibraryWindow _libraryWindow;
@@ -228,6 +230,13 @@ public partial class MainWindow : Window
         UpdateWindowToggles();
         AlignBesidePlayerSoon();
         Activate();
+
+        _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
+        {
+            UpdateButton.ToolTip = $"Lucid {version} is ready. Click to restart into it now, or it installs when you close Lucid.";
+            UpdateButton.Visibility = Visibility.Visible;
+        });
+        _ = _updater.CheckAsync();
     }
 
     // True while the windows are being opened at start-up, when one window showing mustn't count
@@ -992,6 +1001,12 @@ public partial class MainWindow : Window
     private void OnMinimize(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
 
     private void OnCloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
+
+    private void OnInstallUpdate(object sender, RoutedEventArgs e)
+    {
+        _updater.InstallOnExit(restart: true);
+        SystemCommands.CloseWindow(this);
+    }
 
     // ---- Options ----
 
@@ -1913,5 +1928,6 @@ public partial class MainWindow : Window
         CompositionTarget.Rendering -= OnMeterFrame;
         _visualizer.Dispose();
         _player.Dispose();
+        _updater.InstallOnExit(restart: false);
     }
 }

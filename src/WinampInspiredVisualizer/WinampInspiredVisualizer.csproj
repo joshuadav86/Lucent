@@ -11,7 +11,10 @@
     <Product>Lucid</Product>
     <ApplicationIcon>Assets\Lucid.ico</ApplicationIcon>
     <RootNamespace>WinampInspiredVisualizer</RootNamespace>
+    <!-- CI sets the last number to the build number, so every build installs over the one before. -->
     <Version>0.1.0</Version>
+    <!-- Program.Main, so Velopack can run before the app starts. -->
+    <StartupObject>WinampInspiredVisualizer.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +23,7 @@
     <PackageReference Include="NAudio.Lame" Version="2.1.0" />
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
     <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
