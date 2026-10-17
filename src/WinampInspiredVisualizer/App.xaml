@@ -852,6 +852,13 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
                             </Trigger>
+                            <!-- A heading the library has highlighted (its Expander's Tag is true). -->
+                            <Trigger Property="Tag">
+                                <Trigger.Value>
+                                    <sys:Boolean>True</sys:Boolean>
+                                </Trigger.Value>
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -863,6 +870,7 @@
                     <ControlTemplate TargetType="Expander">
                         <StackPanel>
                             <ToggleButton Style="{StaticResource FolderHeaderToggle}" Content="{TemplateBinding Header}"
+                                          Tag="{TemplateBinding Tag}"
                                           IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" />
                             <ContentPresenter x:Name="Body" Visibility="Collapsed" />
                         </StackPanel>
