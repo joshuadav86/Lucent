@@ -49,6 +49,7 @@ public sealed class Renderer : IDisposable
     private volatile float _bloomStrength = 1f;
     private volatile float _transitionSeconds = 3f;
     private volatile float _autoCycleSeconds = 25f;
+    private volatile int[]? _autoCycleChoices;
     private volatile bool _morphsOnly;
     private volatile bool _hdrRequested;
     private int _compilersRunning;
@@ -157,6 +158,13 @@ public sealed class Renderer : IDisposable
     {
         get => _transitionSeconds;
         set => _transitionSeconds = Math.Clamp(value, 0.25f, 30f);
+    }
+
+    /// <summary>The visuals Auto picks from (by index), or null for all of them.</summary>
+    public IReadOnlyCollection<int>? AutoCycleChoices
+    {
+        get => _autoCycleChoices;
+        set => _autoCycleChoices = value?.ToArray();
     }
 
     public float AutoCycleSeconds
@@ -457,9 +465,9 @@ public sealed class Renderer : IDisposable
             lastTime = now;
 
             var (width, height) = GetClientSize();
-            if (width <= 1 || height <= 1)
+            if (width <= 1 || height <= 1 || !IsWindowVisible(_hwnd))
             {
-                // Minimized or hidden: nothing to draw.
+                // Minimized or hidden (the visuals window can be closed while music plays): nothing to draw.
                 Thread.Sleep(50);
                 continue;
             }
@@ -700,9 +708,10 @@ public sealed class Renderer : IDisposable
     private int RandomReadyPreset()
     {
         var ready = new List<int>();
+        var choices = _autoCycleChoices;
         for (var index = 0; index < _slots.Length; index++)
         {
-            if (index != _activePreset && IsReady(index))
+            if (index != _activePreset && IsReady(index) && (choices is null || Array.IndexOf(choices, index) >= 0))
             {
                 ready.Add(index);
             }
@@ -934,6 +943,10 @@ public sealed class Renderer : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hwnd);
 
     private sealed class DeviceLostException : Exception
     {

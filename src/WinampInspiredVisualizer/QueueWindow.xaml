@@ -1,0 +1,110 @@
+<local:ToolWindow x:Class="WinampInspiredVisualizer.QueueWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:WinampInspiredVisualizer.Windows"
+                  Title="Lucid queue"
+                  Width="520" Height="320" MinWidth="300" MinHeight="160"
+                  Background="{DynamicResource SurfaceBrush}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+        <Grid Margin="6,6,4,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Favourite songs and saved playlists: play them, or save the queue as one. -->
+                    <Button x:Name="PlaylistsButton" Style="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
+                            ToolTip="Play your favourite songs or a saved playlist, or save the queue as a playlist"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnPlaylistsMenu">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ListIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
+                            <TextBlock Text="Playlists" FontSize="12" VerticalAlignment="Center" />
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Add files"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnAddFiles">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Add a folder"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnAddFolder">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource FolderIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Clear the queue"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnClearQueue">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ClearIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Hide the queue (Q)"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnHideWindow">
+                        <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="QUEUE" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <TextBlock x:Name="QueueCount" Text="Empty" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"
+                               Foreground="{DynamicResource FaintTextBrush}" />
+                </StackPanel>
+            </DockPanel>
+
+            <ListBox x:Name="PlaylistView" Grid.Row="1" Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     SelectionMode="Extended"
+                     MouseDoubleClick="OnPlaylistDoubleClick"
+                     KeyDown="OnPlaylistKeyDown"
+                     ContextMenuOpening="OnQueueMenuOpening">
+                <ListBox.ContextMenu>
+                    <ContextMenu x:Name="QueueMenu">
+                        <MenuItem Header="Play" Click="OnPlaySelected" />
+                        <MenuItem Header="Remove from the queue" InputGestureText="Del" Click="OnRemoveSelected" />
+                        <Separator x:Name="SongMenuItemsStart" />
+                        <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnEditInfo" />
+                        <MenuItem Header="Show in File Explorer" Click="OnShowInExplorer" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
+                                    Background="{DynamicResource AccentGradientBrush}"
+                                    Visibility="{Binding IsCurrent, Converter={StaticResource VisibleWhenTrue}}" />
+                            <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                                <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextBrush}" />
+                                <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="1" IsHitTestVisible="False"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
+                <TextBlock Text="Drop music here" Margin="0,12,0,0" FontSize="13" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+                <TextBlock Text="MP3 · FLAC · WAV · M4A · ALAC · WMA · OGG · Opus · AIFF" Margin="0,4,0,0"
+                           FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</local:ToolWindow>
