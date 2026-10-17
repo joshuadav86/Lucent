@@ -180,7 +180,7 @@
         </DockPanel>
 
         <!-- The response curve sits directly above the band sliders, lined up with them. -->
-        <Grid x:Name="SliderArea" Margin="16,14,16,0" HorizontalAlignment="Center">
+        <Grid x:Name="SliderArea" Margin="16,14,16,0" HorizontalAlignment="Center" PreviewMouseDown="OnSliderAreaMouseDown">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />

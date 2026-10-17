@@ -37,6 +37,23 @@ public partial class EqualizerWindow : Window
     // handlers stay quiet.
     private bool _updating = true;
 
+    // ---- Glides: the sliders and the curve move to new settings instead of jumping ----
+
+    // How long each column takes to settle, and the most the last column waits behind the first.
+    private const double GlideSeconds = 0.34;
+    private const double MostStagger = 0.22;
+    private bool _gliding;
+    private DateTime _glideStart;
+    private double _stagger;
+    private double[] _glideFrom = Array.Empty<double>();
+    private double[] _glideTo = Array.Empty<double>();
+    private double _preampFrom;
+    private double _preampTo;
+    private EqualizerDesign? _curveFrom;   // the curve being left, or null to rise from flat
+    private bool _revealColumns;
+    private double _widthFrom;
+    private double _widthTo;
+
     private EqualizerWindow(AudioPlayer player, AppSettings settings)
     {
         InitializeComponent();
@@ -163,7 +180,13 @@ public partial class EqualizerWindow : Window
                 text.FontSize = 9;
             }
 
-            var column = new StackPanel { Width = _columnWidth, Background = Brushes.Transparent, Tag = band };
+            var column = new StackPanel
+            {
+                Width = _columnWidth,
+                Background = Brushes.Transparent,
+                Tag = band,
+                RenderTransform = new TranslateTransform(),
+            };
             column.Children.Add(slider);
             column.Children.Add(text);
             var index = band;
@@ -277,11 +300,20 @@ public partial class EqualizerWindow : Window
         // Each band's centre sits right above its slider, so frequency runs evenly (in octaves)
         // across the columns.
         var ratio = Math.Pow(2, _bands.SpacingOctaves);
+        var elapsed = _gliding ? (DateTime.UtcNow - _glideStart).TotalSeconds : double.MaxValue;
         var points = new List<Point>();
         for (var x = 0.0; x <= width; x += 2)
         {
             var hertz = _bands.Centres[0] * Math.Pow(ratio, x / _columnWidth - 0.5);
-            points.Add(new Point(x, Y(design.ResponseDb(hertz))));
+            var db = design.ResponseDb(hertz);
+            if (_gliding)
+            {
+                // Each part of the curve moves with the slider under it.
+                var from = _curveFrom?.ResponseDb(hertz) ?? 0;
+                db = from + (db - from) * GlideProgress(x / _columnWidth - 0.5, elapsed);
+            }
+
+            points.Add(new Point(x, Y(db)));
         }
 
         var zero = Y(0);
@@ -315,6 +347,127 @@ public partial class EqualizerWindow : Window
         CurveLine.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, Eq.Enabled ? "AccentBrush" : "FaintTextBrush");
         CurveFill.Visibility = Eq.Enabled ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    // ---- Glides ----
+
+    // The sliders' and curve's current look, for a glide away from it to begin from.
+    private (double[] Gains, double Preamp, EqualizerDesign Curve) SnapshotForGlide()
+    {
+        var gains = _bandSliders.Select(slider => slider.Value).ToArray();
+        var preamp = PreampSlider.Value;
+        FinishGlide();
+        return (gains, preamp, _player.Equalizer.Preview);
+    }
+
+    private void StartGlide(double[] from, double preampFrom, EqualizerDesign? curveFrom, bool revealColumns, double widthFrom)
+    {
+        _glideFrom = from;
+        _glideTo = Eq.Gains.ToArray();
+        _preampFrom = preampFrom;
+        _preampTo = Eq.PreampDb;
+        _curveFrom = curveFrom;
+        _revealColumns = revealColumns;
+        _widthTo = Width;
+        _widthFrom = double.IsNaN(widthFrom) || widthFrom <= 0 ? _widthTo : widthFrom;
+        _stagger = Math.Min(0.03, MostStagger / Math.Max(1, _bands.Count));
+
+        // Nothing moves for people who've turned animations off in Windows.
+        if (!SystemParameters.ClientAreaAnimation || !IsLoaded)
+        {
+            FinishGlide();
+            return;
+        }
+
+        _glideStart = DateTime.UtcNow;
+        if (!_gliding)
+        {
+            _gliding = true;
+            CompositionTarget.Rendering += OnGlideFrame;
+        }
+
+        OnGlideFrame(null, EventArgs.Empty);
+    }
+
+    // How far along a column is, 0 to 1, easing out: each column starts a moment after the one to its left.
+    private double GlideProgress(double column, double elapsed)
+    {
+        var t = Math.Clamp((elapsed - Math.Max(0, column) * _stagger) / GlideSeconds, 0, 1);
+        return 1 - Math.Pow(1 - t, 3);
+    }
+
+    private void OnGlideFrame(object? sender, EventArgs e)
+    {
+        var elapsed = (DateTime.UtcNow - _glideStart).TotalSeconds;
+        var total = GlideSeconds + Math.Max(0, _bands.Count - 1) * _stagger;
+        if (elapsed >= total)
+        {
+            FinishGlide();
+            return;
+        }
+
+        _updating = true;
+        PreampSlider.Value = _preampFrom + (_preampTo - _preampFrom) * GlideProgress(0, elapsed);
+        for (var band = 0; band < _bandSliders.Count && band < _glideTo.Length; band++)
+        {
+            var progress = GlideProgress(band, elapsed);
+            var from = band < _glideFrom.Length ? _glideFrom[band] : 0;
+            _bandSliders[band].Value = from + (_glideTo[band] - from) * progress;
+            if (_revealColumns && BandPanel.Children[band] is FrameworkElement column)
+            {
+                column.Opacity = progress;
+                ((TranslateTransform)column.RenderTransform).Y = (1 - progress) * 10;
+            }
+        }
+
+        _updating = false;
+        if (Math.Abs(_widthTo - _widthFrom) > 0.5)
+        {
+            var eased = 1 - Math.Pow(1 - Math.Clamp(elapsed / total, 0, 1), 3);
+            Width = _widthFrom + (_widthTo - _widthFrom) * eased;
+        }
+
+        RedrawCurve();
+    }
+
+    // Jumps to the end of a glide (or does nothing if there isn't one).
+    private void FinishGlide()
+    {
+        if (!_gliding && _glideTo.Length == 0)
+        {
+            return;
+        }
+
+        if (_gliding)
+        {
+            CompositionTarget.Rendering -= OnGlideFrame;
+            _gliding = false;
+        }
+
+        _updating = true;
+        PreampSlider.Value = Eq.PreampDb;
+        for (var band = 0; band < _bandSliders.Count; band++)
+        {
+            _bandSliders[band].Value = Eq.Gains[band];
+            if (BandPanel.Children[band] is FrameworkElement column)
+            {
+                column.Opacity = 1;
+                ((TranslateTransform)column.RenderTransform).Y = 0;
+            }
+        }
+
+        _updating = false;
+        if (_widthTo > 0)
+        {
+            Width = _widthTo;
+        }
+
+        _glideTo = Array.Empty<double>();
+        _widthTo = 0;
+        RedrawCurve();
+    }
+
+    // Grabbing a slider mid-glide finishes the glide first, so the slider is where it looks.
+    private void OnSliderAreaMouseDown(object sender, MouseButtonEventArgs e) => FinishGlide();
 
     // ---- Changing the settings ----
 
@@ -398,20 +551,28 @@ public partial class EqualizerWindow : Window
         // Keep the same sound: a preset is redrawn at the new band count, and a hand-made curve is
         // traced through its sliders and sampled at the new bands.
         var curve = FindCurve(Eq.PresetName) ?? EqualizerCurve.FromBands(_bands, Eq.Gains);
+        var oldWidth = ActualWidth;
         Eq.BandCount = count;
         Eq.Gains = curve.Sample(EqualizerBands.ForCount(count)).ToList();
+        FinishGlide();
         BuildBands();
         ShowSettings();
         Apply();
+
+        // The new columns rise into place one after another, their sliders gliding up from 0 with
+        // the curve, while the window eases to its new width.
+        StartGlide(new double[_bands.Count], Eq.PreampDb, curveFrom: null, revealColumns: true, oldWidth);
     }
 
     private void OnResetClicked(object sender, RoutedEventArgs e)
     {
+        var (from, preamp, curve) = SnapshotForGlide();
         Eq.Gains = new double[_bands.Count].ToList();
         Eq.PreampDb = 0;
         Eq.PresetName = EqualizerPresets.FlatName;
         ShowSettings();
         Apply();
+        StartGlide(from, preamp, curve, revealColumns: false, ActualWidth);
     }
 
     // ---- Presets ----
@@ -456,11 +617,13 @@ public partial class EqualizerWindow : Window
         };
         item.Click += (_, _) =>
         {
+            var (from, preamp, oldCurve) = SnapshotForGlide();
             Eq.Gains = curve.Sample(_bands).ToList();
             Eq.PresetName = name;
             Eq.Enabled = true;
             ShowSettings();
             Apply();
+            StartGlide(from, preamp, oldCurve, revealColumns: false, ActualWidth);
         };
         return item;
     }
@@ -596,6 +759,12 @@ public partial class EqualizerWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        if (_gliding)
+        {
+            CompositionTarget.Rendering -= OnGlideFrame;
+            _gliding = false;
+        }
+
         _open = null;
         _saveTimer.Stop();
         _settings.Save();
