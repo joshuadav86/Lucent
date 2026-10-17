@@ -141,6 +141,17 @@ public sealed class AppSettings
 
     public bool ArtworkWindowOnTop { get; set; }
 
+    // ---- Analyzer ----
+
+    /// <summary>The analyzer window's size. It opens docked to the player's group, wherever there's room.</summary>
+    public double AnalyzerWindowWidth { get; set; } = 520;
+
+    public double AnalyzerWindowHeight { get; set; } = 360;
+
+    public SpectrogramPalette AnalyzerPalette { get; set; } = SpectrogramPalette.Classic;
+
+    public AnalyzerSpeed AnalyzerSpeed { get; set; } = AnalyzerSpeed.Normal;
+
     // ---- Audio tools ----
 
     /// <summary>The format and quality last picked in the converter, offered again next time.</summary>
@@ -193,6 +204,25 @@ public enum MeterMode
     Bars,
     Scope,
     Off,
+}
+
+/// <summary>The colours the analyzer's heatmap is painted in.</summary>
+public enum SpectrogramPalette
+{
+    /// <summary>Blue through green and yellow to red, like the Vision plugin.</summary>
+    Classic,
+    /// <summary>Black through red and orange to white.</summary>
+    Fire,
+    /// <summary>The theme's own background and accent colours.</summary>
+    Theme,
+}
+
+/// <summary>How fast the analyzer scrolls.</summary>
+public enum AnalyzerSpeed
+{
+    Slow,
+    Normal,
+    Fast,
 }
 
 /// <summary>A window's position and size, in device-independent pixels.</summary>
