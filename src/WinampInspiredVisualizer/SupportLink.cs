@@ -5,7 +5,7 @@ namespace WinampInspiredVisualizer;
 /// <summary>Where people can chip in for Lucent: the Buy Me a Coffee page behind the options panel's coffee button.</summary>
 public static class SupportLink
 {
-    public const string Url = "https://buymeacoffee.com/YOUR_BMC_USERNAME";
+    public const string Url = "https://buymeacoffee.com/joshuadav86";
 
     /// <summary>Opens the page in the default browser.</summary>
     public static void Open()

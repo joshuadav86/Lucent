@@ -7,7 +7,7 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor and analyzer for 
 
 <p align="center">
   <a href="../../releases/tag/latest"><img src="https://img.shields.io/badge/download-latest%20build-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download the latest build"></a>
-  <a href="https://buymeacoffee.com/YOUR_BMC_USERNAME"><img src="https://img.shields.io/badge/buy%20me%20a%20coffee-support%20Lucent-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
+  <a href="https://buymeacoffee.com/joshuadav86"><img src="https://img.shields.io/badge/buy%20me%20a%20coffee-support%20Lucent-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
 <p align="center">
@@ -289,7 +289,7 @@ cmake --build build/PluginHost --config Release
 
 ## Support Lucent
 
-Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/YOUR_BMC_USERNAME). The **☕ Buy me a coffee** button at the bottom of Lucent's options panel goes to the same page.
+Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86). The **☕ Buy me a coffee** button at the bottom of Lucent's options panel goes to the same page.
 
 ## License
 
