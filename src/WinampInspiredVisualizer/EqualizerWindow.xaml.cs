@@ -38,7 +38,7 @@ public partial class EqualizerWindow : Window
     private const double WidestColumn = 110;
     // How narrow columns may get to fit the player's width with 31 bands, and the knob they hold.
     private const double NarrowestFittedColumn = 12;
-    private const double SliderKnobWidth = 16;
+    private const double SliderKnobWidth = 30;
     // True while the sliders are being set from code (and during start-up), so their change
     // handlers stay quiet.
     private bool _updating = true;
@@ -198,7 +198,7 @@ public partial class EqualizerWindow : Window
             // Sliders in very narrow columns are drawn thinner so their knobs don't touch.
             if (_columnWidth < SliderKnobWidth + 4)
             {
-                slider.LayoutTransform = new ScaleTransform(Math.Max(0.5, (_columnWidth - 4) / SliderKnobWidth), 1);
+                slider.LayoutTransform = new ScaleTransform(Math.Max(0.35, (_columnWidth - 4) / SliderKnobWidth), 1);
             }
 
             var text = new TextBlock { Style = (Style)Resources["BandLabel"], Text = label };
