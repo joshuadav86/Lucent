@@ -56,7 +56,8 @@ public partial class VisualizerWindow : ToolWindow
             VisualizerStatus.Text = message;
             VisualizerStatus.ToolTip = message;
         };
-        host.DoubleClicked += (_, _) => ToggleFullscreen();
+        host.DoubleClicked += (_, _) => OnVisualsDoubleClicked();
+        host.Clicked += (_, _) => OnVisualsClicked();
         host.RightClicked += (_, _) => ShowVisualsMenu();
         host.PresetChanged += (_, _) => ShowPreset();
         host.FrameRateMeasured += (_, stats) =>
