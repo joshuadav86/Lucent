@@ -22,6 +22,8 @@ public static class Screenshots
         ("Player", () => new MainWindow()),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
+        ("Equalizer", () => PreviewEqualizer()),
+        ("Analyzer", () => PreviewAnalyzer()),
     };
 
     public static int Run(string[] args)
@@ -86,5 +88,36 @@ public static class Screenshots
         box.Body.Text = "Lucent couldn't play this file. It may be damaged, or in a format Lucent can't read.";
         box.Buttons.Children.Add(new Button { Content = "OK", Theme = (Avalonia.Styling.ControlTheme?)box.FindResource("PickerButton") });
         return box;
+    }
+
+    private static Window PreviewEqualizer()
+    {
+        var player = new Lucent.Mac.Audio.AudioPlayer();
+        var settings = new AppSettings();
+        settings.Equalizer.BandCount = 16;
+        settings.Equalizer.PresetName = "Rock";
+        settings.Equalizer.Gains = WinampInspiredVisualizer.Audio.EqualizerPresets.Find("Rock")!.Curve
+            .Sample(WinampInspiredVisualizer.Audio.EqualizerBands.ForCount(16)).ToList();
+        settings.Equalizer.PreampDb = -2;
+        player.Equalizer.Apply(settings.Equalizer);
+        var window = EqualizerWindow.Create(player, settings);
+        window.Opened += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            window.UpdateLayout();
+            AnalyzerSampleMusic.Play(player.Capture, 1.5, seconds => window.Spectrum.Advance((float)seconds));
+        });
+        return window;
+    }
+
+    private static Window PreviewAnalyzer()
+    {
+        var player = new Lucent.Mac.Audio.AudioPlayer();
+        var window = AnalyzerWindow.Create(player, new AppSettings());
+        window.Opened += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            window.UpdateLayout();
+            AnalyzerSampleMusic.Play(player.Capture, 11, seconds => window.Picture.Advance(seconds));
+        });
+        return window;
     }
 }
