@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer;
 
@@ -36,7 +37,7 @@ public partial class EqualizerWindow : Window
 
     // Beyond this the sliders look scattered rather than spread out.
     private const double WidestColumn = 110;
-    // How narrow columns may get to fit the player's width with 31 bands, and the knob they hold.
+    // How narrow columns may get to fit the player's width with 32 bands, and the knob they hold.
     private const double NarrowestFittedColumn = 12;
     private const double SliderKnobWidth = 30;
     // True while the sliders are being set from code (and during start-up), so their change
@@ -60,6 +61,9 @@ public partial class EqualizerWindow : Window
     private double _widthFrom;
     private double _widthTo;
 
+    // The music's live spectrum, behind the response curve.
+    private readonly EqualizerSpectrum _spectrum;
+
     private EqualizerWindow(AudioPlayer player, AppSettings settings, double? fitWidth)
     {
         InitializeComponent();
@@ -69,6 +73,13 @@ public partial class EqualizerWindow : Window
         _bands = EqualizerBands.ForCount(Eq.BandCount);
         Eq.BandCount = _bands.Count;
         Eq.Gains = Equalizer.SliderGains(Eq, _bands).ToList();
+        // The spectrum fills the response box under the curve, whatever size the box is.
+        _spectrum = new EqualizerSpectrum(player.Capture);
+        CurveFrame.Child = null;
+        var layers = new Grid();
+        layers.Children.Add(_spectrum);
+        layers.Children.Add(CurveCanvas);
+        CurveFrame.Child = layers;
 
         // Saving is held back until the sliders have been still for a moment.
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
@@ -155,7 +166,9 @@ public partial class EqualizerWindow : Window
     private void BuildBands()
     {
         _bands = EqualizerBands.ForCount(Eq.BandCount);
-        // Narrower columns for more bands, so even 31 sliders fit a normal screen.
+        // The box spans the columns, each band's centre in the middle of its column.
+        _spectrum.SetScale(_bands.Centres[0] / Math.Pow(2, _bands.SpacingOctaves / 2), _bands.SpacingOctaves * _bands.Count);
+        // Narrower columns for more bands, so even 32 sliders fit a normal screen.
         var narrowest = _bands.Count switch
         {
             <= 10 => 40,
