@@ -1,6 +1,8 @@
 // Name: Truchet Weave
 // Endless mirrored knotwork of fine neon threads woven over and under: tiles snap round on the beat to
 // rewire the knots, spirals of light run along the strands, and the view falls forever through the weave.
+// Family: Kaleidoscope
+// Tags: Neon, Geometric, Retro
 
 float twStroke(float d, float halfWidth, float px)
 {

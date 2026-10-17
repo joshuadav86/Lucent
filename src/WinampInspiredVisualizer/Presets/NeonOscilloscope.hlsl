@@ -1,5 +1,7 @@
 // Name: Neon Oscilloscope
 // The live waveform drawn as a glowing line, leaving drifting, colour-shifting echoes.
+// Family: Music-shaped
+// Tags: Dark, Retro
 
 float3 Render(float2 uv, float2 p)
 {

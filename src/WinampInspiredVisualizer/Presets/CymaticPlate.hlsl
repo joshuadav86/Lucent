@@ -1,5 +1,7 @@
 // Name: Cymatic Plate
 // Glowing sand gathers on the still lines of a vibrating plate; the song's spectrum picks the modes, so the figures morph with the music.
+// Family: Music-shaped
+// Tags: Colourful, Neon, Geometric
 
 // One Chladni mode of a square plate: sand collects where this is zero.
 float plateMode(float2 q, float n, float m)

@@ -1,6 +1,8 @@
 // Name: Op Art Moire
 // Two gratings of flower-shaped rings drift across each other in a twelvefold mirror, and their interference
 // blooms into a turning mandala of moire petals in flowing colour that swell with the bass and ripple with the beat.
+// Family: Kaleidoscope
+// Tags: Colourful, Geometric, Retro
 
 // Anti-aliased square wave of a phase; fades to grey where stripes get finer than a couple of pixels.
 float omStripes(float phase, float perPixel)

@@ -11,12 +11,26 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
 
     private static readonly Regex SimulatePattern = new(@"\bvoid\s+Simulate\s*\(");
     private static readonly Regex ParticleCountPattern = new(@"^\s*//\s*Particles:\s*(\d+)", RegexOptions.Multiline);
+    private static readonly Regex FamilyPattern = new(@"^\s*//\s*Family:(.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+    private static readonly Regex TagsPattern = new(@"^\s*//\s*Tags:(.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
 
     /// <summary>A particle visual: it defines Simulate (and Spawn and Show) as well as Render. See Shaders/Particles.hlsli.</summary>
     public bool IsParticles { get; } = SimulatePattern.IsMatch(Code);
 
     /// <summary>How many particles run on Normal detail, from a "// Particles: 300000" line.</summary>
     public int NormalParticleCount { get; } = ReadParticleCount(Code);
+
+    /// <summary>The folder the visual picker lists it in, from a "// Family: Fractal" line ("Other" without one).</summary>
+    public string Family { get; } = VisualStyles.FamilyName(ReadHeader(FamilyPattern, Code));
+
+    /// <summary>The picker's tick boxes it answers to, from a "// Tags: Calm, Space" line (none without one).</summary>
+    public IReadOnlyList<string> Tags { get; } = VisualStyles.TagNames(ReadHeader(TagsPattern, Code));
+
+    private static string? ReadHeader(Regex pattern, string code)
+    {
+        var match = pattern.Match(code);
+        return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
 
     private static int ReadParticleCount(string code)
     {

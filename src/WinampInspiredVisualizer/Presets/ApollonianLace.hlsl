@@ -1,6 +1,8 @@
 // Name: Apollonian Lace
 // An Apollonian gasket: circles packed inside circles forever, drawn as razor-thin
 // lace that slowly zooms and spins. Beats ripple through the packing.
+// Family: Fractal
+// Tags: Calm, Geometric
 
 float gasket(float2 p, out float trap)
 {
