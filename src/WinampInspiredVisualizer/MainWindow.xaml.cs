@@ -22,6 +22,9 @@ namespace WinampInspiredVisualizer;
 
 public partial class MainWindow : Window
 {
+    // How often Auto can change visual, offered in the menu next to the AUTO pill (and in Options).
+    private static readonly int[] AutoCycleChoices = { 10, 15, 25, 45, 90, 180 };
+
     private readonly AudioPlayer _player = new();
     private readonly ObservableCollection<PlaylistEntry> _playlist = new();
     private readonly DispatcherTimer _positionTimer;
@@ -128,9 +131,51 @@ public partial class MainWindow : Window
 
     private void UpdateAutoCycleButton()
     {
+        var seconds = _settings.AutoCycleSeconds;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
+        AutoCycleButton.Content = $"AUTO · {ShortIntervalText(seconds)}";
         AutoCycleButton.SetResourceReference(ForegroundProperty, _settings.AutoCycle ? "AccentBrush" : "FaintTextBrush");
-        AutoCycleButton.ToolTip = $"Move to a new visual on the beat every {_settings.AutoCycleSeconds} seconds or so (A)";
+        AutoCycleButton.ToolTip = _settings.AutoCycle
+            ? $"Moving to a new visual on the beat every {IntervalText(seconds)} or so. Click to stop (A), right-click to change how often"
+            : $"Auto is off. Click to move to a new visual on the beat every {IntervalText(seconds)} or so (A), right-click to change how often";
+    }
+
+    // "25 seconds" / "3 minutes" for menus and tooltips, "25s" / "3m" for the pill.
+    private static string IntervalText(int seconds) =>
+        seconds >= 120 && seconds % 60 == 0 ? $"{seconds / 60} minutes" : $"{seconds} seconds";
+
+    private static string ShortIntervalText(int seconds) =>
+        seconds >= 120 && seconds % 60 == 0 ? $"{seconds / 60}m" : $"{seconds}s";
+
+    private void OnAutoCycleIntervalMenu(object sender, RoutedEventArgs e) => ShowAutoCycleMenu();
+
+    private void OnAutoCycleRightClick(object sender, MouseButtonEventArgs e)
+    {
+        ShowAutoCycleMenu();
+        e.Handled = true;
+    }
+
+    /// <summary>The menu above the AUTO pill for choosing how often the visuals change.</summary>
+    private void ShowAutoCycleMenu()
+    {
+        var menu = new ContextMenu { PlacementTarget = AutoCycleButton, Placement = PlacementMode.Top, VerticalOffset = -6 };
+        menu.Items.Add(new MenuItem { Header = "Change visual about every", IsEnabled = false });
+        foreach (var seconds in AutoCycleChoices)
+        {
+            var item = new MenuItem { Header = IntervalText(seconds), IsChecked = seconds == _settings.AutoCycleSeconds };
+            item.Click += (_, _) =>
+            {
+                // Choosing how often only makes sense with Auto on, so this turns it on too.
+                _settings.AutoCycleSeconds = seconds;
+                _settings.AutoCycle = true;
+                ApplyVisualizerSettings();
+                UpdateAutoCycleButton();
+                _settings.Save();
+            };
+            menu.Items.Add(item);
+        }
+
+        menu.IsOpen = true;
     }
 
     private void OnToggleQueue(object sender, RoutedEventArgs e) => ToggleQueue();
@@ -334,6 +379,7 @@ public partial class MainWindow : Window
                 : "Your screen is in HDR mode, so highlights can shine far brighter than normal white.";
     }
 
+    /// <summary>Updates the frame rate readout in the player bar (about once a second while visuals draw).</summary>
     private void ShowFrameRate(FrameStats stats)
     {
         FrameRateText.Text = $"{stats.FramesPerSecond:0} fps · {stats.Width} × {stats.Height}" + (stats.Hdr ? " · HDR" : string.Empty);
