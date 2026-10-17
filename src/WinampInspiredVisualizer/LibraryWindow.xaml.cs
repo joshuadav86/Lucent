@@ -209,7 +209,7 @@ public partial class LibraryWindow : ToolWindow
                 ApplySearch();
                 if (LibraryInViewOrder().FirstOrDefault() is { } first)
                 {
-                    SearchText.FocusRow(LibraryView, first);
+                    ListRows.Focus(LibraryView, first);
                 }
 
                 e.Handled = true;

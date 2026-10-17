@@ -142,3 +142,16 @@ jobs:
             --target "$GITHUB_SHA" --prerelease \
             --title "Latest build ($LUCENT_VERSION)" \
             --notes "Automatic build of the newest version on main. Download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself)."
+
+  # Lucent.Core is shared with the coming Mac app, so it has to build without Windows.
+  core-on-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build the shared code on macOS
+        run: dotnet build src/Lucent.Core/Lucent.Core.csproj -c Release

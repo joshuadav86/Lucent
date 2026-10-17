@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer.Library;
 

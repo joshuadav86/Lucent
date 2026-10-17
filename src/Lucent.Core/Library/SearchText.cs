@@ -1,8 +1,7 @@
 using System.Globalization;
 using System.Text;
-using System.Windows.Controls;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace WinampInspiredVisualizer.Library;
 
 /// <summary>
 /// The search boxes in the library and the visual picker. What's typed is split into words, and a row
@@ -50,21 +49,5 @@ public static class SearchText
         }
 
         return folded.ToString();
-    }
-
-    /// <summary>Selects a row in a list, scrolls to it and puts the keyboard focus on it, e.g. after Down in a search box.</summary>
-    public static void FocusRow(ListBox list, object item)
-    {
-        list.SelectedItem = item;
-        list.ScrollIntoView(item);
-        list.UpdateLayout();
-        if (list.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem row)
-        {
-            row.Focus();
-        }
-        else
-        {
-            list.Focus();
-        }
     }
 }
