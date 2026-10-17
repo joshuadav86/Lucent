@@ -143,7 +143,7 @@
                     <Button Style="{StaticResource IconButton}" Click="OnZoomIn" ToolTip="Zoom in (+, or the mouse wheel)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ZoomInIcon}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Click="OnZoomFit" ToolTip="Show the whole song (0)">
+                    <Button Style="{StaticResource IconButton}" Click="OnZoomFit" ToolTip="Show the whole sound (0)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ZoomFitIcon}" />
                     </Button>
                 </StackPanel>
@@ -169,7 +169,7 @@
                              BackgroundBrush="{DynamicResource SurfaceBrush}"
                              WindowBrush="{DynamicResource AccentBrush}"
                              WindowBorderBrush="{DynamicResource AccentBrush}"
-                             ToolTip="The whole song. Click or drag to move around; the wheel zooms." />
+                             ToolTip="The whole sound. Click or drag to move around; the wheel zooms." />
 
         <!-- The waveform -->
         <Grid Grid.Row="3" Margin="14,8,14,10">
@@ -183,7 +183,7 @@
                                  CursorBrush="{DynamicResource AccentBrush}"
                                  PlayheadBrush="{DynamicResource TextBrush}" />
             <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
-                <TextBlock x:Name="LoadingText" Text="Opening the song…" FontSize="13" HorizontalAlignment="Center"
+                <TextBlock x:Name="LoadingText" Text="Opening the sound…" FontSize="13" HorizontalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
                 <ProgressBar x:Name="LoadingProgress" Style="{StaticResource ThinProgress}" Margin="0,12,0,0" />
             </StackPanel>
@@ -199,7 +199,7 @@
                     <Button x:Name="PluginPreviewButton" Style="{StaticResource ToolButton}" Content="Preview" Click="OnPreviewPlugin"
                             ToolTip="Play the selection (or from the cursor) through the plugin. Changes in its window are heard straight away." />
                     <Button Style="{StaticResource ToolButton}" Click="OnApplyPlugin" Foreground="{DynamicResource AccentBrush}"
-                            ToolTip="Run the selection (or the whole song) through the plugin, as one step you can undo">
+                            ToolTip="Run the selection (or the whole sound) through the plugin, as one step you can undo">
                         <TextBlock Text="Apply" FontWeight="SemiBold" />
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnClosePlugin"

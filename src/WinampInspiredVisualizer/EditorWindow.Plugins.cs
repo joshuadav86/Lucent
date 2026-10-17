@@ -218,7 +218,7 @@ public partial class EditorWindow
         PluginName.Text = string.IsNullOrWhiteSpace(plugin.Vendor) ? host.Name : $"{host.Name}  ·  {plugin.Vendor}";
         PluginWindowButton.Visibility = host.HasWindow ? Visibility.Visible : Visibility.Collapsed;
         PluginHint.Text = host.HasWindow
-            ? "Set it up in its window. Preview plays the selection through it, and changes are heard as you make them. Apply changes the selection, or the whole song."
+            ? "Set it up in its window. Preview plays the selection through it, and changes are heard as you make them. Apply changes the selection, or the whole sound."
             : "This plugin has no window of its own, so it runs with its standard settings. Preview to hear it, Apply to use it.";
         PluginBar.Visibility = Visibility.Visible;
         PluginBar.IsEnabled = true;

@@ -383,7 +383,7 @@ public sealed class PluginHost : IDisposable
                 // Stopping the helper ends the read too.
                 _gone = true;
                 Kill();
-                throw new PluginException($"{Name} stopped responding, so Lucent closed it. Your song wasn't changed.");
+                throw new PluginException($"{Name} stopped responding, so Lucent closed it. Your sound wasn't changed.");
             }
 
             if (read.Result == 0)
@@ -400,8 +400,8 @@ public sealed class PluginHost : IDisposable
         _gone = true;
         Kill();
         return new PluginException(what is null
-            ? $"{Name} crashed, so Lucent closed it. Your song wasn't changed."
-            : $"{Name} {what}, so Lucent closed it. Your song wasn't changed.");
+            ? $"{Name} crashed, so Lucent closed it. Your sound wasn't changed."
+            : $"{Name} {what}, so Lucent closed it. Your sound wasn't changed.");
     }
 
     private bool HasExited()

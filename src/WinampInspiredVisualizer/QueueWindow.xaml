@@ -23,7 +23,7 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Favourite songs and saved playlists: play them, or save the queue as one. -->
                     <Button x:Name="PlaylistsButton" Style="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
-                            ToolTip="Play your favorite songs or a saved playlist, or save the queue as a playlist"
+                            ToolTip="Play your favorite sounds or a saved playlist, or save the queue as a playlist"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnPlaylistsMenu">
                         <StackPanel Orientation="Horizontal">
                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ListIcon}"
