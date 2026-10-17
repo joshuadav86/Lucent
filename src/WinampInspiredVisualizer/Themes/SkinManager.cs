@@ -163,10 +163,10 @@ public static class SkinManager
                     new(Fade(accent, 0.05), 1),
                 }, new Point(0, 0), new Point(0.6, 1));
                 display = Solid(Fade(background, 0.55));
-                displayEdge = Vertical(Fade(white, light ? 0.9 : 0.2), Fade(white, light ? 0.4 : 0.04));
+                displayEdge = Vertical(Fade(white, light ? 0.9 : 0.2), light ? Fade(black, 0.1) : Fade(white, 0.04));
                 buttonFace = Vertical(Fade(white, light ? 0.7 : 0.08), Fade(white, light ? 0.3 : 0.02));
                 buttonLight = Solid(Fade(white, light ? 0.95 : 0.2));
-                buttonDark = Solid(Fade(white, light ? 0.4 : 0.05));
+                buttonDark = Solid(light ? Fade(black, 0.14) : Fade(white, 0.05));
                 buttonGlyph = Solid(text);
                 playGloss = new LinearGradientBrush(new GradientStopCollection
                 {
@@ -190,9 +190,9 @@ public static class SkinManager
                 values["DisplayGlowEffect"] = Freeze(new DropShadowEffect
                 {
                     Color = accent,
-                    BlurRadius = 16,
+                    BlurRadius = 22,
                     ShadowDepth = 0,
-                    Opacity = 0.7,
+                    Opacity = 1,
                 });
                 break;
 
