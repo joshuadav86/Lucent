@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.ArtworkWindow"
+        Title="Artwork - Lucent"
+        Width="420" Height="456" MinWidth="200" MinHeight="236"
+        Background="{DynamicResource BackgroundBrush}"
+        ShowInTaskbar="False">
+
+    <Grid x:Name="WindowRoot" RowDefinitions="36,*">
+
+        <!-- Title bar: what's playing, keep on top, close. Same custom frame as the main window. -->
+        <DockPanel Grid.Row="0" Background="Transparent" w:Chrome.IsCaption="True">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <ToggleButton x:Name="OnTopToggle" Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,4,2,0"
+                              ToolTip.Tip="Keep this window on top of other apps" Click="OnToggleOnTop">
+                    <Path Theme="{StaticResource LineIcon}" Data="{StaticResource PinIcon}" />
+                </ToggleButton>
+                <Button Theme="{StaticResource CloseCaptionButton}" ToolTip.Tip="Close (Esc)" Click="OnCloseWindow">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </StackPanel>
+            <TextBlock Text="ARTWORK" DockPanel.Dock="Left" Margin="14,0,0,0" FontSize="10" FontWeight="SemiBold"
+                       VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
+            <TextBlock x:Name="TrackText" Margin="10,0,8,0" FontSize="12" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+        </DockPanel>
+
+        <!-- The cover, as big as fits, letterboxed to keep its shape. Drag it to move the window. -->
+        <Grid x:Name="ArtArea" Grid.Row="1" Margin="10,0,10,10" Background="Transparent" PointerPressed="OnArtPointerPressed">
+            <Grid.ContextMenu>
+                <ContextMenu Opening="OnArtContextMenuOpening">
+                    <MenuItem x:Name="CopyMenuItem" Header="Copy image" Click="OnCopyImage" />
+                    <MenuItem x:Name="SaveMenuItem" Header="Save image…" Click="OnSaveImage" />
+                    <Separator />
+                    <MenuItem x:Name="EditMenuItem" Click="OnEditInfo">
+                        <MenuItem.Header>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="⌘I" Margin="28,0,0,0"
+                                           Foreground="{DynamicResource FaintTextBrush}" />
+                                <TextBlock Text="Edit info…" />
+                            </DockPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem x:Name="OnTopMenuItem" Header="Keep on top" ToggleType="CheckBox" Click="OnToggleOnTop" />
+                </ContextMenu>
+            </Grid.ContextMenu>
+
+            <Image x:Name="ArtImage" Stretch="Uniform" IsVisible="False"
+                   RenderOptions.BitmapInterpolationMode="HighQuality" />
+
+            <!-- Shown when the track has no artwork: a soft card in the theme's colours. -->
+            <Viewbox x:Name="Placeholder" Stretch="Uniform" MaxWidth="440" MaxHeight="440">
+                <Grid Width="240" Height="240">
+                    <Border CornerRadius="22" Background="{DynamicResource SurfaceRaisedBrush}"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" />
+                    <Border CornerRadius="22" Background="{DynamicResource AccentGradientBrush}" Opacity="0.14" />
+                    <Border CornerRadius="22" Margin="18" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" />
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <Viewbox Width="64" Height="56" HorizontalAlignment="Center">
+                            <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource AccentGradientBrush}" />
+                        </Viewbox>
+                        <TextBlock x:Name="PlaceholderTitle" Text="Nothing playing" Margin="0,20,0,0" FontSize="13"
+                                   FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock x:Name="PlaceholderText" Text="Artwork appears here when music plays." Margin="0,4,0,0"
+                                   FontSize="10" MaxWidth="170" TextWrapping="Wrap" TextAlignment="Center"
+                                   HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
+                </Grid>
+            </Viewbox>
+        </Grid>
+    </Grid>
+</Window>

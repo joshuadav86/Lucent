@@ -38,6 +38,12 @@ public static class Screenshots
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
         ("Queue", () => PreviewQueue()),
+        ("TrackInfo", TrackInfoPreviews.TrackInfo),
+        ("TrackInfoLyrics", TrackInfoPreviews.TrackInfoLyrics),
+        ("TrackInfoFile", TrackInfoPreviews.TrackInfoFile),
+        ("TrackInfoSeveral", TrackInfoPreviews.TrackInfoSeveral),
+        ("Artwork", TrackInfoPreviews.Artwork),
+        ("ArtworkEmpty", TrackInfoPreviews.ArtworkEmpty),
     };
 
     public static int Run(string[] args)
