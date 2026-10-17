@@ -56,12 +56,13 @@ public static class W {
   public static string Title(IntPtr h) { var s = new StringBuilder(256); GetWindowText(h, s, 256); return s.ToString(); }
   public static R Box(IntPtr h) { R v; DwmGetWindowAttribute(h, 9, out v, 16); return v; }
   public static void Click(int x, int y, int wait) { SetCursorPos(x, y); System.Threading.Thread.Sleep(80); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(40); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(wait); }
-  public static string Track(IntPtr h, int x, int y, int dx, int dy, int steps, int stepMs) {
-    var sb = new StringBuilder(); var b0 = Box(h); sb.Append("start " + b0.L + "," + b0.T + "," + b0.Ri + "," + b0.B + " |");
+  public static string All(uint pid) { var sb = new StringBuilder(); foreach (var w in Of(pid)) { var b = Box(w); var t = Title(w); sb.Append((t.Length > 6 ? t.Substring(6, 3) : "pla") + "=" + b.L + "," + b.T + "," + b.Ri + "," + b.B + " "); } return sb.ToString(); }
+  public static string Track(IntPtr h, uint pid, int x, int y, int dx, int dy, int steps, int stepMs) {
+    var sb = new StringBuilder(); sb.Append("start " + All(pid) + "\n");
     SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
-    for (int i = 1; i <= steps; i++) { SetCursorPos(x + dx * i / steps, y + dy * i / steps); System.Threading.Thread.Sleep(stepMs); var b = Box(h); sb.Append(" " + (dx * i / steps) + ":" + b.L + "," + b.T + "," + b.Ri + "," + b.B); }
+    for (int i = 1; i <= steps; i++) { SetCursorPos(x + dx * i / steps, y + dy * i / steps); System.Threading.Thread.Sleep(stepMs); sb.Append("  " + (dx * i / steps) + ": " + All(pid) + "\n"); }
     System.Threading.Thread.Sleep(300); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(800);
-    var e = Box(h); sb.Append(" | end " + e.L + "," + e.T + "," + e.Ri + "," + e.B); return sb.ToString();
+    sb.Append("end " + All(pid) + "\n"); return sb.ToString();
   }
   public static void Drag(int x, int y, int dx, int dy) {
     SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
@@ -110,6 +111,7 @@ function Bands($order, $wait) {
   Start-Sleep 2; [W]::Shot("$out/eq-after-$wait.png")
   $script:log += " || wait ${wait}: alive=$(-not $script:proc.HasExited) [$(Windows)]"
 }
+Write-Host "::notice::full drag $([W]::SystemParametersInfo(0x0025, 1, [IntPtr]0, 3))"
 Write-Host "::notice::animations on $([W]::SystemParametersInfo(0x1043, 0, [IntPtr]1, 3))"
 Write-Host "::notice::dpi 100 -> $([W]::SetDpi(100))"; Start-Sleep 4
 function Fresh($settings) {
@@ -124,23 +126,23 @@ function RunWith($label, $settings, [scriptblock]$steps) {
   Start-Sleep 35
   try { & $steps } catch { $script:log += " || ERROR $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
   Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
-  Write-Host "::notice::$label $($script:log)"; $script:log = ""
+  Add-Content "$out/log.txt" "#### $label $($script:log)"; $script:log = ""
 }
 function Boxes() { ([W]::Of([uint32]$script:proc.Id) | ForEach-Object { $b = [W]::Box($_); "'$([W]::Title($_))' $($b.L),$($b.T),$($b.Ri),$($b.B)" }) -join '; ' }
 function DragWin($title, $dx, $dy, $tag) {
   $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
   $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
-  $t = [W]::Track($h, $b.L + 150, $b.T + 14, $dx, $dy, 40, 25)
+  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.L + 150, $b.T + 14, $dx, $dy, 40, 25)
   [W]::Shot("$out/$tag.png")
-  Write-Host "::notice::$tag $t"
+  Add-Content "$out/log.txt" "== $tag`n$t"
   $script:log += " || ${tag}: [$(Boxes)]"
 }
 function SizeWin($title, $dx, $tag) {
   $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
   $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
-  $t = [W]::Track($h, $b.Ri - 2, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
+  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.Ri - 2, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
   [W]::Shot("$out/$tag.png")
-  Write-Host "::notice::$tag $t"
+  Add-Content "$out/log.txt" "== $tag`n$t"
   $script:log += " || ${tag}: [$(Boxes)]"
 }
 $lib = @{ ShowLibrary = $true }
@@ -159,5 +161,10 @@ foreach ($dpi in 100, 150) {
     DragWin 'Lucid library' -120 0 "l-away-$dpi"
     DragWin 'Lucid library' 130 0 "l-over10-$dpi"
     SizeWin 'Lucid visuals' -150 "v-size-$dpi"
+    SizeWin 'Lucid visuals' 100 "v-grow-$dpi"
+  }
+  RunWith "player $dpi" $lib {
+    DragWin 'Lucid' 200 120 "p-move-$dpi"
+    DragWin 'Lucid' -200 -120 "p-back-$dpi"
   }
 }
