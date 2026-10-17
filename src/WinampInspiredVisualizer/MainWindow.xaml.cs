@@ -758,7 +758,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        var height = ColumnBottom - Top;
+        // With nothing under the player there's no column to line up with, and the visuals would
+        // shrink to a strip, so they keep their size.
+        var bottom = ColumnBottom;
+        if (bottom - (Top + ActualHeight) < 2)
+        {
+            return;
+        }
+
+        var height = bottom - Top;
         foreach (var window in new ToolWindow[] { _visuals, _libraryWindow })
         {
             if (!window.IsVisible || window.WindowState != WindowState.Normal || window == _visuals && _visuals.IsFullscreen)
