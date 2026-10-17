@@ -135,15 +135,15 @@ void Simulate(inout Particle particle, uint id)
 float3 cameraEye()
 {
     float angle = Time * 0.05;
-    return float3(sin(angle) * 3.6, 0.7 + sin(Time * 0.07) * 0.6, cos(angle) * 3.6);
+    return float3(sin(angle) * 3.1, 0.6 + sin(Time * 0.07) * 0.5, cos(angle) * 3.1);
 }
 
 Sprite Show(Particle particle, uint id)
 {
     float3 eye = cameraEye();
     float roll = sin(Time * 0.05) * 0.08;
-    float3 seen = project(particle.position, eye, 0.0, 2.3, roll);
-    float3 seenBefore = project(particle.position - particle.velocity * 0.04, eye, 0.0, 2.3, roll);
+    float3 seen = project(particle.position, eye, 0.0, 2.45, roll);
+    float3 seenBefore = project(particle.position - particle.velocity * 0.04, eye, 0.0, 2.45, roll);
 
     // Bands of colour sweep up the shape; each band also rides one part of the spectrum.
     float height = particle.position.y * 0.5 + 0.5;
@@ -155,8 +155,8 @@ Sprite Show(Particle particle, uint id)
     float ripple = pow(saturate(sin(length(particle.position) * 9.0 - BeatCount * 2.0 - (1.0 - Beat) * 6.0) * 0.5 + 0.5), 6.0) * Beat;
     float storm = particle.data.x;
     // Mid-change the swarm runs hot and white; settled, it glows its colours.
-    colour = lerp(colour, float3(1.0, 0.95, 1.0), storm * 0.35 + ripple * 0.3);
-    colour *= 0.075 * (0.5 + level * 1.6 + ripple * 1.2) * (1.0 + storm * 0.4);
+    colour = lerp(colour, float3(1.0, 0.95, 1.0), storm * 0.2 + ripple * 0.3);
+    colour *= 0.13 * (0.6 + level * 1.6 + ripple * 1.2) * (1.0 - storm * 0.3);
     colour *= 1.0 + step(0.995, fixedRandom(id, 6.0)) * Treble * 10.0;
 
     Sprite sprite = (Sprite)0;
@@ -171,6 +171,8 @@ Sprite Show(Particle particle, uint id)
 float3 Render(float2 uv, float2 p)
 {
     // A dark stage with a faint glow beneath the swarm, like light reflected off a floor.
-    float3 stage = float3(0.006, 0.004, 0.014) + float3(0.04, 0.02, 0.06) * exp(-length(p - float2(0.0, 0.75)) * 2.5) * (0.6 + Bass);
+    float3 stage = float3(0.006, 0.004, 0.014) + float3(0.05, 0.025, 0.08) * exp(-length(p - float2(0.0, 0.85)) * 2.2) * (0.6 + Bass);
+    // A faint halo of the swarm's own light hangs round it.
+    stage += float3(0.02, 0.012, 0.035) * exp(-dot(p, p) * 1.5) * (0.5 + Level);
     return stage + particles(uv) + previous(uv) * 0.6;
 }

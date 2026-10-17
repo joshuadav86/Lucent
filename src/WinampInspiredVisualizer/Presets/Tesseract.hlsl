@@ -184,17 +184,30 @@ Hit traceScene(float3 origin, float3 direction)
     return hit;
 }
 
-// A dark studio: a soft panel above, and two tall coloured strips for the chrome to catch.
-float3 studio(float3 direction)
+// A dark studio: a soft panel above, and two broad coloured softboxes behind and to either side
+// that rim the rods and joints with pink and cyan. Seen directly they are only a faint glow in the
+// dark, so the tesseract keeps the stage.
+static const float3 RimA = float3(-0.75, 0.25, -0.6);   // towards the pink softbox (normalised in use)
+static const float3 RimB = float3(0.8, 0.3, -0.5);      // towards the cyan softbox
+
+float3 rimColourA()
+{
+    return float3(1.0, 0.3, 0.65) * (1.0 + Mid * 1.5);
+}
+
+float3 rimColourB()
+{
+    return float3(0.25, 0.7, 1.0) * (1.0 + Treble * 1.5);
+}
+
+float3 studio(float3 direction, float panels)
 {
     float3 colour = float3(0.004, 0.004, 0.008) + float3(0.02, 0.015, 0.035) * saturate(direction.y);
     float3 light = normalize(LightDirection);
-    colour += float3(1.0, 0.95, 0.9) * smoothstep(0.93, 0.97, dot(direction, light)) * 3.0;
-    float around = atan2(direction.z, direction.x);
-    float height = smoothstep(-0.1, 0.05, direction.y) * smoothstep(0.6, 0.45, direction.y);
-    float stripA = smoothstep(0.03, 0.012, abs(wrap(around - 0.9, 2.0 * PI) - PI)) * height;
-    float stripB = smoothstep(0.03, 0.012, abs(wrap(around + 2.1, 2.0 * PI) - PI)) * height;
-    colour += float3(1.0, 0.25, 0.7) * stripA * (1.0 + Mid * 2.0) + float3(0.2, 0.7, 1.0) * stripB * (1.0 + Treble * 2.0);
+    colour += float3(1.0, 0.95, 0.9) * smoothstep(0.9, 0.97, dot(direction, light)) * 3.0 * panels;
+    // Soft-edged round softboxes rather than thin strips, so their reflections read as glows.
+    colour += rimColourA() * smoothstep(0.8, 0.98, dot(direction, normalize(RimA))) * 2.0 * panels;
+    colour += rimColourB() * smoothstep(0.8, 0.98, dot(direction, normalize(RimB))) * 2.0 * panels;
     return colour;
 }
 
@@ -215,7 +228,8 @@ float3 floorLight(float3 position)
     }
     float3 toCentre = -position;
     float3 glowing = neon(Time * 0.01 + 0.4) * (0.15 + Bass * 0.25) / (1.0 + dot(toCentre, toCentre));
-    return float3(1.0, 0.96, 0.92) * 0.45 * (0.3 + 0.7 * shade) + glowing;
+    float pool = exp(-dot(position.xz, position.xz) * 0.25);
+    return float3(1.0, 0.96, 0.92) * 0.45 * (0.3 + 0.7 * shade) * (0.5 + pool) + glowing * 2.0;
 }
 
 float3 trace(float3 origin, float3 direction, out float firstDistance)
@@ -223,6 +237,7 @@ float3 trace(float3 origin, float3 direction, out float firstDistance)
     firstDistance = 1e5;
     float3 colour = 0.0;
     float3 throughput = 1.0;
+    bool fromFloor = false;
     [loop]
     for (int bounce = 0; bounce < 3; bounce++)
     {
@@ -233,8 +248,9 @@ float3 trace(float3 origin, float3 direction, out float firstDistance)
         }
         if (hit.material == Nothing)
         {
-            // Seen straight on, the studio lights stay dim so they don't upstage the tesseract.
-            colour += throughput * studio(direction) * (bounce == 0 ? 0.08 : 1.0);
+            // Seen straight on, or in the floor, the studio lights stay dim so they don't upstage
+            // the tesseract; the chrome and glass show them at full strength.
+            colour += throughput * studio(direction, bounce == 0 ? 0.0 : (fromFloor && bounce == 1 ? 0.03 : 1.0));
             break;
         }
         float3 position = origin + direction * hit.distance;
@@ -244,10 +260,13 @@ float3 trace(float3 origin, float3 direction, out float firstDistance)
         if (hit.material == Floor)
         {
             // Polished black stone: a faint light of its own and a dim mirror image.
-            float fade = exp(-length(position.xz) * 0.15);
+            // Polished black stone: a pool of light beneath the tesseract, faint rings cut into it,
+            // and a clear mirror image that dims towards the edge of the stage.
+            float fade = exp(-length(position.xz) * 0.12);
             float rings = smoothstep(0.04, 0.0, abs(frac(length(position.xz) * 1.2) - 0.5) - 0.46);
-            colour += throughput * (float3(0.08, 0.08, 0.09) + rings * 0.05) * floorLight(position) * fade;
-            throughput *= (0.25 + fresnel * 0.6) * fade;
+            colour += throughput * (float3(0.1, 0.1, 0.11) + rings * 0.05) * floorLight(position) * fade;
+            throughput *= (0.4 + fresnel * 0.5) * fade;
+            fromFloor = true;
         }
         else if (hit.material == Rod)
         {
@@ -255,6 +274,9 @@ float3 trace(float3 origin, float3 direction, out float firstDistance)
             // reflection takes over at the edges.
             float3 core = edgeColour(hit.index);
             colour += throughput * core * (0.4 + 1.6 * pow(facing, 3.0)) * (1.0 - fresnel);
+            // The softboxes behind catch the glass along its edges.
+            float edge = pow(1.0 - facing, 2.0);
+            colour += throughput * edge * (rimColourA() * saturate(dot(normal, normalize(RimA))) + rimColourB() * saturate(dot(normal, normalize(RimB)))) * 0.5;
             throughput *= fresnel;
         }
         else
@@ -277,9 +299,9 @@ float3 Render(float2 uv, float2 p)
 {
     placeCorners();
     float orbit = Time * 0.045;
-    float3 eye = float3(sin(orbit) * 3.7, 0.8 + sin(Time * 0.06) * 0.45, cos(orbit) * 3.7);
-    float3 target = float3(0.0, -0.15, 0.0);
-    float3 direction = cameraRay(eye, target, float2(p.x, -p.y), 1.75, 0.0);
+    float3 eye = float3(sin(orbit) * 3.4, 0.6 + sin(Time * 0.06) * 0.4, cos(orbit) * 3.4);
+    float3 target = float3(0.0, -0.4, 0.0);
+    float3 direction = cameraRay(eye, target, float2(p.x, -p.y), 1.95, 0.0);
 
     float firstDistance;
     float3 colour = trace(eye, direction, firstDistance);

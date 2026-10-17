@@ -6,7 +6,8 @@
 // The lake is a mirror: liquid metal reflects most light at every angle and nearly all of it at
 // grazing angles. All the interest comes from what it reflects (the sky, the aurora, the hills
 // and the moon) and from the ripples, which tilt the mirror and so warp the reflections.
-static const float3 MoonDirection = float3(-0.55, 0.22, 0.8);   // towards the moon (normalised in use)
+static float2 PixelPosition;   // this pixel, in pixels, for the aurora's sampling offsets
+static const float3 MoonDirection = float3(-0.32, 0.2, 0.92);   // towards the moon (normalised in use)
 
 float sinceBeat()
 {
@@ -67,7 +68,7 @@ float3 lakeNormal(float2 q, float distance)
 // The aurora: glowing curtains hung high in the sky. The same pattern of wavy ribbons is drawn
 // on a stack of thin layers one above another, which stretches each ribbon into a tall, streaky
 // sheet of light, brightest at its hem.
-float curtain(float2 q)
+float curtain(float2 q, float sharpness)
 {
     float total = 0.0;
     [unroll]
@@ -75,7 +76,8 @@ float curtain(float2 q)
     {
         float middle = 3.0 + j * 2.2 + sin(q.x * 0.35 + Time * 0.06 + j * 2.0) * 1.2 + (noise(float2(q.x * 0.8 + j * 7.0, Time * 0.1)) - 0.5) * 1.4;
         float ribbon = exp(-abs(q.y - middle) * (14.0 - j * 3.0)) + exp(-abs(q.y - middle) * 3.0) * 0.15;
-        float rays = pow(noise(float2(q.x * 7.0 + j * 3.0, Time * 0.25)), 2.0) * 1.6 + 0.1;
+        // Fine vertical rays, smoothed towards their average where they'd be finer than a pixel.
+        float rays = lerp(0.45, pow(noise(float2(q.x * 7.0 + j * 3.0, Time * 0.25)), 2.0) * 1.6 + 0.1, sharpness);
         total += ribbon * rays * (1.0 - j * 0.25);
     }
     return total;
@@ -88,12 +90,13 @@ float3 aurora(float3 direction)
         return 0.0;
     }
     float3 colour = 0.0;
-    int layers = qualitySteps(24);
+    int layers = qualitySteps(28);
     float3 eye = cameraEye();
     float2 sway = float2(0.0, -eye.z * 0.03);
     // Start each pixel's stack of layers at a slightly different height so the layers blend
     // into smooth streaks instead of showing as bands.
-    float jitter = hash(direction.xy * 937.0 + frac(Time * 7.13));
+    // Interleaved gradient noise: an even, fine-grained offset that the frame blend averages away.
+    float jitter = frac(52.9829189 * frac(dot(PixelPosition, float2(0.06711056, 0.00583715))) + frac(FrameCount * 0.618034));
     [loop]
     for (int i = 0; i < layers; i++)
     {
@@ -101,7 +104,9 @@ float3 aurora(float3 direction)
         float height = 1.0 + f * 1.4;
         // Each layer sees the same ribbons from a little higher up.
         float2 q = direction.xz * (height / direction.y) + sway;
-        float density = curtain(q);
+        // How much sky one pixel covers at this layer: it grows fast towards the horizon.
+        float footprint = 0.004 * height / (direction.y * direction.y);
+        float density = curtain(q, saturate(0.12 / footprint));
         // Green at the hem, shading up through cyan to violet and magenta at the top, nudged by the music.
         float hue = 0.36 + f * 0.48 + spectrum(f * 0.6) * 0.08 + sin(Time * 0.04) * 0.04;
         colour += hsv2rgb(frac(hue), 0.9, 1.0) * density * exp(-f * 2.6);
@@ -117,7 +122,7 @@ float hillHeight(float3 direction)
     return 0.005 + 0.035 * fbm(float2(around * 3.0, 1.0)) + 0.012 * sin(around * 2.0 + 1.0);
 }
 
-float3 sky(float3 direction)
+float3 sky(float3 direction, float moonDisc)
 {
     float y = direction.y;
     float3 moon = normalize(MoonDirection);
@@ -132,7 +137,7 @@ float3 sky(float3 direction)
     colour += aurora(direction);
     // The moon, with a soft halo.
     float toMoon = dot(direction, moon);
-    colour += float3(1.0, 0.95, 0.85) * smoothstep(0.99975, 0.99985, toMoon) * 1.3;
+    colour += float3(1.0, 0.95, 0.85) * smoothstep(0.99975, 0.99985, toMoon) * 1.3 * moonDisc;
     colour += float3(0.5, 0.45, 0.6) * pow(saturate(toMoon), 800.0) * 0.15;
     // The hills cut off everything below their ridge.
     float hills = hillHeight(direction);
@@ -143,11 +148,28 @@ float3 sky(float3 direction)
     return colour;
 }
 
+// Slopes of the small, quick ripples that make the moon glitter: a few short waves running
+// different ways, plus a little noise to break up their pattern.
+float2 glitterSlope(float2 q)
+{
+    float2 slope = 0.0;
+    float2 dirs[4] = { float2(0.8, 0.6), float2(-0.5, 0.87), float2(0.96, -0.28), float2(-0.2, -0.98) };
+    float speeds[4] = { 1.7, 2.1, 2.6, 1.3 };
+    [unroll]
+    for (int k = 0; k < 4; k++)
+    {
+        float frequency = 17.0 + k * 9.0;
+        slope += dirs[k] * cos(dot(q, dirs[k]) * frequency + Time * speeds[k] + k * 1.7) * (0.045 - k * 0.006);
+    }
+    slope += (float2(noise(q * 23.0 + Time * 0.9), noise(q * 23.0 + 7.3 - Time * 0.8)) - 0.5) * 0.14;
+    return slope * (0.8 + Bass * 0.5);
+}
+
 float3 trace(float3 eye, float3 direction)
 {
     if (direction.y >= -0.002)
     {
-        return sky(direction);
+        return sky(direction, 1.0);
     }
     float t = -eye.y / direction.y;
     float3 position = eye + direction * t;
@@ -158,7 +180,21 @@ float3 trace(float3 eye, float3 direction)
     float cosine = saturate(dot(normal, -direction));
     float3 metal = float3(0.78, 0.8, 0.84);
     float3 reflectance = metal + (1.0 - metal) * pow(1.0 - cosine, 5.0);
-    float3 colour = sky(reflected) * reflectance;
+    // The moon's own disc is left out of the mirror image: on rippled metal it breaks up into
+    // a path of glints instead, drawn below.
+    float3 colour = sky(reflected, 0.0) * reflectance;
+
+    // Glitter path: tiny fast ripples tilt each patch of the surface a little differently, and
+    // every patch tilted just right flashes with the moon. Far away the ripples are finer than a
+    // pixel, so there the glints merge into a soft, wider band carrying the same light.
+    float3 moon = normalize(MoonDirection);
+    float detail = exp(-t * 0.07);
+    float2 fine = glitterSlope(position.xz);
+    float3 tilted = normalize(normal + float3(fine.x, 0.0, fine.y) * detail);
+    float3 bounced = reflect(direction, tilted);
+    float spread = 0.018 + (1.0 - detail) * 0.05;
+    float glint = exp(-2.0 * (1.0 - dot(bounced, moon)) / (spread * spread)) * (0.03 / spread);
+    colour += float3(1.0, 0.95, 0.88) * glint * reflectance * (3.0 + Treble * 2.5);
     // A faint grey sheen so the surface reads as a surface even where the sky is dark.
     colour += float3(0.01, 0.01, 0.014) * (1.0 - cosine);
     // Mist hanging over the far water.
@@ -168,10 +204,12 @@ float3 trace(float3 eye, float3 direction)
 
 float3 Render(float2 uv, float2 p)
 {
+    PixelPosition = floor(uv * Resolution);
     float3 eye = cameraEye();
     float3 target = cameraTarget(eye);
     float3 direction = cameraRay(eye, target, float2(p.x, -p.y), 1.5, sin(Time * 0.02) * 0.02);
     float3 colour = trace(eye, direction);
-    // A whisper of the last frame smooths the fine shimmer on the ripples.
-    return lerp(colour, previous(uv), 0.35);
+    // A whisper of the last frame smooths the fine shimmer on the ripples and the glitter.
+    // The aurora's layered streaks get a longer blend, which hides their sampling grain.
+    return lerp(colour, previous(uv), direction.y > 0.0 ? 0.55 : 0.35);
 }
