@@ -221,6 +221,7 @@ public partial class MainWindow : Window
 
         _openingWindows = false;
         UpdateWindowToggles();
+        AlignBesidePlayerSoon();
         Activate();
     }
 
@@ -268,6 +269,8 @@ public partial class MainWindow : Window
                 window.Height = Math.Max(window.MinHeight, height - delta);
             }
         }
+
+        AlignBesidePlayer();
     }
 
     /// <summary>
@@ -282,7 +285,10 @@ public partial class MainWindow : Window
         var equalizer = OpenEqualizerWindow;
         var equalizerHeight = equalizer is null ? 0 : SizeOf(equalizer).Height;
         var queueHeight = Math.Clamp(Math.Min(work.Height * 0.36, work.Height - playerHeight - equalizerHeight - 40), _queue.MinHeight, 360);
-        var stackHeight = playerHeight + equalizerHeight + queueHeight;
+        // The windows beside the player run down to the bottom of the column under it, so a hidden
+        // queue doesn't count.
+        var showQueue = _queue.IsVisible || _openingWindows && _settings.ShowQueue;
+        var stackHeight = playerHeight + equalizerHeight + (showQueue ? queueHeight : 0);
         var libraryWidth = _settings.ShowLibrary ? 360.0 : 0.0;
         var visualsWidth = Math.Clamp(work.Width - playerWidth - libraryWidth - 40, 420, 860);
         var groupWidth = libraryWidth + playerWidth + visualsWidth;
@@ -727,6 +733,52 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>The bottom of the column under the player: the queue's bottom when it's docked there, otherwise <see cref="ColumnTop"/>.</summary>
+    private double ColumnBottom
+    {
+        get
+        {
+            var top = ColumnTop;
+            return _queue.IsVisible && _queue.WindowState == WindowState.Normal
+                && Math.Abs(_queue.Left - Left) < 2 && Math.Abs(_queue.Top - top) < 2
+                ? top + SizeOf(_queue).Height
+                : top;
+        }
+    }
+
+    /// <summary>
+    /// Keeps the layout symmetrical: the visuals and library docked beside the player run from its
+    /// top to the bottom of the column under it (the equalizer and queue), so all the windows line up
+    /// along the bottom edge as well as the top.
+    /// </summary>
+    private void AlignBesidePlayer()
+    {
+        if (IsShuttingDown || WindowState != WindowState.Normal || !IsLoaded)
+        {
+            return;
+        }
+
+        var height = ColumnBottom - Top;
+        foreach (var window in new ToolWindow[] { _visuals, _libraryWindow })
+        {
+            if (!window.IsVisible || window.WindowState != WindowState.Normal || window == _visuals && _visuals.IsFullscreen)
+            {
+                continue;
+            }
+
+            var width = SizeOf(window).Width;
+            var beside = Math.Abs(window.Left - (Left + ActualWidth)) < 2 || Math.Abs(window.Left + width - Left) < 2;
+            if (beside && Math.Abs(window.Top - Top) < 2)
+            {
+                window.Height = Math.Max(window.MinHeight, height);
+            }
+        }
+    }
+
+    // Once the windows that just opened or closed have settled their sizes.
+    private void AlignBesidePlayerSoon() =>
+        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, AlignBesidePlayer);
+
     /// <summary>
     /// Docks the equalizer right under the player, the same width, like Winamp's. A queue docked
     /// under the player moves down beneath it, keeping its bottom edge where it was if it can, and
@@ -747,6 +799,7 @@ public partial class MainWindow : Window
 
         _snapper.Add(equalizer);
         Place(equalizer, Left, playerBottom, ActualWidth, height);
+        AlignBesidePlayerSoon();
         if (!_queue.IsVisible || Math.Abs(_queue.Left - Left) >= 2 || Math.Abs(_queue.Top - playerBottom) >= 2)
         {
             return;
@@ -774,6 +827,7 @@ public partial class MainWindow : Window
     // When the equalizer under the player closes, the queue under it moves up to the player again.
     private void CloseEqualizerGap(Window equalizer)
     {
+        AlignBesidePlayerSoon();
         var top = equalizer.Top;
         var bottom = top + equalizer.ActualHeight;
         if (IsShuttingDown || Math.Abs(top - (Top + ActualHeight)) >= 2 || Math.Abs(equalizer.Left - Left) >= 2
@@ -838,6 +892,7 @@ public partial class MainWindow : Window
         _settings.ShowLibrary = _libraryWindow.IsVisible;
         UpdateWindowToggles();
         SavePlacements();
+        AlignBesidePlayerSoon();
     }
 
     private void UpdateWindowToggles()
