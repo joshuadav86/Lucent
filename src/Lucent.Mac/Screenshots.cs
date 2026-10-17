@@ -22,6 +22,12 @@ public static class Screenshots
         ("Player", () => new MainWindow()),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
+        ("TrackInfo", TrackInfoPreviews.TrackInfo),
+        ("TrackInfoLyrics", TrackInfoPreviews.TrackInfoLyrics),
+        ("TrackInfoFile", TrackInfoPreviews.TrackInfoFile),
+        ("TrackInfoSeveral", TrackInfoPreviews.TrackInfoSeveral),
+        ("Artwork", TrackInfoPreviews.Artwork),
+        ("ArtworkEmpty", TrackInfoPreviews.ArtworkEmpty),
     };
 
     public static int Run(string[] args)
