@@ -683,7 +683,7 @@ public partial class VisualizerWindow : ToolWindow
 
     private void OnToggleFullscreen(object sender, RoutedEventArgs e) => ToggleFullscreen();
 
-    /// <summary>Fills the screen with the visuals (Esc or double-click to leave).</summary>
+    /// <summary>Fills the screen with the visuals (Esc, double-click or the × in the corner to leave).</summary>
     public void ToggleFullscreen()
     {
         if (!_isFullscreen && !IsVisible)
@@ -724,6 +724,14 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         OnWindowStateChanged(this, EventArgs.Empty);
+        if (_isFullscreen)
+        {
+            StartExitButton();
+        }
+        else
+        {
+            StopExitButton();
+        }
     }
 
     private void OnMaximizeRestore(object sender, RoutedEventArgs e)
