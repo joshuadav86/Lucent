@@ -1,5 +1,7 @@
 // Name: Fractal Forest
 // Gliding along a lake through a forest of glowing fractal trees: a thousand twigs sway with the music and every beat sends light racing up to their blossoms.
+// Family: Fractal
+// Tags: Calm, Neon, Water
 
 // One fractal tree, built by folding space: every level mirrors the plane so both child branches are drawn
 // at once. Returns the colour and writes how much of the pixel the tree covers (to hide trees behind it).

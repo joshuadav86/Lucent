@@ -91,6 +91,17 @@ public partial class QueueWindow : ToolWindow
     private void OnEditInfo(object sender, RoutedEventArgs e) =>
         Player?.EditInfo(SelectedEntries().Select(entry => entry.Track.Path));
 
+    private void OnOpenInEditor(object sender, RoutedEventArgs e)
+    {
+        if (SelectedEntries().FirstOrDefault() is { } entry)
+        {
+            Player?.OpenInEditor(this, entry.Track.Path);
+        }
+    }
+
+    private void OnConvert(object sender, RoutedEventArgs e) =>
+        Player?.ConvertFiles(this, SelectedEntries().Select(entry => entry.Track.Path).ToList());
+
     private void OnShowInExplorer(object sender, RoutedEventArgs e)
     {
         if (PlaylistView.SelectedItem is PlaylistEntry entry)

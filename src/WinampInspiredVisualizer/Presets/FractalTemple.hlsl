@@ -1,5 +1,7 @@
 // Name: Fractal Temple
 // Floating through an endless gravity-free temple of pointed arches whose tracery holds smaller arches, and smaller still.
+// Family: Fly-through
+// Tags: Colourful, Neon, 3D
 
 static const float StoreyHeight = 2.6;
 static const float ArchWidth = 0.78;      // half-width of the great arches

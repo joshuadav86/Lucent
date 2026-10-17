@@ -29,6 +29,9 @@ public sealed class AudioPlayer : IDisposable
     /// <summary>The audio being played, for the visualizer to analyze.</summary>
     public AudioCapture Capture { get; } = new();
 
+    /// <summary>The equalizer every track plays through. Its settings carry over from track to track.</summary>
+    public Equalizer Equalizer { get; } = new();
+
     public bool HasTrack => _reader is not null;
 
     /// <summary>The file that's loaded, or null when nothing is.</summary>
@@ -76,8 +79,10 @@ public sealed class AudioPlayer : IDisposable
         var reader = AudioReaderFactory.Open(path);
         try
         {
-            // Capture before the volume control so visuals don't shrink when the music is turned down.
-            var captured = new CapturingSampleProvider(reader.ToSampleProvider(), Capture);
+            // Equalize before capturing, so the visuals respond to what you hear, and capture before
+            // the volume control so visuals don't shrink when the music is turned down.
+            var equalized = Equalizer.Attach(reader.ToSampleProvider());
+            var captured = new CapturingSampleProvider(equalized, Capture);
             _volumeProvider = new VolumeSampleProvider(captured) { Volume = _volume };
             _output = new WaveOutEvent { DesiredLatency = OutputLatencyMs };
             _output.PlaybackStopped += OnPlaybackStopped;
@@ -133,6 +138,7 @@ public sealed class AudioPlayer : IDisposable
         _reader?.Dispose();
         _reader = null;
         _volumeProvider = null;
+        Equalizer.Detach();
     }
 
     public void Dispose()

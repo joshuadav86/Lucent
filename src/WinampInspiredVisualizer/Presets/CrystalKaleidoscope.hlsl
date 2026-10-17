@@ -1,6 +1,8 @@
 // Name: Crystal Kaleidoscope
 // Six-way crystal filigree: nested rings and facets drawn in fine glowing lines that fold
 // into each other. The bass reshapes the crystal, the mids swell the rings, beats pulse it.
+// Family: Kaleidoscope
+// Tags: Colourful, Neon, Geometric
 
 float3 Render(float2 uv, float2 p)
 {

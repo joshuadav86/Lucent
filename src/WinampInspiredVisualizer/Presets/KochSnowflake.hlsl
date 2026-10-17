@@ -1,5 +1,7 @@
 // Name: Koch Snowflake
 // An endless fall into a Koch snowflake built from smaller snowflakes, each built from smaller ones again, glittering like frost.
+// Family: Fractal
+// Tags: Calm, Geometric
 
 static const float KochRoot3 = 1.7320508;
 

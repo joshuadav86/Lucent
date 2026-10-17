@@ -1,6 +1,8 @@
 // Name: Prism Mandala
 // A many-ringed mandala of white-hot line work seen through a prism: each beat splits every line into
 // rainbow fringes that slowly reconverge, while layered rings turn against each other and keep reshaping.
+// Family: Kaleidoscope
+// Tags: Colourful, Geometric
 
 float pmLine(float d, float halfWidth, float px)
 {

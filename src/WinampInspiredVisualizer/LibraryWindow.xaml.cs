@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Settings;
@@ -18,12 +19,19 @@ public partial class LibraryWindow : ToolWindow
     private AppSettings _settings = null!;
     private HashSet<string> _collapsedFolders = new(StringComparer.OrdinalIgnoreCase);
     private ListCollectionView? _libraryView;
+    private string[] _searchWords = Array.Empty<string>();
+
+    // Searching waits for a short pause in the typing, so a big library doesn't re-sort on every key.
+    private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
 
     public LibraryWindow()
     {
         InitializeComponent();
         PlacementName = "Library";
+        _searchTimer.Tick += (_, _) => ApplySearch();
     }
+
+    private bool IsSearching => _searchWords.Length > 0;
 
     /// <summary>Folder headings the user has closed, saved with the settings.</summary>
     public IEnumerable<string> CollapsedFolders => _collapsedFolders;
@@ -37,9 +45,19 @@ public partial class LibraryWindow : ToolWindow
         library.ItemsChanged += (_, _) => RebuildLibraryView();
         library.TagsLoaded += (_, _) =>
         {
-            // Titles and artists only become known once tags are read, so re-sort by them now.
-            if (_settings.LibrarySort is LibrarySort.Title or LibrarySort.Artist)
+            if (IsSearching)
             {
+                // Titles, artists and albums only become known once tags are read, so search again (which
+                // also re-sorts). The last tags are put on their rows at background priority, so wait for them.
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _libraryView?.Refresh();
+                    UpdateLibraryStatus();
+                }, DispatcherPriority.Background);
+            }
+            else if (_settings.LibrarySort is LibrarySort.Title or LibrarySort.Artist)
+            {
+                // Titles and artists only become known once tags are read, so re-sort by them now.
                 _libraryView?.Refresh();
             }
         };
@@ -60,10 +78,9 @@ public partial class LibraryWindow : ToolWindow
             view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LibraryItem.Folder)));
         }
 
-        if (_settings.LibraryFavoritesOnly)
+        if (LibraryFilter() is { } filter)
         {
-            var favorites = new HashSet<string>(_settings.FavoriteTracks, StringComparer.OrdinalIgnoreCase);
-            view.Filter = item => favorites.Contains(((LibraryItem)item).Path);
+            view.Filter = filter;
         }
 
         _libraryView = view;
@@ -71,28 +88,157 @@ public partial class LibraryWindow : ToolWindow
         UpdateLibraryStatus();
     }
 
+    /// <summary>Which songs the list shows: the favourites when FAVOURITES is on, and the ones matching the search. Null shows them all.</summary>
+    private Predicate<object>? LibraryFilter()
+    {
+        var favorites = _settings.LibraryFavoritesOnly
+            ? new HashSet<string>(_settings.FavoriteTracks, StringComparer.OrdinalIgnoreCase)
+            : null;
+        var words = _searchWords;
+        if (favorites is null && words.Length == 0)
+        {
+            return null;
+        }
+
+        return item => item is LibraryItem song
+            && (favorites is null || favorites.Contains(song.Path))
+            && SearchText.Matches(song.SearchKey, words);
+    }
+
     private void UpdateLibraryStatus()
     {
         var count = _library.Items.Count;
         var linked = _library.Folders.Count > 0;
         var favoritesOnly = _settings.LibraryFavoritesOnly && linked && count > 0;
-        var shown = favoritesOnly ? _libraryView?.Count ?? 0 : count;
+        var searching = IsSearching && linked && count > 0;
+        var shown = favoritesOnly || searching ? _libraryView?.Count ?? 0 : count;
+        var updating = _library.IsScanning ? "  ·  updating" : string.Empty;
+        string countText;
+        if (searching)
+        {
+            // "12 of 1,234 tracks": how many match out of what's being searched.
+            var favorites = new HashSet<string>(_settings.FavoriteTracks, StringComparer.OrdinalIgnoreCase);
+            var searched = favoritesOnly ? _library.Items.Count(item => favorites.Contains(item.Path)) : count;
+            var noun = favoritesOnly ? (searched == 1 ? "favourite" : "favourites") : (searched == 1 ? "track" : "tracks");
+            countText = $"{shown:N0} of {searched:N0} {noun}{updating}";
+        }
+        else
+        {
+            countText = favoritesOnly
+                ? $"{shown:N0} {(shown == 1 ? "favourite" : "favourites")}{updating}"
+                : $"{count:N0} {(count == 1 ? "track" : "tracks")}{updating}";
+        }
+
         LibraryCount.Text = !linked
             ? "No folder linked"
             : _library.IsScanning && count == 0
                 ? "Looking for music…"
-                : favoritesOnly
-                    ? $"{shown:N0} {(shown == 1 ? "favourite" : "favourites")}{(_library.IsScanning ? "  ·  updating" : string.Empty)}"
-                    : $"{count:N0} {(count == 1 ? "track" : "tracks")}{(_library.IsScanning ? "  ·  updating" : string.Empty)}";
+                : countText;
 
+        var noMatches = searching && shown == 0;
         EmptyLibraryHint.Visibility = shown == 0 && !_library.IsScanning ? Visibility.Visible : Visibility.Collapsed;
-        EmptyLibraryTitle.Text = favoritesOnly ? "No favourites here yet" : linked ? "No music found" : "Link a music folder";
-        EmptyLibraryText.Text = favoritesOnly
-            ? "Click the heart in the player, or right-click songs here or in the queue, to make them favourites."
-            : linked
-                ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
-                : "Every song inside it shows up here, newest first, and new files appear on their own.";
-        LinkFolderButton.Visibility = favoritesOnly ? Visibility.Collapsed : Visibility.Visible;
+        EmptyLibraryTitle.Text = noMatches ? "No songs match your search"
+            : favoritesOnly ? "No favourites here yet"
+            : linked ? "No music found"
+            : "Link a music folder";
+        EmptyLibraryText.Text = noMatches
+            ? favoritesOnly
+                ? "Only your favourites are searched while FAVOURITES is on. Try other words, or press Esc to clear the search."
+                : "Search looks in titles, artists, albums and file names. Try other words, or press Esc to clear the search."
+            : favoritesOnly
+                ? "Click the heart in the player, or right-click songs here or in the queue, to make them favourites."
+                : linked
+                    ? "None of your library folders have music Lucid can play yet. New files appear here on their own."
+                    : "Every song inside it shows up here, newest first, and new files appear on their own.";
+        LinkFolderButton.Visibility = favoritesOnly || noMatches ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // ---- Search ----
+
+    private void OnSearchChanged(object sender, TextChangedEventArgs e)
+    {
+        ClearSearchButton.Visibility = SearchBox.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        _searchTimer.Stop();
+        if (SearchBox.Text.Length == 0)
+        {
+            // Clearing the search shows everything again straight away.
+            ApplySearch();
+        }
+        else
+        {
+            _searchTimer.Start();
+        }
+    }
+
+    /// <summary>Narrows the list to the songs matching what's typed in the search box.</summary>
+    private void ApplySearch()
+    {
+        _searchTimer.Stop();
+        var words = SearchText.Words(SearchBox.Text);
+        if (words.SequenceEqual(_searchWords))
+        {
+            return;
+        }
+
+        _searchWords = words;
+        if (_libraryView is not null)
+        {
+            // Setting the filter re-sorts and regroups the list.
+            _libraryView.Filter = LibraryFilter();
+            UpdateLibraryStatus();
+        }
+    }
+
+    private void OnSearchKeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Escape when SearchBox.Text.Length > 0:
+                SearchBox.Clear();
+                e.Handled = true;
+                break;
+            case Key.Escape:
+                // Already empty: hand the keys back to the list (and the player's shortcuts).
+                LibraryView.Focus();
+                e.Handled = true;
+                break;
+            case Key.Down:
+            case Key.Enter:
+                // Into the results: the first match is selected, and Enter again plays it.
+                ApplySearch();
+                if (LibraryInViewOrder().FirstOrDefault() is { } first)
+                {
+                    SearchText.FocusRow(LibraryView, first);
+                }
+
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void OnClearSearch(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        SearchBox.Focus();
+    }
+
+    /// <summary>Puts the keyboard in the search box, with what's there selected so typing replaces it.</summary>
+    public void FocusSearch()
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            FocusSearch();
+            e.Handled = true;
+            return;
+        }
+
+        base.OnPreviewKeyDown(e);
     }
 
     private void OnLinkLibraryFolder(object sender, RoutedEventArgs e) => LinkLibraryFolder();
@@ -231,13 +377,14 @@ public partial class LibraryWindow : ToolWindow
     {
         if (sender is Expander { DataContext: CollectionViewGroup group } expander)
         {
-            expander.IsExpanded = !_collapsedFolders.Contains(group.Name?.ToString() ?? string.Empty);
+            // While searching every heading is open, so no match is hidden in a closed one.
+            expander.IsExpanded = IsSearching || !_collapsedFolders.Contains(group.Name?.ToString() ?? string.Empty);
         }
     }
 
     private void OnFolderGroupExpanded(object sender, RoutedEventArgs e)
     {
-        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
+        if (!IsSearching && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
         {
             _collapsedFolders.Remove(group.Name?.ToString() ?? string.Empty);
         }
@@ -245,7 +392,7 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnFolderGroupCollapsed(object sender, RoutedEventArgs e)
     {
-        if (sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
+        if (!IsSearching && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
         {
             _collapsedFolders.Add(group.Name?.ToString() ?? string.Empty);
         }
@@ -328,6 +475,17 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnLibraryEditInfo(object sender, RoutedEventArgs e) =>
         Player?.EditInfo(SelectedLibraryItems().Select(item => item.Path));
+
+    private void OnLibraryOpenInEditor(object sender, RoutedEventArgs e)
+    {
+        if (SelectedLibraryItems().FirstOrDefault() is { } item)
+        {
+            Player?.OpenInEditor(this, item.Path);
+        }
+    }
+
+    private void OnLibraryConvert(object sender, RoutedEventArgs e) =>
+        Player?.ConvertFiles(this, SelectedLibraryItems().Select(item => item.Path).ToList());
 
     private void OnLibraryShowInExplorer(object sender, RoutedEventArgs e)
     {

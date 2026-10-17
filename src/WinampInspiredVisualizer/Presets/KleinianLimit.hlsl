@@ -1,5 +1,7 @@
 // Name: Kleinian Limit
 // The limit set of a morphing Kleinian group: necklaces of jewelled pearls that coil into lace-fine spirals and slowly turn inside out.
+// Family: Fractal
+// Tags: Calm, Dark, Geometric
 
 float3 kleinianJewel(float t)
 {

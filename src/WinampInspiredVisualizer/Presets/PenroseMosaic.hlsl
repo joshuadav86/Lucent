@@ -1,6 +1,8 @@
 // Name: Penrose Mosaic
 // An endless fivefold Penrose quasicrystal of faceted gem tiles laced with glowing curves: tiles flip into new
 // arrangements on every beat, the spectrum lights each tile direction and ripples of light run through it.
+// Family: Kaleidoscope
+// Tags: Colourful, Geometric
 
 static const float2 PM_E[5] = {
     float2(1.0, 0.0),

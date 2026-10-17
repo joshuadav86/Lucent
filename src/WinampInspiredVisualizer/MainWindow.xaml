@@ -40,6 +40,11 @@
                                Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel x:Name="TitleButtons" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
+                    <ToggleButton x:Name="AudioToolsButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
+                                  ToolTip="Edit or convert songs" Click="OnAudioTools"
+                                  WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Style="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
+                    </ToggleButton>
                     <ToggleButton x:Name="OptionsButton" Style="{StaticResource PanelToggle}" Padding="7,0"
                                   ToolTip="Options: graphics, visual changes and themes (O)" Click="OnToggleOptions"
                                   WindowChrome.IsHitTestVisibleInChrome="True">
@@ -272,7 +277,15 @@
                 </StackPanel>
 
                 <!-- Each lights up while its window is open. -->
-                <StackPanel x:Name="WindowToggles" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <StackPanel x:Name="WindowToggles" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Background="Transparent">
+                    <StackPanel.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Dock all windows to the player" InputGestureText="D" Click="OnArrangeWindows" />
+                            <MenuItem Header="Fill the screen" InputGestureText="G" Click="OnFillScreen" />
+                            <MenuItem Header="Shrink everything" InputGestureText="K" Click="OnShrinkWindows" />
+                        </ContextMenu>
+                    </StackPanel.ContextMenu>
                     <ToggleButton x:Name="VisualsToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
                                   Content="Visuals" ToolTip="Show or hide the visuals (W)" Click="OnToggleVisuals" />
                     <ToggleButton x:Name="QueueToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
@@ -281,6 +294,8 @@
                                   Content="Library" ToolTip="Show or hide the library (L)" Click="OnToggleLibrary" />
                     <ToggleButton x:Name="ArtToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
                                   Content="Art" ToolTip="Show the playing song's artwork in its own window (C)" Click="OnToggleArtwork" />
+                    <ToggleButton x:Name="EqualizerToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
+                                  Content="EQ" ToolTip="Show or hide the equalizer (E)" Click="OnToggleEqualizer" />
                 </StackPanel>
             </DockPanel>
         </Grid>

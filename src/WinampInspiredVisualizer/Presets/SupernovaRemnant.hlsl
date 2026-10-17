@@ -1,5 +1,7 @@
 // Name: Supernova Remnant
 // Shells of star-stuff laced with glowing filaments burst outward from a spinning pulsar, one with every beat, as its lighthouse beams sweep through the wreckage.
+// Family: Cosmic
+// Tags: Intense, Space
 
 static const int ShellCount = 5;
 

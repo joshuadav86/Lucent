@@ -1,5 +1,7 @@
 // Name: Crystal Cavern
 // Gliding through a winding geode whose walls bristle with glowing faceted crystals that ring with the music.
+// Family: Fly-through
+// Tags: Intense, Colourful, 3D
 
 static const float Sectors = 11.0;        // large crystals around the cave
 static const float RowLength = 0.7;       // spacing of crystal rows along the cave

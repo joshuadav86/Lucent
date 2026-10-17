@@ -18,6 +18,7 @@ public sealed class VisualizerHost : HwndHost
     private const int CS_DBLCLKS = 0x0008;
     private const int WM_ERASEBKGND = 0x0014;
     private const int WM_LBUTTONDBLCLK = 0x0203;
+    private const int WM_RBUTTONUP = 0x0205;
     private const int IDC_ARROW = 32512;
 
     private static bool _classRegistered;
@@ -47,6 +48,9 @@ public sealed class VisualizerHost : HwndHost
     public event EventHandler<string>? ProblemReported;
 
     public event EventHandler? DoubleClicked;
+
+    /// <summary>Raised when the visuals are right-clicked, for their menu.</summary>
+    public event EventHandler? RightClicked;
 
     /// <summary>Raised on the UI thread when auto-cycle switches to another preset.</summary>
     public event EventHandler<int>? PresetChanged;
@@ -81,6 +85,9 @@ public sealed class VisualizerHost : HwndHost
         var wanted = new HashSet<string>(chosen, StringComparer.OrdinalIgnoreCase);
         return Enumerable.Range(0, names.Count).Where(index => wanted.Contains(names[index])).ToList();
     }
+
+    /// <summary>Every visual (with its family and tags), in the order <see cref="PresetIndex"/> counts them; empty until they load.</summary>
+    public IReadOnlyList<PresetSource> Presets => _renderer?.Presets ?? Array.Empty<PresetSource>();
 
     /// <summary>The visual to start with (by name), usually the one showing when the app last closed.</summary>
     public string? StartPresetName { get; set; }
@@ -282,6 +289,10 @@ public sealed class VisualizerHost : HwndHost
                 return new IntPtr(1);
             case WM_LBUTTONDBLCLK:
                 DoubleClicked?.Invoke(this, EventArgs.Empty);
+                handled = true;
+                return IntPtr.Zero;
+            case WM_RBUTTONUP:
+                RightClicked?.Invoke(this, EventArgs.Empty);
                 handled = true;
                 return IntPtr.Zero;
             default:
