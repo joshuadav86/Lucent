@@ -1,0 +1,26 @@
+name: Snap diagnose
+on:
+  push:
+    branches: [snap-diagnose]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the latest build
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download latest -p Lucid-win-x64.zip -R $env:GITHUB_REPOSITORY
+          Expand-Archive Lucid-win-x64.zip -DestinationPath app
+      - name: Drag windows and record where they go
+        shell: pwsh
+        run: ./tools/snap-diagnose.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: ${{ runner.temp }}/shots
