@@ -247,7 +247,7 @@
                     Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                 <Canvas x:Name="CurveCanvas">
                     <Path x:Name="ZeroLine" Stroke="{DynamicResource HairlineBrush}" StrokeThickness="1" StrokeDashArray="3 3" />
-                    <Path x:Name="CurveFill" Fill="{DynamicResource AccentSoftBrush}" Opacity="0.7" />
+                    <Path x:Name="CurveFill" Fill="{DynamicResource AccentSoftBrush}" Opacity="0.55" />
                     <Path x:Name="CurveLine" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.6" StrokeLineJoin="Round" />
                 </Canvas>
             </Border>

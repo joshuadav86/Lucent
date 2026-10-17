@@ -9,7 +9,7 @@ namespace WinampInspiredVisualizer.Audio;
 public sealed class EqualizerBands
 {
     /// <summary>The band counts people can choose between.</summary>
-    public static readonly IReadOnlyList<int> Counts = new[] { 3, 4, 5, 8, 10, 16, 24, 31 };
+    public static readonly IReadOnlyList<int> Counts = new[] { 3, 4, 5, 8, 10, 16, 24 };
 
     private static readonly Dictionary<int, EqualizerBands> ByCount = Counts.ToDictionary(count => count, Create);
 

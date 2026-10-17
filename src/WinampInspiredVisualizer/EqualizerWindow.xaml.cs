@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer;
 
@@ -60,6 +61,9 @@ public partial class EqualizerWindow : Window
     private double _widthFrom;
     private double _widthTo;
 
+    // The music's live spectrum, behind the response curve.
+    private readonly EqualizerSpectrum _spectrum;
+
     private EqualizerWindow(AudioPlayer player, AppSettings settings, double? fitWidth)
     {
         InitializeComponent();
@@ -69,6 +73,8 @@ public partial class EqualizerWindow : Window
         _bands = EqualizerBands.ForCount(Eq.BandCount);
         Eq.BandCount = _bands.Count;
         Eq.Gains = Equalizer.SliderGains(Eq, _bands).ToList();
+        _spectrum = new EqualizerSpectrum(player.Capture);
+        CurveCanvas.Children.Insert(0, _spectrum);
 
         // Saving is held back until the sliders have been still for a moment.
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
@@ -358,6 +364,9 @@ public partial class EqualizerWindow : Window
         // Each band's centre sits right above its slider, so frequency runs evenly (in octaves)
         // across the columns.
         var ratio = Math.Pow(2, _bands.SpacingOctaves);
+        _spectrum.Width = width;
+        _spectrum.Height = height;
+        _spectrum.SetScale(_bands.Centres[0] / Math.Sqrt(ratio), _bands.SpacingOctaves * _bands.Count);
         var elapsed = _gliding ? (DateTime.UtcNow - _glideStart).TotalSeconds : double.MaxValue;
         var points = new List<Point>();
         for (var x = 0.0; x <= width; x += 2)
