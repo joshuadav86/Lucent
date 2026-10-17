@@ -606,13 +606,16 @@ public partial class EqualizerWindow : Window
             return;
         }
 
+        // A glide still running from the last change finishes first, while the sliders and the gains
+        // still have the same number of bands.
+        FinishGlide();
+
         // Keep the same sound: a preset is redrawn at the new band count, and a hand-made curve is
         // traced through its sliders and sampled at the new bands.
         var curve = FindCurve(Eq.PresetName) ?? EqualizerCurve.FromBands(_bands, Eq.Gains);
         var oldWidth = ActualWidth;
         Eq.BandCount = count;
         Eq.Gains = curve.Sample(EqualizerBands.ForCount(count)).ToList();
-        FinishGlide();
         BuildBands();
         ShowSettings();
         Apply();
