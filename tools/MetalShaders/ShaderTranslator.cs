@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Silk.NET.Core.Contexts;
 using Silk.NET.SPIRV;
 using Silk.NET.SPIRV.Cross;
 
@@ -46,7 +47,22 @@ public static unsafe class ShaderTranslator
         (UavShift + 0, 2, 0, 0),         // u0: ParticleState          -> buffer(2)
     };
 
-    private static readonly Cross Api = Cross.GetApi();
+    private static readonly Cross Api = LoadCross();
+
+    /// <summary>
+    /// Loads SPIRV-Cross from the copy NuGet put next to the tool. Silk's own search for it works
+    /// with some .NET builds and not others (it failed on GitHub's Ubuntu runners), so this names
+    /// the file outright when it's there.
+    /// </summary>
+    private static Cross LoadCross()
+    {
+        var (os, file) = OperatingSystem.IsWindows() ? ("win", "spirv-cross.dll")
+            : OperatingSystem.IsMacOS() ? ("osx", "libspirv-cross.dylib")
+            : ("linux", "libspirv-cross.so");
+        var arch = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+        var path = Path.Combine(AppContext.BaseDirectory, "runtimes", $"{os}-{arch}", "native", file);
+        return File.Exists(path) ? new Cross(new DefaultNativeContext(path)) : Cross.GetApi();
+    }
 
     public static string ToMetal(string hlsl, string entryPoint, string sourceName)
     {
