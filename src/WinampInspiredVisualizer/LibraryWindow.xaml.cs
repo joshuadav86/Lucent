@@ -309,7 +309,48 @@ public partial class LibraryWindow : ToolWindow
         var add = new MenuItem { Header = _settings.LibraryFolders.Count == 0 ? "Link a music folder…" : "Link another folder…" };
         add.Click += (_, _) => LinkLibraryFolder();
         menu.Items.Add(add);
+        if (RemoveAllFoldersMenuItem() is { } removeAll)
+        {
+            menu.Items.Add(removeAll);
+        }
+
         menu.IsOpen = true;
+    }
+
+    /// <summary>"Remove all folders…", or null when the library has none.</summary>
+    private MenuItem? RemoveAllFoldersMenuItem()
+    {
+        if (_settings.LibraryFolders.Count == 0)
+        {
+            return null;
+        }
+
+        var removeAll = new MenuItem
+        {
+            Header = "Remove all folders…",
+            ToolTip = "Empties the library. The files stay on your computer.",
+        };
+        removeAll.Click += (_, _) => RemoveAllLibraryFolders();
+        return removeAll;
+    }
+
+    /// <summary>Takes every folder out of the library, after asking. Nothing on disk is touched.</summary>
+    private void RemoveAllLibraryFolders()
+    {
+        var count = _settings.LibraryFolders.Count;
+        var answer = MessageBox.Show(this,
+            $"Remove {(count == 1 ? "the 1 folder" : $"all {count} folders")} from your library?\n\n" +
+            "Your music files stay where they are. You can add the folders back at any time.",
+            "Library", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        _settings.LibraryFolders.Clear();
+        _settings.HiddenLibraryFolders.Clear();
+        HighlightFolders(Array.Empty<string>());
+        ApplyLibraryFolders();
     }
 
     private MenuItem AddFolderMenuItem()
@@ -468,6 +509,11 @@ public partial class LibraryWindow : ToolWindow
             var remove = RemoveFoldersMenuItem(HighlightedDirectories());
             remove.InputGestureText = "Del";
             menu.Items.Add(remove);
+        }
+
+        if (RemoveAllFoldersMenuItem() is { } removeAll)
+        {
+            menu.Items.Add(removeAll);
         }
 
         if (groups.Count == 1 && songs.Count > 0)
