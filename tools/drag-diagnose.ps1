@@ -137,10 +137,17 @@ function DragWin($title, $dx, $dy, $tag) {
   Add-Content "$out/log.txt" "== $tag`n$t"
   $script:log += " || ${tag}: [$(Boxes)]"
 }
+function SizeLeft($title, $dx, $tag) {
+  $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
+  $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
+  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.L - 3, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
+  [W]::Shot("$out/$tag.png")
+  Add-Content "$out/log.txt" "== $tag`n$t"
+}
 function SizeWin($title, $dx, $tag) {
   $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
   $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
-  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.Ri - 2, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
+  $t = [W]::Track($h, [uint32]$script:proc.Id, $b.Ri + 3, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
   [W]::Shot("$out/$tag.png")
   Add-Content "$out/log.txt" "== $tag`n$t"
   $script:log += " || ${tag}: [$(Boxes)]"
@@ -162,6 +169,9 @@ foreach ($dpi in 100, 150) {
     DragWin 'Lucid library' 130 0 "l-over10-$dpi"
     SizeWin 'Lucid visuals' -150 "v-size-$dpi"
     SizeWin 'Lucid visuals' 100 "v-grow-$dpi"
+    SizeLeft 'Lucid visuals' 60 "v-left-in-$dpi"
+    SizeLeft 'Lucid visuals' -90 "v-left-over-$dpi"
+    SizeWin 'Lucid library' 40 "l-right-over-$dpi"
   }
   RunWith "player $dpi" $lib {
     DragWin 'Lucid' 200 120 "p-move-$dpi"
