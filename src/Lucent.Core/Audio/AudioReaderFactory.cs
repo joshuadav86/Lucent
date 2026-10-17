@@ -15,15 +15,20 @@ public static class AudioReaderFactory
 
     public static bool IsSupported(string path) => SupportedExtensions.Contains(Path.GetExtension(path));
 
+    /// <summary>
+    /// Opens the formats that need the operating system's decoders (MP3, WAV, AIFF, FLAC, AAC/M4A,
+    /// ALAC, WMA). Each app sets this when it starts; Ogg and Opus are decoded here on every platform.
+    /// </summary>
+    public static Func<string, WaveStream>? OpenWithSystemDecoder { get; set; }
+
     public static WaveStream Open(string path)
     {
         return Path.GetExtension(path).ToLowerInvariant() switch
         {
             ".ogg" or ".oga" => OpenOgg(path),
             ".opus" => new OpusWaveStream(path),
-            // MP3, WAV and AIFF use NAudio's built-in readers; everything else
-            // (FLAC, AAC/M4A, ALAC, WMA) goes through Windows Media Foundation.
-            _ => new AudioFileReader(path),
+            _ => OpenWithSystemDecoder?.Invoke(path)
+                ?? throw new NotSupportedException($"No decoder for {Path.GetExtension(path)} files on this platform."),
         };
     }
 

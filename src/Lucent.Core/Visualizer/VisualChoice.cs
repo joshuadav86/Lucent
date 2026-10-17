@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using WinampInspiredVisualizer.Windows;
+using WinampInspiredVisualizer.Library;
 
 namespace WinampInspiredVisualizer.Visualizer;
 

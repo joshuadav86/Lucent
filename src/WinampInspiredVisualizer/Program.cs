@@ -1,4 +1,7 @@
+using NAudio.Wave;
 using Velopack;
+using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer;
@@ -14,6 +17,11 @@ public static class Program
     {
         VelopackApp.Build().Run();
         AppDataFolder.CopyFromOldName();
+
+        // The shared code leaves these to each platform. On Windows, NAudio's readers handle MP3,
+        // WAV and AIFF, Media Foundation handles the rest, and MP3 is written with LAME.
+        AudioReaderFactory.OpenWithSystemDecoder = path => new AudioFileReader(path);
+        AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
 
         var app = new App();
         app.InitializeComponent();

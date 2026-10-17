@@ -238,6 +238,8 @@
                     <Button Style="{StaticResource ToolButton}" Content="Fade out" Click="OnFadeOut"
                             ToolTip="Fade down to silence over the selection (or the last 3 seconds)" />
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
+                    <Button Style="{StaticResource ToolButton}" Content="Split" Click="OnSplit"
+                            ToolTip="Split into clips at the cursor, or around the selection, to move them around (S)" />
                     <Button x:Name="TrimButton" Style="{StaticResource ToolButton}" Content="Trim to selection" Click="OnTrim"
                             ToolTip="Keep only the selected part" />
                     <Button x:Name="DeleteButton" Style="{StaticResource ToolButton}" Content="Delete" Click="OnDelete"

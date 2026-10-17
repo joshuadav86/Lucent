@@ -8,7 +8,7 @@ namespace WinampInspiredVisualizer.Audio;
 public sealed class AudioPlayer : IDisposable
 {
     /// <summary>How far ahead of the speakers the audio is decoded, in milliseconds.</summary>
-    public const int OutputLatencyMs = 150;
+    public const int OutputLatencyMs = AudioCapture.OutputLatencyMs;
 
     private WaveOutEvent? _output;
     private WaveStream? _reader;

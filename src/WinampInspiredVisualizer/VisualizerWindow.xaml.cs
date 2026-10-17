@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Visualizer;
 using WinampInspiredVisualizer.Windows;
@@ -696,7 +697,7 @@ public partial class VisualizerWindow : ToolWindow
                 break;
             case Key.Down when _shown.Count > 0:
                 // Into the list, to pick with the arrow keys and Enter.
-                SearchText.FocusRow(PresetList, PresetList.SelectedItem ?? _shown[0]);
+                ListRows.Focus(PresetList, PresetList.SelectedItem ?? _shown[0]);
                 e.Handled = true;
                 break;
         }

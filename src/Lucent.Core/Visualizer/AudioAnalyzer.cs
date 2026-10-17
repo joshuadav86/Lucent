@@ -66,7 +66,7 @@ public sealed class AudioAnalyzer
         }
         else
         {
-            var delay = _capture.SampleRate * AudioPlayer.OutputLatencyMs / 1000 * 2 / 3;
+            var delay = _capture.SampleRate * AudioCapture.OutputLatencyMs / 1000 * 2 / 3;
             _capture.ReadLatest(_samples, delay);
         }
 

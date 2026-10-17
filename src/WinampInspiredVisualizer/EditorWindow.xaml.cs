@@ -23,6 +23,9 @@ public partial class EditorWindow : Window
     /// <summary>With nothing selected, fades cover this much at the start or end.</summary>
     private static readonly TimeSpan DefaultFadeLength = TimeSpan.FromSeconds(3);
 
+    /// <summary>The lengths of silence the right-click menu offers, in seconds.</summary>
+    private static readonly double[] SilenceLengths = { 0.5, 1, 2, 3, 5, 10 };
+
     /// <summary>The main player: paused while the editor plays, and asked to let go of a file being saved over.</summary>
     private readonly AudioPlayer _mainPlayer;
     private readonly EditorPlayer _player = new();
@@ -64,6 +67,8 @@ public partial class EditorWindow : Window
                 PlayFrom(Waveform.CursorFrame, _session?.Audio.Frames ?? 0, _previewThrough);
             }
         };
+        Waveform.ClipMoveRequested += async (_, move) => await MoveClipAsync(move.Clip, move.ToIndex);
+        Waveform.MouseRightButtonUp += OnWaveformRightClick;
         Overview.NavigateRequested += (_, frame) => Waveform.ScrollTo(frame);
         Overview.ZoomRequested += (_, notches) => Waveform.Zoom(Math.Pow(0.8, notches));
 
@@ -106,7 +111,7 @@ public partial class EditorWindow : Window
             LoadingPanel.Visibility = Visibility.Collapsed;
             ShowStatus(mixedDown
                 ? $"This file has {info.Channels} channels; the editor mixes them down to stereo, so saving makes a stereo file."
-                : "Drag across the waveform to select part of it. The wheel zooms, Shift+wheel scrolls.");
+                : "Drag across the waveform to select part of it, or right-click it for what you can do. The wheel zooms, Shift+wheel scrolls.");
         }
         catch (OperationCanceledException)
         {
@@ -275,6 +280,7 @@ public partial class EditorWindow : Window
         }
 
         Waveform.Peaks = _session.Peaks;
+        Waveform.Splits = _session.Splits;
         Overview.Peaks = _session.Peaks;
         Overview.SetVisibleRange(Waveform.ViewStart, Waveform.ViewLength);
         UpdateHistory();
@@ -367,17 +373,17 @@ public partial class EditorWindow : Window
     private async void OnFadeOut(object sender, RoutedEventArgs e) =>
         await ApplyAsync(new FadeEffect(FadeDirection.Out), FadeRange(FadeDirection.Out));
 
-    /// <summary>The selection, or with nothing selected, the first or last few seconds.</summary>
-    private FrameRange FadeRange(FadeDirection direction)
+    /// <summary>The selection, or with nothing selected, the first or last few seconds of the song (or of <paramref name="clip"/>).</summary>
+    private FrameRange FadeRange(FadeDirection direction, FrameRange? clip = null)
     {
         if (!Selection.IsEmpty || _session is null)
         {
             return Selection;
         }
 
-        var frames = _session.Audio.Frames;
-        var length = (int)Math.Min(frames, DefaultFadeLength.TotalSeconds * _session.Audio.SampleRate);
-        return direction == FadeDirection.In ? new FrameRange(0, length) : new FrameRange(frames - length, length);
+        var scope = clip ?? new FrameRange(0, _session.Audio.Frames);
+        var length = (int)Math.Min(scope.Length, DefaultFadeLength.TotalSeconds * _session.Audio.SampleRate);
+        return direction == FadeDirection.In ? new FrameRange(scope.Start, length) : new FrameRange(scope.End - length, length);
     }
 
     private async void OnSilence(object sender, RoutedEventArgs e) => await ApplyAsync(new SilenceEffect());
@@ -402,6 +408,199 @@ public partial class EditorWindow : Window
         {
             await EditAsync("Delete", session => session.Delete(selection), () => new FrameRange(selection.Start, 0));
         }
+    }
+
+    // ---- Clips ----
+
+    private void OnSplit(object sender, RoutedEventArgs e) => SplitAtCursor();
+
+    /// <summary>
+    /// Splits around the selection, or with nothing selected, at the cursor (at the playhead while playing,
+    /// so S can be tapped along with the music). Splitting is instant, so playback carries on.
+    /// </summary>
+    private void SplitAtCursor()
+    {
+        var frames = !Selection.IsEmpty
+            ? new[] { Selection.Start, Selection.End }
+            : new[] { _player.IsPlaying ? _player.PositionFrame : Waveform.CursorFrame };
+        Split(frames);
+    }
+
+    private void Split(int[] frames)
+    {
+        if (_session is not { } session || IsBusy)
+        {
+            return;
+        }
+
+        if (!session.Split(frames))
+        {
+            ShowStatus(frames.All(f => f <= 0 || f >= session.Audio.Frames)
+                ? "Put the cursor inside the song to split it there."
+                : "It's already split there.");
+            return;
+        }
+
+        Waveform.Splits = session.Splits;
+        UpdateHistory();
+        ShowStatus($"Split into {session.Clips.Count} clips. Drag a clip's tab to move it, or right-click it for more. Ctrl+Z undoes it.");
+    }
+
+    private async Task MoveClipAsync(int clip, int toIndex)
+    {
+        var moved = default(FrameRange);
+        await EditAsync("Move clip", session => moved = session.MoveClip(clip, toIndex), () => moved);
+    }
+
+    private async Task InsertSilenceAsync(int at, double seconds)
+    {
+        if (_session is not { } session)
+        {
+            return;
+        }
+
+        var silence = default(FrameRange);
+        var frames = (int)Math.Round(seconds * session.Audio.SampleRate);
+        await EditAsync("Add silence", s => silence = s.InsertSilence(at, frames), () => silence);
+    }
+
+    /// <summary>
+    /// The right-click menu: what to do to the selection when the click is inside it, otherwise to the
+    /// clip under the mouse (or the whole song before it's split), plus splitting, moving and silence.
+    /// </summary>
+    private void OnWaveformRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_session is not { } session || IsBusy)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var frame = Waveform.FrameAt(e.GetPosition(Waveform).X);
+        var onSelection = !Selection.IsEmpty && frame >= Selection.Start && frame <= Selection.End;
+        if (!onSelection)
+        {
+            Waveform.ClearSelection();
+            Waveform.CursorFrame = frame;
+        }
+
+        var clips = session.Clips;
+        var clipIndex = session.ClipAt(frame);
+        clipIndex = Math.Min(clipIndex, clips.Count - 1);
+        var clip = clips[clipIndex];
+        var split = clips.Count > 1;
+        var noun = onSelection ? "selection" : split ? "clip" : "song";
+        // Effects work on the selection, or on the clip; an empty range means the whole song.
+        var target = onSelection ? Selection : split ? clip : new FrameRange(0, 0);
+
+        var menu = new ContextMenu { PlacementTarget = Waveform, Placement = PlacementMode.MousePoint };
+        MenuItem Add(ItemsControl parent, string header, Func<Task> action, string? gesture = null, bool enabled = true)
+        {
+            var item = new MenuItem { Header = header, InputGestureText = gesture, IsEnabled = enabled };
+            item.Click += async (_, _) => await action();
+            parent.Items.Add(item);
+            return item;
+        }
+
+        Task Run(Action action)
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        // Selects the clip first, so the Volume and Pitch cards (which work on the selection) change just it.
+        void SelectTarget()
+        {
+            if (!onSelection && split)
+            {
+                Waveform.Selection = clip;
+            }
+        }
+
+        var playRange = onSelection ? Selection : split ? clip : new FrameRange(frame, session.Audio.Frames - frame);
+        Add(menu, onSelection || split ? $"Play {noun}" : "Play from here", () => Run(() => PlayFrom(playRange.Start, playRange.End)), "Space");
+        Add(menu, onSelection ? "Split around selection" : "Split here", () => Run(() =>
+            Split(onSelection ? new[] { Selection.Start, Selection.End } : new[] { frame })), "S");
+        if (split && !onSelection)
+        {
+            Add(menu, "Select clip", () => Run(() => Waveform.Selection = clip));
+        }
+
+        menu.Items.Add(new Separator());
+        Add(menu, "Fade in", () => ApplyAsync(new FadeEffect(FadeDirection.In),
+            FadeRange(FadeDirection.In, onSelection ? null : split ? clip : null)));
+        Add(menu, "Fade out", () => ApplyAsync(new FadeEffect(FadeDirection.Out),
+            FadeRange(FadeDirection.Out, onSelection ? null : split ? clip : null)));
+        Add(menu, "Normalize to −1 dB", () => ApplyAsync(new NormalizeEffect(NormalizeTarget.Peak, -1), target));
+        Add(menu, "Volume…", () => Run(() =>
+        {
+            SelectTarget();
+            GainPopup.IsOpen = true;
+        }));
+        Add(menu, "Pitch…", () => Run(() =>
+        {
+            SelectTarget();
+            PitchPopup.IsOpen = true;
+        }));
+        Add(menu, "Reverse", () => ApplyAsync(new ReverseEffect(), target));
+        Add(menu, "Replace with silence", () => ApplyAsync(new SilenceEffect(), target));
+
+        menu.Items.Add(new Separator());
+        if (onSelection)
+        {
+            var selection = Selection;
+            Add(menu, "Trim to selection", () => EditAsync("Trim", s => s.TrimTo(selection), () => new FrameRange(0, 0)));
+            Add(menu, "Delete selection", DeleteSelectionAsync, "Delete");
+        }
+        else if (split)
+        {
+            Add(menu, "Delete clip", () => EditAsync("Delete clip", s => s.Delete(clip), () => new FrameRange(clip.Start, 0)));
+        }
+
+        if (split && !onSelection)
+        {
+            menu.Items.Add(new Separator());
+            Add(menu, "Move clip earlier", () => MoveClipAsync(clipIndex, clipIndex - 1), enabled: clipIndex > 0);
+            Add(menu, "Move clip later", () => MoveClipAsync(clipIndex, clipIndex + 1), enabled: clipIndex < clips.Count - 1);
+            Add(menu, "Join with previous clip", () => Run(() => JoinAt(clip.Start)), enabled: clipIndex > 0);
+            Add(menu, "Join with next clip", () => Run(() => JoinAt(clip.End)), enabled: clipIndex < clips.Count - 1);
+        }
+
+        menu.Items.Add(new Separator());
+        void AddSilence(string header, int at)
+        {
+            var parent = new MenuItem { Header = header };
+            foreach (var seconds in SilenceLengths)
+            {
+                Add(parent, seconds < 1 ? $"{seconds * 1000:0} ms" : $"{seconds:0} second{(seconds == 1 ? "" : "s")}",
+                    () => InsertSilenceAsync(at, seconds));
+            }
+
+            menu.Items.Add(parent);
+        }
+
+        var block = onSelection ? Selection : clip;
+        if (!onSelection)
+        {
+            AddSilence("Add silence here", frame);
+        }
+
+        AddSilence($"Add silence before {noun}", block.Start);
+        AddSilence($"Add silence after {noun}", block.End);
+        menu.IsOpen = true;
+    }
+
+    private void JoinAt(int split)
+    {
+        if (_session is not { } session)
+        {
+            return;
+        }
+
+        session.Join(split);
+        Waveform.Splits = session.Splits;
+        UpdateHistory();
+        ShowStatus("Joined. Ctrl+Z undoes it.");
     }
 
     // ---- Undo ----
@@ -777,12 +976,19 @@ public partial class EditorWindow : Window
                 e.Handled = true;
                 await SaveAsync();
                 return;
+            case Key.S:
+                SplitAtCursor();
+                break;
             case Key.Delete or Key.Back:
                 e.Handled = true;
                 await DeleteSelectionAsync();
                 return;
             case Key.Escape:
-                if (_player.IsPlaying)
+                if (Waveform.IsDraggingClip)
+                {
+                    Waveform.CancelClipDrag();
+                }
+                else if (_player.IsPlaying)
                 {
                     StopPlayback();
                 }
