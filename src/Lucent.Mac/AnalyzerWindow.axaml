@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.AnalyzerWindow"
+        Title="Analyzer - Lucent"
+        Width="760" Height="460" MinWidth="440" MinHeight="220"
+        CanResize="True"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        Background="{DynamicResource SurfaceBrush}">
+
+    <!-- Same custom title bar as the main window, with native resizing. -->
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1">
+        <Grid x:Name="WindowRoot" Background="{DynamicResource PanelSheenBrush}" RowDefinitions="36,*">
+
+            <!-- Title bar: the frequency under the mouse, the colours, and close. -->
+            <DockPanel Grid.Row="0" Background="{DynamicResource TitleBarBrush}" w:Chrome.IsCaption="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Which parts show: the heatmap, spectrum, waveform and stereo scope. -->
+                    <Button x:Name="PanelsButton" Theme="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
+                            ToolTip.Tip="Choose which parts of the analyzer to show" Click="OnPanelsClicked">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Panels" FontSize="12" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Border Theme="{StaticResource SegmentBar}" Margin="0,0,6,0"
+                            ToolTip.Tip="The colours loudness is painted in">
+                        <StackPanel x:Name="PaletteBar" Orientation="Horizontal" />
+                    </Border>
+                    <Button Theme="{StaticResource CloseCaptionButton}" Height="36" ToolTip.Tip="Close (Y)" Click="OnCloseWindow">
+                        <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <Image x:Name="TitleIcon" Width="14" Height="14" VerticalAlignment="Center"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <TextBlock Text="ANALYZER" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="ReadoutText" Margin="12,0,0,0" FontSize="11" VerticalAlignment="Center"
+                               Foreground="{DynamicResource FaintTextBrush}" />
+                </StackPanel>
+            </DockPanel>
+
+            <!-- The analyzer's parts, in a sunken display like the equalizer's curve. Right-click for panels and speed. -->
+            <Border x:Name="Display" Grid.Row="1" Margin="10,2,10,10" ClipToBounds="True"
+                    CornerRadius="{DynamicResource ControlCorner}"
+                    Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                    PointerMoved="OnDisplayMouseMove" PointerExited="OnDisplayMouseLeave" PointerPressed="OnDisplayMouseDown">
+                <Border.ContextMenu>
+                    <ContextMenu x:Name="DisplayMenu" Opening="OnDisplayMenuOpening">
+                        <Separator x:Name="PanelItemsEnd" />
+                        <MenuItem x:Name="SlowMenuItem" Header="Scroll slowly" ToggleType="CheckBox" Click="OnSpeedChosen" Tag="Slow" />
+                        <MenuItem x:Name="NormalMenuItem" Header="Scroll at normal speed" ToggleType="CheckBox" Click="OnSpeedChosen" Tag="Normal" />
+                        <MenuItem x:Name="FastMenuItem" Header="Scroll quickly" ToggleType="CheckBox" Click="OnSpeedChosen" Tag="Fast" />
+                        <Separator />
+                        <MenuItem x:Name="OnTopMenuItem" Header="Keep on top" ToggleType="CheckBox" Click="OnToggleOnTop" />
+                    </ContextMenu>
+                </Border.ContextMenu>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
