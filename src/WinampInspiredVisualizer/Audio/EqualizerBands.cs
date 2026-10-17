@@ -9,7 +9,7 @@ namespace WinampInspiredVisualizer.Audio;
 public sealed class EqualizerBands
 {
     /// <summary>The band counts people can choose between.</summary>
-    public static readonly IReadOnlyList<int> Counts = new[] { 3, 4, 5, 8, 10, 16, 24 };
+    public static readonly IReadOnlyList<int> Counts = new[] { 4, 8, 16, 24, 32 };
 
     private static readonly Dictionary<int, EqualizerBands> ByCount = Counts.ToDictionary(count => count, Create);
 
@@ -31,6 +31,12 @@ public sealed class EqualizerBands
 
     /// <summary>How far apart neighbouring bands are, in octaves (the same for every pair).</summary>
     public double SpacingOctaves { get; }
+
+    /// <summary>
+    /// The layout an older version of Lucid used for this many bands (3, 5, 10 and 31 were offered
+    /// once), so sliders saved with it can be redrawn at a band count offered now. Null for others.
+    /// </summary>
+    public static EqualizerBands? Former(int count) => count is 3 or 5 or 10 or 31 ? Create(count) : null;
 
     /// <summary>The layout for one of the <see cref="Counts"/>; anything else gets the nearest one.</summary>
     public static EqualizerBands ForCount(int count)

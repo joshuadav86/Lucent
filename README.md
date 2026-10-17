@@ -53,7 +53,7 @@ Double-click the visuals (or press F11) to go fullscreen. Click once to pause or
 
 - **Plays almost anything:** MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
 - **A real library:** link a folder and every song shows up, searchable as you type, with favourites and playlists that Winamp can open too
-- **Equalizer:** 3 to 31 bands, 15 presets, and a live response curve
+- **Equalizer:** 4 to 32 bands, 15 presets, and a live response curve over the music's spectrum
 - **Built-in audio editor:** trim, fade, normalize, change pitch and more, with undo
 - **Converter and tag editor:** make MP3, FLAC or WAV, and edit titles, artists and cover art safely
 - **Graphics options:** up to 4K supersampling, Ultra detail, adjustable glow and HDR
@@ -110,7 +110,7 @@ Nothing needs installing. If Windows SmartScreen warns about an unknown app, cli
   - **Glow:** how strongly bright parts bloom, from off to strong
   - **HDR:** on screens with HDR turned on in Windows, highlights shine brighter than normal white
   - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown under the visuals)
-- A Winamp-style equalizer under the player, the same width, open from the start (the EQ switch in the player, or E, shows or hides it, and the queue moves to make room): choose 3, 4, 5, 8, 10, 16, 24 or 31 bands, drag the sliders (double-click one to put it back to 0) with the response curve drawn live above them, set the preamp, and pick from 15 presets such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own. Changing the band count keeps your curve (the new sliders rise into place one after another, and presets and Reset glide the sliders and curve to their new settings), the visuals react to the equalized sound, and Lucid turns the volume down a touch when you boost so the music doesn't distort
+- A Winamp-style equalizer under the player, the same width, open from the start (the EQ switch in the player, or E, shows or hides it, and the queue moves to make room): choose 4, 8, 16, 24 or 32 bands, drag the sliders (double-click one to put it back to 0) with the response curve drawn live above them over the music's live spectrum, so problem frequencies show up as peaks, set the preamp, and pick from 15 presets such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own. Changing the band count keeps your curve (the new sliders rise into place one after another, and presets and Reset glide the sliders and curve to their new settings), the visuals react to the equalized sound, and Lucid turns the volume down a touch when you boost so the music doesn't distort
 - Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
 - Remembers the last visual, your options and your theme
 - Visuals compile in the background and are kept on disk, so the app starts straight away

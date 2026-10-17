@@ -37,7 +37,7 @@ public partial class EqualizerWindow : Window
 
     // Beyond this the sliders look scattered rather than spread out.
     private const double WidestColumn = 110;
-    // How narrow columns may get to fit the player's width with 31 bands, and the knob they hold.
+    // How narrow columns may get to fit the player's width with 32 bands, and the knob they hold.
     private const double NarrowestFittedColumn = 12;
     private const double SliderKnobWidth = 30;
     // True while the sliders are being set from code (and during start-up), so their change
@@ -161,7 +161,7 @@ public partial class EqualizerWindow : Window
     private void BuildBands()
     {
         _bands = EqualizerBands.ForCount(Eq.BandCount);
-        // Narrower columns for more bands, so even 31 sliders fit a normal screen.
+        // Narrower columns for more bands, so even 32 sliders fit a normal screen.
         var narrowest = _bands.Count switch
         {
             <= 10 => 40,

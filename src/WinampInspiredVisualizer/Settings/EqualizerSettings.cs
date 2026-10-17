@@ -5,8 +5,8 @@ public sealed class EqualizerSettings
 {
     public bool Enabled { get; set; } = true;
 
-    /// <summary>How many sliders the equalizer has: 3, 4, 5, 8, 10, 16, 24 or 31.</summary>
-    public int BandCount { get; set; } = 10;
+    /// <summary>How many sliders the equalizer has: 4, 8, 16, 24 or 32.</summary>
+    public int BandCount { get; set; } = 8;
 
     /// <summary>Each slider's gain in decibels, lowest band first.</summary>
     public List<double> Gains { get; set; } = new();

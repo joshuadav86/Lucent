@@ -120,7 +120,8 @@ public sealed class Equalizer : ISampleProvider
 
     /// <summary>
     /// The slider gains saved settings describe for a layout: the saved gains when they match it,
-    /// otherwise the named preset, otherwise flat.
+    /// otherwise the named preset, otherwise the saved sliders redrawn for the new layout when they
+    /// came from a band count Lucid no longer offers, otherwise flat.
     /// </summary>
     public static double[] SliderGains(EqualizerSettings settings, EqualizerBands bands)
     {
@@ -129,7 +130,14 @@ public sealed class Equalizer : ISampleProvider
             return settings.Gains.Select(gain => double.IsFinite(gain) ? Math.Clamp(gain, -MaxGainDb, MaxGainDb) : 0).ToArray();
         }
 
-        return EqualizerPresets.Find(settings.PresetName)?.Curve.Sample(bands) ?? new double[bands.Count];
+        if (EqualizerPresets.Find(settings.PresetName) is { } preset)
+        {
+            return preset.Curve.Sample(bands);
+        }
+
+        return EqualizerBands.Former(settings.Gains.Count) is { } former
+            ? EqualizerCurve.FromBands(former, settings.Gains).Sample(bands).Select(gain => Math.Clamp(gain, -MaxGainDb, MaxGainDb)).ToArray()
+            : new double[bands.Count];
     }
 
     private void UpdateDesigns(int sampleRate)
