@@ -217,6 +217,7 @@ Skins decide the shape, type and finish of every window. Themes decide the colou
 |---|---|
 | 🎵 **Plays almost anything** | MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF |
 | 📚 **Library** | Link a folder and every sound shows up, searchable as you type |
+| 🛒 **Bandcamp and Beatport** | Music you download from either store files itself into the library, and Bandcamp purchases can sync by themselves |
 | ❤️ **Favorites and playlists** | Heart sounds, star visuals, and save .m3u8 playlists Winamp can open too |
 | ✂️ **Audio editor** | Cut, copy and paste with crossfades, a spectrogram view, meters and loudness analysis, EQ, compressor and limiter, hum, click and noise repair, tempo, mono conversion and your own VST3 effects, with undo |
 | 🔁 **Converter** | Make MP3, FLAC or WAV, in mono if you like, with tags and artwork carried across and optional processing for a whole batch |
@@ -258,6 +259,8 @@ Shortcuts work from any Lucent window, and your keyboard's media keys work while
 - Add files or folders with the eject button, or drag them onto any Lucent window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library, newest first, with other sort orders and folder headings you can open or close. Search by title, artist, album or file name as you type (Ctrl+F); Esc clears it
+- Bandcamp and Beatport: switch them on under **Bandcamp and Beatport…** in the library's folder menu, and Lucent watches your Downloads folder. Releases and tracks you download from either store are unpacked into Music\Bandcamp or Music\Beatport, a folder per artist and release, and show up in the library. The downloads stay where they are, and other zips and songs are left alone (each store tags the files it sells, which is how Lucent recognises them)
+- Bandcamp collection sync (experimental): sign in to Bandcamp on its own page and Lucent downloads your purchases in the format you pick (FLAC, MP3, ALAC, AAC or Ogg), then any new ones each time it starts. Bandcamp has no official way for apps to do this, so it uses the website's own pages and may need an update if Bandcamp changes them. The sign-in is kept encrypted for your Windows account only
 - Favorite sounds: the heart in the player (or H), or right-click sounds in the queue or library. The FAVORITES pill in the library shows only them
 - Playlists: save the queue, add sounds from the queue or library, and play them from **Playlists** in the queue window. They're standard .m3u8 files
 - Edit a sound's info (right-click it, or Ctrl+I): title, artist, album, album artist, year, track and disc, genre, composer, BPM, comment and lyrics. Edit several sounds at once. Add, paste, remove or save cover art; very large pictures are shrunk to 1600 pixels. New info is written to a checked copy before it replaces the original, and sounds keep their date so they stay put in the library

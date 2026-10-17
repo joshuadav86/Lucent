@@ -21,7 +21,9 @@
     <PackageReference Include="Concentus.Oggfile" Version="1.0.7" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="NAudio.Lame" Version="2.1.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
     <PackageReference Include="Velopack" Version="1.2.161" />
     <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
@@ -67,6 +69,18 @@
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </None>
+    </ItemGroup>
+  </Target>
+
+  <!--
+    WebView2's loader (for the Bandcamp sign-in page) is a native DLL that WebView2 loads from the app's
+    folder. Like LAME, it ships beside Lucent.exe rather than inside the single-file bundle.
+  -->
+  <Target Name="KeepWebView2LoaderBesideTheApp" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Condition="'%(ResolvedFileToPublish.Filename)' == 'WebView2Loader'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
     </ItemGroup>
   </Target>
 
