@@ -8,7 +8,8 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
+using SavedPlaylists = WinampInspiredVisualizer.Playlist.SavedPlaylists;
+using Track = WinampInspiredVisualizer.Playlist.Track;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Windows;
 
