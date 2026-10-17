@@ -226,7 +226,7 @@
                             <TextBlock x:Name="VolumeText" DockPanel.Dock="Right" Text="80%" Width="34" FontSize="11"
                                        TextAlignment="Right" VerticalAlignment="Center"
                                        Foreground="{DynamicResource FaintTextBrush}" />
-                            <Slider x:Name="VolumeSlider" Minimum="0" Maximum="1" Value="0.8" Margin="10,0,6,0"
+                            <Slider x:Name="VolumeSlider" Style="{StaticResource VolumeSlider}" Minimum="0" Maximum="1" Value="0.8" Margin="10,0,6,0"
                                     ToolTip="Volume (mouse wheel over the player changes it too)"
                                     ValueChanged="OnVolumeChanged" />
                         </DockPanel>
@@ -235,7 +235,7 @@
             </Border>
 
             <!-- Seek bar -->
-            <Slider x:Name="SeekBar" Grid.Row="2" Minimum="0" Maximum="1" IsEnabled="False" Margin="14,8,14,0"
+            <Slider x:Name="SeekBar" Style="{StaticResource SeekSlider}" Grid.Row="2" Minimum="0" Maximum="1" IsEnabled="False" Margin="14,8,14,0"
                     Thumb.DragStarted="OnSeekDragStarted"
                     Thumb.DragCompleted="OnSeekDragCompleted"
                     ValueChanged="OnSeekValueChanged" />

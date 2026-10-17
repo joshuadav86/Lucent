@@ -524,6 +524,99 @@
             </Setter>
         </Style>
 
+        <!-- The seek bar: a thicker track in the accent colours with a playhead that always shows
+             where the song is, so it reads differently from the thin, quiet volume bar. -->
+        <Style x:Key="SeekEdgeButton" TargetType="RepeatButton" BasedOn="{StaticResource SliderEdgeButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Grid Background="Transparent">
+                            <Border Height="6" CornerRadius="3" Background="{TemplateBinding Background}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SeekSlider" TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Track x:Name="PART_Track" VerticalAlignment="Center">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource SeekEdgeButton}" Command="Slider.DecreaseLarge"
+                                              Background="{DynamicResource AccentGradientBrush}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource SeekEdgeButton}" Command="Slider.IncreaseLarge"
+                                              Background="{DynamicResource HoverBrush}" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Grid Background="Transparent">
+                                                <Ellipse x:Name="Head" Width="12" Height="12" Fill="{DynamicResource TextBrush}"
+                                                         Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" />
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Head" Property="Width" Value="14" />
+                                                    <Setter TargetName="Head" Property="Height" Value="14" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The volume bar: thin and filled in a quiet grey, not the accent colour of the seek bar. -->
+        <Style x:Key="VolumeSlider" TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Track x:Name="PART_Track" VerticalAlignment="Center">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource SliderEdgeButton}" Command="Slider.DecreaseLarge"
+                                              Background="{DynamicResource MutedTextBrush}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource SliderEdgeButton}" Command="Slider.IncreaseLarge"
+                                              Background="{DynamicResource HairlineBrush}" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb x:Name="Knob" Opacity="0">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Ellipse Width="10" Height="10" Fill="{DynamicResource TextBrush}" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Knob" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Thin, unobtrusive scroll bar for the playlist. -->
         <Style TargetType="ScrollBar">
             <Setter Property="Width" Value="6" />
