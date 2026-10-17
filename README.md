@@ -29,15 +29,16 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor and analyzer for 
 
 ![Lucent's Black Hole visual, fullscreen](assets/screenshots/hero-black-hole.jpg)
 
-## What's new
+## At a glance
 
 | | |
 |---|---|
-| ✨ **49 new visuals** | Ray-traced glass, chrome and planets, plus particle storms of fire, smoke, sparks and starlings. 141 in all. |
+| ✨ **141 visuals** | Fractals, kaleidoscopes and cyberpunk cities, ray-traced glass, chrome and planets, and particle storms of fire, smoke, sparks and starlings. |
 | 📊 **Analyzer** | A scrolling spectrogram heatmap like Winamp's Vision plugin, with a live spectrum, waveform and stereo spread scope. |
-| 🎨 **Skins** | Five skins change the shape, type and finish of every window, and any skin goes with any of the eight themes. |
+| 🎨 **Skins and themes** | Five skins change the shape, type and finish of every window, and any skin goes with any of the eight themes. |
 | 🎚️ **Studio equalizer** | 4, 8, 16, 24 or 32 mixing-desk faders over the music's live spectrum. |
-| 🧲 **Smoother snapping** | Docked windows move as one while you drag, and never overlap by accident. |
+| 🧲 **Snapping windows** | The player, equalizer, queue, library and visuals snap together like Winamp's and move as one. |
+| ✂️ **Built-in tools** | An audio editor, a converter and a tag editor, all a right-click away. |
 
 ## 141 visuals
 

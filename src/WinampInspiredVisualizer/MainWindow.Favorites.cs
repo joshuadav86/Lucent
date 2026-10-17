@@ -208,24 +208,11 @@ public partial class MainWindow
             playlist.Items.Add(new Separator());
 
             var rename = new MenuItem { Header = "Rename…" };
-            rename.Click += (_, _) =>
-            {
-                if (AskForPlaylistName(owner, "Rename playlist", "Choose a new name.", "Rename", name) is { } newName && newName != name)
-                {
-                    SavePlaylist(() => SavedPlaylists.Rename(name, newName));
-                }
-            };
+            rename.Click += (_, _) => RenamePlaylist(owner, name);
             playlist.Items.Add(rename);
 
             var delete = new MenuItem { Header = "Delete" };
-            delete.Click += (_, _) =>
-            {
-                if (MessageBox.Show(owner, $"Delete the playlist \"{name}\"? The sounds themselves aren't touched.", "Lucent",
-                        MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
-                {
-                    SavePlaylist(() => SavedPlaylists.Delete(name));
-                }
-            };
+            delete.Click += (_, _) => DeletePlaylist(owner, name);
             playlist.Items.Add(delete);
             menu.Items.Add(playlist);
         }
@@ -242,6 +229,31 @@ public partial class MainWindow
             ShowInExplorer(SavedPlaylists.Folder);
         };
         menu.Items.Add(open);
+    }
+
+    public void RenamePlaylist(Window owner, string name)
+    {
+        if (AskForPlaylistName(owner, "Rename playlist", "Choose a new name.", "Rename", name) is { } newName && newName != name)
+        {
+            SavePlaylist(() => SavedPlaylists.Rename(name, newName));
+        }
+    }
+
+    public void DeletePlaylist(Window owner, string name)
+    {
+        if (MessageBox.Show(owner, $"Delete the playlist \"{name}\"? The sounds themselves aren't touched.", "Lucent",
+                MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
+        {
+            SavePlaylist(() => SavedPlaylists.Delete(name));
+        }
+    }
+
+    /// <summary>Takes these files out of a playlist, wherever they appear in it. The files themselves stay.</summary>
+    public void RemoveFromPlaylist(string name, IReadOnlyCollection<string> paths)
+    {
+        var remove = new HashSet<string>(paths, StringComparer.OrdinalIgnoreCase);
+        SavePlaylist(() => SavedPlaylists.Write(name,
+            SavedPlaylists.Read(name).Where(path => !remove.Contains(path)).Select(Track.FromFile).ToList()));
     }
 
     private static void AddPlayItems(MenuItem parent, Action<bool> play)
@@ -283,5 +295,7 @@ public partial class MainWindow
         {
             ShowError("Couldn't save the playlist.", ex);
         }
+
+        _libraryWindow.PlaylistsChanged();
     }
 }

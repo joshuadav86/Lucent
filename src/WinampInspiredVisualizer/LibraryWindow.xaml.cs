@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Windows;
 
@@ -66,15 +67,21 @@ public partial class LibraryWindow : ToolWindow
         SortLabel.Text = LibrarySorts.Label(settings.LibrarySort);
         UpdateGroupFoldersButton();
         UpdateLibraryStatus();
+        LoadPlaylists();
     }
+
+    private bool ShowingPlaylists => _settings.LibraryShowPlaylists;
 
     private void RebuildLibraryView()
     {
-        var view = new ListCollectionView(_library.Items.ToList())
+        // Playlists keep their own order, under a heading each.
+        var view = new ListCollectionView((ShowingPlaylists ? _playlistItems : _library.Items).ToList());
+        if (!ShowingPlaylists)
         {
-            CustomSort = new LibraryItemComparer(_settings.LibrarySort),
-        };
-        if (_settings.GroupLibraryByFolder)
+            view.CustomSort = new LibraryItemComparer(_settings.LibrarySort);
+        }
+
+        if (ShowingPlaylists || _settings.GroupLibraryByFolder)
         {
             view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LibraryItem.Folder)));
         }
@@ -108,6 +115,12 @@ public partial class LibraryWindow : ToolWindow
 
     private void UpdateLibraryStatus()
     {
+        if (ShowingPlaylists)
+        {
+            UpdatePlaylistsStatus();
+            return;
+        }
+
         var count = _library.Items.Count;
         var linked = _library.Folders.Count > 0;
         var favoritesOnly = _settings.LibraryFavoritesOnly && linked && count > 0;
@@ -152,6 +165,184 @@ public partial class LibraryWindow : ToolWindow
                     ? "None of your library folders have music Lucent can play yet. New files appear here on their own."
                     : "Every sound inside it shows up here, newest first, and new files appear on their own.";
         LinkFolderButton.Visibility = favoritesOnly || noMatches ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // ---- Playlists ----
+    // PLAYLISTS swaps the library folders for the saved playlists: each playlist is a heading with its
+    // sounds under it, in the playlist's own order. The favourites filter and the search still apply.
+
+    private List<LibraryItem> _playlistItems = new();
+    private int _playlistLoad;
+
+    /// <summary>Called by the player whenever a playlist is saved, renamed or deleted.</summary>
+    public void PlaylistsChanged() => LoadPlaylists();
+
+    private async void LoadPlaylists()
+    {
+        var load = ++_playlistLoad;
+        var known = new Dictionary<string, LibraryItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in _library.Items)
+        {
+            known[item.Path] = item;
+        }
+
+        List<(string Name, string Path, DateTime Added)> entries;
+        try
+        {
+            entries = await Task.Run(() => SavedPlaylists.Names()
+                .SelectMany(name => SavedPlaylists.Read(name).Select(path =>
+                    (name, path, known.TryGetValue(path, out var song) ? song.Added : AddedTime(path))))
+                .ToList());
+        }
+        catch (Exception)
+        {
+            // A playlist file that can't be read right now; the next change tries again.
+            return;
+        }
+
+        if (load != _playlistLoad)
+        {
+            return;
+        }
+
+        var items = new List<LibraryItem>(entries.Count);
+        var untagged = new List<LibraryItem>();
+        foreach (var (name, path, added) in entries)
+        {
+            var item = new LibraryItem(path, name, Path.GetDirectoryName(path) ?? string.Empty, added);
+            if (known.TryGetValue(path, out var song) && song.Track is { } track)
+            {
+                item.ApplyTags(track);
+            }
+            else
+            {
+                untagged.Add(item);
+            }
+
+            items.Add(item);
+        }
+
+        _playlistItems = items;
+        if (ShowingPlaylists)
+        {
+            RebuildLibraryView();
+        }
+
+        // Sounds outside the library folders get their titles and artists read here.
+        if (untagged.Count > 0)
+        {
+            var tracks = await Task.Run(() => untagged.Select(item => Track.FromFile(item.Path)).ToList());
+            if (load != _playlistLoad)
+            {
+                return;
+            }
+
+            for (var i = 0; i < untagged.Count; i++)
+            {
+                untagged[i].ApplyTags(tracks[i]);
+            }
+
+            if (ShowingPlaylists && IsSearching)
+            {
+                _libraryView?.Refresh();
+                UpdateLibraryStatus();
+            }
+        }
+    }
+
+    private static DateTime AddedTime(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.CreationTime > info.LastWriteTime ? info.CreationTime : info.LastWriteTime;
+        }
+        catch (Exception)
+        {
+            return DateTime.MinValue;
+        }
+    }
+
+    private void UpdatePlaylistsStatus()
+    {
+        var total = _playlistItems.Count;
+        var lists = _playlistItems.Select(item => item.Folder).Distinct().Count();
+        var filtered = IsSearching || _settings.LibraryFavoritesOnly;
+        var shown = filtered ? _libraryView?.Count ?? 0 : total;
+        LibraryCount.Text = total == 0
+            ? "No playlists"
+            : filtered
+                ? $"{shown:N0} of {total:N0} {(total == 1 ? "sound" : "sounds")}"
+                : $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}  ·  {total:N0} {(total == 1 ? "sound" : "sounds")}";
+
+        EmptyLibraryHint.Visibility = shown == 0 ? Visibility.Visible : Visibility.Collapsed;
+        EmptyLibraryTitle.Text = total == 0 ? "No playlists yet"
+            : IsSearching ? "No sounds match your search"
+            : "No favorites in your playlists";
+        EmptyLibraryText.Text = total == 0
+            ? "Right-click sounds and choose Add to playlist, or save the queue as a playlist, and they show up here."
+            : IsSearching
+                ? "Search looks in titles, artists, albums and file names. Try other words, or press Esc to clear the search."
+                : "Turn FAVORITES off to see every sound in your playlists.";
+        LinkFolderButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnTogglePlaylists(object sender, RoutedEventArgs e) => SetShowingPlaylists(!ShowingPlaylists);
+
+    private void SetShowingPlaylists(bool show)
+    {
+        _settings.LibraryShowPlaylists = show;
+        _settings.Save();
+        HighlightFolders(Array.Empty<string>());
+        UpdateGroupFoldersButton();
+        RebuildLibraryView();
+    }
+
+    /// <summary>The menu for highlighted playlist headings: play them, rename or delete one.</summary>
+    private void OpenPlaylistMenu()
+    {
+        var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.MousePoint };
+        var names = HighlightedGroups().Select(group => group.Name?.ToString() ?? string.Empty).ToList();
+        var songs = HighlightedGroups().SelectMany(group => group.Items.OfType<LibraryItem>()).ToList();
+        if (songs.Count > 0)
+        {
+            var play = new MenuItem { Header = names.Count == 1 ? "Play this playlist" : "Play these playlists" };
+            play.Click += async (_, _) =>
+            {
+                var tracks = await Task.Run(() => songs.Select(item => item.ToTrack()).ToList());
+                Player?.ReplaceQueue(tracks, 0);
+            };
+            var queue = new MenuItem { Header = "Add to queue" };
+            queue.Click += async (_, _) =>
+            {
+                var tracks = await Task.Run(() => songs.Select(item => item.ToTrack()).ToList());
+                Player?.AddToQueue(tracks);
+            };
+            menu.Items.Add(play);
+            menu.Items.Add(queue);
+        }
+
+        if (names.Count == 1 && Player is { } player)
+        {
+            var name = names[0];
+            menu.Items.Add(new Separator());
+            var rename = new MenuItem { Header = "Rename…" };
+            rename.Click += (_, _) => player.RenamePlaylist(this, name);
+            var delete = new MenuItem { Header = "Delete playlist" };
+            delete.Click += (_, _) => player.DeletePlaylist(this, name);
+            menu.Items.Add(rename);
+            menu.Items.Add(delete);
+        }
+
+        if (menu.Items.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+        }
+
+        var folders = new MenuItem { Header = "Back to library folders" };
+        folders.Click += (_, _) => SetShowingPlaylists(false);
+        menu.Items.Add(folders);
+        menu.IsOpen = true;
     }
 
     // ---- Search ----
@@ -396,6 +587,14 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnToggleGroupFolders(object sender, RoutedEventArgs e)
     {
+        if (ShowingPlaylists)
+        {
+            // Back from the playlists to the library folders, with their headings on.
+            _settings.GroupLibraryByFolder = true;
+            SetShowingPlaylists(false);
+            return;
+        }
+
         _settings.GroupLibraryByFolder = !_settings.GroupLibraryByFolder;
         _settings.Save();
         UpdateGroupFoldersButton();
@@ -404,7 +603,12 @@ public partial class LibraryWindow : ToolWindow
 
     private void UpdateGroupFoldersButton()
     {
-        GroupFoldersButton.SetResourceReference(ForegroundProperty, _settings.GroupLibraryByFolder ? "AccentBrush" : "FaintTextBrush");
+        GroupFoldersButton.SetResourceReference(ForegroundProperty,
+            _settings.GroupLibraryByFolder && !ShowingPlaylists ? "AccentBrush" : "FaintTextBrush");
+        PlaylistsButton.SetResourceReference(ForegroundProperty, ShowingPlaylists ? "AccentBrush" : "FaintTextBrush");
+
+        // Playlists keep their own order, so there's nothing to sort.
+        SortButton.IsEnabled = !ShowingPlaylists;
         FavoritesOnlyButton.SetResourceReference(ForegroundProperty, _settings.LibraryFavoritesOnly ? "AccentBrush" : "FaintTextBrush");
     }
 
@@ -448,7 +652,15 @@ public partial class LibraryWindow : ToolWindow
                 HighlightFolders(new[] { name.ToString() ?? string.Empty });
             }
 
-            OpenFolderMenu();
+            if (ShowingPlaylists)
+            {
+                OpenPlaylistMenu();
+            }
+            else
+            {
+                OpenFolderMenu();
+            }
+
             return;
         }
 
@@ -466,6 +678,26 @@ public partial class LibraryWindow : ToolWindow
         foreach (var item in _songMenuItems)
         {
             LibraryMenu.Items.Insert(at++, item);
+        }
+
+        if (ShowingPlaylists)
+        {
+            // Under PLAYLISTS the bottom item takes the sounds out of the playlists they're listed in.
+            var remove = new MenuItem { Header = "Remove from playlist" };
+            remove.Click += (_, _) =>
+            {
+                foreach (var playlist in items.GroupBy(item => item.Folder))
+                {
+                    Player?.RemoveFromPlaylist(playlist.Key, playlist.Select(item => item.Path).ToList());
+                }
+            };
+            foreach (var item in new object[] { new Separator(), remove })
+            {
+                LibraryMenu.Items.Add(item);
+                _songMenuItems.Add(item);
+            }
+
+            return;
         }
 
         // The folders the chosen songs are in, at the bottom.
@@ -719,7 +951,7 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnLibraryKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Delete && _highlightedFolders.Count > 0)
+        if (e.Key == Key.Delete && _highlightedFolders.Count > 0 && !ShowingPlaylists)
         {
             RemoveLibraryFolders(HighlightedDirectories());
             e.Handled = true;
