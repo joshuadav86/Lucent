@@ -56,6 +56,13 @@ public static class W {
   public static string Title(IntPtr h) { var s = new StringBuilder(256); GetWindowText(h, s, 256); return s.ToString(); }
   public static R Box(IntPtr h) { R v; DwmGetWindowAttribute(h, 9, out v, 16); return v; }
   public static void Click(int x, int y, int wait) { SetCursorPos(x, y); System.Threading.Thread.Sleep(80); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(40); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(wait); }
+  public static string Track(IntPtr h, int x, int y, int dx, int dy, int steps, int stepMs) {
+    var sb = new StringBuilder(); var b0 = Box(h); sb.Append("start " + b0.L + "," + b0.T + "," + b0.Ri + "," + b0.B + " |");
+    SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
+    for (int i = 1; i <= steps; i++) { SetCursorPos(x + dx * i / steps, y + dy * i / steps); System.Threading.Thread.Sleep(stepMs); var b = Box(h); sb.Append(" " + (dx * i / steps) + ":" + b.L + "," + b.T + "," + b.Ri + "," + b.B); }
+    System.Threading.Thread.Sleep(300); mouse_event(4, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(800);
+    var e = Box(h); sb.Append(" | end " + e.L + "," + e.T + "," + e.Ri + "," + e.B); return sb.ToString();
+  }
   public static void Drag(int x, int y, int dx, int dy) {
     SetCursorPos(x, y); System.Threading.Thread.Sleep(300); mouse_event(2, 0, 0, 0, IntPtr.Zero); System.Threading.Thread.Sleep(300);
     SetCursorPos(x + 3, y + 3); System.Threading.Thread.Sleep(400);
@@ -105,9 +112,52 @@ function Bands($order, $wait) {
 }
 Write-Host "::notice::animations on $([W]::SystemParametersInfo(0x1043, 0, [IntPtr]1, 3))"
 Write-Host "::notice::dpi 100 -> $([W]::SetDpi(100))"; Start-Sleep 4
-$order = @(7, 0, 7, 1, 6, 0, 5, 2, 7, 3, 7, 0, 4, 1, 6, 3, 2, 5, 7, 0)
-Run "bands fast" { Bands $order 60 }
-Run "bands medium" { Bands $order 150 }
-Run "faders" { $eq = Find 'Equalizer'; $b = [W]::Box($eq); [W]::Click($b.L + 111 + 30 * 3, $b.T + 57, 1500); [W]::Drag($b.L + 120, $b.T + 258, 0, -50); [W]::Shot("$out/faders-8.png"); [W]::Click($b.L + 111 + 30 * 0, $b.T + 57, 1500); [W]::Shot("$out/faders-3.png") }
-Write-Host "::notice::dpi 150 -> $([W]::SetDpi(150))"; Start-Sleep 4
-Run "faders 150" { [W]::Shot("$out/faders-10-150.png") }
+function Fresh($settings) {
+  Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'Lucid') -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force (Join-Path $env:APPDATA 'Lucid') | Out-Null
+  $settings | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $env:APPDATA 'Lucid\settings.json')
+}
+function RunWith($label, $settings, [scriptblock]$steps) {
+  Fresh $settings
+  $script:started = Get-Date
+  $script:proc = Start-Process -FilePath (Resolve-Path 'publish/Lucid.exe') -PassThru
+  Start-Sleep 35
+  try { & $steps } catch { $script:log += " || ERROR $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
+  Stop-Process -Id $script:proc.Id -ErrorAction SilentlyContinue; Start-Sleep 3
+  Write-Host "::notice::$label $($script:log)"; $script:log = ""
+}
+function Boxes() { ([W]::Of([uint32]$script:proc.Id) | ForEach-Object { $b = [W]::Box($_); "'$([W]::Title($_))' $($b.L),$($b.T),$($b.Ri),$($b.B)" }) -join '; ' }
+function Move($title, $dx, $dy, $tag) {
+  $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
+  $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
+  $t = [W]::Track($h, $b.L + 150, $b.T + 14, $dx, $dy, 40, 25)
+  [W]::Shot("$out/$tag.png")
+  Write-Host "::notice::$tag $t"
+  $script:log += " || ${tag}: [$(Boxes)]"
+}
+function Size($title, $dx, $tag) {
+  $h = Find $title; if (-not $h) { $script:log += " || ${tag}: no $title"; return }
+  $b = [W]::Box($h); [void][W]::SetForegroundWindow($h); Start-Sleep 1
+  $t = [W]::Track($h, $b.Ri - 2, [int](($b.T + $b.B) / 2), $dx, 0, 40, 25)
+  [W]::Shot("$out/$tag.png")
+  Write-Host "::notice::$tag $t"
+  $script:log += " || ${tag}: [$(Boxes)]"
+}
+$lib = @{ ShowLibrary = $true }
+foreach ($dpi in 100, 150) {
+  Write-Host "::notice::dpi $dpi -> $([W]::SetDpi($dpi))"; Start-Sleep 4
+  RunWith "rest $dpi" $lib { [W]::Shot("$out/rest-$dpi.png"); $script:log += " [$(Boxes)]" }
+  RunWith "visuals $dpi" $lib {
+    Move 'Lucid visuals' 120 0 "v-away-$dpi"
+    Move 'Lucid visuals' -114 0 "v-gap6-$dpi"
+    Move 'Lucid visuals' 120 0 "v-away2-$dpi"
+    Move 'Lucid visuals' -130 0 "v-over10-$dpi"
+    Move 'Lucid visuals' 120 0 "v-away3-$dpi"
+    Move 'Lucid visuals' -150 0 "v-over30-$dpi"
+  }
+  RunWith "library $dpi" $lib {
+    Move 'Lucid library' -120 0 "l-away-$dpi"
+    Move 'Lucid library' 130 0 "l-over10-$dpi"
+    Size 'Lucid visuals' -150 "v-size-$dpi"
+  }
+}
