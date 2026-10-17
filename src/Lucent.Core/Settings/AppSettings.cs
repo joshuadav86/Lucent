@@ -28,6 +28,9 @@ public sealed class AppSettings
     /// <summary>Whether the library lists only the favourite songs.</summary>
     public bool LibraryFavoritesOnly { get; set; }
 
+    /// <summary>Whether the library lists the saved playlists instead of the library folders.</summary>
+    public bool LibraryShowPlaylists { get; set; }
+
     /// <summary>Library folder headings the user has closed.</summary>
     public List<string> CollapsedLibraryFolders { get; set; } = new();
 
