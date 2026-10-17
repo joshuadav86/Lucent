@@ -1,65 +1,201 @@
-<p align="center"><img src="assets/lucid-icon.png" width="112" alt="Lucid icon"></p>
+<p align="center"><img src="assets/lucid-icon.png" width="128" alt="Lucid icon"></p>
 
 <h1 align="center">Lucid</h1>
 
-<p align="center"><b>A music player for Windows with 143 GPU visuals that dance to your music.</b><br>
-Inspired by Winamp and MilkDrop, rebuilt for modern graphics cards.</p>
+<p align="center"><b>Winamp's soul, a 2026 graphics card's muscle.</b><br>
+A music player for Windows with 143 live GPU visuals, ray-traced scenes and particle storms that move to every beat.</p>
 
-<p align="center"><a href="../../releases/tag/latest"><b>⬇ Download the latest build</b></a> · Windows 10 and 11 · free and open source</p>
+<p align="center">
+  <a href="../../releases/tag/latest"><img src="https://img.shields.io/badge/download-latest%20build-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download the latest build"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Windows-10%20%26%2011-22D3EE?style=flat-square" alt="Windows 10 and 11">
+  <img src="https://img.shields.io/badge/visuals-143-D946EF?style=flat-square" alt="143 visuals">
+  <img src="https://img.shields.io/badge/Direct3D-11-F97316?style=flat-square" alt="Direct3D 11">
+  <img src="https://img.shields.io/badge/license-MIT-10B981?style=flat-square" alt="MIT license">
+</p>
+
+<p align="center">
+  <a href="#143-visuals">Visuals</a> ·
+  <a href="#the-player">Player</a> ·
+  <a href="#equalizer">Equalizer</a> ·
+  <a href="#analyzer">Analyzer</a> ·
+  <a href="#skins-and-themes">Skins</a> ·
+  <a href="#download-and-run">Download</a> ·
+  <a href="#make-your-own-visuals">Make visuals</a>
+</p>
 
 ![Lucid's Black Hole visual, fullscreen](assets/screenshots/hero-black-hole.jpg)
 
-## A player that looks the part
+## What's new
 
-The player, equalizer, queue, library and visuals each get their own window, and they snap together like Winamp's did. Drag the player and everything docked to it comes along. Press D to tidy them back into one neat rectangle.
+| | |
+|---|---|
+| ✨ **50 new visuals** | Ray-traced glass, chrome and planets, plus particle storms of fire, smoke, sparks and starlings. 143 in all. |
+| 📊 **Analyzer** | A scrolling spectrogram heatmap like Winamp's Vision plugin, with a live spectrum, waveform and stereo spread scope. |
+| 🎨 **Skins** | Five skins change the shape, type and finish of every window, and any skin goes with any of the eight themes. |
+| 🎚️ **Studio equalizer** | 4, 8, 16, 24 or 32 mixing-desk faders over the music's live spectrum. |
+| 🧲 **Smoother snapping** | Docked windows move as one while you drag, and never overlap by accident. |
 
-![The Lucid player with its library, equalizer, queue and visuals docked together](assets/screenshots/player-layout.jpg)
+## 143 visuals
 
-## 143 visuals, drawn live on your graphics card
+Every visual is drawn live on your graphics card and listens to the bass, mids, treble and beat of what's playing. Auto mode studies each song ahead of time and changes visual right on a downbeat, with morphs that melt, glow, fly or fold one visual into the next.
 
-Fly through fractal worlds, kaleidoscopes, galaxies made of hundreds of thousands of particles, and rain-soaked neon cities. Every visual reacts to the bass, mids, treble and beat of what's playing. Auto mode listens to each song ahead of time and switches visuals right on a downbeat.
+### Ray traced
+
+Physically lit 3D scenes with real reflections, glass that bends light and soft shadows. 33 of them, from a diamond throwing rainbows to a whole planet under moving cloud.
 
 <table>
 <tr>
-<td><img src="assets/screenshots/sunset-highway.jpg" alt="Sunset Highway"><br><sub>Sunset Highway</sub></td>
-<td><img src="assets/screenshots/mandelbulb-bloom.jpg" alt="Mandelbulb Bloom"><br><sub>Mandelbulb Bloom</sub></td>
-<td><img src="assets/screenshots/rose-window.jpg" alt="Rose Window"><br><sub>Rose Window</sub></td>
+<td width="33%"><img src="assets/screenshots/visuals/diamond-fire.jpg" alt="Diamond Fire"><br><sub><b>Diamond Fire</b></sub></td>
+<td width="33%"><img src="assets/screenshots/visuals/blue-marble.jpg" alt="Blue Marble"><br><sub><b>Blue Marble</b></sub></td>
+<td width="33%"><img src="assets/screenshots/visuals/cornell-box.jpg" alt="Cornell Box"><br><sub><b>Cornell Box</b></sub></td>
 </tr>
 <tr>
-<td><img src="assets/screenshots/galaxy-collision.jpg" alt="Galaxy Collision"><br><sub>Galaxy Collision</sub></td>
-<td><img src="assets/screenshots/kaleido-cathedral.jpg" alt="Kaleido Cathedral"><br><sub>Kaleido Cathedral</sub></td>
-<td><img src="assets/screenshots/flower-of-life.jpg" alt="Flower of Life"><br><sub>Flower of Life</sub></td>
+<td><img src="assets/screenshots/visuals/snow-globe.jpg" alt="Snow Globe"><br><sub><b>Snow Globe</b></sub></td>
+<td><img src="assets/screenshots/visuals/crystal-organ.jpg" alt="Crystal Organ"><br><sub><b>Crystal Organ</b></sub></td>
+<td><img src="assets/screenshots/visuals/cloud-sea.jpg" alt="Cloud Sea"><br><sub><b>Cloud Sea</b></sub></td>
 </tr>
 <tr>
-<td><img src="assets/screenshots/neon-downpour.jpg" alt="Neon Downpour"><br><sub>Neon Downpour</sub></td>
-<td><img src="assets/screenshots/menger-voyage.jpg" alt="Menger Voyage"><br><sub>Menger Voyage</sub></td>
-<td><img src="assets/screenshots/cosmic-jellyfish.jpg" alt="Cosmic Jellyfish"><br><sub>Cosmic Jellyfish</sub></td>
+<td><img src="assets/screenshots/visuals/ringed-world.jpg" alt="Ringed World"><br><sub><b>Ringed World</b></sub></td>
+<td><img src="assets/screenshots/visuals/chrome-equalizer.jpg" alt="Chrome Equalizer"><br><sub><b>Chrome Equalizer</b></sub></td>
+<td><img src="assets/screenshots/visuals/forest-light.jpg" alt="Forest Light"><br><sub><b>Forest Light</b></sub></td>
 </tr>
 </table>
 
-## Find the right visual in seconds
+### Particles
 
-Press V and start typing. Visuals are sorted into families and tagged (Calm, Intense, Neon, Space, 3D and more), and you can star favorites or make your own lists for Auto mode to play from.
+Hundreds of thousands of glowing particles simulated on the graphics card every frame, with lens blur and motion streaks. 42 of them, and up to four times as many particles on Ultra detail.
+
+<table>
+<tr>
+<td width="33%"><img src="assets/screenshots/visuals/phoenix-rising.jpg" alt="Phoenix Rising"><br><sub><b>Phoenix Rising</b></sub></td>
+<td width="33%"><img src="assets/screenshots/visuals/volcanic-eruption.jpg" alt="Volcanic Eruption"><br><sub><b>Volcanic Eruption</b></sub></td>
+<td width="33%"><img src="assets/screenshots/visuals/solar-flare.jpg" alt="Solar Flare"><br><sub><b>Solar Flare</b></sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/visuals/iron-filings.jpg" alt="Iron Filings"><br><sub><b>Iron Filings</b></sub></td>
+<td><img src="assets/screenshots/visuals/magnetosphere.jpg" alt="Magnetosphere"><br><sub><b>Magnetosphere</b></sub></td>
+<td><img src="assets/screenshots/visuals/ember-storm.jpg" alt="Ember Storm"><br><sub><b>Ember Storm</b></sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/visuals/strange-attractors.jpg" alt="Strange Attractors"><br><sub><b>Strange Attractors</b></sub></td>
+<td><img src="assets/screenshots/visuals/knot-stream.jpg" alt="Knot Stream"><br><sub><b>Knot Stream</b></sub></td>
+<td><img src="assets/screenshots/visuals/dyson-swarm.jpg" alt="Dyson Swarm"><br><sub><b>Dyson Swarm</b></sub></td>
+</tr>
+</table>
+
+### Fractals, kaleidoscopes and neon worlds
+
+The MilkDrop spirit, rebuilt: fly through infinite fractals, stare into kaleidoscopes and sacred geometry, or cruise rain-soaked cyberpunk cities.
+
+<table>
+<tr>
+<td width="33%"><img src="assets/screenshots/sunset-highway.jpg" alt="Sunset Highway"><br><sub><b>Sunset Highway</b></sub></td>
+<td width="33%"><img src="assets/screenshots/mandelbulb-bloom.jpg" alt="Mandelbulb Bloom"><br><sub><b>Mandelbulb Bloom</b></sub></td>
+<td width="33%"><img src="assets/screenshots/rose-window.jpg" alt="Rose Window"><br><sub><b>Rose Window</b></sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/kaleido-cathedral.jpg" alt="Kaleido Cathedral"><br><sub><b>Kaleido Cathedral</b></sub></td>
+<td><img src="assets/screenshots/neon-downpour.jpg" alt="Neon Downpour"><br><sub><b>Neon Downpour</b></sub></td>
+<td><img src="assets/screenshots/menger-voyage.jpg" alt="Menger Voyage"><br><sub><b>Menger Voyage</b></sub></td>
+</tr>
+</table>
+
+| Family | Visuals | A few favorites |
+|---|---:|---|
+| Particles | 42 | Galaxy Collision, Phoenix Rising, Murmuration, Volcanic Eruption, Sand Yantra |
+| Ray traced | 33 | Diamond Fire, Glass and Chrome, Hall of Mirrors, Snow Globe, Tesseract |
+| Kaleidoscope | 15 | Kaleido Cathedral, Rose Window, Metatron's Cube, Flower of Life, Droste Zoom |
+| Fly-through | 12 | Menger Voyage, Mandelbox Tunnel, Wormhole Transit, Gyroid Caverns |
+| Music-shaped | 12 | Spectrum Tunnel, Cymatic Plate, Lissajous Laser, Pulsar Ridges |
+| Fractal | 11 | Mandelbulb Bloom, Apollonian Lace, Burning Ship, Newton Basins |
+| Cyberpunk | 7 | Neon Downpour, Sunset Highway, Folded Metropolis, Neon Alley |
+| Organic | 6 | Aurora Veil, Ink Flow, Shot Silk, Living Cells |
+| Cosmic | 5 | Black Hole, Bass Nebula, Cosmic Jellyfish, Supernova Remnant |
+
+<details>
+<summary><b>Graphics options</b></summary>
+
+- **Resolution:** the window's size, or 1080p, 1440p or 4K, supersampled down for finer detail
+- **Detail:** Low to Ultra, for more ray-marching steps, deeper fractals and up to four times the particles
+- **Glow:** how strongly bright parts bloom, from off to strong
+- **HDR:** highlights shine brighter than white on HDR screens
+- Transition length, morphs only, Auto timing from 10 seconds to 3 minutes, and a frame rate readout
+
+</details>
+
+### Find the right one in seconds
+
+Press **V** and start typing. Visuals sit in family folders and carry tags (Calm, Intense, Neon, Space, Fire, 3D and more). Star your favorites or make lists, and Auto mode, N and B stick to what you picked.
 
 ![The visual picker, searching for Kaleido Cathedral](assets/screenshots/visual-picker.jpg)
 
-## Fullscreen, without losing control
+### Fullscreen, without losing control
 
-Double-click the visuals (or press F11) to go fullscreen. Click once to pause or play, and right-click for a menu with a seek bar, track controls, volume and every graphics option.
+Double-click the visuals or press **F11**. Click once to pause or play, and right-click for a seek bar, track controls, volume and every graphics option.
 
 ![The right-click menu over the Neon Downpour visual in fullscreen](assets/screenshots/fullscreen-menu.jpg)
 
-## Highlights
+## The player
 
-- **Plays almost anything:** MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
-- **A real library:** link a folder and every song shows up, searchable as you type, with favorites and playlists that Winamp can open too
-- **Equalizer:** 4 to 32 bands, 15 presets, and a live response curve over the music's spectrum
-- **Analyzer:** a scrolling heatmap of every frequency over time, the waveform, a live spectrum and a stereo spread scope, like the Vision plugin
-- **Built-in audio editor:** trim, fade, normalize, change pitch and more, with undo
-- **Converter and tag editor:** make MP3, FLAC or WAV, and edit titles, artists and cover art safely
-- **Graphics options:** up to 4K supersampling, Ultra detail, adjustable glow and HDR
-- **Five skins and eight themes:** skins change the shape, type and finish of every window (Classic's bevels and LCD, Glass, Neon, brushed-metal Studio), themes change the colours, and any skin goes with any theme
-- **Make your own visuals:** each one is a single shader file (see below)
+A small player in the spirit of Winamp's, with the equalizer, queue, library, analyzer, artwork and visuals each in their own window. Edges snap to each other and to the screen, docked windows travel together while you drag, and resizing one edge resizes its neighbours. Press **D** to tidy everything back into one neat rectangle, **G** to fill the screen, or **K** to shrink it all.
+
+![The Lucid player with its library, equalizer, queue and visuals docked together](assets/screenshots/player-layout.jpg)
+
+## Equalizer
+
+<img align="right" width="400" src="assets/screenshots/equalizer.png" alt="The 16-band equalizer with the music's live spectrum behind the response curve">
+
+Docked under the player like Winamp's, with sliders styled after mixing-desk faders.
+
+- **4, 8, 16, 24 or 32 bands.** Switching keeps your curve, and the new faders rise into place.
+- **The music's live spectrum** sits behind the response curve, so problem frequencies show up as peaks.
+- **15 presets** such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own.
+- **Preamp and safe boosting.** Lucid lowers the volume a touch when you boost, so the music doesn't distort.
+- The visuals react to the equalized sound.
+
+<br clear="right">
+
+## Analyzer
+
+Open it with the heatmap button in the player, or **Y**. Four panels, and you choose which to show:
+
+| Panel | What it shows |
+|---|---|
+| **Spectrogram** | The music as a heatmap scrolling right to left, low notes at the bottom, coloured by loudness. Point at it to read the frequency. |
+| **Waveform** | The signal scrolling underneath, in step with the heatmap. |
+| **Spectrum** | Bars on the same frequency scale right now, with peak marks. |
+| **Stereo spread** | How wide the mix is, with a bar for how alike the left and right sides are. |
+
+Pick Classic (blue through red), Fire or Theme colours, and right-click to scroll slower or faster. It docks with the other windows, follows your skin and theme, and holds still while the music is paused so you can look closer.
+
+## Skins and themes
+
+Skins decide the shape, type and finish of every window. Themes decide the colours. Each skin comes with a theme it was designed around, and any skin works with any theme.
+
+| Skin | Look | Made for |
+|---|---|---|
+| **Lucid** | Soft corners, hairlines and calm, modern type | Midnight |
+| **Classic** | Square corners, raised buttons and a black LCD, like the players of 1999 | Emerald |
+| **Glass** | Frosted panes, soft light and big round buttons | Deep Ocean |
+| **Neon** | Hard edges that glow in the accent colour, over scan lines | Ultraviolet |
+| **Studio** | Brushed metal and an inset display, like rack-mounted hi-fi gear | Graphite |
+
+<p align="center"><img src="assets/themes.svg" alt="The eight themes: Midnight, Deep Ocean, Glacier, Ultraviolet, Emerald, Ember, Graphite and Rosé"></p>
+
+## Everything else a music player needs
+
+| | |
+|---|---|
+| 🎵 **Plays almost anything** | MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF |
+| 📚 **Library** | Link a folder and every song shows up, searchable as you type |
+| ❤️ **Favorites and playlists** | Heart songs, star visuals, and save .m3u8 playlists Winamp can open too |
+| ✂️ **Audio editor** | Trim, fade, normalize to dB or LUFS, change pitch, reverse, with undo |
+| 🔁 **Converter** | Make MP3, FLAC or WAV, with tags and artwork carried across |
+| 🏷️ **Tag editor** | Titles, artists, lyrics and cover art, saved safely to a checked copy first |
+| 🖼️ **Artwork window** | The playing song's cover, as big as you like |
 
 ## Download and run
 
@@ -69,69 +205,54 @@ Double-click the visuals (or press F11) to go fullscreen. Click once to pause or
 
 Nothing needs installing. If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**. Lucid.exe works on its own too, but keep the Presets folder beside it if you want to change or add visuals.
 
-## Everything Lucid does
+## Keyboard shortcuts
+
+Shortcuts work from any Lucid window, and your keyboard's media keys work while Lucid has focus.
+
+| Playback | | Windows | | Visuals | |
+|---|---|---|---|---|---|
+| `Space` | Play or pause | `W` `Q` `L` | Visuals, queue, library | `N` / `B` | Next or previous visual |
+| `Z` / `X` | Previous or next track | `E` | Equalizer | `V` | Visual picker |
+| `S` | Shuffle | `Y` | Analyzer | `A` | Auto mode |
+| `R` | Repeat off, all or one | `C` | Artwork | `F` | Star the visual |
+| `H` | Favorite the song | `D` / `G` / `K` | Dock, fill, shrink | `F11` / `Esc` | Fullscreen, leave it |
+| `Enter` / `Delete` | Play or remove selected | `O` | Options | `Ctrl+I` | Edit song info |
 
 <details>
-<summary>The full feature list and keyboard shortcuts</summary>
+<summary><b>The full feature list</b></summary>
 
-- Plays MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus and AIFF
 - A small player window like Winamp's, with a big time display, a spectrum meter (click it for a waveform, or to hide it), a scrolling title, and the bitrate and sample rate
-- The visuals, the queue and the library each have their own window. Their edges snap to each other and to the screen (keep dragging to pull a window free), and a window dropped beside others with one corner lined up stretches a little to line up its other corner too, and dragging the player carries every window docked to it, including ones that are switched off. The equalizer opens with the player, docked right underneath it like Winamp's, with the queue below it. The visuals and library docked beside the player always line up with the bottom of the column under it, so the windows form one neat rectangle whichever of the equalizer and queue are open. The queue and library always open docked to the player (the queue underneath, the library to the left), and the artwork window opens docked to the outside of the group wherever there's room, and you can drag any of them away from there. Resizing a window resizes the windows docked to it: drag the edge between two windows to move both, or an outside edge they share (like the bottom of the queue and the visuals) to stretch them together; hold Ctrl to resize just one. Press D, or right-click the window switches in the player, to dock every window back around the player, G to fill the screen with them, or K to shrink them all to their smallest. The visuals open with the player; the Visuals, Queue and Library switches in the player show or hide each one, and Lucid remembers where you left them
-- Add files or whole folders with the eject button, or drag them onto any Lucid window
+- The visuals, queue, library, equalizer, analyzer and artwork each have their own window. Edges snap to each other and to the screen (keep dragging to pull a window free). A window dropped beside others with one corner lined up stretches a little to line up its other corner too. Dragging the player carries every window docked to it, even ones that are switched off, and docked windows stay together throughout the drag. Windows never end up overlapping by accident
+- The equalizer opens docked under the player, with the queue below it. The visuals and library line up with the bottom of the column, so the windows form one neat rectangle whichever are open. Lucid remembers where you left them
+- Resizing a window resizes the windows docked to it: drag the edge between two windows to move both, or an outside edge they share to stretch them together; hold Ctrl to resize just one
+- On a first start, just the player, equalizer and visuals open
+- Add files or folders with the eject button, or drag them onto any Lucid window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
-- A music library: link a folder and every song inside it is listed, newest first, with other sort orders and folder headings you can open or close. Type in the search box at the top (or press Ctrl+F) to find songs by title, artist, album or file name as you type; Esc clears it
-- Favorite songs: click the heart in the player (or press H), or right-click songs in the queue or library. The FAVORITES pill in the library shows only them
-- Playlists: save the queue as a playlist, add songs to one from the queue or library (right-click), and play them or add them to the queue from **Playlists** in the queue window. They're saved as standard .m3u8 files, so Winamp and other players can open them too
-- Shows track title, artist and length from the file's tags
-- Edit a song's info: right-click it in the queue or library (or the song name in the player) and choose **Edit info…**, or press Ctrl+I. Change the title, artist, album, album artist, year, track and disc numbers, genre, composer, BPM, comment and lyrics, and see the file's format, quality and size. Choose several songs to change them all at once (fields that differ say "several values" and stay as they are unless you type in them)
-  - Artwork: add a cover by choosing a picture, dropping one onto the cover, or pasting one you've copied (Ctrl+V). Remove it, or save it as an image. Very large pictures are shrunk to 1600 pixels so files don't balloon
-  - Saving is safe: the new info is written to a copy that's checked before it replaces the original, so a problem can't damage your music. Files that can't be saved are listed with the reason. The song playing only pauses for a moment
-  - Songs keep their date when edited, so they stay put in the library's newest-first order (switch "Keep the files' dates" off if you'd rather they move to the top)
-- An artwork window: click **Art** in the player, or press C, to see the playing song's cover as big as you like. It uses the cover stored in the file, or a folder.jpg, cover.jpg or front.jpg next to it. Pin it on top of other windows, and right-click it to copy or save the picture or edit the song's info
-- An audio editor: click the waveform button in the player's title bar, or right-click a song in the queue or library and choose **Open in editor…**. It shows the song's left and right channels; drag to select part of it (Shift extends, Ctrl+A selects everything), the wheel zooms and Shift+wheel scrolls, and Space plays from the cursor or plays the selection
-  - Effects change the selection, or the whole song when nothing is selected: normalize (to a peak of −0.1, −1 or −3 dB, or to a loudness of −14, −16 or −23 LUFS), change the pitch by up to 12 semitones either way in 0.1 steps (keeping the speed, or like a faster or slower record), gain, fade in and out, trim, delete, silence and reverse. Ctrl+Z undoes and Ctrl+Y redoes
-  - **Save** replaces the original after asking (formats Lucid can't write, like M4A or OGG, are saved as a new FLAC file instead). **Save as new version** keeps the original and suggests "Song (edited)". The tags and artwork come along, and the new file is checked before it replaces anything
-- A converter: right-click songs and choose **Convert to…**, or use the waveform button. Make MP3 (128 to 320 kbps, or VBR V0 and V2), FLAC (16 or 24-bit) or WAV (16, 24 or 32-bit float), keep the sample rate or change it to 44.1 or 48 kHz, and put the new files next to the originals or in a folder you choose. Several songs convert at once, tags and artwork are copied, and nothing is replaced without asking
-- GPU visualizer (Direct3D 11) that reacts to bass, mids, treble and beats, with MilkDrop-style feedback trails
-- 143 visuals in eight families:
-  - **Fly-through worlds:** Menger Voyage, Gyroid Caverns, Hyperspace Rings, Mandelbox Tunnel, Fractal Temple, Crystal Cavern, Wormhole Transit, Folded Metropolis, Kleinian Reef, Fibre Optic Braid and more
-  - **Kaleidoscopes and sacred geometry:** Crystal Kaleidoscope, Kaleido Cathedral, Sacred Geometry, Rose Window, Metatron's Cube, Flower of Life, Penrose Mosaic, Prism Mandala, Lotus Bloom, Droste Zoom and more
-  - **Fractals:** Julia Kaleidoscope, Apollonian Lace, Mandelbrot Dive, Mandelbulb Bloom, Burning Ship, Kleinian Limit, Newton Basins, Kali Flame, Koch Snowflake, Fractal Forest and more
-  - **Music-shaped:** Spectrum Tunnel, Neon Oscilloscope, Cymatic Plate, Pulsar Ridges, Spectral Sunflower, Spectrum Galaxy, Lissajous Laser, Plasma Orb, Caustic Rings, Beat Shards and more
-  - **Cosmic and organic:** Bass Nebula, Aurora Veil, Black Hole, Cosmic Jellyfish, Supernova Remnant, Electric Storm, Ink Flow, Chrome Blobs, Shot Silk, Living Cells and more
-  - **Particles:** hundreds of thousands of glowing particles moving on the graphics card every frame: Strange Attractors, Galaxy Collision, Firework Mandala, Silk Currents, Sonic Dandelion, Knot Stream, Lava Lamp, Fireworks Night, Abyssal Glow, Stellar Nursery, Grand Spiral and Orrery, and five built on sacred geometry: Sand Yantra, Seed of Life, Platonic Nest, Torus Field and Golden Angle, plus Murmuration, Ember Storm, Solar Flare, Meteor Shower, Volcanic Eruption, Quantum Orbitals, Magnetosphere, Shape Shifter, Cosmic Web, DNA Helix, Smoke Rings, Phoenix Rising, Iron Filings and more
-  - **Cyberpunk:** rain-soaked neon cities and retro-futurist worlds: Neon Downpour, Sunset Highway, Hologram Billboards, Neon Alley and Circuit City
-  - **Ray traced:** clean, physically lit 3D scenes with real reflections, glass that bends light, and soft shadows: Glass and Chrome, Newton's Cradle, Glass Prism, Sunlit Pool, Hall of Mirrors, Gyroscope, Diamond Fire, Disco Ball, Ferrofluid, Cornell Box, Cathedral Light, Ringed World, Blue Marble, Cloud Sea, Tesseract, Pendulum Wave and more, and scenes full of particles: Snow Globe, Hourglass, Champagne Toast, Dancing Fountains and Spark Forge
-- A visual picker: click the visual's name under the visuals (the button with the screen-and-spark icon), or press V, to choose any visual from a list. Just start typing to search it by name, family or tag: Enter shows the first match, Esc clears the search, and N and B, and Auto mode, stick to the matches
-- Favorite visuals and lists of visuals: star a visual in the picker, with the star under the visuals, or with F. The menu at the top of the picker switches between all visuals, your favorites and lists you make (right-click a visual to add it to one). The picker, N and B, and Auto mode then stick to that list
-- Folders and tags in the visual picker: visuals are listed in folders by family (Fractal, Cosmic, Particles and so on) that you can open or close, or switch off with the FOLDERS pill. Tick tags on the left (Calm, Intense, Neon, Space, 3D and more) to show only visuals with any of those tags; CLEAR shows everything again. N and B, and Auto mode, stick to what the picker shows
-- Smooth transitions between visuals, including morphs where one visual melts, glows, flies or folds into the next, and an Auto mode that moves to a new visual on the beat every 25 seconds or so. Lucid listens to each song ahead of time to find its bars, so Auto's changes land right on a downbeat, at the start of a phrase where it can. The AUTO pill under the visuals shows how often; click the arrow beside it (or right-click the pill) to choose anything from 10 seconds to 3 minutes
-- Options (the gear in the player's title bar, or O):
-  - **Resolution:** draw visuals at the window's size, or at 1080p, 1440p or 4K. Above the window's size they're drawn bigger and shrunk to fit (supersampling), for smoother, finer detail
-  - **Detail:** Low to Ultra, for more ray-marching steps and deeper fractals in the 3D and fractal visuals, and up to four times as many particles in the particle visuals
-  - **Glow:** how strongly bright parts bloom, from off to strong
-  - **HDR:** on screens with HDR turned on in Windows, highlights shine brighter than normal white
-  - How often Auto mode changes visual, how long transitions take, morphs only, and an optional frame rate readout (shown under the visuals)
-- A Winamp-style equalizer under the player, the same width, open from the start (the EQ switch in the player, or E, shows or hides it, and the queue moves to make room): choose 4, 8, 16, 24 or 32 bands, drag the sliders (double-click one to put it back to 0) with the response curve drawn live above them over the music's live spectrum, so problem frequencies show up as peaks, set the preamp, and pick from 15 presets such as Bass Boost, Rock, Vocal, Late Night and Small Speakers, or save your own. Changing the band count keeps your curve (the new sliders rise into place one after another, and presets and Reset glide the sliders and curve to their new settings), the visuals react to the equalized sound, and Lucid turns the volume down a touch when you boost so the music doesn't distort
-- An analyzer window (the heatmap button in the player, or Y) that paints the music as a heatmap scrolling right to left, low notes at the bottom and high ones at the top, coloured by how loud each frequency is, with the waveform scrolling underneath in step, like Winamp's Vision plugin. Beside them are the spectrum right now, as bars on the same frequency scale with peak marks, and a stereo spread scope that shows how wide the mix is, with a bar for how alike the two sides are. Choose which of the four to show with Panels (or a right-click), pick Classic (blue through red), Fire or Theme colours, right-click to scroll slower or faster, and point at it to read the frequency. It docks and snaps with the other windows and follows the skin and theme, and it holds still while the music is paused so you can look closer
-- Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
-- Five skins that change the whole look: Lucid, Classic, Glass, Neon and Studio. Each comes with a theme it was made for, and you can pick another theme to go with it
+- A music library, newest first, with other sort orders and folder headings you can open or close. Search by title, artist, album or file name as you type (Ctrl+F); Esc clears it
+- Favorite songs: the heart in the player (or H), or right-click songs in the queue or library. The FAVORITES pill in the library shows only them
+- Playlists: save the queue, add songs from the queue or library, and play them from **Playlists** in the queue window. They're standard .m3u8 files
+- Edit a song's info (right-click it, or Ctrl+I): title, artist, album, album artist, year, track and disc, genre, composer, BPM, comment and lyrics. Edit several songs at once. Add, paste, remove or save cover art; very large pictures are shrunk to 1600 pixels. New info is written to a checked copy before it replaces the original, and songs keep their date so they stay put in the library
+- An artwork window (Art in the player, or C) that uses the file's cover, or a folder.jpg, cover.jpg or front.jpg next to it. Pin it on top, copy or save the picture
+- An audio editor (the waveform button in the player, or **Open in editor…** on a song) showing both channels. Drag to select, the wheel zooms, Space plays. Normalize to a peak of −0.1, −1 or −3 dB or a loudness of −14, −16 or −23 LUFS, change pitch by up to 12 semitones in 0.1 steps (keeping the speed or like a record), gain, fade in and out, trim, delete, silence and reverse, with undo and redo. Save over the original after asking, or as a new version; formats Lucid can't write are saved as FLAC
+- A converter (**Convert to…**): MP3 at 128 to 320 kbps or VBR V0 and V2, FLAC at 16 or 24-bit, WAV at 16, 24 or 32-bit float, at the original sample rate or 44.1 or 48 kHz. Several songs at once, tags and artwork copied, nothing replaced without asking
+- A Direct3D 11 visualizer with MilkDrop-style feedback trails, and visuals that compile in the background and are kept on disk, so the app starts straight away
+- The visual picker lists visuals in family folders (switch them off with the FOLDERS pill) and filters by tag; CLEAR shows everything again. Enter shows the first match, Esc clears the search
+- Favorite visuals and lists: star a visual in the picker, under the visuals, or with F. The menu at the top of the picker switches between all visuals, favorites and your lists
+- Auto mode moves to a new visual about every 25 seconds, on a downbeat at the start of a phrase where it can. The AUTO pill shows how often; click the arrow beside it to choose anything from 10 seconds to 3 minutes
+- Fullscreen: double-click or F11. Leave with Esc, a double-click, the × in the top-right corner, or the right-click menu. Click once to pause or play, in a window or fullscreen
+- The right-click menu on the visuals: fullscreen, a seek bar, play or pause, stop, next and previous track, volume, the next or previous visual, the picker, favorite, Auto and its timing, and the graphics options
 - Remembers the last visual, your options, your skin and your theme
-- Visuals compile in the background and are kept on disk, so the app starts straight away
-- Fullscreen visuals: double-click the visualizer or press F11. To leave, press Esc, double-click again, click the × that appears in the top-right corner when you move the mouse, or right-click and choose Leave fullscreen
-- Click the visuals once to pause or play the music, in a window or fullscreen
-- Right-click the visuals for a menu: fullscreen, a bar to move through the song, play or pause, stop, next and previous track and a volume slider (in fullscreen, where the player is hidden), the next or previous visual, the picker, favorite, Auto and how often it changes, and the graphics options (resolution, detail, glow, HDR and the frame rate readout), in fullscreen too
-
-**Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, D docks them all back around the player, G stretches them to fill the screen, K shrinks them all to their smallest, O opens options, E opens the equalizer, Y opens the analyzer, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, C opens the artwork window, Ctrl+I edits the selected (or playing) song's info, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
 
 </details>
 
-## Making your own visuals
+## Make your own visuals
 
 Each visual is one HLSL pixel shader file in [`src/WinampInspiredVisualizer/Presets`](src/WinampInspiredVisualizer/Presets) (and in the `Presets` folder next to the app once downloaded). A preset defines one function:
 
 ```hlsl
 // Name: My Visual
+// Family: Kaleidoscope
+// Tags: Calm, Neon
 float3 Render(float2 uv, float2 p)
 {
     float3 trail = previous(toUv(p * 1.02)) * 0.92;   // last frame, zoomed in a little
@@ -140,11 +261,11 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. Optional `// Family: Fractal` and `// Tags: Calm, Neon, 3D` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/WinampInspiredVisualizer/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/WinampInspiredVisualizer/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into the `Presets` folder and restart the app to see it. Every pull request checks that all presets compile.
 
-A particle visual also defines `Spawn`, `Simulate` and `Show`, which start, move and draw each of its particles; the engine runs them for every particle each frame on the graphics card and adds the glowing dots into a layer that `Render` reads with `particles(uv)`. A `// Particles: 300000` line sets how many run on Normal detail. Random numbers, 3D projection with lens blur, curl-noise flow and motion streaks are in [`Shaders/Particles.hlsli`](src/WinampInspiredVisualizer/Shaders/Particles.hlsli).
+A particle visual also defines `Spawn`, `Simulate` and `Show`, which start, move and draw each of its particles. The engine runs them for every particle each frame on the graphics card and adds the glowing dots into a layer that `Render` reads with `particles(uv)`. A `// Particles: 300000` line sets how many run on Normal detail. Random numbers, 3D projection with lens blur, curl-noise flow and motion streaks are in [`Shaders/Particles.hlsli`](src/WinampInspiredVisualizer/Shaders/Particles.hlsli).
 
-## Building from source
+## Build from source
 
 Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) on Windows.
 
