@@ -49,7 +49,7 @@ A modern, open-source music player for Windows with GPU-powered visualizations i
 - Eight themes for everything around the visuals: Midnight, Deep Ocean, Glacier (light), Ultraviolet, Emerald, Ember, Graphite and Rosé
 - Remembers the last visual, your options and your theme
 - Visuals compile in the background and are kept on disk, so the app starts straight away
-- Fullscreen visuals: double-click the visualizer or press F11
+- Fullscreen visuals: double-click the visualizer or press F11. To leave, press Esc, double-click again, click the × that appears in the top-right corner when you move the mouse, or right-click and choose Leave fullscreen
 - Right-click the visuals for a menu: fullscreen, the next or previous visual, the picker, favourite, Auto and how often it changes, and the graphics options (resolution, detail, glow, HDR and the frame rate readout), in fullscreen too
 
 **Shortcuts** (from any Lucid window): Space plays or pauses, Z and X go to the previous or next track, S turns shuffle on or off, R switches between repeat off, all and one, Enter plays the selected track, Delete removes selected tracks from the queue, N and B switch to the next or previous visual, V opens the visual picker, W, Q and L show or hide the visuals, queue and library, D docks them all back around the player, G stretches them to fill the screen, K shrinks them all to their smallest, O opens options, E opens the equalizer, A turns Auto mode on or off, F stars or unstars the visual that's showing, H does the same for the song, C opens the artwork window, Ctrl+I edits the selected (or playing) song's info, F11 toggles fullscreen and Esc leaves it. The media keys on your keyboard work while Lucid has focus.
