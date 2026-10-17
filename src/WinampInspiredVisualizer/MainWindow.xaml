@@ -45,6 +45,12 @@
                     <Button x:Name="UpdateButton" Style="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
                             Content="UPDATE" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"
                             Click="OnInstallUpdate" WindowChrome.IsHitTestVisibleInChrome="True" />
+                    <Button Style="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
+                            ToolTip="Buy me a coffee: support Lucent" Click="OnBuyMeACoffee"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Style="{StaticResource LineIcon}"
+                              Data="M2.5,6.5 H11 V10 A3.5,3.5 0 0 1 7.5,13.5 H6 A3.5,3.5 0 0 1 2.5,10 Z M11,7.5 H12 A1.75,1.75 0 0 1 12,11 H10.8 M5.5,4.5 C4.8,3.7 6.2,2.8 5.5,1.5 M8.5,4.5 C7.8,3.7 9.2,2.8 8.5,1.5" />
+                    </Button>
                     <ToggleButton x:Name="AudioToolsButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
                                   ToolTip="Edit or convert sounds" Click="OnAudioTools"
                                   WindowChrome.IsHitTestVisibleInChrome="True">
