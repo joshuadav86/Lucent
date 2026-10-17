@@ -465,14 +465,17 @@ public partial class MainWindow : Window
 
         var want = SizeOf(window);
         var resizable = window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
+        // Windows reaching past the edge of the screen leave no room on that side, rather than less than none.
+        static Size Room(double width, double height) => new(Math.Max(0, width), Math.Max(0, height));
+
         // Each spot: where its top-left corner goes for a given size, and how much room there is.
         var spots = new (Func<Size, Point> Corner, Size Room)[]
         {
-            (size => new Point(bounds.Right, bounds.Top), new Size(area.Right - bounds.Right, area.Bottom - bounds.Top)),
-            (size => new Point(bounds.Left - size.Width, bounds.Top), new Size(bounds.Left - area.Left, area.Bottom - bounds.Top)),
-            (size => new Point(player.Left, columnBottom), new Size(area.Right - player.Left, area.Bottom - columnBottom)),
-            (size => new Point(bounds.Left, bounds.Bottom), new Size(area.Right - bounds.Left, area.Bottom - bounds.Bottom)),
-            (size => new Point(bounds.Left, bounds.Top - size.Height), new Size(area.Right - bounds.Left, bounds.Top - area.Top)),
+            (size => new Point(bounds.Right, bounds.Top), Room(area.Right - bounds.Right, area.Bottom - bounds.Top)),
+            (size => new Point(bounds.Left - size.Width, bounds.Top), Room(bounds.Left - area.Left, area.Bottom - bounds.Top)),
+            (size => new Point(player.Left, columnBottom), Room(area.Right - player.Left, area.Bottom - columnBottom)),
+            (size => new Point(bounds.Left, bounds.Bottom), Room(area.Right - bounds.Left, area.Bottom - bounds.Bottom)),
+            (size => new Point(bounds.Left, bounds.Top - size.Height), Room(area.Right - bounds.Left, bounds.Top - area.Top)),
         };
 
         foreach (var shrink in new[] { false, true })
@@ -485,9 +488,9 @@ public partial class MainWindow : Window
             foreach (var (corner, room) in spots)
             {
                 var size = new Size(Math.Min(want.Width, room.Width), Math.Min(want.Height, room.Height));
-                var fits = shrink
+                var fits = size.Width > 0 && size.Height > 0 && (shrink
                     ? size.Width >= window.MinWidth && size.Height >= window.MinHeight
-                    : size.Width >= want.Width && size.Height >= want.Height;
+                    : size.Width >= want.Width && size.Height >= want.Height);
                 if (!fits)
                 {
                     continue;
