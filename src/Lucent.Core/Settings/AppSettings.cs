@@ -123,6 +123,9 @@ public sealed class AppSettings
     /// <summary>Songs marked as favourites, by file path.</summary>
     public List<string> FavoriteTracks { get; set; } = new();
 
+    /// <summary>Identifies this copy of Lucent to Plex when signing in to import a Plex library.</summary>
+    public string? PlexClientId { get; set; }
+
     /// <summary>The name the favourites go by in lists of visuals; no list of the user's can take it.</summary>
     public const string FavoritesListName = "Favorites";
 

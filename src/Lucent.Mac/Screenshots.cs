@@ -54,6 +54,8 @@ public static class Screenshots
         ("StoresSyncing", () => PreviewStores(signedIn: true, syncing: true)),
         ("StoresFirstSync", () => PreviewStores(signedIn: true, firstSync: true)),
         ("BandcampSignIn", () => new Lucent.Mac.Stores.BandcampSignInWindow()),
+        ("Import", () => PreviewImport(done: false)),
+        ("ImportDone", () => PreviewImport(done: true)),
         ("Visuals", () => PreviewVisuals()),
         ("VisualsPicker", () => PreviewVisualsPicker()),
         ("Editor", () => PreviewEditor(EditorView.Waveform)),
@@ -330,6 +332,27 @@ public static class Screenshots
         else
         {
             service.PreviewStatus("Added Burial - Antidawn to your library.");
+        }
+
+        return window;
+    }
+
+    private static Window PreviewImport(bool done)
+    {
+        var window = new ImportWindow(new MainWindow(), new AppSettings { PlexClientId = "preview" });
+        if (done)
+        {
+            window.PreviewResult(new WinampInspiredVisualizer.Import.LibraryImportResult
+            {
+                Source = WinampInspiredVisualizer.Import.ImportSource.AppleMusic,
+                Songs = 2140,
+                Found = 2093,
+                StatsUpdated = 1876,
+                Playlists = new[] { "Road trip", "Late nights", "Gym" },
+                Missing = Enumerable.Range(1, 47).Select(i => $"Artist – Song {i}").ToList(),
+                FolderToLink = "/Users/sam/Music/iTunes/iTunes Media/Music",
+                FolderToLinkSongs = 312,
+            }, newFavorites: 58);
         }
 
         return window;

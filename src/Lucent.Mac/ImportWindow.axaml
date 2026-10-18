@@ -1,0 +1,125 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.ImportWindow"
+        Title="Import from another player - Lucent"
+        Width="520" SizeToContent="Height" CanResize="False"
+        Background="{DynamicResource SurfaceBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <ControlTheme x:Key="DialogButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.4" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="SourceButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="DockPanel.Dock" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="12,2,0,0" />
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.4" />
+            </Style>
+        </ControlTheme>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="TextBlock.sourceName">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
+        <Style Selector="TextBlock.sourceHint">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,3,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+    </Window.Styles>
+
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <StackPanel>
+            <!-- Title bar -->
+            <Grid Height="40" Background="Transparent" w:Chrome.IsCaption="True">
+                <TextBlock Text="IMPORT FROM ANOTHER PLAYER" Margin="20,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <Button Theme="{StaticResource CloseCaptionButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip.Tip="Close" Click="OnCloseButton">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <StackPanel x:Name="Sources" Margin="20,0,20,20">
+                <TextBlock Classes="sourceHint" Margin="0,0,0,6"
+                           Text="Bring your playlists, play counts, ratings and loved songs over. Songs are matched to the music in your library, so link your music folders first." />
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button Theme="{StaticResource SourceButton}" Content="IMPORT" Click="OnAppleMusic" />
+                    <StackPanel>
+                        <TextBlock Classes="sourceName" Text="Apple Music or iTunes" />
+                        <TextBlock Classes="sourceHint"
+                                   Text="In the Music app, choose File &gt; Library &gt; Export Library, then choose the file it saved. An &quot;iTunes Library.xml&quot; from iTunes or MusicBee works too." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button Theme="{StaticResource SourceButton}" Content="IMPORT" Click="OnPlaylistFiles" />
+                    <StackPanel>
+                        <TextBlock Classes="sourceName" Text="foobar2000 and other playlists" />
+                        <TextBlock Classes="sourceHint"
+                                   Text="Choose playlist files: foobar2000's own, or .m3u, .pls, .xspf and .wpl files from VLC, Swinsian and other players." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button x:Name="FileTagsButton" Theme="{StaticResource SourceButton}" Content="READ" Click="OnFileTags" />
+                    <StackPanel>
+                        <TextBlock Classes="sourceName" Text="Ratings and play counts in your songs" />
+                        <TextBlock Classes="sourceHint"
+                                   Text="Many players save ratings in the files themselves. In foobar2000, save the playback statistics to the files' tags first." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button x:Name="PlexButton" Theme="{StaticResource SourceButton}" Content="SIGN IN" Click="OnPlex" />
+                    <StackPanel>
+                        <TextBlock Classes="sourceName" Text="Plex" />
+                        <TextBlock x:Name="PlexText" Classes="sourceHint"
+                                   Text="Sign in on Plex's website, and Lucent reads the music library and playlists on your Plex Media Server." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button Theme="{StaticResource SourceButton}" Content="IMPORT" Click="OnYouTubeMusic" />
+                    <StackPanel>
+                        <TextBlock Classes="sourceName" Text="YouTube Music playlists" />
+                        <TextBlock Classes="sourceHint"
+                                   Text="Download your YouTube Music data from Google Takeout (takeout.google.com), unzip it, and choose the folder. Lucent finds the songs in your own library. Nothing is downloaded from YouTube." />
+                    </StackPanel>
+                </DockPanel>
+
+                <Border Height="1" Margin="0,20,0,0" Background="{DynamicResource HairlineBrush}" />
+
+                <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap" Margin="2,14,0,0" IsVisible="False"
+                           Foreground="{DynamicResource TextBrush}" />
+                <TextBlock x:Name="FolderText" FontSize="12" TextWrapping="Wrap" Margin="2,10,0,0" IsVisible="False"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                    <Button x:Name="MissingButton" Theme="{StaticResource DialogButton}" Content="Songs not found" IsVisible="False"
+                            Click="OnShowMissing" />
+                    <Button x:Name="LinkFolderButton" Theme="{StaticResource DialogButton}" Content="Add folder to library" Margin="8,0,0,0"
+                            IsVisible="False" Foreground="{DynamicResource AccentBrush}" Click="OnLinkFolder" />
+                    <Button x:Name="StopButton" Theme="{StaticResource DialogButton}" Content="Stop" Margin="8,0,0,0" IsVisible="False"
+                            Click="OnStop" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
