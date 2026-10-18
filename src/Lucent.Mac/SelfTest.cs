@@ -19,7 +19,8 @@ namespace Lucent.Mac;
 /// made up on the spot, and can save a contact sheet of what they look like. It records a short video
 /// as Record video does and checks the MP4 that comes out. It also translates visuals from HLSL as the
 /// app does for the user's own, and checks the result matches the build's, and puts a made-up track in
-/// macOS's Now Playing controls and reads it back. The sound checks (listing the outputs, and gapless
+/// macOS's Now Playing controls and reads it back. It times each visual at Retina size and lists the
+/// slowest (SelfTest.Timing.cs). The sound checks (listing the outputs, and gapless
 /// playback) are in SelfTest.Sound.cs.
 /// </summary>
 /// <remarks>Usage: Lucent --self-test [--sheet picture.png] [music files...]</remarks>
@@ -285,6 +286,7 @@ public static partial class SelfTest
         }
 
         output.Dispose();
+        TimeVisuals(device, engine, capture, music, ref now);
         var compiled = engine.Presets.Count - failed.Count;
         Console.WriteLine($"Drew {compiled} of {engine.Presets.Count} visuals in {stopwatch.Elapsed.TotalSeconds:0} s.");
         foreach (var message in failed)

@@ -42,7 +42,7 @@ float3 bokehLayer(float2 q, float cellSize, float blur, float footprint, float s
 {
     float2 cell = floor(q / cellSize);
     float3 total = 0.0;
-    [unroll]
+    [loop]
     for (int i = 0; i < 9; i++)
     {
         float2 c = cell + float2(i % 3 - 1, i / 3 - 1);
@@ -52,9 +52,16 @@ float3 bokehLayer(float2 q, float cellSize, float blur, float footprint, float s
         float radius = lerp(sharpRadius, blurRadius * lerp(0.55, 1.0, frac(h.x * 7.7)), blur);
         radius = max(radius, footprint * 1.2);
         float2 d = q - centre;
+        float soft = max(radius * lerp(0.05, 0.2, blur), footprint);
+        // Most cells have no light, and most lights are nowhere near this pixel: the disc's edge
+        // is never further out than 1.05 radius + 1.08 soft (the hexagon reaches 1/cos 30 degrees
+        // of its size), so skip the rest for those. This is most of the visual's work.
+        if (present <= 0.0 || length(d) > 1.1 * (radius + soft))
+        {
+            continue;
+        }
         float hexagon = polygon(rotate(d, 0.26), 6.0, radius * 0.95);
         float shape = lerp(length(d) - radius, hexagon, 0.55);
-        float soft = max(radius * lerp(0.05, 0.2, blur), footprint);
         float disc = 1.0 - smoothstep(-soft, soft, shape);
         float rim = 0.75 + 0.45 * smoothstep(-radius * 0.45, 0.0, shape);
         float energy = min(1.0, pow(0.03 / radius, 0.7));
