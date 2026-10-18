@@ -51,6 +51,8 @@
     <!-- Their Metal translations, from tools/MetalShaders. -->
     <None Include="$(MetalShadersFolder)\**\*.metal" Link="Shaders\Metal\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\WinampInspiredVisualizer\Assets\Lucent-64.png" Link="Assets\Lucent-64.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The song a first start puts in the library (see StarterMusic). -->
+    <None Include="..\WinampInspiredVisualizer\StarterMusic\*.mp3" Link="StarterMusic\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The editor's native helpers, next to Lucent (Mp3Writer and PluginHost look for them there). -->
     <None Include="$(MacNativeFolder)\libmp3lame.dylib" Condition="Exists('$(MacNativeFolder)\libmp3lame.dylib')" Link="libmp3lame.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="$(MacNativeFolder)\LucentPluginHost" Condition="Exists('$(MacNativeFolder)\LucentPluginHost')" Link="LucentPluginHost" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

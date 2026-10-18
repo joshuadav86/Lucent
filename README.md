@@ -268,7 +268,7 @@ Shortcuts work from any Lucent window, and your keyboard's media keys work while
 - The visuals, queue, library, equalizer, analyzer and artwork each have their own window. Edges snap to each other and to the screen (keep dragging to pull a window free). A window dropped beside others with one corner lined up stretches a little to line up its other corner too. Dragging the player carries every window docked to it, even ones that are switched off, and docked windows stay together throughout the drag. Windows never end up overlapping by accident
 - The equalizer opens docked under the player, with the queue below it. The visuals and library line up with the bottom of the column, so the windows form one neat rectangle whichever are open. Lucent remembers where you left them
 - Resizing a window resizes the windows docked to it: drag the edge between two windows to move both, or an outside edge they share to stretch them together; hold Ctrl to resize just one
-- On a first start, just the player, equalizer and visuals open
+- On a first start, just the player, equalizer and visuals open, with a song in the queue and the library to try it with: "Self Actualize" from Kepler North's *Pseudo Profound* EP. It sits in its own Starter Music folder, so take it out of the library like any other folder when you're done with it
 - Add files or folders with the eject button, or drag them onto any Lucent window
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
 - A music library, newest first, with other sort orders and folder headings you can open or close. Search by title, artist, album or file name as you type (Ctrl+F); Esc clears it
@@ -364,6 +364,8 @@ Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee
 ## License
 
 [MIT](LICENSE). Not affiliated with or endorsed by Winamp.
+
+The starter song (`StarterMusic/Kepler North - Self Actualize.mp3`) is © Kepler North and isn't covered by the MIT licence; it comes with Lucent to be played in it.
 
 MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucent.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
 

@@ -21,6 +21,12 @@ public sealed class AppSettings
     /// <summary>Folders inside the library folders that were taken out of the library.</summary>
     public List<string> HiddenLibraryFolders { get; set; } = new();
 
+    /// <summary>
+    /// Whether the music that comes with Lucent still has to be put in the library and the queue. Only a first
+    /// start (no settings file yet) sets it, so people updating from an older Lucent don't get it.
+    /// </summary>
+    public bool AddStarterMusic { get; set; }
+
     public LibrarySort LibrarySort { get; set; } = LibrarySort.Newest;
 
     public bool GroupLibraryByFolder { get; set; } = true;
@@ -212,9 +218,10 @@ public sealed class AppSettings
         catch (Exception)
         {
             // A damaged settings file just means starting from the defaults.
+            return new AppSettings();
         }
 
-        return new AppSettings();
+        return new AppSettings { AddStarterMusic = true };
     }
 
     public void Save()

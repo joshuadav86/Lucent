@@ -49,6 +49,11 @@
     <EmbeddedResource Include="Shaders\*.hlsl*" LogicalName="Shaders/%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- The song a first start puts in the library (see StarterMusic), beside Lucent.exe so it can be copied out. -->
+  <ItemGroup>
+    <None Include="StarterMusic\*.mp3" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
   <!--
     The plugin helper that runs VST3 effects for the editor (src/PluginHost), when it has been built (see the
     README; CI always builds it). It's a program of its own, so it ships beside Lucent.exe.
