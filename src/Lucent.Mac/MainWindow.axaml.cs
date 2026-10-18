@@ -314,6 +314,34 @@ public partial class MainWindow : Window
         });
         _updater.EveryBuild = _settings.EveryBuild;
         _ = _updater.RunAsync();
+        AddStarterMusic();
+    }
+
+    /// <summary>
+    /// On a first start, puts the music that comes with Lucent in the library and the queue, so the play
+    /// button has something to play. It's an ordinary library folder from then on, and can be taken out.
+    /// </summary>
+    private async void AddStarterMusic()
+    {
+        // The screenshots' made-up queue stays as it is.
+        if (!_settings.AddStarterMusic || _previewing)
+        {
+            return;
+        }
+
+        _settings.AddStarterMusic = false;
+        _settings.Save();
+        var tracks = await Task.Run(() => StarterMusic.Install().Select(Track.FromFile).ToList());
+        if (tracks.Count == 0)
+        {
+            return;
+        }
+
+        LinkLibraryFolder(StarterMusic.Folder);
+        foreach (var track in tracks)
+        {
+            _playlist.Add(new PlaylistEntry(track));
+        }
     }
 
     /// <summary>
