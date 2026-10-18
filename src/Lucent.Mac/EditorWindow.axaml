@@ -232,7 +232,7 @@
                             ToolTip.Tip="Fade down to silence over the selection (or the last 3 seconds)" />
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
                     <Button x:Name="EqButton" Theme="{StaticResource ToolButton}" Content="EQ…" Click="OnEq"
-                            ToolTip.Tip="A parametric equalizer, drawn over the selection's spectrum, heard live while you shape it" />
+                            ToolTip.Tip="A parametric equalizer drawn over the selection's spectrum and heard live while you shape it" />
                     <Button x:Name="DynamicsButton" Theme="{StaticResource ToolButton}" Content="Dynamics…" Click="OnDynamics"
                             ToolTip.Tip="A compressor to even out the level, or a true-peak limiter to make it louder without clipping" />
                     <Button x:Name="RepairButton" Theme="{StaticResource ToolButton}" Click="OnRepair"
