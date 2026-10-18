@@ -234,7 +234,7 @@
                             ToolTip.Tip="Listening volume (⇧↑ and ⇧↓). It changes only what you hear, not the sound itself; the Volume tool does that." />
                     <TextBlock x:Name="VolumeText" Width="34" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"
                                Foreground="{DynamicResource MutedTextBrush}" />
-                    <editor:LevelMeter x:Name="Meter" Width="230" Margin="0,0,14,0" VerticalAlignment="Center"
+                    <editor:LevelMeter x:Name="Meter" Width="190" Margin="0,0,14,0" VerticalAlignment="Center"
                                        BarBrush="{DynamicResource AccentBrush}" TrackBrush="{DynamicResource HairlineBrush}"
                                        LabelBrush="{DynamicResource MutedTextBrush}" />
                     <ToggleButton x:Name="SpectrogramToggle" Theme="{StaticResource ToolToggle}" Content="Spectrogram"
@@ -244,6 +244,9 @@
                                   ToolTip.Tip="The hand tool (G): drag a clip's waveform to slide it left or right, leaving silence behind it. Turn it off to select again." />
                     <ToggleButton x:Name="SnapToggle" Theme="{StaticResource ToolToggle}" Content="Snap" Click="OnSnapToggle"
                                   ToolTip.Tip="Snap the cursor and selection to the nearest zero crossing, so cuts don't click. Hold ⌘ to place them freely." />
+                    <ToggleButton x:Name="TransientToggle" Theme="{StaticResource ToolToggle}" Content="Tab" Click="OnTransientToggle"
+                                  ContextRequested="OnTransientMenu"
+                                  ToolTip.Tip="Tab to Transient: Tab jumps the cursor to the next drum hit or note, ⇧Tab to the one before, and adding ⌥ selects up to it. Right-click to set how sensitive it is." />
                     <Border Width="1" Height="20" Margin="4,0,8,0" Background="{DynamicResource HairlineBrush}" />
                     <Button x:Name="UndoButton" Theme="{StaticResource DimmingIconButton}" Click="OnUndo" ToolTip.Tip="Undo (⌘Z)">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource UndoIcon}" />
@@ -503,6 +506,22 @@
                                Text="Every 6 dB doubles or halves the level. Above 0 dB, loud parts may distort; Normalize avoids that." />
                     <Button Theme="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
                             Click="OnApplyGain" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Tab to Transient's sensitivity -->
+        <Popup x:Name="TransientPopup" PlacementTarget="{Binding #TransientToggle}" Placement="BottomEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="TransientValue" DockPanel.Dock="Right" FontSize="13" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Transient sensitivity" />
+                    </DockPanel>
+                    <Slider x:Name="TransientSlider" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                            ValueChanged="OnTransientSensitivityChanged" />
+                    <TextBlock x:Name="TransientCount" Theme="{StaticResource OptionHint}" />
                 </StackPanel>
             </Border>
         </Popup>

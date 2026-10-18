@@ -35,6 +35,7 @@ public partial class EditorWindow
     private Popup[] ToolPopups => new[]
     {
         GainPopup, PitchPopup, TempoPopup, EqPopup, DynamicsPopup, WidthPopup, NoisePopup, ClickPopup, AnalysisPopup, StemsPopup,
+        TransientPopup,
     };
 
     private void InitTools()

@@ -33,6 +33,12 @@ public sealed class EditorSettings
     /// <summary>Selections and the cursor land on the nearest zero crossing.</summary>
     public bool SnapToZeroCrossings { get; set; } = true;
 
+    /// <summary>Tab and Shift+Tab jump the cursor to the next and previous transient (a drum hit, the start of a note).</summary>
+    public bool TabToTransient { get; set; } = true;
+
+    /// <summary>How readily Tab to Transient counts an onset as a transient, from 0 (only hard hits) to 100 (every onset).</summary>
+    public double TransientSensitivity { get; set; } = Transients.DefaultSensitivity;
+
     /// <summary>How long the crossfade at a cut, paste or clip move is, in milliseconds (0 for none).</summary>
     public int CrossfadeMs { get; set; } = 10;
 
