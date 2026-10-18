@@ -83,6 +83,7 @@ public partial class MainWindow : Window
                 var count => $"{count} tracks",
             };
             _shuffleHistory.RemoveAll(entry => !_playlist.Contains(entry));
+            ForgetUpNext();
             ShowNowPlaying(_current?.Track);
         };
 
@@ -90,6 +91,8 @@ public partial class MainWindow : Window
         _player.Volume = (float)VolumeSlider.Value;
         _player.Equalizer.Apply(_settings.Equalizer);
         _player.TrackEnded += (_, _) => OnTrackEnded();
+        _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
+        ApplySoundSettings();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -97,6 +100,7 @@ public partial class MainWindow : Window
         {
             UpdatePosition();
             UpdateSongClock();
+            LineUpNext();
         };
         _positionTimer.Start();
 
@@ -1080,6 +1084,7 @@ public partial class MainWindow : Window
         var tab = (sender as RadioButton)?.Tag as string;
         GraphicsTab.Visibility = tab == "Graphics" ? Visibility.Visible : Visibility.Collapsed;
         VisualsTab.Visibility = tab == "Visuals" ? Visibility.Visible : Visibility.Collapsed;
+        SoundTab.Visibility = tab == "Sound" ? Visibility.Visible : Visibility.Collapsed;
         ThemeTab.Visibility = tab == "Theme" ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -1179,6 +1184,7 @@ public partial class MainWindow : Window
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
+        ShowSoundValues();
     }
 
     /// <summary>Applies the chosen theme and skin to every window.</summary>
@@ -1446,6 +1452,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        ForgetUpNext();
+        _player.Play();
+        ShowEntryPlaying(entry);
+    }
+
+    /// <summary>Shows <paramref name="entry"/> as the track playing, once the player has it.</summary>
+    private void ShowEntryPlaying(PlaylistEntry entry)
+    {
         if (_current is not null)
         {
             _current.IsCurrent = false;
@@ -1461,8 +1475,8 @@ public partial class MainWindow : Window
         _queue.PlaylistView.SelectedItem = entry;
         _queue.PlaylistView.ScrollIntoView(entry);
 
-        _player.Play();
         ShowNowPlaying(entry.Track);
+        OutputStatus.Text = DescribeOutput();
         UpdatePlayPauseButton();
         UpdatePosition();
         UpdateSongClock();
@@ -1487,40 +1501,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_settings.Shuffle)
+        // The track already lined up to follow is the one to play, so a shuffle doesn't pick twice.
+        var next = _upNext is { RepeatsCurrent: false } lined ? lined : ChooseNext(wrap);
+        if (next is null)
         {
-            var unplayed = _playlist.Where(entry => !_shuffleHistory.Contains(entry)).ToList();
-            if (unplayed.Count == 0)
-            {
-                if (!wrap)
-                {
-                    StopAtEnd();
-                    return;
-                }
-
-                // Everything has played: start a fresh round, avoiding an instant repeat of this track.
-                _shuffleHistory.Clear();
-                unplayed = _playlist.Where(entry => entry != _current || _playlist.Count == 1).ToList();
-            }
-
-            PlayEntry(unplayed[_random.Next(unplayed.Count)]);
+            StopAtEnd();
             return;
         }
 
-        var index = _current is null ? -1 : _playlist.IndexOf(_current);
-        var next = index + 1;
-        if (next >= _playlist.Count)
+        if (next.StartsNewRound)
         {
-            if (!wrap)
-            {
-                StopAtEnd();
-                return;
-            }
-
-            next = 0;
+            _shuffleHistory.Clear();
         }
 
-        PlayEntry(_playlist[next]);
+        PlayEntry(next.Entry);
     }
 
     /// <summary>End of the queue: rewind the last track and stop.</summary>
@@ -1571,6 +1565,7 @@ public partial class MainWindow : Window
             _shuffleHistory.Add(_current);
         }
 
+        ForgetUpNext();
         UpdateShuffleRepeatButtons();
         _settings.Save();
     }
@@ -1585,6 +1580,7 @@ public partial class MainWindow : Window
             RepeatMode.All => RepeatMode.One,
             _ => RepeatMode.Off,
         };
+        ForgetUpNext();
         UpdateShuffleRepeatButtons();
         _settings.Save();
     }
@@ -1657,6 +1653,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Media keys work everywhere, even while typing.
+        if (MediaCommandFor(e.Key) is { } media)
+        {
+            RunMediaCommand(media, fromKey: true);
+            e.Handled = true;
+            return;
+        }
+
         // Typing in a text box (or using Ctrl/Alt shortcuts) isn't a shortcut for the player.
         if (e.OriginalSource is TextBoxBase || Keyboard.Modifiers is ModifierKeys.Control or ModifierKeys.Alt)
         {
@@ -1666,18 +1670,12 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.Space:
-            case Key.MediaPlayPause:
                 TogglePlayPause();
                 break;
-            case Key.MediaStop:
-                StopPlayback();
-                break;
             case Key.Z:
-            case Key.MediaPreviousTrack:
                 PlayPrevious();
                 break;
             case Key.X:
-            case Key.MediaNextTrack:
                 PlayNext(wrap: true);
                 break;
             case Key.F11:
@@ -1851,6 +1849,7 @@ public partial class MainWindow : Window
         // The play triangle looks centred when nudged slightly right.
         PlayPauseIcon.Margin = playing ? new Thickness(0) : new Thickness(2, 0, 0, 0);
         UpdatePlayState();
+        UpdateMediaControls();
     }
 
     /// <summary>The little play / pause / stop mark next to the time.</summary>
@@ -1863,6 +1862,7 @@ public partial class MainWindow : Window
     private void ShowNowPlaying(Track? track)
     {
         ArtworkWindow.ShowTrack(track);
+        UpdateMediaControls();
         UpdateTrackFavoriteButton();
         if (track is null)
         {

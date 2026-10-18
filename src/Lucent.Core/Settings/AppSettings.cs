@@ -58,6 +58,15 @@ public sealed class AppSettings
 
     public double Volume { get; set; } = 0.8;
 
+    /// <summary>Run each track straight into the next, with no gap between them.</summary>
+    public bool Gapless { get; set; } = true;
+
+    /// <summary>The output to play through (a Windows device id), or null for Windows' default.</summary>
+    public string? OutputDevice { get; set; }
+
+    /// <summary>Take the output for Lucent alone and send each track at its own format: bit-perfect playback.</summary>
+    public bool ExclusiveOutput { get; set; }
+
     /// <summary>Where each window was last left, by name ("Player", "Visuals", "Queue", "Library").</summary>
     public Dictionary<string, WindowBounds> Windows { get; set; } = new();
 

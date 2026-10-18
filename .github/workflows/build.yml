@@ -58,6 +58,11 @@ jobs:
           $particles = Get-Content "$root/Shaders/Particles.hlsli" -Raw
           $particleMain = Get-Content "$root/Shaders/ParticleMain.hlsli" -Raw
           if (-not (Test-Shader "Particles" ($common + "`n" + $particles) "PSSprite" "ps_5_0")) { $failed = $true }
+          # Recording a video turns frames into the encoder's NV12 pictures with these (it stands alone).
+          $video = Get-Content "$root/Shaders/VideoEncode.hlsl" -Raw
+          if (-not (Test-Shader "VideoEncode" $video "VSMain" "vs_5_0")) { $failed = $true }
+          if (-not (Test-Shader "VideoEncode" $video "PSLuma" "ps_5_0")) { $failed = $true }
+          if (-not (Test-Shader "VideoEncode" $video "PSChroma" "ps_5_0")) { $failed = $true }
           foreach ($preset in Get-ChildItem "$root/Presets/*.hlsl") {
             # Same assembly as Renderer.CompileLoop does at runtime. Particle visuals (they define
             # Simulate) also get the particle API, a compute shader and a vertex shader.
