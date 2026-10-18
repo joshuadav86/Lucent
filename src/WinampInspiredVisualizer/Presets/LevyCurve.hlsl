@@ -2,6 +2,7 @@
 // Four hair-thin lines of light fold themselves, step by step, into the lace of the Lévy C curve: every straight piece bends into a corner, then every corner bends again, until the square blossoms into a glowing tapestry. Then it slowly unfolds and begins again, the music running along the line as it goes.
 // Family: Fractal
 // Tags: Geometric, Minimal
+// Added: 2026-10-17 22:02
 
 // The Lévy C curve is made by one simple move: replace a straight line with two lines half as
 // long (well, 1/sqrt 2) meeting at a right angle, like a little roof. Do the same to each of

@@ -2,6 +2,7 @@
 // Hundreds of thousands of points hop halfway to random corners of a slowly turning polygon, and out of pure chance a perfect fractal appears: triangles within triangles, pentagons within pentagons, a carpet of squares. Every few bars the rules change and the picture snaps into a new pattern, breathing with each beat.
 // Family: Particles
 // Tags: Geometric
+// Added: 2026-10-17 22:02
 // Particles: 393216
 
 // The chaos game: start anywhere, pick a corner at random, jump part of the way towards it, repeat.

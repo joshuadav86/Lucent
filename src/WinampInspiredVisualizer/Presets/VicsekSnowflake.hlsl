@@ -2,6 +2,7 @@
 // An endless fall into a cross of ice built from five smaller crosses, each built from five smaller again. Crisp frosted outlines etch every level, glowing softly with the music as beats ripple inward.
 // Family: Fractal
 // Tags: Calm, Geometric
+// Added: 2026-10-17 21:50
 
 static const float VicsekPeriod = 9.0;   // seconds per threefold zoom
 

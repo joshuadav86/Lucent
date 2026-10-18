@@ -22,7 +22,7 @@ public static class StemModel
     private const string FileName = "htdemucs.onnx";
 
     /// <summary>Roughly how big the download is, for asking first.</summary>
-    public const int DownloadMegabytes = 85;
+    public const int DownloadMegabytes = 90;
 
     private static readonly HttpClient Http = new() { Timeout = Timeout.InfiniteTimeSpan };
 

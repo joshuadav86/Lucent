@@ -3,6 +3,7 @@
 // blooms into a turning mandala of moire petals in flowing colour that swell with the bass and ripple with the beat.
 // Family: Kaleidoscope
 // Tags: Colourful, Geometric, Retro
+// Added: 2026-10-16 23:54
 
 // Anti-aliased square wave of a phase; fades to grey where stripes get finer than a couple of pixels.
 float omStripes(float phase, float perPixel)

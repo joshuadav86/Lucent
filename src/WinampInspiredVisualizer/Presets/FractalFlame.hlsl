@@ -2,6 +2,7 @@
 // Silky veils of fire fold and curl round a slowly turning heart of light, like flame caught in glass. Their shapes melt from one form to the next as the music plays, the bass swelling the inner petals and every beat flaring them brighter.
 // Family: Particles
 // Tags: Colourful, Fire
+// Added: 2026-10-17 22:02
 // Particles: 458752
 
 // A fractal flame is the chaos game with bent rules. Each rule stretches and turns a point, then

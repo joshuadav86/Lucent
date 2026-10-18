@@ -2,6 +2,7 @@
 // A long-exposure photograph come to life: sparklers and coloured light wands sweep spirals, glowing orbs and looping ribbons through the dark, leaving trails that slowly fade; every beat starts a fresh stroke and the colours follow the music.
 // Family: Particles
 // Tags: Neon, Colourful, Dark
+// Added: 2026-10-17 17:12
 // Particles: 327680
 
 // Five lights are being waved about in a dark room. Most particles are the light they leave

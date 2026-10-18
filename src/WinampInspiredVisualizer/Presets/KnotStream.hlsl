@@ -2,6 +2,7 @@
 // Rivers of light pour endlessly around a glowing knot that reties itself into new shapes, swelling wherever its slice of the spectrum is loud.
 // Family: Particles
 // Tags: Colourful, Dark, Neon
+// Added: 2026-10-17 00:03
 // Particles: 262144
 
 // Every so often the knot reties itself: the particles flow smoothly from one knot to the next.

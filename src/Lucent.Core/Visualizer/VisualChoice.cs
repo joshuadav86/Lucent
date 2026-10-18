@@ -37,6 +37,9 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>Who made it (MilkDrop presets), or null.</summary>
     public string? Author { get; }
 
+    /// <summary>When it joined the visuals, for the picker's "Newest first" order, or null if that isn't known.</summary>
+    public DateTime? Added { get; init; }
+
     /// <summary>The name with its author, "Reaction Diffusion by Geiss", for the name shown over the visuals.</summary>
     public string Label => PresetSource.LabelFor(Name, Author);
 

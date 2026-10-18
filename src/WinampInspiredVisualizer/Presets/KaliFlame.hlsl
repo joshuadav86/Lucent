@@ -2,6 +2,7 @@
 // Kali's fold-and-invert fractal as an endless lace of fine filaments that writhes while tongues of iridescent fire lick up through it.
 // Family: Fractal
 // Tags: Intense, Colourful, Fire
+// Added: 2026-10-16 23:54
 
 // Fire colour by heat: ember red -> orange -> gold.
 float3 kaliFire(float heat)

@@ -2,6 +2,7 @@
 // Gliding past the Burning Ship fractal's armada: towering ships of fire rise from a dark sea that mirrors their flames, heat bands rolling up with the beat.
 // Family: Fractal
 // Tags: Fire, Dark
+// Added: 2026-10-16 23:54
 
 // Fire colour by heat: deep red -> orange -> gold -> white.
 float3 shipFire(float heat)

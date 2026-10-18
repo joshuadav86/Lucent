@@ -3,6 +3,7 @@
 // Heighway dragon; four dragons wind out from one point and lock together like tiles, coloured by the fold that placed them.
 // Family: Fractal
 // Tags: Geometric, Colourful
+// Added: 2026-10-17 21:41
 
 static const float DragonFirstLevel = 5.0;
 static const float DragonBeatsPerFold = 2.0;

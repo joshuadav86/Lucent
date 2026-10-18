@@ -3,6 +3,7 @@
 // out of the field and sink back, flipping which way the illusion reads, while the beat raises rings of them in light.
 // Family: Geometric
 // Tags: Geometric, Retro, 3D
+// Added: 2026-10-17 21:44
 
 // How far the column at grid cell c has lifted. Waves lift whole cubes by exactly one step and set them
 // down again, so at rest the pattern is always a perfect tiling.

@@ -2,6 +2,7 @@
 // A black mirror holding a vortex of neon shatters outward from a new spot on every beat, its shards trembling with the spectrum before the glass heals.
 // Family: Music-shaped
 // Tags: Intense, Neon, Colourful
+// Added: 2026-10-16 23:54
 
 static const float ShardSize = 0.34;
 

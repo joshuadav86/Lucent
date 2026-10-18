@@ -2,6 +2,7 @@
 // Glass marbles roll down a chrome track spiralling round a mirror-bright column, each one bending and reflecting everything around it and casting soft shadows and bright focused spots of light on a polished walnut base; their glowing hearts pulse with the music.
 // Family: Ray traced
 // Tags: Colourful, Geometric, 3D
+// Added: 2026-10-17 17:15
 
 // The track is a helix of two chrome rails held out from the column by thin spokes. Marbles
 // roll down it, vanish through a hole in the base and come back in at the top, out of sight.

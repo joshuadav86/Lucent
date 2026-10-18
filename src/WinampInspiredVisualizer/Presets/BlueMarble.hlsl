@@ -2,6 +2,7 @@
 // The Earth from orbit, turning slowly beneath you: a thin blue sky glowing along its edge, sunset orange along the line between day and night, drifting clouds casting their shadows, the sun glinting off the oceans, and city lights twinkling on the night side with the treble while storms flicker on the beat.
 // Family: Ray traced
 // Tags: Space, Calm, 3D
+// Added: 2026-10-17 17:15
 
 // The sky is computed the way real sunlight scatters in air: for each pixel we step through
 // the atmosphere, and at each step work out how much sunlight reaches that spot (dimmed and

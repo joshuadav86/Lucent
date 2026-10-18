@@ -2,6 +2,7 @@
 // A vast flock of starlings pours across a glowing dusk sky above a dark line of trees, folding, splitting and flowing back together like smoke, with waves of birds rippling through it on every beat.
 // Family: Particles
 // Tags: Calm, 3D
+// Added: 2026-10-17 17:06
 // Particles: 300000
 
 // The flock lives well out in front of the camera, above the trees. y is up in this world.

@@ -3,6 +3,7 @@
 // with its own part of the spectrum, and every beat sends a wave of light rolling outward through the grid.
 // Family: Geometric
 // Tags: Neon, 3D, Geometric
+// Added: 2026-10-17 21:44
 
 // The three directions across a hexagon's flat sides. Neighbouring cell centres are one unit apart along them.
 static const float2 HP_N0 = float2(1.0, 0.0);

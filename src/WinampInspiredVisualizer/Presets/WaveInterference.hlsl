@@ -2,6 +2,7 @@
 // A wide sheet of points stretching to the horizon, rippled by rings spreading from three drifting sources; where the ripples meet they build into crests or cancel into calm, each source rising with its own part of the music and sending out a fresh ring on every beat.
 // Family: Particles
 // Tags: Geometric, 3D, Calm
+// Added: 2026-10-17 22:17
 // Particles: 262144
 
 // The particles sit on a square grid, like the surface of a still pond seen from low down. Three

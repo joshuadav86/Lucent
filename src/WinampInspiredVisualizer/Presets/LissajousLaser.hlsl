@@ -2,6 +2,7 @@
 // A laser traces a slowly turning 3D Lissajous knot that shivers with the waveform, leaving phosphor ghosts behind.
 // Family: Music-shaped
 // Tags: Dark, Neon, Retro
+// Added: 2026-10-16 23:54
 
 float laserSegment(float2 p, float2 a, float2 b)
 {

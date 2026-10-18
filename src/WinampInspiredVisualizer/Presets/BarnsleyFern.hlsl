@@ -2,6 +2,7 @@
 // A little glade of ferns grows out of the dark, each frond unfurling from a curled tip and then swaying in a breeze that stirs with the music, every leaflet a perfect small copy of the whole.
 // Family: Particles
 // Tags: Calm
+// Added: 2026-10-17 22:02
 // Particles: 393216
 
 // Barnsley's fern is drawn by the chaos game: four simple stretch-and-turn rules, one picked at

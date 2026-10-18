@@ -2,6 +2,7 @@
 // Mirror, gold and glass spheres bounce to the beat on a polished floor, ray traced with real reflections, refraction and soft shadows, ringed by strip lights that rise with the music.
 // Family: Ray traced
 // Tags: 3D, Geometric, Colourful
+// Added: 2026-10-17 02:07
 
 static const int BallCount = 7;
 static const float RingRadius = 9.0;

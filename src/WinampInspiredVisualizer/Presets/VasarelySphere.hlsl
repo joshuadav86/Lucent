@@ -3,6 +3,7 @@
 // bass while waves of colour sweep across the squares with the music.
 // Family: Geometric
 // Tags: Geometric, Colourful, Retro
+// Added: 2026-10-17 21:37
 
 // Anti-aliased chequer of a grid coordinate: 1 on one colour, 0 on the other, grey where squares get too fine.
 float vsChequer(float2 g)

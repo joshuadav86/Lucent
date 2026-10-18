@@ -3,6 +3,7 @@
 // rewire the knots, spirals of light run along the strands, and the view falls forever through the weave.
 // Family: Kaleidoscope
 // Tags: Neon, Geometric, Retro
+// Added: 2026-10-16 23:54
 
 float twStroke(float d, float halfWidth, float px)
 {

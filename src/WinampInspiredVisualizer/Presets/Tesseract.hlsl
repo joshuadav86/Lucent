@@ -2,6 +2,7 @@
 // A four-dimensional cube turns through a direction we can't point to, its shadow in our world folding endlessly inside out: glowing glass rods and chrome joints, ray traced with reflections and soft shadows on a black mirror floor. Every beat gives the turn a fresh push and the rods glow with the spectrum.
 // Family: Ray traced
 // Tags: Geometric, Neon, 3D
+// Added: 2026-10-17 17:02
 
 // A tesseract has 16 corners, every combination of +-1 in four coordinates (x, y, z, w), and 32
 // edges joining corners that differ in just one coordinate. We turn it in 4D, then view it in

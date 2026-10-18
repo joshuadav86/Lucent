@@ -3,6 +3,7 @@
 // it: spirals of light and waves of colour sweep through the glass and every beat ripples out from the heart.
 // Family: Kaleidoscope
 // Tags: Colourful, Geometric
+// Added: 2026-10-16 23:54
 
 float rwHash(float2 p)
 {

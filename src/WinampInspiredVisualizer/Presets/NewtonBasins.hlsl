@@ -2,6 +2,7 @@
 // Newton's method hunting five drifting roots: spiralling chains of glowing beads mark the borders where the basins meet.
 // Family: Fractal
 // Tags: Colourful, Neon
+// Added: 2026-10-16 23:54
 
 float2 nbMul(float2 a, float2 b)
 {

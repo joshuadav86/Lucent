@@ -2,6 +2,7 @@
 // A quiet globe of evenly spaced points, laid out in the golden spirals of a sunflower head, that breathes with the bass; ripples run from pole to pole with the waveform, and the music slices it into rings that lift and turn and grow fine spines, each with its own part of the spectrum.
 // Family: Particles
 // Tags: Minimal, Geometric, 3D
+// Added: 2026-10-17 22:17
 // Particles: 131072
 
 // The points sit on a Fibonacci lattice: each one a golden angle round from the last as they

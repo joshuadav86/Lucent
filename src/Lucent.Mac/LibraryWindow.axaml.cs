@@ -238,6 +238,8 @@ public partial class LibraryWindow : ToolWindow
         {
             Dispatcher.UIThread.Post(() => scroller.Offset = kept, DispatcherPriority.Loaded);
         }
+
+        UpdateFoldAllButton();
     }
 
     /// <summary>Which songs the list shows: the favourites when FAVOURITES is on, and the ones matching the search. Null shows them all.</summary>
@@ -1069,6 +1071,8 @@ public partial class LibraryWindow : ToolWindow
             {
                 _collapsedFolders.Add(heading.Name);
             }
+
+            UpdateFoldAllButton();
         }
 
         var at = _rows.IndexOf(heading);
@@ -1094,6 +1098,42 @@ public partial class LibraryWindow : ToolWindow
 
             _rows.RemoveRange(at + 1, heading.Items.Count);
         }
+    }
+
+    /// <summary>Closes every folder heading, or opens them all when every one is already closed.</summary>
+    private void OnFoldAllFolders(object? sender, RoutedEventArgs e)
+    {
+        var names = _groups.Select(heading => heading.Name).ToList();
+        if (AnyFolderOpen())
+        {
+            _collapsedFolders.UnionWith(names);
+        }
+        else
+        {
+            _collapsedFolders.ExceptWith(names);
+        }
+
+        // Rebuilt in one go rather than heading by heading, which is slow with many folders.
+        RefreshView();
+    }
+
+    private bool AnyFolderOpen() => _groups.Any(heading => !_collapsedFolders.Contains(heading.Name));
+
+    /// <summary>Shows the fold-all button only over folder headings, ready to close them all or, when they're all closed, open them.</summary>
+    private void UpdateFoldAllButton()
+    {
+        FoldAllButton.IsVisible = ShowingPlaylists || _settings.GroupLibraryByFolder;
+
+        // A search opens every heading, so no match is hidden; there's nothing to fold until it's cleared.
+        FoldAllButton.IsEnabled = !IsSearching;
+        var collapse = AnyFolderOpen();
+        if (this.TryFindResource(collapse ? "CollapseAllIcon" : "ExpandAllIcon", ActualThemeVariant, out var icon)
+            && icon is Avalonia.Media.Geometry geometry)
+        {
+            FoldAllIcon.Data = geometry;
+        }
+
+        ToolTip.SetTip(FoldAllButton, collapse ? "Close every folder" : "Open every folder");
     }
 
     // ---- Keyboard ----

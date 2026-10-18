@@ -2,6 +2,7 @@
 // Forking tendrils of plasma crawl from a glowing heart to the inside of a glass globe, each one carrying a band of the spectrum and flaring on the beat.
 // Family: Music-shaped
 // Tags: Dark, Neon
+// Added: 2026-10-16 23:54
 
 static const float GlobeRadius = 0.78;
 static const int Tendrils = 14;

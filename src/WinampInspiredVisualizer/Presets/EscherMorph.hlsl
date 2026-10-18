@@ -3,6 +3,7 @@
 // pinwheeling Escher creatures before settling back into squares, each change rolling in on the downbeat.
 // Family: Geometric
 // Tags: Geometric, Colourful, Retro
+// Added: 2026-10-17 21:37
 
 // The tiling is the set of cells around a lattice of points (each pixel belongs to its nearest point).
 // Sliding the lattice from square to hexagonal, adding a second point per cell (triangles) and

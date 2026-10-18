@@ -67,6 +67,7 @@ public partial class VisualizerWindow : ToolWindow
         VisualizerFrame.Child = host;
         UpdateAutoCycleButton();
         UpdateGroupFamiliesButton();
+        SortLabel.Text = VisualSorts.Label(settings.VisualSort);
     }
 
     /// <summary>Shows or hides the frame rate readout, following the setting in Options.</summary>
@@ -139,6 +140,13 @@ public partial class VisualizerWindow : ToolWindow
             Activate();
         }
 
+        // Visuals picked or starred since it was last open move up those orders. (Not while it's open,
+        // so a row doesn't jump away from under the mouse.)
+        if (_settings.VisualSort is VisualSort.RecentlyUsed or VisualSort.FavoritesFirst)
+        {
+            ShowActiveList();
+        }
+
         PresetPopup.IsOpen = true;
         if (PresetList.SelectedItem is not null)
         {
@@ -203,6 +211,8 @@ public partial class VisualizerWindow : ToolWindow
             ShowPreset();
         }
 
+        VisualSorts.Remember(_settings.RecentVisuals, choice.Name);
+
         PresetPopup.IsOpen = false;
     }
 
@@ -217,7 +227,11 @@ public partial class VisualizerWindow : ToolWindow
             // Presets and names come from the same load, so they line up; the fallback is just in case.
             var preset = index < presets.Count ? presets[index] : null;
             var tags = (preset?.Tags ?? Array.Empty<string>()).OrderBy(VisualStyles.TagOrder).ThenBy(tag => tag, StringComparer.OrdinalIgnoreCase).ToList();
-            return new VisualChoice(name, index, preset?.Family ?? VisualStyles.OtherFamily, tags, preset?.Author) { IsFavorite = favorites.Contains(name) };
+            return new VisualChoice(name, index, preset?.Family ?? VisualStyles.OtherFamily, tags, preset?.Author)
+            {
+                IsFavorite = favorites.Contains(name),
+                Added = preset?.Added,
+            };
         }).ToList();
 
         // One tick box for every tag some visual uses. Ticks saved for tags no visual has any more are dropped,
@@ -298,15 +312,10 @@ public partial class VisualizerWindow : ToolWindow
 
     /// <summary>
     /// The visuals in the order the picker lists them, which is also the order N and B step through them:
-    /// folder by folder when grouped, A to Z within each.
+    /// folder by folder when grouped, in the chosen order within each.
     /// </summary>
     private List<VisualChoice> InPickerOrder(IEnumerable<VisualChoice> choices) =>
-        _settings.GroupVisualsByFamily
-            ? choices.OrderBy(choice => VisualStyles.FamilyOrder(choice.Family))
-                .ThenBy(choice => choice.Family, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(choice => choice.Index)
-                .ToList()
-            : choices.OrderBy(choice => choice.Index).ToList();
+        VisualSorts.Order(choices, _settings.VisualSort, _settings.GroupVisualsByFamily, _settings.RecentVisuals);
 
     /// <summary>Whether a visual has any of the ticked tags (every visual does when none are ticked).</summary>
     private bool MatchesTags(VisualChoice choice) =>
@@ -609,8 +618,94 @@ public partial class VisualizerWindow : ToolWindow
         }
     }
 
-    private void UpdateGroupFamiliesButton() =>
+    private void UpdateGroupFamiliesButton()
+    {
         GroupFamiliesButton.SetResourceReference(ForegroundProperty, _settings.GroupVisualsByFamily ? "AccentBrush" : "FaintTextBrush");
+
+        // Without folders there's nothing to open or close.
+        var folders = _settings.GroupVisualsByFamily ? Visibility.Visible : Visibility.Collapsed;
+        CollapseAllButton.Visibility = folders;
+        ExpandAllButton.Visibility = folders;
+    }
+
+    private void OnSortMenu(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = SortButton, Placement = PlacementMode.Bottom };
+        foreach (var sort in VisualSorts.All)
+        {
+            var item = new MenuItem { Header = VisualSorts.Label(sort), IsChecked = sort == _settings.VisualSort };
+            item.Click += (_, _) =>
+            {
+                _settings.VisualSort = sort;
+                _settings.Save();
+                SortLabel.Text = VisualSorts.Label(sort);
+                ShowActiveList();
+                if (PresetList.SelectedItem is not null)
+                {
+                    PresetList.ScrollIntoView(PresetList.SelectedItem);
+                }
+            };
+            menu.Items.Add(item);
+        }
+
+        // The picker closes when focus leaves it, so keep it open while the menu is up.
+        PresetPopup.StaysOpen = true;
+        menu.Closed += (_, _) => PresetPopup.StaysOpen = false;
+        menu.IsOpen = true;
+    }
+
+    private void OnCollapseAllFamilies(object sender, RoutedEventArgs e) =>
+        SetAllFamiliesOpen(false);
+
+    private void OnExpandAllFamilies(object sender, RoutedEventArgs e) =>
+        SetAllFamiliesOpen(true);
+
+    /// <summary>
+    /// Closes or opens every family folder, and remembers it. Closing all of them during a search only
+    /// takes effect once the search is cleared, since a search keeps every folder open.
+    /// </summary>
+    private void SetAllFamiliesOpen(bool open)
+    {
+        _collapsedFamilies.Clear();
+        if (!open)
+        {
+            _collapsedFamilies.UnionWith(_choices.Select(choice => choice.Family));
+        }
+
+        SaveCollapsedFamilies();
+        if (_searchWords.Length > 0)
+        {
+            return;
+        }
+
+        // Folders scrolled out of sight pick up the saved state when they're next shown.
+        foreach (var expander in Descendants<Expander>(PresetList))
+        {
+            expander.IsExpanded = open;
+        }
+
+        if (open && PresetList.SelectedItem is not null)
+        {
+            PresetList.ScrollIntoView(PresetList.SelectedItem);
+        }
+    }
+
+    private static IEnumerable<T> Descendants<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+            {
+                yield return match;
+            }
+
+            foreach (var descendant in Descendants<T>(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
 
     // Family folders remember whether they were left open or closed.
     private void OnFamilyFolderLoaded(object sender, RoutedEventArgs e)

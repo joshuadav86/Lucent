@@ -2,6 +2,7 @@
 // A city block of polished chrome and glowing coloured-glass cubes rises and falls as a giant 3D spectrum analyser, bass in the middle and treble round the edge, every block mirroring its neighbours as the camera circles slowly round.
 // Family: Ray traced
 // Tags: Geometric, Neon, 3D
+// Added: 2026-10-17 17:12
 
 // The blocks stand on a square grid. Each frame a ray steps from cell to cell across the grid
 // (only the cells it passes over), checking the one block in each, so even a big grid stays cheap.

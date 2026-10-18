@@ -3,6 +3,7 @@
 // of the Mandelbrot set, so endless spirals and seahorse tails unfold.
 // Family: Fractal
 // Tags: Calm, Colourful
+// Added: 2026-10-16 20:19
 
 float3 Render(float2 uv, float2 p)
 {

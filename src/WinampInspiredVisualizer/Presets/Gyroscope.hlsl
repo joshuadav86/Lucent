@@ -2,6 +2,7 @@
 // Nested chrome, gold and copper rings spin round a glowing glass heart above a black mirror, ray traced with reflections, refraction and soft shadows; each ring's light band follows the bass, mids or treble.
 // Family: Ray traced
 // Tags: 3D, Geometric, Dark
+// Added: 2026-10-17 02:07
 
 static const int RingCount = 3;
 static const float3 Centre = float3(0.0, 1.6, 0.0);

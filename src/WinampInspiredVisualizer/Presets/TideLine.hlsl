@@ -3,6 +3,7 @@
 // sends small ripples running along its edge, and faint wet lines mark where each wave last reached.
 // Family: Minimal
 // Tags: Minimal, Calm, Water
+// Added: 2026-10-17 21:41
 
 // The shoreline's height across the screen at time t: long slow swells plus a ripple from the treble.
 float tlShore(float x, float t, float bass, float treble)

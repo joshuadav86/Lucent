@@ -2,6 +2,7 @@
 // A crystal sculpture grown by folding space through rotating mirrors again and again: facets, spires and lattices of glassy light that refold themselves with the music, rim-lit in shifting colours.
 // Family: Fractal
 // Tags: 3D, Geometric
+// Added: 2026-10-17 21:50
 
 float3x3 kifsRotation(float3 angles)
 {

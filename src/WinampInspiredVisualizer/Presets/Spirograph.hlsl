@@ -3,6 +3,7 @@
 // gears change and a new figure blooms over the last, its petals swelling with the bass and coloured by the music.
 // Family: Geometric
 // Tags: Neon, Geometric, Colourful
+// Added: 2026-10-17 21:44
 
 // The gear sets: rolling-gear size as a fraction of the ring (teeth q over p), how far out the pen sits,
 // and whether the gear rolls inside the ring (0) or around the outside (1).

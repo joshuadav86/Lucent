@@ -2,6 +2,7 @@
 // Three colonies of glowing slime mould spread across the dark, each following its own scent until they knit together into living, branching networks of rose, cyan and gold. The bass scatters food for them to race towards, and every beat shakes them loose to find new paths.
 // Family: Particles
 // Tags: Colourful
+// Added: 2026-10-17 22:02
 // Particles: 393216
 
 // Slime mould finds its way without a brain. Each agent here is a tiny explorer that smells the

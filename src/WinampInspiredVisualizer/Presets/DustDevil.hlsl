@@ -2,6 +2,7 @@
 // A towering whirlwind of glowing sand twists its way across the desert at dusk, lit gold by the setting sun; the bass winds it tighter and faster, and every beat flings showers of grit out of the funnel.
 // Family: Particles
 // Tags: Intense, 3D
+// Added: 2026-10-17 17:12
 // Particles: 262144
 
 // World y is up; the desert floor is y = 0.

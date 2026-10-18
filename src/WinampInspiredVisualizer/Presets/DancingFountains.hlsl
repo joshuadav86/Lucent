@@ -2,6 +2,7 @@
 // A grand fountain show at night: a long line of water jets leaps, sways and fans out in choreographed patterns to the music, lit from below in shifting colours, mirrored in a dark rippling lake with the city skyline glittering behind.
 // Family: Ray traced
 // Tags: Water, Colourful, 3D
+// Added: 2026-10-17 17:12
 // Particles: 393216
 
 // The lake, the sky and the city are ray traced; the water in the air is particles. Particles come

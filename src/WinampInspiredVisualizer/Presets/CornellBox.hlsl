@@ -2,6 +2,7 @@
 // The classic red and green room, path traced with real bouncing light: soft shadows, walls tinting each other with colour, and a glass and a mirror ball that hop to the beat while the ceiling light breathes with the music.
 // Family: Ray traced
 // Tags: Calm, Geometric, 3D
+// Added: 2026-10-17 17:12
 
 // Every frame each pixel follows a light path or two at random through the room, and the result
 // is blended with the last frame's picture, so the grain of the random paths settles into a

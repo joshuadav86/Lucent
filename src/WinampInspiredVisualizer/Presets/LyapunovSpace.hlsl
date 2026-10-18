@@ -2,6 +2,7 @@
 // Polished gold shapes floating over a deep blue sea, where order meets chaos in a simple population model. Every bar of the music swaps the rhythm of the rule, and the gold melts and reforms into new shapes.
 // Family: Fractal
 // Tags: Colourful
+// Added: 2026-10-17 21:50
 
 // Each pattern is twelve steps of A and B (bit = 1 means B), read from the lowest bit up.
 uint lyapunovPattern(float index)

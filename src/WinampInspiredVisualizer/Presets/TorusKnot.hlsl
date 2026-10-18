@@ -2,6 +2,7 @@
 // Riding inside a glowing lattice tube tied into an endless torus knot, glimpsing its other loops through the mesh.
 // Family: Fly-through
 // Tags: Colourful, Neon, 3D
+// Added: 2026-10-16 23:54
 
 static const float KnotTurns = 3.0;       // times the knot circles the axis
 static const float KnotWinds = 5.0;       // times it winds through the hole

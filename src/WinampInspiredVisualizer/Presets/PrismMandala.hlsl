@@ -3,6 +3,7 @@
 // rainbow fringes that slowly reconverge, while layered rings turn against each other and keep reshaping.
 // Family: Kaleidoscope
 // Tags: Colourful, Geometric
+// Added: 2026-10-16 23:54
 
 float pmLine(float d, float halfWidth, float px)
 {

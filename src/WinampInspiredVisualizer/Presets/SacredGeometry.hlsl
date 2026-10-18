@@ -3,6 +3,7 @@
 // breathing with a different part of the spectrum, echoing back into a tunnel.
 // Family: Kaleidoscope
 // Tags: Neon, Geometric
+// Added: 2026-10-16 20:19
 
 float3 Render(float2 uv, float2 p)
 {

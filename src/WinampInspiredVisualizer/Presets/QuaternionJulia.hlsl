@@ -2,6 +2,7 @@
 // A glossy four-dimensional Julia set sliced into our world, a sculpture of lacquered lobes and curls that slowly melts into new forms. Coloured rim lights follow the bass and treble, and every beat brightens its sheen.
 // Family: Fractal
 // Tags: 3D, Dark
+// Added: 2026-10-17 21:50
 
 // Squares a quaternion.
 float4 juliaSquare(float4 a)

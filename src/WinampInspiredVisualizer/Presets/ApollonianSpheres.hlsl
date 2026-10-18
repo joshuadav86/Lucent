@@ -2,6 +2,7 @@
 // Drifting through an endless foam of pearly spheres packed inside spheres, each gap holding smaller ones forever. Light glows warmly in the hollows between them and swells with the music.
 // Family: Fractal
 // Tags: 3D, Calm
+// Added: 2026-10-17 21:50
 
 // Distance to an Apollonian packing of spheres, folding space into a repeating cell and inverting it
 // in a sphere over and over. The trap remembers the orbit for colour and occlusion.

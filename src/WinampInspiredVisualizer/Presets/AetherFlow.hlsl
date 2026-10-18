@@ -2,6 +2,7 @@
 // Silky threads of coloured light stream past a glowing glass sphere, parting smoothly round it and wrapping its surface before tumbling into slow swirling eddies behind it; the whole current surges with the bass and the glass glows from within.
 // Family: Particles
 // Tags: Calm, Colourful, 3D
+// Added: 2026-10-17 17:15
 // Particles: 262144
 
 // The light flows like an ideal fluid round a ball: the textbook "flow past a sphere", which

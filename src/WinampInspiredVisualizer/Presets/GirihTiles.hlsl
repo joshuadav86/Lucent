@@ -3,6 +3,7 @@
 // the stars open and close with the music, light runs along the straps and every beat ripples out from the centre.
 // Family: Geometric
 // Tags: Colourful, Geometric
+// Added: 2026-10-17 21:44
 
 // Anti-aliased band: 1 inside half-width w of the line, fading over one pixel.
 float gtStroke(float d, float w, float px)

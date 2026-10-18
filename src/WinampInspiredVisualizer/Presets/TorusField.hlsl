@@ -2,6 +2,7 @@
 // A breathing torus of light: streams of particles rise up through its glowing core, curl out over its nested shells and pour back down round the outside, the bass pumping the flow and each shell humming with its own band of the spectrum.
 // Family: Particles
 // Tags: Geometric, 3D, Calm, Colourful
+// Added: 2026-10-17 01:42
 // Particles: 262144
 
 // The field is a set of nested shells, like the layers of an onion bent into a ring. Particles

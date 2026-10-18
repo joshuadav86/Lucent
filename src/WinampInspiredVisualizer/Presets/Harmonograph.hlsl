@@ -3,6 +3,7 @@
 // Every few bars the paper is cleared and the pendulums start again in a new ratio; the beat leaves a tremor in the line.
 // Family: Minimal
 // Tags: Minimal, Calm, Geometric
+// Added: 2026-10-17 21:41
 
 // Memory: one pixel at the top-left of the feedback buffer, stored far too dim to see:
 // which drawing we are on, when it started (as a fraction of HgPeriod), and its seed.

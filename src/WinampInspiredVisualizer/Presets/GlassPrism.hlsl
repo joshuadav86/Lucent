@@ -2,6 +2,7 @@
 // A beam of white light splits through a floating glass prism into a rainbow, ray traced wavelength by wavelength; every colour of the spectrum glows with its own part of the music.
 // Family: Ray traced
 // Tags: 3D, Colourful, Dark
+// Added: 2026-10-17 02:07
 
 static const float PrismRadius = 0.78;   // centre to corner of the triangle
 static const float PrismLength = 0.9;    // half its length along z

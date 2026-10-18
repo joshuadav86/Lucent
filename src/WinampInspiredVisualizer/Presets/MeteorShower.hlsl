@@ -2,6 +2,7 @@
 // Meteors streak down a deep starry sky over snow-capped mountains, burning green, gold and violet and leaving glowing trains that twist slowly in the high winds; louder music brings more of them, and strong beats send a blazing fireball across the sky.
 // Family: Particles
 // Tags: Space, Calm, Dark
+// Added: 2026-10-17 17:12
 // Particles: 262144
 
 // Every meteor is a line of particles: each one waits at its place along the meteor's path, lights

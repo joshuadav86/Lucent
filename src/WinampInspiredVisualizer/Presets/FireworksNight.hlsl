@@ -2,6 +2,7 @@
 // A fireworks show over a city harbour: rockets climb on the beat and burst into peonies, golden willows, palms and glittering rings, raining embers that shimmer in the water below.
 // Family: Particles
 // Tags: Intense, Colourful, Fire
+// Added: 2026-10-17 01:51
 // Particles: 262144
 
 // Shells take turns: a new rocket goes up on every other beat, and every few seconds even in silence.

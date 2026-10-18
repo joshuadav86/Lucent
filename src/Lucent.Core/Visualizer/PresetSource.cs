@@ -13,6 +13,7 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     private static readonly Regex ParticleCountPattern = new(@"^\s*//\s*Particles:\s*(\d+)", RegexOptions.Multiline);
     private static readonly Regex FamilyPattern = new(@"^\s*//\s*Family:(.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
     private static readonly Regex TagsPattern = new(@"^\s*//\s*Tags:(.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+    private static readonly Regex AddedPattern = new(@"^\s*//\s*Added:(.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
 
     /// <summary>A MilkDrop preset (a .milk file) rather than a Lucent shader. See Visualizer/MilkDrop.</summary>
     public bool IsMilkDrop { get; } = IsMilkDropFile(FilePath);
@@ -35,6 +36,13 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     public IReadOnlyList<string> Tags { get; } = IsMilkDropFile(FilePath)
         ? VisualStyles.TagNames("Retro")
         : VisualStyles.TagNames(ReadHeader(TagsPattern, Code) + (SimulatePattern.IsMatch(Code) ? $", {VisualStyles.ParticlesTag}" : string.Empty));
+
+    /// <summary>
+    /// When it joined Lucent's visuals, from a "// Added: 2026-10-17 21:37" line, for the picker's "Newest first"
+    /// order. Without one (the user's own visuals, MilkDrop presets) it's when the file was made, or null if
+    /// there's no file to ask.
+    /// </summary>
+    public DateTime? Added { get; } = ReadAdded(FilePath, Code);
 
     /// <summary>
     /// Who made it, for MilkDrop presets named the community's way ("Geiss - Reaction Diffusion.milk"),
@@ -117,6 +125,25 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     {
         var match = pattern.Match(code);
         return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    private static DateTime? ReadAdded(string path, string code)
+    {
+        if (!IsMilkDropFile(path)
+            && DateTime.TryParse(ReadHeader(AddedPattern, code), CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var added))
+        {
+            return added;
+        }
+
+        try
+        {
+            return File.Exists(path) ? File.GetCreationTimeUtc(path) : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static int ReadParticleCount(string code)

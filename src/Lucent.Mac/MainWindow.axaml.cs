@@ -160,6 +160,14 @@ public partial class MainWindow : Window
             };
         }
 
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property == WindowStateProperty)
+            {
+                OnPlayerWindowStateChanged(e.GetOldValue<WindowState>());
+            }
+        };
+
         // Keys and dropped music, from anywhere in the player.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         AddHandler(PointerWheelChangedEvent, OnPreviewMouseWheel, RoutingStrategies.Tunnel);
@@ -995,7 +1003,14 @@ public partial class MainWindow : Window
         var area = Placement.WorkArea(this);
         var playerBottom = Top + ActualHeight;
         var height = Placement.SizeOf(equalizer).Height;
-        equalizer.Closing += (_, _) => CloseEqualizerGap(equalizer);
+        equalizer.Closing += (_, e) =>
+        {
+            // Only when it's closed on its own: closing with the player leaves the queue where it was.
+            if (e.CloseReason == WindowCloseReason.WindowClosing)
+            {
+                CloseEqualizerGap(equalizer);
+            }
+        };
         var queueBelow = _queue.IsVisible && Math.Abs(_queue.Left() - Left) < 2 && Math.Abs(_queue.Top() - playerBottom) < 2;
         var needed = playerBottom + height + (queueBelow ? _queue.MinHeight : 0) - area.Bottom;
         if (needed > 0)
@@ -1117,6 +1132,34 @@ public partial class MainWindow : Window
     }
 
     private void OnMinimize(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    /// <summary>
+    /// The windows that went down to the Dock with the player, to bring back with it. As on Windows,
+    /// the windows the player owns (visuals, queue, library, equalizer and the rest) go with it.
+    /// </summary>
+    private readonly List<Window> _minimizedWithPlayer = new();
+
+    private void OnPlayerWindowStateChanged(WindowState previous)
+    {
+        if (WindowState == WindowState.Minimized)
+        {
+            foreach (var window in OwnedWindows.Where(window => window.IsVisible && window.WindowState != WindowState.Minimized).ToList())
+            {
+                _minimizedWithPlayer.Add(window);
+                window.WindowState = WindowState.Minimized;
+            }
+        }
+        else if (previous == WindowState.Minimized)
+        {
+            foreach (var window in _minimizedWithPlayer.Where(window => window.IsVisible && window.WindowState == WindowState.Minimized))
+            {
+                window.WindowState = WindowState.Normal;
+            }
+
+            _minimizedWithPlayer.Clear();
+            Activate();
+        }
+    }
 
     private void OnCloseWindow(object? sender, RoutedEventArgs e) => Close();
 

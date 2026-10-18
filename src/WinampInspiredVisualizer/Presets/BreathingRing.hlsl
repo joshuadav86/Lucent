@@ -3,6 +3,7 @@
 // by the music, mirrored softly in a still black floor below.
 // Family: Minimal
 // Tags: Minimal, Calm, Dark
+// Added: 2026-10-17 21:37
 
 // Ring radius at an angle: a slow breath, the bass, and a soft ripple from the spectrum (mirrored left and right).
 float brRadius(float angle)

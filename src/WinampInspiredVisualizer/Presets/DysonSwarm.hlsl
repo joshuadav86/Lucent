@@ -2,6 +2,7 @@
 // A blazing star wrapped in shell after shell of orbiting solar mirrors, hundreds of thousands of them glinting gold as they catch its light; the star throbs with the bass and the great rings of orbits tilt and sway with the music.
 // Family: Particles
 // Tags: Space, Geometric, 3D
+// Added: 2026-10-17 17:12
 // Particles: 393216
 
 // Each collector rides its own circular orbit. The orbits are grouped into shells: rings of

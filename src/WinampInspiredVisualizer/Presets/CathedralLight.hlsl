@@ -2,6 +2,7 @@
 // Walk slowly down a hazy gothic nave as sunlight pours through tall stained glass windows in shafts of coloured light, laying jewelled patterns across the stone floor; the glass glows brighter where the music is loudest, and specks of dust glint as they drift through the beams.
 // Family: Ray traced
 // Tags: Calm, Colourful, 3D
+// Added: 2026-10-17 17:12
 // Particles: 131072
 
 // The nave runs along z, repeating every bay: a pair of stone columns each side and a tall

@@ -2,6 +2,7 @@
 // Look out through a misted, rain-streaked window at a neon city melted into big soft circles of light; raindrops cling to the glass and run down it, each one a tiny lens holding a sharp upside-down glimpse of the street; the city lights and signs pulse with the music.
 // Family: Ray traced
 // Tags: Water, Neon, Calm
+// Added: 2026-10-17 17:15
 
 // The camera is focused on the glass, so the city beyond is far out of focus: every light spreads
 // into a soft disc (a slightly hexagonal one, the shape of a camera's aperture) and the neon signs

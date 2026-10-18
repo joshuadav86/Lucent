@@ -2,6 +2,7 @@
 // A ghostly seated figure condenses out of the dark like a nebula, its veils of violet, teal and gold built up point by point by countless sparks tracing their escape from the Mandelbrot set. The bass deepens its outer glow while the treble kindles the finest threads.
 // Family: Particles
 // Tags: Space, Calm
+// Added: 2026-10-17 22:02
 // Particles: 458752
 
 // The Buddhabrot is the Mandelbrot set seen from the other side. Instead of colouring the starting

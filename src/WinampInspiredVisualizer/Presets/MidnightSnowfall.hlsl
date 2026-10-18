@@ -2,6 +2,7 @@
 // Snow drifts down a quiet street at midnight, glittering in warm pools of lamplight, with big soft flakes tumbling right past the lens; gusts swirl it on the beat and the treble makes it sparkle.
 // Family: Particles
 // Tags: Calm, 3D
+// Added: 2026-10-17 17:06
 // Particles: 262144
 
 // y is up; the street runs along z between two rows of houses, with lamps on both pavements.

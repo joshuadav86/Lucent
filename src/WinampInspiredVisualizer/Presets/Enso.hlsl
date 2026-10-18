@@ -3,6 +3,7 @@
 // it rests for a while, fades into the paper, and a new circle is painted every few bars.
 // Family: Minimal
 // Tags: Calm, Minimal
+// Added: 2026-10-17 21:37
 
 static const float EnCycle = 8.0;       // seconds per circle
 static const float EnDrawTime = 1.9;    // seconds the brush takes to sweep round
