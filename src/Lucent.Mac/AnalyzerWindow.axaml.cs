@@ -21,6 +21,7 @@ public partial class AnalyzerWindow : Window
 
     private readonly AppSettings _settings;
     private readonly Spectrogram _spectrogram;
+    private readonly FullScreen _fullScreen;
 
     // For the XAML previewer only.
     public AnalyzerWindow()
@@ -36,6 +37,8 @@ public partial class AnalyzerWindow : Window
         _settings = settings;
         Width = Math.Max(MinWidth, settings.AnalyzerWindowWidth);
         Height = Math.Max(MinHeight, settings.AnalyzerWindowHeight);
+        _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
+        _fullScreen.Changed += (_, _) => Frame.BorderThickness = new Thickness(_fullScreen.IsOn ? 0 : 1);
 
         _spectrogram = new Spectrogram(player.Capture)
         {
@@ -226,7 +229,7 @@ public partial class AnalyzerWindow : Window
     private void OnDisplayMouseDown(object? sender, PointerPressedEventArgs e)
     {
         // Drag the picture to move the window, as with the artwork.
-        if (e.GetCurrentPoint(Display).Properties.IsLeftButtonPressed && WindowState == WindowState.Normal)
+        if (e.GetCurrentPoint(Display).Properties.IsLeftButtonPressed && WindowState == WindowState.Normal && !_fullScreen.IsOn)
         {
             BeginMoveDrag(e);
         }
@@ -234,9 +237,25 @@ public partial class AnalyzerWindow : Window
 
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
+        if (FullScreen.IsToggleKey(e))
+        {
+            _fullScreen.Toggle();
+            e.Handled = true;
+            return;
+        }
+
+        // Esc leaves full screen first, then closes the window.
         if (e.Key == Key.Escape)
         {
-            Close();
+            if (_fullScreen.IsOn)
+            {
+                _fullScreen.Toggle();
+            }
+            else
+            {
+                Close();
+            }
+
             e.Handled = true;
             return;
         }
@@ -253,7 +272,8 @@ public partial class AnalyzerWindow : Window
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (WindowState == WindowState.Normal && ClientSize.Width > 0 && ClientSize.Height > 0)
+        // While full screen, keep the size it would go back to.
+        if (WindowState == WindowState.Normal && !_fullScreen.IsOn && ClientSize.Width > 0 && ClientSize.Height > 0)
         {
             _settings.AnalyzerWindowWidth = ClientSize.Width;
             _settings.AnalyzerWindowHeight = ClientSize.Height;

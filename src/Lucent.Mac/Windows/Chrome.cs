@@ -70,7 +70,7 @@ public static class Chrome
             }
         }
 
-        if (caption.GetVisualRoot() is Window window)
+        if (caption.GetVisualRoot() is Window window && !FullScreen.Fills(window))
         {
             window.BeginMoveDrag(e);
             e.Handled = true;
