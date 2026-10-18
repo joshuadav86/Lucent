@@ -131,7 +131,7 @@ public partial class EditorWindow
 
         menu.Items.Add(new MenuItem { Header = $"{marker.Name}  ·  {Format(marker.Frame)}", IsEnabled = false });
         Add("Go here", () => GoToMarker(index));
-        Add("Play from here", () => PlayFrom(marker.Frame, session.Audio.Frames));
+        Add("Play from here", () => Play(marker.Frame, session.Audio.Frames));
         var end = index + 1 < session.Markers.Count ? session.Markers[index + 1].Frame : session.Audio.Frames;
         Add(index + 1 < session.Markers.Count ? "Select to the next marker" : "Select to the end", () =>
             Waveform.Selection = new FrameRange(marker.Frame, end - marker.Frame), end > marker.Frame);

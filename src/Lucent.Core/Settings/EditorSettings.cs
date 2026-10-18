@@ -47,6 +47,9 @@ public sealed class EditorSettings
     /// <summary>The history list is open beside the waveform.</summary>
     public bool ShowHistory { get; set; }
 
+    /// <summary>The listening volume while editing (0 to 1); null until it's first set, when the main player's is used.</summary>
+    public double? Volume { get; set; }
+
     /// <summary>The channel strip of plugin slots is open beside the waveform.</summary>
     public bool ShowInserts { get; set; } = true;
 

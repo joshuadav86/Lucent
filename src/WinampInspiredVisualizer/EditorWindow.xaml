@@ -261,6 +261,17 @@
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,1" Padding="14,8">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- The listening volume: only what's heard, never the audio itself -->
+                    <Grid VerticalAlignment="Center" ToolTip="Listening volume (Shift+Up and Shift+Down). It changes only what you hear, not the sound itself; the Volume tool does that.">
+                        <Path Data="{StaticResource SpeakerIcon}" Fill="{DynamicResource MutedTextBrush}" />
+                        <Path Data="{StaticResource SpeakerWavesIcon}" Stroke="{DynamicResource MutedTextBrush}"
+                              StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    </Grid>
+                    <Slider x:Name="VolumeSlider" Style="{StaticResource VolumeSlider}" Width="90" Minimum="0" Maximum="1"
+                            Margin="8,0,6,0" VerticalAlignment="Center" Focusable="False" ValueChanged="OnVolumeChanged"
+                            ToolTip="Listening volume (Shift+Up and Shift+Down). It changes only what you hear, not the sound itself; the Volume tool does that." />
+                    <TextBlock x:Name="VolumeText" Width="34" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"
+                               Foreground="{DynamicResource MutedTextBrush}" />
                     <editor:LevelMeter x:Name="Meter" Width="230" Margin="0,0,14,0" VerticalAlignment="Center"
                                        BarBrush="{DynamicResource AccentBrush}" TrackBrush="{DynamicResource HairlineBrush}"
                                        LabelBrush="{DynamicResource MutedTextBrush}" />
@@ -364,9 +375,9 @@
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
                         <TextBlock x:Name="PluginHint" Style="{StaticResource OptionHint}" Margin="4,0,4,8" TextWrapping="Wrap" />
                         <UniformGrid Columns="2">
-                            <Button x:Name="PluginPreviewButton" Style="{StaticResource ToolButton}" Margin="0,0,3,0" Content="Preview"
-                                    Click="OnPreviewPlugin"
-                                    ToolTip="Play the selection (or from the cursor) through the chain. Changes in the plugins' windows, and switching one off, are heard straight away." />
+                            <ToggleButton x:Name="ChainBypassToggle" Style="{StaticResource ToolToggle}" Margin="0,0,3,0" Content="Bypass"
+                                          Click="OnChainBypass"
+                                          ToolTip="Play without the plugins, to compare (B). Play goes through every plugin that's on, and changes in their windows are heard straight away." />
                             <Button x:Name="PluginApplyButton" Style="{StaticResource ToolButton}" Margin="3,0,0,0" Click="OnApplyPlugin"
                                     Foreground="{DynamicResource AccentBrush}"
                                     ToolTip="Run the selection (or the whole sound) through every plugin that's switched on, as one step you can undo">

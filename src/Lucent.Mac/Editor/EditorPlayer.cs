@@ -28,6 +28,18 @@ public sealed class EditorPlayer : IDisposable
     /// <summary>Raised on the UI thread when playback stops by itself or fails.</summary>
     public event EventHandler<Exception?>? Stopped;
 
+    private volatile float _volume = 1;
+
+    /// <summary>
+    /// The listening volume, from 0 to 1. It only changes what's heard (after the meters), never the audio itself,
+    /// and a change is heard straight away, even while playing.
+    /// </summary>
+    public float Volume
+    {
+        get => _volume;
+        set => _volume = Math.Clamp(value, 0f, 1f);
+    }
+
     public bool IsPlaying => _output?.PlaybackState == PlaybackState.Playing;
 
     /// <summary>Levels and loudness of what's playing, measured before the listening volume; null when stopped.</summary>
@@ -59,7 +71,7 @@ public sealed class EditorPlayer : IDisposable
     /// over again from <paramref name="from"/> when <paramref name="loop"/> is set. <paramref name="through"/>,
     /// if given, wraps the audio in something that changes it (a plugin or tool preview).
     /// </summary>
-    public void Play(AudioBuffer audio, int from, int to, float volume, Func<ISampleProvider, ISampleProvider>? through = null,
+    public void Play(AudioBuffer audio, int from, int to, Func<ISampleProvider, ISampleProvider>? through = null,
         bool loop = false)
     {
         Stop();
@@ -69,7 +81,7 @@ public sealed class EditorPlayer : IDisposable
         _provider = new RangeSampleProvider(audio, from, to) { Loop = loop && to - from > audio.SampleRate / 20 };
         Meter = new LiveMeter(audio.ChannelCount, audio.SampleRate);
         var processed = through is null ? _provider : through(_provider);
-        _counter = new PlayedCounter(new MeteredOutput(processed, Meter, volume), LatencyFrames(audio.SampleRate, audio.ChannelCount));
+        _counter = new PlayedCounter(new MeteredOutput(processed, Meter, this), LatencyFrames(audio.SampleRate, audio.ChannelCount));
         var output = new AudioQueueOutput(LatencyMs);
         _output = output;
         output.PlaybackStopped += OnPlaybackStopped;
@@ -192,13 +204,15 @@ public sealed class EditorPlayer : IDisposable
     {
         private readonly ISampleProvider _source;
         private readonly LiveMeter _meter;
-        private readonly float _volume;
+        private readonly EditorPlayer _player;
+        private float _volume;
 
-        public MeteredOutput(ISampleProvider source, LiveMeter meter, float volume)
+        public MeteredOutput(ISampleProvider source, LiveMeter meter, EditorPlayer player)
         {
             _source = source;
             _meter = meter;
-            _volume = volume;
+            _player = player;
+            _volume = player.Volume;
         }
 
         public WaveFormat WaveFormat => _source.WaveFormat;
@@ -207,10 +221,16 @@ public sealed class EditorPlayer : IDisposable
         {
             var read = _source.Read(buffer, offset, count);
             _meter.Feed(buffer, offset, read);
+            // A change of volume slides across the block, so moving the fader doesn't click.
+            var from = _volume;
+            var to = _player.Volume;
+            var step = read > 0 ? (to - from) / read : 0;
             for (var i = 0; i < read; i++)
             {
-                buffer[offset + i] *= _volume;
+                buffer[offset + i] *= from + step * i;
             }
+
+            _volume = to;
 
             return read;
         }
