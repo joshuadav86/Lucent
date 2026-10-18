@@ -14,7 +14,6 @@ It also fails when an entry here is out of date, such as a file that's now on bo
 
 | What | Only on | Why, and what the other platform has |
 | --- | --- | --- |
-| MilkDrop presets: `VisualizerWindow.MilkDrop.cs`, `Visualizer/MilkDrop/MilkDropImport.cs`, `Visualizer/MilkDrop/MilkDropRenderer.cs`, `Visualizer/MilkDrop/MilkDropVisual.cs`, `MilkDropVisuals`, `EelGlobals`, `MilkAudio`, `MilkFrameInput`, `MilkGeometry`, `MilkPreset`, `MilkPresetRunner`, `MilkShaderKind`, `MilkShaderTranslator` | Windows | Being ported to the Mac (Metal) for 1.0. The presets are read and run by `Lucent.Core`, so the Mac needs only the drawing. |
 | MusicBee import button | Windows | MusicBee is Windows-only. On a Mac, the Apple Music import takes a MusicBee library file too. |
 
 ## Same feature, different platform pieces
@@ -23,8 +22,8 @@ Each platform does these its own way. The feature is on both; only the files dif
 
 | What | Only on | Its counterpart on the other platform |
 | --- | --- | --- |
-| Drawing the visuals: `Visualizer/Renderer.cs`, `Visualizer/Renderer.Offscreen.cs`, `Visualizer/ShaderCache.cs`, `Visualizer/PresetLibrary.cs` | Windows | Direct3D 11 with HLSL compiled as it loads. The Mac draws the same visuals with Metal: `Visuals/` (shaders translated from the HLSL when the app is built, and by DXC as it runs for your own visuals). |
-| Drawing the visuals with Metal: `Visuals/MetalRenderer.cs`, `Visuals/MetalView.cs`, `Visuals/VisualEngine.cs`, `Visuals/MetalSupport.cs`, `Visuals/MetalTranslation.cs`, `Visuals/MetalShaderFiles.cs`, `Visuals/ShaderCache.cs`, `Visuals/DxcCompiler.cs` | Mac | Windows' `Visualizer/Renderer.cs` and friends. |
+| Drawing the visuals: `Visualizer/Renderer.cs`, `Visualizer/Renderer.Offscreen.cs`, `Visualizer/ShaderCache.cs`, `Visualizer/PresetLibrary.cs`, `Visualizer/MilkDrop/MilkDropRenderer.cs`, `Visualizer/MilkDrop/MilkDropVisual.cs` | Windows | Direct3D 11 with HLSL compiled as it loads. The Mac draws the same visuals with Metal: `Visuals/` (shaders translated from the HLSL when the app is built, and by DXC as it runs for your own visuals). |
+| Drawing the visuals with Metal: `Visuals/MetalRenderer.cs`, `Visuals/MetalView.cs`, `Visuals/VisualEngine.cs`, `Visuals/MetalSupport.cs`, `Visuals/MetalTranslation.cs`, `Visuals/MetalShaderFiles.cs`, `Visuals/ShaderCache.cs`, `Visuals/DxcCompiler.cs`, `Visuals/MetalPipelines.cs`, `Visuals/MilkDropRenderer.cs`, `Visuals/MilkDropVisual.cs` | Mac | Windows' `Visualizer/Renderer.cs` and friends. |
 | Exclusive (bit-perfect) output through WASAPI: `Audio/PcmOutput.cs` | Windows | WASAPI exclusive mode is Windows-only. The Mac does the same with Core Audio: `Audio/ExclusiveDevice.cs` takes the device in hog mode (other apps go quiet) and switches it to each track's own sample rate. |
 | Exclusive (bit-perfect) output through Core Audio: `Audio/ExclusiveDevice.cs` | Mac | Windows' `Audio/PcmOutput.cs`, through WASAPI exclusive mode. |
 | Playing sound through Core Audio: `Audio/AudioQueueOutput.cs`, `Audio/MacAudioFileReader.cs`, `Interop/CoreAudio.cs` | Mac | Windows plays through WASAPI (NAudio, and `Audio/PcmOutput.cs` for exclusive mode) and decodes with Media Foundation and NAudio. The Mac decodes the same formats with macOS's own decoders (Extended Audio File Services). |
@@ -34,3 +33,4 @@ Each platform does these its own way. The feature is on both; only the files dif
 | Menus kept clear of the taskbar: `Windows/DropDownMenu.cs` | Windows | Avalonia's menus keep themselves on screen and clear of the Dock. |
 | The self-test's sound checks: `SelfTest.Sound.cs` | Mac | Kept in their own file on the Mac. Windows' self-test doesn't check gapless or the outputs yet. |
 | Screenshot tool: `Screenshots.cs`, `Screenshots.TrackInfo.cs`, `MainWindow.Preview.cs`, `AnalyzerSampleMusic.cs`, `LayoutCheck.cs` | Mac | `Lucent --screenshots` draws the Mac windows on any OS (Linux included) for checking them by eye, and the layout check runs in CI. Windows' windows are checked on Windows. |
+| `MilkTranslatedShader` | Mac | Both apps translate MilkDrop shaders with `MilkShaderTranslator`, but only the Mac's code names the result's type. |
