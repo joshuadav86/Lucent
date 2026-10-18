@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Checks the Windows and Mac apps have the same features: every file in one app has its counterpart in
+    the other, every setting is used by both, and so is every piece of Lucent.Core either one uses.
+    Anything that's on one platform on purpose is listed in docs/PARITY.md. See Program.cs.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Lucent.ParityCheck</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Lucent.Core\Lucent.Core.csproj" />
+  </ItemGroup>
+
+</Project>

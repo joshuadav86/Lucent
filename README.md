@@ -335,6 +335,8 @@ dotnet run --project src/WinampInspiredVisualizer
 
 The code is in three projects. `src/Lucent.Core` holds everything that doesn't depend on Windows (audio analysis, the equalizer, the editor's effects, export, tags, the library, playlists, and settings) and builds on any OS, for both apps. `src/WinampInspiredVisualizer` is the Windows app: its windows, the Direct3D renderer, playback, and the shaders. `src/Lucent.Mac` is the Mac app (see [Mac](#mac)).
 
+The two apps have the same features, so a change to one goes into the other in the same pull request. Anything that can only be on one platform is listed in [`docs/PARITY.md`](docs/PARITY.md) with what the other has instead, and every pull request runs `dotnet run --project tools/ParityCheck` to catch a file, setting, or shared piece of `Lucent.Core` that only one app has.
+
 VST3 plugins in the editor need the plugin helper, a small C++ program in [`src/PluginHost`](src/PluginHost). Build it first (with [CMake](https://cmake.org/) and Visual Studio's C++ tools) and the app build copies it next to `Lucent.exe`:
 
 ```
