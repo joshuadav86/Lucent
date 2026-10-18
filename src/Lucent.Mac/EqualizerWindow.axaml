@@ -1,0 +1,256 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.EqualizerWindow"
+        Title="Equalizer"
+        CanResize="False"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        Background="{DynamicResource SurfaceBrush}">
+
+    <!-- Same custom title bar as the main window. The window sizes itself to fit its sliders. -->
+    <Window.Resources>
+        <!-- The empty track either side of a slider's thumb: clicking it moves the thumb there. -->
+        <ControlTheme x:Key="BandSliderEdge" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
+        <!-- A vertical equalizer slider drawn like a mixing desk fader: a dark slot cut into the panel,
+             a scale of marks every 3 dB (longer at 0), and a metal cap with a coloured line across it. -->
+        <ControlTheme x:Key="FaderMark" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="BorderThickness" Value="0,1,0,0" />
+            <Setter Property="Opacity" Value="0.7" />
+        </ControlTheme>
+
+        <!-- The fader's cap. -->
+        <ControlTheme x:Key="BandThumb" TargetType="Thumb">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid Width="28" Height="14" Background="Transparent">
+                        <Border Name="Cap" CornerRadius="2.5" BorderBrush="#99000000" BorderThickness="1">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Offset="0" Color="#F4F4F8" />
+                                    <GradientStop Offset="0.45" Color="#C9C9D2" />
+                                    <GradientStop Offset="0.55" Color="#B4B4BF" />
+                                    <GradientStop Offset="1" Color="#7E7E8A" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="5" OffsetX="0" OffsetY="1.5" Color="Black" Opacity="0.6" />
+                            </Border.Effect>
+                        </Border>
+                        <!-- Grip ridges above and below the line, and the line itself. -->
+                        <Border Height="1" Margin="4,3,4,0" VerticalAlignment="Top" Background="#40000000" />
+                        <Border Height="1" Margin="4,0,4,3" VerticalAlignment="Bottom" Background="#40000000" />
+                        <Border Name="Line" Height="2" Margin="2,0" VerticalAlignment="Center"
+                                Background="{DynamicResource AccentBrush}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Cap">
+                <Setter Property="Opacity" Value="0.85" />
+            </Style>
+            <Style Selector="^:pressed /template/ Border#Cap">
+                <Setter Property="Opacity" Value="0.75" />
+            </Style>
+            <Style Selector="^:pressed /template/ Border#Line">
+                <Setter Property="Height" Value="3" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="BandSlider" TargetType="Slider">
+            <Setter Property="Orientation" Value="Vertical" />
+            <Setter Property="Minimum" Value="-12" />
+            <Setter Property="Maximum" Value="12" />
+            <Setter Property="SmallChange" Value="0.5" />
+            <Setter Property="LargeChange" Value="3" />
+            <Setter Property="TickFrequency" Value="0.5" />
+            <Setter Property="IsSnapToTickEnabled" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Height" Value="150" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid Width="30" Background="Transparent">
+                        <!-- The scale: eight 3 dB steps between the cap's highest and lowest centre. -->
+                        <Grid Width="26" Margin="0,7" HorizontalAlignment="Center" RowDefinitions="*,*,*,*,*,*,*,*">
+                            <Border Grid.Row="0" Theme="{StaticResource FaderMark}" />
+                            <Border Grid.Row="1" Theme="{StaticResource FaderMark}" Margin="4,0" />
+                            <Border Grid.Row="2" Theme="{StaticResource FaderMark}" />
+                            <Border Grid.Row="3" Theme="{StaticResource FaderMark}" Margin="4,0" />
+                            <Border Grid.Row="4" Theme="{StaticResource FaderMark}" Margin="-2,0" BorderThickness="0,1.5,0,0"
+                                    BorderBrush="{DynamicResource MutedTextBrush}" Opacity="1" />
+                            <Border Grid.Row="5" Theme="{StaticResource FaderMark}" Margin="4,0" />
+                            <Border Grid.Row="6" Theme="{StaticResource FaderMark}" />
+                            <Border Grid.Row="7" Theme="{StaticResource FaderMark}" Margin="4,0" BorderThickness="0,1,0,1" />
+                        </Grid>
+                        <!-- The slot the cap slides in. -->
+                        <Border Width="6" Margin="0,3" CornerRadius="3" Background="#B0000000"
+                                BorderBrush="#30FFFFFF" BorderThickness="0,0,0,1">
+                            <Border CornerRadius="3" BorderBrush="#C0000000" BorderThickness="0,1,0,0" />
+                        </Border>
+                        <Track Name="PART_Track" Orientation="Vertical"
+                               Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                               Value="{TemplateBinding Value, Mode=TwoWay}" IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource BandSliderEdge}" />
+                            </Track.DecreaseButton>
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource BandSliderEdge}" />
+                            </Track.IncreaseButton>
+                            <Thumb Name="Cap" Theme="{StaticResource BandThumb}" />
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
+        <!-- The label under each slider. -->
+        <ControlTheme x:Key="BandLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+        </ControlTheme>
+
+        <!-- Small dB marks beside the sliders. -->
+        <ControlTheme x:Key="ScaleLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </ControlTheme>
+
+        <!-- The box for naming a saved preset. -->
+        <ControlTheme x:Key="NameBox" TargetType="TextBox" BasedOn="{StaticResource TextInput}">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MaxLength" Value="40" />
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+            <Setter Property="Padding" Value="8,0" />
+            <Style Selector="^:pointerover /template/ Border#PART_BorderElement">
+                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            </Style>
+            <Style Selector="^:focus /template/ Border#PART_BorderElement">
+                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            </Style>
+        </ControlTheme>
+    </Window.Resources>
+
+    <Border x:Name="Frame" BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1">
+        <StackPanel x:Name="Root">
+            <!-- Title bar -->
+            <Grid Height="36" Background="Transparent" w:Chrome.IsCaption="True">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <Image x:Name="TitleIcon" Width="14" Height="14" VerticalAlignment="Center"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <TextBlock Text="EQUALIZER" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button HorizontalAlignment="Right" Height="36" Theme="{StaticResource CloseCaptionButton}"
+                        ToolTip.Tip="Close (E)" Click="OnCloseClicked">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <!-- On/off, band count, presets and reset -->
+            <DockPanel x:Name="HeaderRow" Margin="16,2,16,0">
+                <CheckBox x:Name="EnabledSwitch" DockPanel.Dock="Left" Theme="{StaticResource SwitchToggle}" Content="On"
+                          HorizontalAlignment="Left" VerticalAlignment="Center"
+                          ToolTip.Tip="Turn the equalizer on or off, to hear the difference"
+                          Click="OnEnabledClicked" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="PresetsButton" Theme="{StaticResource PickerButton}" Height="28" Padding="10,0"
+                            ToolTip.Tip="Choose a preset, or save your own" Click="OnPresetsClicked">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="PresetLabel" FontSize="12" MaxWidth="140" TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button Theme="{StaticResource PillButton}" Margin="8,0,0,0" ToolTip.Tip="Set every slider and the preamp back to 0"
+                            Click="OnResetClicked">
+                        <StackPanel Orientation="Horizontal">
+                            <LayoutTransformControl VerticalAlignment="Center">
+                                <LayoutTransformControl.LayoutTransform>
+                                    <ScaleTransform ScaleX="0.75" ScaleY="0.75" />
+                                </LayoutTransformControl.LayoutTransform>
+                                <Path Theme="{StaticResource LineIcon}" Data="{StaticResource RefreshIcon}" StrokeThickness="1.4" />
+                            </LayoutTransformControl>
+                            <TextBlock Text="Reset" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel x:Name="BandsGroup" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0">
+                    <TextBlock x:Name="BandsLabel" Text="Bands" FontSize="12" Foreground="{DynamicResource MutedTextBrush}"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <Border Theme="{StaticResource SegmentBar}" ToolTip.Tip="How many sliders: fewer for quick changes, more for fine control">
+                        <StackPanel x:Name="BandCountBar" Orientation="Horizontal" />
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- The response curve sits directly above the band sliders, lined up with them. -->
+            <Grid x:Name="SliderArea" Margin="16,14,16,0" HorizontalAlignment="Center"
+                  ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto">
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Response" FontSize="10"
+                           Foreground="{DynamicResource FaintTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                <Border x:Name="CurveFrame" Grid.Row="0" Grid.Column="2" Height="84" CornerRadius="{DynamicResource ControlCorner}" ClipToBounds="True"
+                        Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                    <Canvas x:Name="CurveCanvas">
+                        <Path x:Name="ZeroLine" Stroke="{DynamicResource HairlineBrush}" StrokeThickness="1" StrokeDashArray="3,3" />
+                        <Path x:Name="CurveFill" Fill="{DynamicResource AccentSoftBrush}" Opacity="0.55" />
+                        <Path x:Name="CurveLine" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.6" StrokeJoin="Round" />
+                    </Canvas>
+                </Border>
+
+                <!-- Preamp: raises or lowers everything at once. -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Width="48" Margin="0,12,0,0">
+                    <Slider x:Name="PreampSlider" Theme="{StaticResource BandSlider}"
+                            ToolTip.Tip="Preamp: louder or quieter overall. Double-click to reset." />
+                    <TextBlock Theme="{StaticResource BandLabel}" Text="Preamp" />
+                </StackPanel>
+
+                <Grid Grid.Row="1" Grid.Column="1" Width="26" Height="150" Margin="0,12,6,0" VerticalAlignment="Top">
+                    <TextBlock Theme="{StaticResource ScaleLabel}" Text="+12" VerticalAlignment="Top" Margin="0,-2,0,0" />
+                    <TextBlock Theme="{StaticResource ScaleLabel}" Text="0" VerticalAlignment="Center" />
+                    <TextBlock Theme="{StaticResource ScaleLabel}" Text="−12" VerticalAlignment="Bottom" Margin="0,0,0,-2" />
+                </Grid>
+
+                <StackPanel x:Name="BandPanel" Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="0,12,0,0" />
+            </Grid>
+
+            <!-- Status: what's under the mouse, or a hint; and how far it's been turned down to avoid distortion. -->
+            <DockPanel Margin="16,10,16,14">
+                <TextBlock x:Name="HeadroomText" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource FaintTextBrush}"
+                           VerticalAlignment="Center" Margin="12,0,0,0" />
+                <TextBlock x:Name="StatusText" FontSize="11" Foreground="{DynamicResource MutedTextBrush}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+
+            <!-- Shown while saving a preset. -->
+            <DockPanel x:Name="SaveRow" Margin="16,0,16,14" IsVisible="False">
+                <TextBlock DockPanel.Dock="Left" Text="Save as" FontSize="12" Foreground="{DynamicResource MutedTextBrush}"
+                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="Cancel" Margin="6,0,0,0"
+                        Click="OnSaveCancelled" />
+                <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="Save" Margin="8,0,0,0"
+                        Click="OnSaveConfirmed" />
+                <TextBox x:Name="PresetNameBox" Theme="{StaticResource NameBox}" />
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</Window>

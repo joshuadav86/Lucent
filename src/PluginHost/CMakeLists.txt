@@ -6,11 +6,17 @@
 # Build (Windows, from a Visual Studio developer prompt or with CMake on the PATH):
 #   cmake -S src/PluginHost -B build/PluginHost -A x64
 #   cmake --build build/PluginHost --config Release
+# Build (Mac, with the Xcode command line tools and CMake): tools/build-pluginhost-mac.sh, which makes a
+# universal (Apple silicon and Intel) LucentPluginHost for the Mac app.
 # The Steinberg VST3 SDK (MIT licence) is downloaded at configure time. To use a copy you already
 # have, pass -DLUCENT_VST3SDK_DIR=path/to/vst3sdk.
 
 cmake_minimum_required(VERSION 3.20)
 project(LucentPluginHost LANGUAGES CXX)
+if(APPLE)
+    # The SDK's module loader and the plugin windows are Objective-C++.
+    enable_language(OBJCXX)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -71,6 +77,8 @@ set(HOST_SOURCES
 )
 if(WIN32)
     list(APPEND HOST_SOURCES source/editor_win32.cpp)
+elseif(APPLE)
+    list(APPEND HOST_SOURCES source/editor_mac.mm)
 else()
     # No plugin windows on other systems yet; processing works everywhere.
     list(APPEND HOST_SOURCES source/editor_none.cpp)
@@ -94,7 +102,10 @@ endif()
 if(WIN32)
     target_link_libraries(LucentPluginHost PRIVATE ole32 user32)
 elseif(APPLE)
-    target_link_libraries(LucentPluginHost PRIVATE "-framework CoreFoundation" "-framework Foundation")
+    # Both Objective-C++ files (the SDK's module_mac.mm and editor_mac.mm) need ARC.
+    target_compile_options(LucentPluginHost PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+    target_link_libraries(LucentPluginHost PRIVATE "-framework CoreFoundation" "-framework Foundation" "-framework Cocoa"
+        "-framework CoreGraphics")
 else()
     target_link_libraries(LucentPluginHost PRIVATE dl pthread)
 endif()

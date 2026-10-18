@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.MessageWindow"
+        Title="Lucent"
+        Width="400" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource SurfaceRaisedBrush}">
+
+    <!-- Lucent's message box: the Mac's stand-in for WPF's MessageBox, in Lucent's own colours. -->
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1" w:Chrome.IsCaption="True"
+            Background="{DynamicResource PanelSheenBrush}" Padding="18,16,18,16">
+        <StackPanel>
+            <TextBlock x:Name="Heading" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+            <TextBlock x:Name="Body" FontSize="13" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
+            <StackPanel x:Name="Buttons" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,18,0,0" />
+        </StackPanel>
+    </Border>
+</Window>

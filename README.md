@@ -235,6 +235,19 @@ If Windows SmartScreen warns about an unknown app, click **More info**, then **R
 
 Rather not install? Download `Lucent-win-x64.zip` from the same release, right-click it and choose **Extract All**, then double-click `Lucent.exe`. That copy doesn't update itself.
 
+### On a Mac
+
+Lucent for the Mac is the same app (every window, the visuals drawn with Metal) and needs macOS 12 or later.
+
+1. From the [Latest build](../../releases/tag/latest) release, download [`Lucent-Setup-mac-arm64.pkg`](../../releases/download/latest/Lucent-Setup-mac-arm64.pkg) for an Apple silicon Mac (M1 or later), or [`Lucent-Setup-mac-x64.pkg`](../../releases/download/latest/Lucent-Setup-mac-x64.pkg) for an Intel Mac. (**Apple menu > About This Mac** says which you have.)
+2. Open it. Lucent installs into **Applications** and opens.
+
+Installed Lucent keeps itself up to date just like on Windows, with the same **UPDATE** button in the title bar. Your settings, playlists and visuals are in `~/Library/Application Support/Lucent` and are kept. To uninstall, drag Lucent from Applications to the Bin.
+
+Lucent isn't signed by Apple yet, so the first time macOS says it can't check the installer (or the app). Open **System Settings > Privacy & Security**, scroll down and click **Open Anyway**.
+
+Rather not install? Download `Lucent-mac-arm64.zip` or `Lucent-mac-x64.zip`, open it and double-click `Lucent.app` (drag it to Applications first if you like). That copy doesn't update itself.
+
 ## Keyboard shortcuts
 
 Shortcuts work from any Lucent window, and your keyboard's media keys work while Lucent has focus.
@@ -297,7 +310,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/Lucent.Core/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into `%AppData%\Lucent\Presets` (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
+`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)` and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm` and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/Lucent.Core/Visualizer/VisualStyles.cs); without them it goes in Other). Drop a new `.hlsl` file into `%AppData%\Lucent\Presets` on Windows or `~/Library/Application Support/Lucent/Presets` on a Mac (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
 
 A particle visual also defines `Spawn`, `Simulate` and `Show`, which start, move and draw each of its particles. The engine runs them for every particle each frame on the graphics card and adds the glowing dots into a layer that `Render` reads with `particles(uv)`. A `// Particles: 300000` line sets how many run on Normal detail. Random numbers, 3D projection with lens blur, curl-noise flow and motion streaks are in [`Shaders/Particles.hlsli`](src/WinampInspiredVisualizer/Shaders/Particles.hlsli).
 
@@ -309,7 +322,7 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) on W
 dotnet run --project src/WinampInspiredVisualizer
 ```
 
-The code is in two projects. `src/Lucent.Core` holds everything that doesn't depend on Windows (audio analysis, the equalizer, the editor's effects, export, tags, the library, playlists and settings) and builds on any OS, ready for a Mac version. `src/WinampInspiredVisualizer` is the Windows app: its windows, the Direct3D renderer, playback and the shaders.
+The code is in three projects. `src/Lucent.Core` holds everything that doesn't depend on Windows (audio analysis, the equalizer, the editor's effects, export, tags, the library, playlists and settings) and builds on any OS, for both apps. `src/WinampInspiredVisualizer` is the Windows app: its windows, the Direct3D renderer, playback and the shaders. `src/Lucent.Mac` is the Mac app (see [Mac](#mac)).
 
 VST3 plugins in the editor need the plugin helper, a small C++ program in [`src/PluginHost`](src/PluginHost). Build it first (with [CMake](https://cmake.org/) and Visual Studio's C++ tools) and the app build copies it next to `Lucent.exe`:
 
@@ -318,25 +331,27 @@ cmake -S src/PluginHost -B build/PluginHost -A x64
 cmake --build build/PluginHost --config Release
 ```
 
-### Mac (early preview)
+### Mac
 
-`src/Lucent.Mac` is a first Mac version: one window that plays music (MP3, AAC, ALAC, FLAC, WAV, AIFF) and shows the visuals with Metal. The playlist, library, equalizer window, editor and skins come over in later steps. It needs macOS 12 or later and the .NET 8 SDK.
+`src/Lucent.Mac` is the Mac app: the whole Windows app ported to [Avalonia](https://avaloniaui.net/), sharing `src/Lucent.Core` with it. The visuals are drawn with Metal, music plays through Core Audio, the Bandcamp sign-in uses Safari's WebKit and is kept in your keychain, and it updates itself with [Velopack](https://velopack.io/) like the Windows app. It needs macOS 12 or later and the .NET 8 SDK.
 
-The visuals are written in HLSL, so they're translated to Metal when the app is built. That needs Microsoft's [DirectX Shader Compiler](https://github.com/microsoft/DirectXShaderCompiler/releases) (`dxc`) on your PATH, or set `DXC` to it:
+The visuals are written in HLSL, so they're translated to Metal when the app is built. That needs Microsoft's [DirectX Shader Compiler](https://github.com/microsoft/DirectXShaderCompiler/releases) (`dxc`) on your PATH, or set `DXC` to it. DXC has no Mac build, so run the first line on Linux or Windows (CI does it on Linux) and copy `artifacts/metal-shaders` across:
 
 ```
 dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders
 dotnet run --project src/Lucent.Mac
 ```
 
-To make `Lucent.app`, publish and package it:
+To make `Lucent.app`, publish it for your Mac's chip (`osx-arm64` for Apple silicon, `osx-x64` for Intel) and package it. `package-mac.sh` adds the icon and Info.plist and signs it ad hoc (set `MAC_SIGN_IDENTITY` to a Developer ID certificate's name to sign it properly):
 
 ```
 dotnet publish src/Lucent.Mac -c Release -r osx-arm64 --self-contained -o publish-mac
 tools/package-mac.sh publish-mac . 0.1.0
 ```
 
-The app isn't signed by Apple yet, so the first time, right-click it and choose **Open**. Your own HLSL visuals and HDR aren't supported on the Mac yet. `Lucent --self-test music.m4a` checks decoding and draws every visual without a window; CI runs it on a Mac on every push.
+CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, and every visual drawn on the graphics card), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, they're added to the Latest build release. Adding Apple signing and notarization later only needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml).
+
+`Lucent --screenshots <folder>` draws each window to a PNG without a screen (on any OS, Linux included), for checking the Mac windows by eye.
 
 ## Report a bug
 

@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Visuals;
 using NAudio.Wave;
+using SharpMetal.Foundation;
 using SharpMetal.Metal;
 using SkiaSharp;
 using WinampInspiredVisualizer.Audio;
@@ -13,7 +14,8 @@ namespace Lucent.Mac;
 /// <summary>
 /// Checks the Mac app works without a window, for CI on a Mac: decodes the given music files with
 /// Core Audio, then compiles every visual's Metal shaders and draws a few frames of each to music
-/// made up on the spot, and can save a contact sheet of what they look like.
+/// made up on the spot, and can save a contact sheet of what they look like. It also translates
+/// visuals from HLSL as the app does for the user's own, and checks the result matches the build's.
 /// </summary>
 /// <remarks>Usage: Lucent --self-test [--sheet picture.png] [music files...]</remarks>
 public static class SelfTest
@@ -21,6 +23,13 @@ public static class SelfTest
     private const int Width = 320;
     private const int Height = 180;
     private const int FramesPerVisual = 45;
+
+    // A visual still black after FramesPerVisual frames keeps drawing this much longer before it
+    // counts as black: some take a while to build up, or have quiet moments (Sand Yantra sweeps its
+    // mandala away and pours it out again), and the brightness is checked every CheckEvery frames.
+    private const int SlowStarterFrames = 12 * 60;
+    private const int CheckEvery = 30;
+    private const double DarkBrightness = 0.004;
     private const double FrameSeconds = 1.0 / 60.0;
     private const int SampleRate = 44100;
 
@@ -47,6 +56,7 @@ public static class SelfTest
         }
 
         failures += TestVisuals(sheetPath);
+        failures += TestRuntimeTranslation();
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }
@@ -107,7 +117,8 @@ public static class SelfTest
         Console.WriteLine($"Metal device: {StringHelper.Read(device.Name)}");
         var capture = new AudioCapture();
         capture.Reset(SampleRate);
-        var files = new MetalShaderFiles();
+        // A cache of its own, so the self-test never tidies away the user's translations.
+        var files = new MetalShaderFiles(cache: new ShaderCache(Path.Combine(Path.GetTempPath(), "lucent-self-test-cache")));
         using var engine = new VisualEngine(device, new AudioAnalyzer(capture), files, MTLPixelFormat.BGRA8Unorm)
         {
             AutoCycle = false,
@@ -139,6 +150,7 @@ public static class SelfTest
         using var sheet = canRead && sheetPath is not null ? new SKBitmap(columns * Width, rows * Height) : null;
         var pixels = new byte[Width * Height * 4];
         var dark = new List<string>();
+        var slow = new List<string>();
         var drawingErrors = 0;
         var now = 0.0;
         var music = new MadeUpMusic();
@@ -150,11 +162,13 @@ public static class SelfTest
             var name = engine.Presets[index].Name;
             engine.PresetIndex = index;
 
-            // Draw until this visual has compiled and been on screen for a while (or it failed).
+            // Draw until this visual has compiled and been on screen for a while (or it failed). One
+            // that's still black then keeps going a while longer, in case it's just a slow starter.
             var drawn = 0;
             var waitedFor = Stopwatch.StartNew();
             MTLCommandBuffer? last = null;
-            while (drawn < FramesPerVisual && !engine.HasFailed(index) && waitedFor.Elapsed < TimeSpan.FromSeconds(120))
+            var brightness = 0.0;
+            while (!engine.HasFailed(index) && waitedFor.Elapsed < TimeSpan.FromSeconds(120))
             {
                 using var pool = AutoreleasePool.Begin();
                 capture.Write(music.Next((int)(SampleRate * FrameSeconds)));
@@ -164,7 +178,7 @@ public static class SelfTest
                 if (engine.ActivePreset == index)
                 {
                     drawn++;
-                    if (drawn == FramesPerVisual)
+                    if (drawn >= FramesPerVisual && (drawn - FramesPerVisual) % CheckEvery == 0)
                     {
                         commands.WaitUntilCompleted();
                         last = commands;
@@ -172,6 +186,18 @@ public static class SelfTest
                         {
                             drawingErrors++;
                             Console.WriteLine($"::error::{name}: the GPU reported an error drawing it: {StringHelper.Read(commands.Error.LocalizedDescription)}");
+                            break;
+                        }
+
+                        if (!canRead)
+                        {
+                            break;
+                        }
+
+                        brightness = Brightness(output, pixels);
+                        if (brightness >= DarkBrightness || drawn >= FramesPerVisual + SlowStarterFrames)
+                        {
+                            break;
                         }
                     }
                 }
@@ -200,27 +226,13 @@ public static class SelfTest
                 continue;
             }
 
-            var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
-            try
-            {
-                output.GetBytes(handle.AddrOfPinnedObject(), Width * 4,
-                    new MTLRegion { origin = new MTLOrigin(), size = new MTLSize { width = Width, height = Height, depth = 1 } }, 0);
-            }
-            finally
-            {
-                handle.Free();
-            }
-
-            long sum = 0;
-            for (var i = 0; i < pixels.Length; i += 4)
-            {
-                sum += pixels[i] + pixels[i + 1] + pixels[i + 2];
-            }
-
-            var brightness = sum / (Width * Height * 3.0 * 255.0);
-            if (brightness < 0.004)
+            if (brightness < DarkBrightness)
             {
                 dark.Add(name);
+            }
+            else if (drawn > FramesPerVisual)
+            {
+                slow.Add($"{name} ({drawn / 60.0:0.0} s)");
             }
 
             if (sheet is not null)
@@ -237,9 +249,14 @@ public static class SelfTest
             Console.WriteLine($"::error::{message}");
         }
 
+        if (slow.Count > 0)
+        {
+            Console.WriteLine($"Slow starters, black after {FramesPerVisual} frames but drawing later: {string.Join(", ", slow)}");
+        }
+
         if (dark.Count > 0)
         {
-            Console.WriteLine($"::warning::Black after {FramesPerVisual} frames (may be fine for slow starters): {string.Join(", ", dark)}");
+            Console.WriteLine($"::warning::Still black after {(FramesPerVisual + SlowStarterFrames) / 60} seconds: {string.Join(", ", dark)}");
         }
 
         if (sheet is not null)
@@ -250,6 +267,119 @@ public static class SelfTest
         }
 
         return failed.Count + drawingErrors;
+    }
+
+    /// <summary>The output's average brightness, 0 to 1, leaving its BGRA pixels in <paramref name="pixels"/>.</summary>
+    private static double Brightness(MTLTexture output, byte[] pixels)
+    {
+        var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+        try
+        {
+            output.GetBytes(handle.AddrOfPinnedObject(), Width * 4,
+                new MTLRegion { origin = new MTLOrigin(), size = new MTLSize { width = Width, height = Height, depth = 1 } }, 0);
+        }
+        finally
+        {
+            handle.Free();
+        }
+
+        long sum = 0;
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            sum += pixels[i] + pixels[i + 1] + pixels[i + 2];
+        }
+
+        return sum / (Width * Height * 3.0 * 255.0);
+    }
+
+    /// <summary>
+    /// Translates some visuals from HLSL as the app does for the user's own (DXC's library, then SPIRV-Cross),
+    /// checks each comes out exactly as the build translated it, and has Metal compile a visual of the user's own.
+    /// </summary>
+    private static int TestRuntimeTranslation()
+    {
+        if (!DxcCompiler.IsAvailable)
+        {
+            Console.WriteLine($"::warning::{DxcCompiler.LibraryName} isn't beside the app, so the user's own visuals can't be translated.");
+            return 0;
+        }
+
+        var problems = 0;
+        var userFolder = Directory.CreateTempSubdirectory("lucent-own-visuals");
+        var cacheFolder = Directory.CreateTempSubdirectory("lucent-translations");
+        try
+        {
+            File.WriteAllText(Path.Combine(userFolder.FullName, "SelfTestOwn.hlsl"),
+                "// Name: Self-test own visual\n// Family: Fractal\nfloat3 Render(float2 uv, float2 p)\n{\n    return float3(pow(p.x, 2.0), uv.y, 0.5 + 0.5 * sin(Time + Bass));\n}\n");
+            var files = new MetalShaderFiles(userPresetsFolder: userFolder.FullName, cache: new ShaderCache(cacheFolder.FullName));
+            var presets = files.LoadPresets();
+            var own = presets.FirstOrDefault(preset => !files.IsBuiltIn(preset));
+            if (own is null)
+            {
+                Console.WriteLine("::error::A visual in the user's own folder wasn't found.");
+                return 1;
+            }
+
+            // The user's visual, translated now, must compile for Metal.
+            var device = MTLDevice.CreateSystemDefaultDevice();
+            var stopwatch = Stopwatch.StartNew();
+            var metal = files.Preset(own, "PSMain");
+            Console.WriteLine($"Translated {own.Name} from HLSL in {stopwatch.Elapsed.TotalMilliseconds:0} ms.");
+            if (device.NativePtr != IntPtr.Zero)
+            {
+                var options = new MTLCompileOptions { LanguageVersion = MTLLanguageVersion.Version21, FastMathEnabled = false };
+                var error = new NSError(IntPtr.Zero);
+                var library = device.NewLibrary(StringHelper.Create(metal), options, ref error);
+                if (library.NativePtr == IntPtr.Zero)
+                {
+                    problems++;
+                    Console.WriteLine($"::error::{own.Name}, translated as the app runs, didn't compile for Metal: {(error.NativePtr != IntPtr.Zero ? StringHelper.Read(error.LocalizedDescription) : "no reason given")}");
+                }
+                else
+                {
+                    library.Dispose();
+                }
+            }
+
+            // Built-in visuals translated now must match what the build made, a particle visual among them.
+            var samples = presets.Where(files.IsBuiltIn).Where(preset => preset.IsParticles).Take(1)
+                .Concat(presets.Where(files.IsBuiltIn).Where(preset => !preset.IsParticles).Take(2));
+            var common = File.ReadAllText(Path.Combine(files.ShadersFolder, "Common.hlsli"));
+            var particles = File.ReadAllText(Path.Combine(files.ShadersFolder, "Particles.hlsli"));
+            var presetMain = File.ReadAllText(Path.Combine(files.ShadersFolder, "PresetMain.hlsli"));
+            var particleMain = File.ReadAllText(Path.Combine(files.ShadersFolder, "ParticleMain.hlsli"));
+            foreach (var preset in samples)
+            {
+                foreach (var entry in preset.IsParticles ? new[] { "PSMain", "CSMain", "VSParticle" } : new[] { "PSMain" })
+                {
+                    var shipped = Path.Combine(files.MetalFolder, "Presets", $"{Path.GetFileName(preset.FilePath)}.{entry}.metal");
+                    var hlsl = MetalTranslation.PresetSource(common, particles, presetMain, particleMain, preset.Code, preset.IsParticles, entry);
+                    var now = new ShaderCache(cacheFolder.FullName).GetOrTranslate(hlsl, entry, Path.GetFileName(preset.FilePath));
+                    if (!File.Exists(shipped) || File.ReadAllText(shipped).ReplaceLineEndings("\n") != now.ReplaceLineEndings("\n"))
+                    {
+                        problems++;
+                        Console.WriteLine($"::error::{preset.Name} ({entry}) translated as the app runs doesn't match the build's translation.");
+                    }
+                }
+            }
+
+            if (problems == 0)
+            {
+                Console.WriteLine("Translating visuals as the app runs works, and matches the build.");
+            }
+        }
+        catch (Exception ex)
+        {
+            problems++;
+            Console.WriteLine($"::error::Translating a visual as the app runs failed: {ex.Message}");
+        }
+        finally
+        {
+            userFolder.Delete(recursive: true);
+            cacheFolder.Delete(recursive: true);
+        }
+
+        return problems;
     }
 
     /// <summary>Copies one visual's BGRA picture into its place on the contact sheet.</summary>

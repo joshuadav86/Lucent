@@ -5,12 +5,18 @@ namespace WinampInspiredVisualizer.Settings;
 /// <summary>
 /// %AppData%\Lucent, where settings, saved playlists and the user's own visuals live. The app was called
 /// Lucid before, and kept them in %AppData%\Lucid; the first run under the new name copies them across.
+/// On a Mac it's ~/Library/Application Support/Lucent. LUCENT_DATA_FOLDER puts it somewhere else
+/// (the Mac app's screenshot tool uses that, so it never touches real settings).
 /// </summary>
 public static class AppDataFolder
 {
-    private static readonly string Roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+    private static readonly string Roaming = Environment.GetFolderPath(OperatingSystem.IsMacOS()
+        ? Environment.SpecialFolder.LocalApplicationData
+        : Environment.SpecialFolder.ApplicationData);
 
-    public static string Path { get; } = System.IO.Path.Combine(Roaming, "Lucent");
+    public static string Path { get; } = Environment.GetEnvironmentVariable("LUCENT_DATA_FOLDER") is { Length: > 0 } custom
+        ? custom
+        : System.IO.Path.Combine(Roaming, "Lucent");
 
     private static string OldPath => System.IO.Path.Combine(Roaming, "Lucid");
 

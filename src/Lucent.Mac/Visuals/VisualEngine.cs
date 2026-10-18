@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Lucent.Mac.Interop;
 using SharpMetal.Foundation;
 using SharpMetal.Metal;
+using Lucent.Mac.Visualizer;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Visualizer;
 
@@ -14,7 +15,9 @@ namespace Lucent.Mac.Visuals;
 /// Above window resolution the result is shrunk to the window (supersampling), then it's bloomed
 /// and tone-mapped onto the output. Particle visuals move their particles with a compute shader and
 /// draw them as glowing dots into a layer before their own pass. Visuals compile in the background,
-/// so the first one appears straight away.
+/// so the first one appears straight away. Given a half-float output it draws in HDR (EDR), with
+/// normal white at 1.0 and highlights reaching up to the screen's peak, as the Windows renderer does
+/// on HDR screens.
 /// </summary>
 /// <remarks>
 /// It draws into whatever texture it's given, so the same code draws into the window (see
@@ -43,7 +46,8 @@ public sealed class VisualEngine : IDisposable
     private readonly MTLCommandQueue _queue;
     private readonly AudioAnalyzer _analyzer;
     private readonly MetalShaderFiles _files;
-    private readonly MTLPixelFormat _outputFormat;
+    private readonly Dictionary<MTLPixelFormat, MTLRenderPipelineState> _presentPipelines = new();
+    private readonly object _displayLock = new();
     private readonly PresetSlot[] _slots;
     private readonly List<Thread> _compileThreads = new();
     private readonly float[] _constants = new float[ConstantCount];
@@ -55,7 +59,7 @@ public sealed class VisualEngine : IDisposable
     private readonly List<MTLLibrary> _engineLibraries = new();
     private MTLFunction _vertexFunction;
     private MTLFunction _spriteFunction;
-    private MTLRenderPipelineState _presentPipeline;
+    private MTLFunction _presentFunction;
     private MTLRenderPipelineState _blendPipeline;
     private MTLRenderPipelineState _downsamplePipeline;
     private MTLSamplerState _sampler;
@@ -70,6 +74,9 @@ public sealed class VisualEngine : IDisposable
     private volatile float _transitionSeconds = 3f;
     private volatile float _autoCycleSeconds = 25f;
     private volatile bool _morphsOnly;
+    private volatile int[]? _autoCycleChoices;
+    private DisplayInfo _display = DisplayInfo.Standard;
+    private int _compilersRunning;
     private int _frame;
     private int _current;
     private int _frameCount;
@@ -90,13 +97,14 @@ public sealed class VisualEngine : IDisposable
         _device = device;
         _analyzer = analyzer;
         _files = files;
-        _outputFormat = outputFormat;
         _queue = device.NewCommandQueue();
         _slots = files.LoadPresets().Select(source => new PresetSlot(source)).ToArray();
         Presets = _slots.Select(slot => slot.Source).ToList();
+        PresetNames = Presets.Select(preset => preset.Name).ToList();
 
         CreateResources();
         CompileEngineShaders();
+        PresentPipelineFor(outputFormat);
     }
 
     /// <summary>Raised (on a compile thread) when a visual fails to compile; it is skipped.</summary>
@@ -105,8 +113,11 @@ public sealed class VisualEngine : IDisposable
     /// <summary>Raised (on the drawing thread) when the engine moves to another visual by itself.</summary>
     public event Action<int>? PresetChanged;
 
-    /// <summary>Every visual, in the order <see cref="PresetIndex"/> counts them.</summary>
+    /// <summary>Every visual's file (with its family and tags), in the order <see cref="PresetIndex"/> counts them.</summary>
     public IReadOnlyList<PresetSource> Presets { get; }
+
+    /// <summary>Every visual's name, in the same order as <see cref="Presets"/>.</summary>
+    public IReadOnlyList<string> PresetNames { get; }
 
     public MTLDevice Device => _device;
 
@@ -117,6 +128,9 @@ public sealed class VisualEngine : IDisposable
         get => _requestedPreset;
         set => _requestedPreset = value;
     }
+
+    /// <summary>True when the last frame was drawn in HDR: into a half-float output, in extended linear light.</summary>
+    public bool HdrActive { get; private set; }
 
     /// <summary>The visual on screen now, or -1 before the first one has compiled.</summary>
     public int ActivePreset => _activePreset;
@@ -165,6 +179,41 @@ public sealed class VisualEngine : IDisposable
         set => _morphsOnly = value;
     }
 
+    /// <summary>The visuals Auto picks from (by index), or null for all of them.</summary>
+    public IReadOnlyCollection<int>? AutoCycleChoices
+    {
+        get => _autoCycleChoices;
+        set => _autoCycleChoices = value?.ToArray();
+    }
+
+    /// <summary>
+    /// The screen the visuals are on: its normal white and peak brightness set how bright HDR
+    /// highlights go. Set from the UI thread; read when each frame is drawn.
+    /// </summary>
+    public DisplayInfo Display
+    {
+        get
+        {
+            lock (_displayLock)
+            {
+                return _display;
+            }
+        }
+
+        set
+        {
+            lock (_displayLock)
+            {
+                _display = value;
+            }
+        }
+    }
+
+    /// <summary>The size the last frame was drawn at (bigger than the output when supersampling).</summary>
+    public int RenderWidth => _renderWidth;
+
+    public int RenderHeight => _renderHeight;
+
     /// <summary>The song that's playing and its bars, so Auto can change visual on a downbeat.</summary>
     public SongClock? SongClock { get; set; }
 
@@ -204,9 +253,25 @@ public sealed class VisualEngine : IDisposable
         using var pool = AutoreleasePool.Begin();
         _vertexFunction = LoadFunction(_files.Engine("VSMain"), "engine_vertex", _engineLibraries);
         _spriteFunction = LoadFunction(_files.Engine("PSSprite"), "sprite_fragment", _engineLibraries);
-        _presentPipeline = MakePipeline(_vertexFunction, LoadFunction(_files.Engine("PSPresent"), "engine_present", _engineLibraries), _outputFormat, additive: false);
+        _presentFunction = LoadFunction(_files.Engine("PSPresent"), "engine_present", _engineLibraries);
         _blendPipeline = MakePipeline(_vertexFunction, LoadFunction(_files.Engine("PSBlend"), "engine_blend", _engineLibraries), FeedbackFormat, additive: false);
         _downsamplePipeline = MakePipeline(_vertexFunction, LoadFunction(_files.Engine("PSDownsample"), "engine_downsample", _engineLibraries), FeedbackFormat, additive: false);
+    }
+
+    /// <summary>
+    /// The last pass, onto the output, for the output's pixel format: 8-bit for a normal screen,
+    /// half-float for HDR. Each is made the first time it's needed.
+    /// </summary>
+    private MTLRenderPipelineState PresentPipelineFor(MTLPixelFormat format)
+    {
+        if (!_presentPipelines.TryGetValue(format, out var pipeline))
+        {
+            using var pool = AutoreleasePool.Begin();
+            pipeline = MakePipeline(_vertexFunction, _presentFunction, format, additive: false);
+            _presentPipelines[format] = pipeline;
+        }
+
+        return pipeline;
     }
 
     /// <summary>Compiles Metal source and returns one of its functions. The library is kept in <paramref name="libraries"/> to be freed later.</summary>
@@ -283,6 +348,7 @@ public sealed class VisualEngine : IDisposable
     {
         _stopCompiling = false;
         var count = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
+        _compilersRunning = count;
         for (var i = 0; i < count; i++)
         {
             var thread = new Thread(CompileLoop)
@@ -335,6 +401,12 @@ public sealed class VisualEngine : IDisposable
                 Volatile.Write(ref slot.State, PresetSlot.Failed);
                 PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
             }
+        }
+
+        // The last compiler to finish a full pass tidies away translations of visuals that changed or went.
+        if (Interlocked.Decrement(ref _compilersRunning) == 0 && !_stopCompiling)
+        {
+            _files.RemoveUnusedTranslations();
         }
     }
 
@@ -394,6 +466,7 @@ public sealed class VisualEngine : IDisposable
 
         var width = (int)output.Width;
         var height = (int)output.Height;
+        HdrActive = output.PixelFormat == MTLPixelFormat.RGBA16Float;
         if (width != _windowWidth || height != _windowHeight)
         {
             _windowWidth = width;
@@ -448,9 +521,10 @@ public sealed class VisualEngine : IDisposable
         _constants[13] = _transitionStyle;
         _constants[14] = _bloomStrength;
         _constants[15] = (float)_renderWidth / _windowWidth;
-        _constants[16] = 0f;  // HDR (EDR on the Mac) comes later: standard range for now.
-        _constants[17] = 1f;
-        _constants[18] = 1f;
+        var display = Display;
+        _constants[16] = HdrActive ? 1f : 0f;
+        _constants[17] = display.SdrWhiteNits / 80f;
+        _constants[18] = display.PeakNits / 80f;
         _constants[19] = _frameCount++;
 
         var target = _feedback[_current]!;
@@ -478,7 +552,7 @@ public sealed class VisualEngine : IDisposable
         }
 
         // Pass 3: bloom and tone-map the result onto the output.
-        DrawPass(commands, audio, output, _windowWidth, _windowHeight, _presentPipeline, shown.Texture, null, null);
+        DrawPass(commands, audio, output, _windowWidth, _windowHeight, PresentPipelineFor(output.PixelFormat), shown.Texture, null, null);
         _current = 1 - _current;
         return commands;
     }
@@ -745,9 +819,10 @@ public sealed class VisualEngine : IDisposable
     private int RandomReadyPreset()
     {
         var ready = new List<int>();
+        var choices = _autoCycleChoices;
         for (var index = 0; index < _slots.Length; index++)
         {
-            if (index != _activePreset && IsReady(index))
+            if (index != _activePreset && IsReady(index) && (choices is null || Array.IndexOf(choices, index) >= 0))
             {
                 ready.Add(index);
             }
@@ -868,7 +943,12 @@ public sealed class VisualEngine : IDisposable
             slot.Dispose();
         }
 
-        _presentPipeline.Dispose();
+        foreach (var pipeline in _presentPipelines.Values)
+        {
+            pipeline.Dispose();
+        }
+
+        _presentFunction.Dispose();
         _blendPipeline.Dispose();
         _downsamplePipeline.Dispose();
         _vertexFunction.Dispose();

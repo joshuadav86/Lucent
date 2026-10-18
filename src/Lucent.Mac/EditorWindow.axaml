@@ -1,0 +1,587 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        xmlns:editor="using:Lucent.Mac.Editor"
+        x:Class="Lucent.Mac.EditorWindow"
+        Title="Audio editor - Lucent"
+        Width="1240" Height="700" MinWidth="980" MinHeight="480"
+        Background="{DynamicResource BackgroundBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <!-- Icons only the editor uses, on the same 16 x 16 grid as the app's. -->
+        <StreamGeometry x:Key="UndoIcon">M5,2.5 L1.5,6 L5,9.5 M1.5,6 H10 A4,4 0 0 1 10,14 H7</StreamGeometry>
+        <StreamGeometry x:Key="RedoIcon">M11,2.5 L14.5,6 L11,9.5 M14.5,6 H6 A4,4 0 0 0 6,14 H9</StreamGeometry>
+        <StreamGeometry x:Key="ZoomInIcon">M6.5,1.5 A5,5 0 1 1 6.49,1.5 Z M10.2,10.2 L14.5,14.5 M4,6.5 H9 M6.5,4 V9</StreamGeometry>
+        <StreamGeometry x:Key="ZoomOutIcon">M6.5,1.5 A5,5 0 1 1 6.49,1.5 Z M10.2,10.2 L14.5,14.5 M4,6.5 H9</StreamGeometry>
+        <StreamGeometry x:Key="ZoomFitIcon">M1,8 H15 M4,5 L1,8 L4,11 M12,5 L15,8 L12,11</StreamGeometry>
+
+        <!-- A thin progress bar in the accent colours. -->
+        <ControlTheme x:Key="ThinProgress" TargetType="ProgressBar">
+            <Setter Property="Height" Value="4" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="1" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid>
+                        <Border Name="PART_Track" CornerRadius="2" Background="{DynamicResource HairlineBrush}" />
+                        <Border Name="PART_Indicator" CornerRadius="2" HorizontalAlignment="Left"
+                                Background="{DynamicResource AccentGradientBrush}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
+        <!-- Text button for the processing bar and the save buttons. -->
+        <ControlTheme x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.4" />
+            </Style>
+        </ControlTheme>
+
+        <!-- An icon button that dims when there's nothing for it to do (Undo with no history). -->
+        <ControlTheme x:Key="DimmingIconButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.35" />
+            </Style>
+        </ControlTheme>
+
+        <!-- A switch in the toolbar (Loop, Snap, Spectrogram), lit while it's on. -->
+        <ControlTheme x:Key="ToolToggle" TargetType="ToggleButton" BasedOn="{StaticResource PanelToggle}">
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Padding" Value="10,0" />
+        </ControlTheme>
+
+        <!-- A small label and value above a slider in the tool cards. -->
+        <ControlTheme x:Key="CardValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontFamily" Value="Menlo, Consolas, monospace" />
+        </ControlTheme>
+
+        <ControlTheme x:Key="PopupCard" TargetType="Border">
+            <Setter Property="Margin" Value="16" />
+            <Setter Property="Width" Value="320" />
+            <Setter Property="Padding" Value="16,12,16,16" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BoxShadow" Value="0 0 24 0 #99000000" />
+        </ControlTheme>
+    </Window.Resources>
+
+    <Grid x:Name="WindowRoot" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
+
+        <!-- Title bar -->
+        <Grid Grid.Row="0" Height="40" ColumnDefinitions="*,Auto" Background="Transparent" w:Chrome.IsCaption="True">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                <Image x:Name="TitleIcon" Width="16" Height="16" VerticalAlignment="Center"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="AUDIO EDITOR" Margin="10,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="FileTitle" Margin="14,0,0,0" FontSize="12" MaxWidth="560"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button Theme="{StaticResource CaptionButton}" ToolTip.Tip="Minimize" Click="OnMinimize">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource MinimizeIcon}" />
+                </Button>
+                <Button x:Name="MaximizeButton" Theme="{StaticResource CaptionButton}" ToolTip.Tip="Maximize" Click="OnMaximizeRestore">
+                    <Path x:Name="MaximizeIcon" Theme="{StaticResource CaptionIcon}" Data="{StaticResource MaximizeIcon}" />
+                </Button>
+                <Button Theme="{StaticResource CloseCaptionButton}" ToolTip.Tip="Close" Click="OnCloseWindow">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Transport, position and view controls -->
+        <Border x:Name="Toolbar" Grid.Row="1" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,1" Padding="14,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <editor:LevelMeter x:Name="Meter" Width="230" Margin="0,0,14,0" VerticalAlignment="Center"
+                                       BarBrush="{DynamicResource AccentBrush}" TrackBrush="{DynamicResource HairlineBrush}"
+                                       LabelBrush="{DynamicResource MutedTextBrush}" />
+                    <ToggleButton x:Name="SpectrogramToggle" Theme="{StaticResource ToolToggle}" Content="Spectrogram"
+                                  Click="OnViewToggle"
+                                  ToolTip.Tip="Show the frequencies over time instead of the waveform (V). Hum, hiss, clipping and an MP3's cut-off show up clearly." />
+                    <ToggleButton x:Name="SnapToggle" Theme="{StaticResource ToolToggle}" Content="Snap" Click="OnSnapToggle"
+                                  ToolTip.Tip="Snap the cursor and selection to the nearest zero crossing, so cuts don't click. Hold ⌘ to place them freely." />
+                    <Border Width="1" Height="20" Margin="4,0,8,0" Background="{DynamicResource HairlineBrush}" />
+                    <Button x:Name="UndoButton" Theme="{StaticResource DimmingIconButton}" Click="OnUndo" ToolTip.Tip="Undo (⌘Z)">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource UndoIcon}" />
+                    </Button>
+                    <Button x:Name="RedoButton" Theme="{StaticResource DimmingIconButton}" Click="OnRedo" ToolTip.Tip="Redo (⇧⌘Z)">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource RedoIcon}" />
+                    </Button>
+                    <Border Width="1" Height="20" Margin="8,0" Background="{DynamicResource HairlineBrush}" />
+                    <Button Theme="{StaticResource IconButton}" Click="OnZoomOut" ToolTip.Tip="Zoom out (-, or scroll)">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ZoomOutIcon}" />
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Click="OnZoomIn" ToolTip.Tip="Zoom in (+, or scroll)">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ZoomInIcon}" />
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Click="OnZoomFit" ToolTip.Tip="Show the whole sound (0)">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ZoomFitIcon}" />
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="PlayButton" Theme="{StaticResource PlayButton}" Width="40" Height="40"
+                            ToolTip.Tip="Play from the cursor, or play the selection (Space)" Click="OnPlay">
+                        <Path x:Name="PlayIcon" Theme="{StaticResource SolidIcon}" Data="{StaticResource PlayIcon}" Margin="2,0,0,0" />
+                    </Button>
+                    <Button x:Name="PlaySelectionButton" Theme="{StaticResource ToolButton}" Margin="10,0,6,0"
+                            Content="Play selection" ToolTip.Tip="Play only the selected part" Click="OnPlaySelection" />
+                    <ToggleButton x:Name="LoopToggle" Theme="{StaticResource ToolToggle}" Content="Loop" Click="OnLoopToggle"
+                                  ToolTip.Tip="Play the selection round and round (L), to hear a change while you make it" />
+                    <StackPanel Margin="18,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="PositionText" FontSize="13" Foreground="{DynamicResource TextBrush}"
+                                   FontFamily="Menlo, Consolas, monospace" Text="0:00.000" />
+                        <TextBlock x:Name="LengthText" FontSize="11" Margin="0,2,0,0" Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- The whole song, with the visible part marked -->
+        <editor:OverviewView x:Name="Overview" Grid.Row="2" Height="38" Margin="14,10,14,0"
+                             WaveBrush="{DynamicResource FaintTextBrush}"
+                             BackgroundBrush="{DynamicResource SurfaceBrush}"
+                             WindowBrush="{DynamicResource AccentBrush}"
+                             WindowBorderBrush="{DynamicResource AccentBrush}"
+                             ToolTip.Tip="The whole sound. Click or drag to move around; scrolling zooms." />
+
+        <!-- The waveform -->
+        <Grid Grid.Row="3" Margin="14,8,14,10">
+            <editor:WaveformView x:Name="Waveform"
+                                 WaveBrush="{DynamicResource AccentBrush}"
+                                 SelectedWaveBrush="#F2F0EA"
+                                 LaneBrush="{DynamicResource SurfaceBrush}"
+                                 SelectionBrush="#2EF2F0EA"
+                                 LineBrush="{DynamicResource HairlineBrush}"
+                                 LabelBrush="{DynamicResource MutedTextBrush}"
+                                 CursorBrush="{DynamicResource AccentBrush}"
+                                 PlayheadBrush="{DynamicResource TextBrush}" />
+            <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
+                <TextBlock x:Name="LoadingText" Text="Opening the sound…" FontSize="13" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+                <ProgressBar x:Name="LoadingProgress" Theme="{StaticResource ThinProgress}" Margin="0,12,0,0" />
+            </StackPanel>
+        </Grid>
+
+        <!-- The plugin that's open, while one is -->
+        <Border x:Name="PluginBar" Grid.Row="4" IsVisible="False" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="PluginWindowButton" Theme="{StaticResource ToolButton}" Content="Show its window"
+                            Click="OnShowPluginWindow" ToolTip.Tip="Bring the plugin's settings window to the front" />
+                    <Button x:Name="PluginPreviewButton" Theme="{StaticResource ToolButton}" Content="Preview" Click="OnPreviewPlugin"
+                            ToolTip.Tip="Play the selection (or from the cursor) through the plugin. Changes in its window are heard straight away." />
+                    <Button Theme="{StaticResource ToolButton}" Click="OnApplyPlugin" Foreground="{DynamicResource AccentBrush}"
+                            ToolTip.Tip="Run the selection (or the whole sound) through the plugin, as one step you can undo">
+                        <TextBlock Text="Apply" FontWeight="SemiBold" />
+                    </Button>
+                    <Button Theme="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnClosePlugin"
+                            ToolTip.Tip="Close the plugin. Its settings are remembered for next time." />
+                </StackPanel>
+                <StackPanel VerticalAlignment="Center" Margin="2,0,12,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="PLUGIN" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock x:Name="PluginName" Margin="10,0,0,0" FontSize="13" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+                    </StackPanel>
+                    <TextBlock x:Name="PluginHint" Theme="{StaticResource OptionHint}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Processing -->
+        <Border x:Name="ProcessBar" Grid.Row="5" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,8">
+            <StackPanel>
+                <WrapPanel>
+                    <Button x:Name="NormalizeButton" Theme="{StaticResource ToolButton}" Click="OnNormalize"
+                            ToolTip.Tip="Make it as loud as it can be without distorting, or match a loudness level">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Normalize" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="GainButton" Theme="{StaticResource ToolButton}" Content="Volume…" Click="OnGain"
+                            ToolTip.Tip="Make it louder or quieter" />
+                    <Button x:Name="PitchButton" Theme="{StaticResource ToolButton}" Content="Pitch…" Click="OnPitch"
+                            ToolTip.Tip="Move the pitch up or down by up to an octave" />
+                    <Button x:Name="TempoButton" Theme="{StaticResource ToolButton}" Content="Tempo…" Click="OnTempo"
+                            ToolTip.Tip="Make it faster or slower, keeping the pitch (or not)" />
+                    <Button Theme="{StaticResource ToolButton}" Content="Fade in" Click="OnFadeIn"
+                            ToolTip.Tip="Fade up from silence over the selection (or the first 3 seconds)" />
+                    <Button Theme="{StaticResource ToolButton}" Content="Fade out" Click="OnFadeOut"
+                            ToolTip.Tip="Fade down to silence over the selection (or the last 3 seconds)" />
+                    <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
+                    <Button x:Name="EqButton" Theme="{StaticResource ToolButton}" Content="EQ…" Click="OnEq"
+                            ToolTip.Tip="A parametric equalizer, drawn over the selection's spectrum, heard live while you shape it" />
+                    <Button x:Name="DynamicsButton" Theme="{StaticResource ToolButton}" Content="Dynamics…" Click="OnDynamics"
+                            ToolTip.Tip="A compressor to even out the level, or a true-peak limiter to make it louder without clipping" />
+                    <Button x:Name="RepairButton" Theme="{StaticResource ToolButton}" Click="OnRepair"
+                            ToolTip.Tip="Take out hum, clicks, background noise or a DC offset">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Repair" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ChannelsButton" Theme="{StaticResource ToolButton}" Click="OnChannels"
+                            ToolTip.Tip="Swap, mix, invert or widen the channels, convert to mono, or edit one channel alone">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Channels" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="AnalyzeButton" Theme="{StaticResource ToolButton}" Content="Analyze…" Click="OnAnalyze"
+                            ToolTip.Tip="Peak, true peak, loudness, loudness range, DC offset, clipping and the spectrum of the selection (or the sound)" />
+                    <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
+                    <Button Theme="{StaticResource ToolButton}" Content="Split" Click="OnSplit"
+                            ToolTip.Tip="Split into clips at the cursor, or around the selection, to move them around (S)" />
+                    <Button x:Name="TrimButton" Theme="{StaticResource ToolButton}" Content="Trim to selection" Click="OnTrim"
+                            ToolTip.Tip="Keep only the selected part" />
+                    <Button x:Name="DeleteButton" Theme="{StaticResource ToolButton}" Content="Delete" Click="OnDelete"
+                            ToolTip.Tip="Cut out the selected part (Delete)" />
+                    <Button Theme="{StaticResource ToolButton}" Content="Silence" Click="OnSilence"
+                            ToolTip.Tip="Replace the selection with silence" />
+                    <Button Theme="{StaticResource ToolButton}" Content="Reverse" Click="OnReverse"
+                            ToolTip.Tip="Play the selection backwards" />
+                    <Button x:Name="EditMenuButton" Theme="{StaticResource ToolButton}" Click="OnEditMenu"
+                            ToolTip.Tip="Cut, copy and paste (⌘X, C, V), and how joins are crossfaded">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Edit" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="MarkersButton" Theme="{StaticResource ToolButton}" Click="OnMarkers"
+                            ToolTip.Tip="Add a marker (M), go to one ([ and ]), or select between two">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Markers" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
+                    <Button x:Name="PluginsButton" Theme="{StaticResource ToolButton}" Click="OnPlugins"
+                            ToolTip.Tip="Use a VST3 effect installed on this Mac: reverb, EQ, compression and more">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Plugins" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button Theme="{StaticResource ToolButton}" Content="Batch…" Click="OnBatch"
+                            ToolTip.Tip="Process and convert many sounds at once: normalize, limit, trim silence, remove hum and more" />
+                </WrapPanel>
+                <TextBlock x:Name="ScopeHint" Theme="{StaticResource OptionHint}" Margin="2,4,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Status and saving -->
+        <Border Grid.Row="6" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,8">
+            <DockPanel>
+                <StackPanel x:Name="SaveButtons" DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="SaveAsButton" Theme="{StaticResource ToolButton}" Content="Save as new version…" Click="OnSaveAs"
+                            ToolTip.Tip="Save the edit as a new file, in any format, and keep the original" />
+                    <Button x:Name="SaveButton" Theme="{StaticResource ToolButton}" Margin="0" Click="OnSave"
+                            Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="Replace the original file with the edit (⌘S)">
+                        <TextBlock Text="Save" FontWeight="SemiBold" />
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel x:Name="BusyPanel" Orientation="Horizontal" IsVisible="False" VerticalAlignment="Center">
+                        <ProgressBar x:Name="BusyProgress" Theme="{StaticResource ThinProgress}" Width="140" />
+                        <Button x:Name="CancelButton" Theme="{StaticResource PillButton}" Content="CANCEL" Margin="10,0,0,0"
+                                Click="OnCancelBusy" />
+                    </StackPanel>
+                    <TextBlock x:Name="StatusText" Margin="12,0,0,0" FontSize="12" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" MaxWidth="560" Foreground="{DynamicResource MutedTextBrush}" />
+                    <Button x:Name="ShowFileButton" Theme="{StaticResource PillButton}" Content="SHOW IN FINDER" Margin="10,0,0,0"
+                            IsVisible="False" Click="OnShowFile" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Volume -->
+        <Popup x:Name="GainPopup" PlacementTarget="{Binding #GainButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="GainValue" DockPanel.Dock="Right" FontSize="13" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Change the volume by" />
+                    </DockPanel>
+                    <Slider x:Name="GainSlider" Minimum="-24" Maximum="24" Value="3" TickFrequency="0.5"
+                            IsSnapToTickEnabled="True" ValueChanged="OnGainChanged" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Every 6 dB doubles or halves the level. Above 0 dB, loud parts may distort; Normalize avoids that." />
+                    <Button Theme="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Click="OnApplyGain" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Pitch -->
+        <Popup x:Name="PitchPopup" PlacementTarget="{Binding #PitchButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="PitchValue" DockPanel.Dock="Right" FontSize="13" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Move the pitch by" />
+                    </DockPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Left" Theme="{StaticResource IconButton}" Width="28" Height="28" Content="−"
+                                ToolTip.Tip="0.1 semitone lower" Click="OnPitchDown" />
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource IconButton}" Width="28" Height="28" Content="+"
+                                ToolTip.Tip="0.1 semitone higher" Click="OnPitchUp" />
+                        <Slider x:Name="PitchSlider" Minimum="-12" Maximum="12" Value="0" TickFrequency="0.1"
+                                IsSnapToTickEnabled="True" Margin="4,0" VerticalAlignment="Center" ValueChanged="OnPitchChanged" />
+                    </DockPanel>
+                    <Border Theme="{StaticResource SegmentBar}" Margin="0,12,0,0">
+                        <UniformGrid Rows="1">
+                            <RadioButton x:Name="KeepSpeedChoice" Theme="{StaticResource SegmentButton}" GroupName="PitchMode"
+                                         Content="Keep the speed" IsChecked="True" Click="OnPitchModeChanged" />
+                            <RadioButton x:Name="ChangeSpeedChoice" Theme="{StaticResource SegmentButton}" GroupName="PitchMode"
+                                         Content="Change the speed" Click="OnPitchModeChanged" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock x:Name="PitchHint" Theme="{StaticResource OptionHint}" />
+                    <Button Theme="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Click="OnApplyPitch" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Tempo -->
+        <Popup x:Name="TempoPopup" PlacementTarget="{Binding #TempoButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="TempoValue" DockPanel.Dock="Right" FontSize="13" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Play it at" />
+                    </DockPanel>
+                    <Slider x:Name="TempoSlider" Minimum="50" Maximum="200" Value="100" TickFrequency="1"
+                            IsSnapToTickEnabled="True" ValueChanged="OnTempoChanged" />
+                    <Border Theme="{StaticResource SegmentBar}" Margin="0,12,0,0">
+                        <UniformGrid Rows="1">
+                            <RadioButton x:Name="TempoKeepPitch" Theme="{StaticResource SegmentButton}" GroupName="TempoMode"
+                                         Content="Keep the pitch" IsChecked="True" Click="OnTempoModeChanged" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="TempoMode"
+                                         Content="Pitch changes too" Click="OnTempoModeChanged" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock x:Name="TempoHint" Theme="{StaticResource OptionHint}" />
+                    <Button Theme="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Click="OnApplyTempo" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Equalizer -->
+        <Popup x:Name="EqPopup" PlacementTarget="{Binding #EqButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True" Closed="OnToolPopupClosed">
+            <Border Theme="{StaticResource PopupCard}" Width="620">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,8">
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="FLAT" Click="OnEqReset"
+                                ToolTip.Tip="Put every band back to 0 dB" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" VerticalAlignment="Center"
+                                   Text="Drag a handle to shape the sound. Scrolling over one makes a band narrower or wider; double-click switches it off." TextWrapping="Wrap" />
+                    </DockPanel>
+                    <Border CornerRadius="8" Background="{DynamicResource BackgroundBrush}" Padding="2">
+                        <editor:EqCurveView x:Name="EqCurve" Height="210"
+                                            CurveBrush="{DynamicResource AccentBrush}" GridBrush="{DynamicResource HairlineBrush}"
+                                            LabelBrush="{DynamicResource FaintTextBrush}" SpectrumBrush="{DynamicResource HoverBrush}"
+                                            HandleTextBrush="{DynamicResource AccentForegroundBrush}" />
+                    </Border>
+                    <DockPanel Margin="0,10,0,0">
+                        <CheckBox x:Name="EqBandOn" DockPanel.Dock="Right" Theme="{StaticResource SwitchToggle}" Content="On"
+                                  HorizontalAlignment="Right" Click="OnEqBandControl" />
+                        <TextBlock x:Name="EqBandTitle" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
+                    </DockPanel>
+                    <Border Theme="{StaticResource SegmentBar}" Margin="0,8,0,0">
+                        <UniformGrid x:Name="EqShapes" Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="EqShape" Tag="Peak" Content="Bell" Click="OnEqShape" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="EqShape" Tag="LowShelf" Content="Low shelf" Click="OnEqShape" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="EqShape" Tag="HighShelf" Content="High shelf" Click="OnEqShape" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="EqShape" Tag="HighPass" Content="Low cut" Click="OnEqShape" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="EqShape" Tag="LowPass" Content="High cut" Click="OnEqShape" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="EqShape" Tag="Notch" Content="Notch" Click="OnEqShape" />
+                        </UniformGrid>
+                    </Border>
+                    <UniformGrid Columns="3" Margin="0,8,0,0">
+                        <StackPanel Margin="0,0,10,0">
+                            <DockPanel>
+                                <TextBlock x:Name="EqFrequencyValue" DockPanel.Dock="Right" Theme="{StaticResource CardValue}" />
+                                <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Frequency" />
+                            </DockPanel>
+                            <Slider x:Name="EqFrequencySlider" Minimum="0" Maximum="1000" ValueChanged="OnEqBandSlider" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,10,0">
+                            <DockPanel>
+                                <TextBlock x:Name="EqGainValue" DockPanel.Dock="Right" Theme="{StaticResource CardValue}" />
+                                <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Gain" />
+                            </DockPanel>
+                            <Slider x:Name="EqGainSlider" Minimum="-18" Maximum="18" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                    ValueChanged="OnEqBandSlider" />
+                        </StackPanel>
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock x:Name="EqQValue" DockPanel.Dock="Right" Theme="{StaticResource CardValue}" />
+                                <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Width (Q)" />
+                            </DockPanel>
+                            <Slider x:Name="EqQSlider" Minimum="0" Maximum="1000" ValueChanged="OnEqBandSlider" />
+                        </StackPanel>
+                    </UniformGrid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                        <Button x:Name="EqPreviewButton" Theme="{StaticResource ToolButton}" Content="Preview" Click="OnEqPreview"
+                                ToolTip.Tip="Play the selection (or from the cursor) through the equalizer; changes are heard as you make them" />
+                        <Button Theme="{StaticResource ToolButton}" Margin="0" Click="OnApplyEq" Foreground="{DynamicResource AccentBrush}">
+                            <TextBlock Text="Apply" FontWeight="SemiBold" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Compressor and limiter -->
+        <Popup x:Name="DynamicsPopup" PlacementTarget="{Binding #DynamicsButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True" Closed="OnToolPopupClosed">
+            <Border Theme="{StaticResource PopupCard}" Width="420">
+                <StackPanel>
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton x:Name="CompressorChoice" Theme="{StaticResource SegmentButton}" GroupName="Dynamics"
+                                         Content="Compressor" Click="OnDynamicsMode" />
+                            <RadioButton x:Name="LimiterChoice" Theme="{StaticResource SegmentButton}" GroupName="Dynamics"
+                                         Content="Limiter" Click="OnDynamicsMode" />
+                        </UniformGrid>
+                    </Border>
+                    <StackPanel x:Name="CompressorPanel" />
+                    <StackPanel x:Name="LimiterPanel" />
+                    <DockPanel Margin="0,14,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="DynamicsPreviewButton" Theme="{StaticResource ToolButton}" Content="Preview" Click="OnDynamicsPreview"
+                                    ToolTip.Tip="Play the selection (or from the cursor) through it; changes are heard as you make them" />
+                            <Button Theme="{StaticResource ToolButton}" Margin="0" Click="OnApplyDynamics" Foreground="{DynamicResource AccentBrush}">
+                                <TextBlock Text="Apply" FontWeight="SemiBold" />
+                            </Button>
+                        </StackPanel>
+                        <TextBlock x:Name="ReductionText" Theme="{StaticResource CardValue}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Stereo width -->
+        <Popup x:Name="WidthPopup" PlacementTarget="{Binding #ChannelsButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="WidthValue" DockPanel.Dock="Right" FontSize="13" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Stereo width" />
+                    </DockPanel>
+                    <Slider x:Name="WidthSlider" Minimum="0" Maximum="200" Value="120" TickFrequency="5"
+                            IsSnapToTickEnabled="True" ValueChanged="OnWidthChanged" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="100% leaves it as it is. Lower narrows it towards mono; higher spreads it wider. Much past 150% can sound hollow in mono." />
+                    <Button Theme="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Click="OnApplyWidth" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Noise reduction -->
+        <Popup x:Name="NoisePopup" PlacementTarget="{Binding #RepairButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}" Width="360">
+                <StackPanel>
+                    <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="1. Teach it what the noise sounds like" />
+                    <DockPanel Margin="0,6,0,0">
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource ToolButton}" Margin="10,0,0,0" Content="Learn"
+                                Click="OnLearnNoise" ToolTip.Tip="Learn the noise from the selection" />
+                        <TextBlock x:Name="NoiseProfileText" Theme="{StaticResource OptionHint}" Margin="0" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="2. Select what to clean (or nothing, for the whole sound), then" />
+                    <DockPanel>
+                        <TextBlock x:Name="NoiseAmountValue" DockPanel.Dock="Right" Theme="{StaticResource CardValue}" />
+                        <TextBlock Theme="{StaticResource OptionHint}" Margin="0" Text="Turn the noise down by" />
+                    </DockPanel>
+                    <Slider x:Name="NoiseAmountSlider" Minimum="3" Maximum="36" TickFrequency="1" IsSnapToTickEnabled="True"
+                            ValueChanged="OnNoiseSlider" Margin="0,4,0,0" />
+                    <DockPanel Margin="0,8,0,0">
+                        <TextBlock x:Name="NoiseSensitivityValue" DockPanel.Dock="Right" Theme="{StaticResource CardValue}" />
+                        <TextBlock Theme="{StaticResource OptionHint}" Margin="0" Text="Treat as noise up to" />
+                    </DockPanel>
+                    <Slider x:Name="NoiseSensitivitySlider" Minimum="0" Maximum="15" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                            ValueChanged="OnNoiseSlider" Margin="0,4,0,0" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Gentle settings sound the most natural. If the music sounds watery, turn both down a little." />
+                    <Button x:Name="NoiseApplyButton" Theme="{StaticResource ToolButton}" Content="Reduce noise" HorizontalAlignment="Right"
+                            Margin="0,12,0,0" Click="OnApplyNoise" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Click removal -->
+        <Popup x:Name="ClickPopup" PlacementTarget="{Binding #RepairButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock x:Name="ClickValue" DockPanel.Dock="Right" FontSize="13" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Sensitivity" />
+                    </DockPanel>
+                    <Slider x:Name="ClickSlider" Minimum="1" Maximum="10" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                            ValueChanged="OnClickSlider" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Higher finds quieter clicks and crackle, but may soften sharp drum hits. Try it on a selection first." />
+                    <Button Theme="{StaticResource ToolButton}" Content="Remove clicks" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Click="OnApplyClicks" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Analysis -->
+        <Popup x:Name="AnalysisPopup" PlacementTarget="{Binding #AnalyzeButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}" Width="560">
+                <StackPanel>
+                    <TextBlock x:Name="AnalysisHeading" Theme="{StaticResource OptionLabel}" Margin="0,0,0,8" />
+                    <TextBlock x:Name="AnalysisText" FontFamily="Menlo, Consolas, monospace" FontSize="12" Foreground="{DynamicResource TextBrush}"
+                               LineHeight="19" />
+                    <Border CornerRadius="8" Background="{DynamicResource BackgroundBrush}" Padding="2" Margin="0,10,0,0">
+                        <editor:EqCurveView x:Name="AnalysisSpectrum" Height="150" ShowCurve="False" IsHitTestVisible="False"
+                                            CurveBrush="{DynamicResource AccentBrush}" GridBrush="{DynamicResource HairlineBrush}"
+                                            LabelBrush="{DynamicResource FaintTextBrush}" SpectrumBrush="{DynamicResource AccentSoftBrush}" />
+                    </Border>
+                    <TextBlock Theme="{StaticResource OptionHint}" Text="The average spectrum. A sharp drop high up is the cut-off of a lossy (MP3, AAC) encode." />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button x:Name="ShowClippingButton" Theme="{StaticResource ToolButton}" Content="Show clipping" Click="OnShowClipping"
+                                ToolTip.Tip="Mark every clipped spot in red on the waveform. F3 goes to the next one." />
+                        <Button Theme="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnCloseAnalysis" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</Window>

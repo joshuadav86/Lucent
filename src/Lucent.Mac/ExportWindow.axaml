@@ -1,0 +1,220 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.ExportWindow"
+        Title="Convert - Lucent"
+        Width="500" SizeToContent="Height" CanResize="False"
+        Background="{DynamicResource SurfaceBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <ControlTheme x:Key="ThinProgress" TargetType="ProgressBar">
+            <Setter Property="Height" Value="4" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="1" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid>
+                        <Border Name="PART_Track" CornerRadius="2" Background="{DynamicResource HairlineBrush}" />
+                        <Border Name="PART_Indicator" CornerRadius="2" HorizontalAlignment="Left"
+                                Background="{DynamicResource AccentGradientBrush}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
+        <ControlTheme x:Key="NameBox" TargetType="TextBox" BasedOn="{StaticResource TextInput}">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+            <Setter Property="Height" Value="NaN" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="8,6" />
+            <Style Selector="^:pointerover /template/ Border#PART_BorderElement">
+                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            </Style>
+            <Style Selector="^:focus /template/ Border#PART_BorderElement">
+                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="DialogButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.4" />
+            </Style>
+        </ControlTheme>
+    </Window.Resources>
+
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <StackPanel>
+            <!-- Title bar -->
+            <Grid Height="40" Background="Transparent" w:Chrome.IsCaption="True">
+                <TextBlock x:Name="Heading" Text="CONVERT" Margin="20,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <Button Theme="{StaticResource CloseCaptionButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip.Tip="Close" Click="OnCloseButton">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <StackPanel x:Name="OptionsArea" Margin="20,0,20,0">
+                <!-- Saving an edit: the new file's name and folder -->
+                <StackPanel x:Name="SaveTarget">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Margin="2,4,0,6" Text="Name" />
+                    <DockPanel>
+                        <TextBlock x:Name="ExtensionText" DockPanel.Dock="Right" Margin="8,0,2,0" FontSize="13" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" Text=".mp3" />
+                        <TextBox x:Name="NameInput" Theme="{StaticResource NameBox}" />
+                    </DockPanel>
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Folder" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="CHANGE" Margin="10,0,0,0"
+                                Click="OnChooseSaveFolder" />
+                        <TextBlock x:Name="SaveFolderText" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource TextBrush}" />
+                    </DockPanel>
+                </StackPanel>
+
+                <!-- Converting: which files, and where the new ones go -->
+                <StackPanel x:Name="ConvertTarget">
+                    <TextBlock x:Name="FilesSummary" FontSize="13" TextWrapping="Wrap" Margin="2,4,0,0"
+                               Foreground="{DynamicResource TextBrush}" />
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Put the new files" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton x:Name="NextToOriginals" Theme="{StaticResource SegmentButton}" GroupName="Output"
+                                         Content="Next to the originals" Click="OnOutputChoice" />
+                            <RadioButton x:Name="InChosenFolder" Theme="{StaticResource SegmentButton}" GroupName="Output"
+                                         Content="In a folder I choose" Click="OnOutputChoice" />
+                        </UniformGrid>
+                    </Border>
+                    <DockPanel x:Name="OutputFolderRow" Margin="2,8,0,0">
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="CHANGE" Margin="10,0,0,0"
+                                Click="OnChooseOutputFolder" />
+                        <TextBlock x:Name="OutputFolderText" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource TextBrush}" />
+                    </DockPanel>
+                </StackPanel>
+
+                <TextBlock x:Name="NoteText" FontSize="12" TextWrapping="Wrap" Margin="2,14,0,0"
+                           Foreground="{DynamicResource AccentBrush}" IsVisible="False" />
+
+                <TextBlock Theme="{StaticResource OptionLabel}" Text="Format" />
+                <Border Theme="{StaticResource SegmentBar}">
+                    <UniformGrid x:Name="FormatChoices" Rows="1">
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Format" Tag="Mp3" Content="MP3" Click="OnOptionChosen" />
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Format" Tag="Flac" Content="FLAC" Click="OnOptionChosen" />
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Format" Tag="Wav" Content="WAV" Click="OnOptionChosen" />
+                        <RadioButton x:Name="AiffChoice" Theme="{StaticResource SegmentButton}" GroupName="Format" Tag="Aiff" Content="AIFF"
+                                     Click="OnOptionChosen" IsVisible="False" />
+                    </UniformGrid>
+                </Border>
+
+                <StackPanel x:Name="Mp3Panel">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Quality" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Mp3Quality" Tag="Cbr128" Content="128" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Mp3Quality" Tag="Cbr192" Content="192" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Mp3Quality" Tag="Cbr256" Content="256" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Mp3Quality" Tag="Cbr320" Content="320" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Mp3Quality" Tag="VbrV2" Content="VBR V2" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Mp3Quality" Tag="VbrV0" Content="VBR V0" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock x:Name="Mp3Hint" Theme="{StaticResource OptionHint}" />
+                </StackPanel>
+
+                <StackPanel x:Name="FlacPanel">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Bit depth" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="FlacBits" Tag="16" Content="16-bit" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="FlacBits" Tag="24" Content="24-bit" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Compression" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="FlacCompression" Tag="Fast" Content="Fast" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="FlacCompression" Tag="Normal" Content="Normal" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="FlacCompression" Tag="Best" Content="Best" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="16-bit is CD quality. 24-bit keeps every detail of hi-res audio and of edits. FLAC is lossless, so every compression level sounds the same: Best just makes slightly smaller files, more slowly." />
+                </StackPanel>
+
+                <StackPanel x:Name="WavPanel">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Bit depth" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="WavDepth" Tag="Int16" Content="16-bit" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="WavDepth" Tag="Int24" Content="24-bit" Click="OnOptionChosen" />
+                            <RadioButton x:Name="FloatChoice" Theme="{StaticResource SegmentButton}" GroupName="WavDepth" Tag="Float32"
+                                         Content="32-bit float" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Not compressed, so files are big: about 10 MB a minute at 16-bit. 24-bit and 32-bit float keep edits at full precision." />
+                </StackPanel>
+
+                <TextBlock Theme="{StaticResource OptionLabel}" Text="Sample rate" />
+                <Border Theme="{StaticResource SegmentBar}">
+                    <UniformGrid Rows="1">
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SampleRate" Tag="Keep" Content="Keep" Click="OnOptionChosen" />
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SampleRate" Tag="Rate44100" Content="44.1 kHz" Click="OnOptionChosen" />
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SampleRate" Tag="Rate48000" Content="48 kHz" Click="OnOptionChosen" />
+                    </UniformGrid>
+                </Border>
+                <TextBlock Theme="{StaticResource OptionHint}"
+                           Text="Keep is best. Pick 44.1 kHz (CD) or 48 kHz (video) only if a device or app needs it." />
+
+                <TextBlock Theme="{StaticResource OptionLabel}" Text="Channels" />
+                <Border Theme="{StaticResource SegmentBar}">
+                    <UniformGrid Rows="1">
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Channels" Tag="Keep" Content="Keep" Click="OnOptionChosen" />
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Channels" Tag="Mono" Content="Mono" Click="OnOptionChosen" />
+                    </UniformGrid>
+                </Border>
+                <TextBlock Theme="{StaticResource OptionHint}"
+                           Text="Mono mixes the channels into one: good for speech, podcasts and single speakers, in files about half the size." />
+
+                <!-- Converting: processing done to every song on the way -->
+                <StackPanel x:Name="StepsArea">
+                    <DockPanel Margin="0,14,0,6">
+                        <Button x:Name="AddStepButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="ADD STEP"
+                                Click="OnAddStep" ToolTip.Tip="Normalize, limit, trim silence, remove hum and more, done to every sound" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="2,0,0,0" VerticalAlignment="Center" Text="Process each sound" />
+                    </DockPanel>
+                    <StackPanel x:Name="StepsList" />
+                    <TextBlock x:Name="StepsHint" Theme="{StaticResource OptionHint}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Converting: progress and results -->
+            <StackPanel x:Name="ProgressArea" Margin="20,16,20,0" IsVisible="False">
+                <ProgressBar x:Name="Progress" Theme="{StaticResource ThinProgress}" />
+                <TextBlock x:Name="ProgressText" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+            </StackPanel>
+
+            <DockPanel Margin="20,18,20,18" LastChildFill="False">
+                <Button x:Name="PrimaryButton" DockPanel.Dock="Right" Theme="{StaticResource DialogButton}" Margin="8,0,0,0"
+                        Foreground="{DynamicResource AccentBrush}" Click="OnPrimary">
+                    <TextBlock x:Name="PrimaryText" Text="Convert" FontWeight="SemiBold" />
+                </Button>
+                <Button x:Name="SecondaryButton" DockPanel.Dock="Right" Theme="{StaticResource DialogButton}" Content="Cancel"
+                        Click="OnSecondary" />
+                <Button x:Name="ShowFolderButton" DockPanel.Dock="Left" Theme="{StaticResource DialogButton}" Content="Show in Finder"
+                        IsVisible="False" Click="OnShowFolder" />
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</Window>

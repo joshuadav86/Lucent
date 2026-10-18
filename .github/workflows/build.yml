@@ -152,7 +152,7 @@ jobs:
             --notes "Automatic build of the newest version on main. Download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself)."
 
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
-  # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac build.
+  # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
   metal-shaders:
     runs-on: ubuntu-latest
     steps:
@@ -177,11 +177,90 @@ jobs:
           name: metal-shaders
           path: artifacts/metal-shaders
 
-  mac:
-    needs: metal-shaders
+  # DXC has no Mac release either, but the Mac app needs it as it runs too: it translates the user's own
+  # visuals (and built-in ones they've edited) to Metal. So its library is built here as one universal
+  # file for both kinds of Mac, once per DXC version (the result is cached), and ships inside Lucent.app.
+  dxc-mac:
     runs-on: macos-latest
     env:
+      DXC_VERSION: v1.8.2407
+    steps:
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: dxc-mac
+          key: dxc-mac-universal-${{ env.DXC_VERSION }}-1
+
+      # DXC 1.8 and the VST3 SDK still set CMake policies that CMake 4 (on the Mac runners) no longer allows.
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
+
+      - name: Build DXC's library for macOS
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          command -v ninja > /dev/null || brew install ninja
+          git clone --depth 1 --branch "$DXC_VERSION" --recurse-submodules --shallow-submodules \
+            https://github.com/microsoft/DirectXShaderCompiler.git dxc-src
+          # DXC 1.8's LLVM specializes std traits, which the newest Xcode's libc++ rejects by default.
+          cmake -S dxc-src -B dxc-build -G Ninja -C dxc-src/cmake/caches/PredefinedParams.cmake \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_OSX_ARCHITECTURES='arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DCMAKE_CXX_FLAGS='-Wno-invalid-specialization' -DHLSL_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF -DSPIRV_BUILD_TESTS=OFF
+          ninja -C dxc-build dxcompiler
+          mkdir -p dxc-mac
+          cp -L dxc-build/lib/libdxcompiler.dylib dxc-mac/
+          cp dxc-src/LICENSE.TXT dxc-mac/LICENSE-DXC.txt
+          cp dxc-src/ThirdPartyNotices.txt dxc-mac/LICENSE-ThirdPartyNotices.txt 2> /dev/null || true
+
+      - name: Check the library
+        run: |
+          file dxc-mac/libdxcompiler.dylib
+          # It must stand alone: nothing but the system's own libraries.
+          otool -L dxc-mac/libdxcompiler.dylib
+          if otool -L dxc-mac/libdxcompiler.dylib | tail -n +2 | grep -v -e /usr/lib/ -e /System/ -e libdxcompiler; then
+            echo "::error::libdxcompiler.dylib needs libraries that won't be in Lucent.app."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dxc-mac
+          path: dxc-mac
+
+  # The Mac app, for Apple silicon (arm64) and Intel (x64) Macs, each built and tested on its own kind of
+  # Mac. Each is packaged twice: Lucent.app zipped as it is (runs from anywhere, doesn't update itself),
+  # and with Velopack, which makes an installer (.pkg) and the update feed installed copies check, in its
+  # own channel (osx-arm64, osx-x64) so each Mac only ever updates to the build for its chip.
+  #
+  # Signing: without a Developer ID, everything is signed ad hoc, so the first time macOS asks people
+  # to allow Lucent in System Settings > Privacy & Security. To sign and notarize, add these repository
+  # secrets and nothing else needs to change:
+  #   MACOS_CERTIFICATE_P12            the "Developer ID Application" certificate and key, exported as .p12, base64
+  #   MACOS_CERTIFICATE_PASSWORD       that .p12's password
+  #   MACOS_SIGN_APP_IDENTITY          its name, e.g. "Developer ID Application: Your Name (TEAMID)"
+  #   MACOS_INSTALLER_CERTIFICATE_P12  (optional) the "Developer ID Installer" certificate as .p12, base64, to sign the .pkg
+  #   MACOS_INSTALLER_CERTIFICATE_PASSWORD  (optional) that .p12's password
+  #   MACOS_SIGN_INSTALL_IDENTITY      (optional) its name, e.g. "Developer ID Installer: Your Name (TEAMID)"
+  #   APPLE_ID                         (optional, for notarizing) the Apple ID of the developer account
+  #   APPLE_TEAM_ID                    (optional, for notarizing) the team ID
+  #   APPLE_APP_PASSWORD               (optional, for notarizing) an app-specific password for that Apple ID
+  mac:
+    needs: [metal-shaders, dxc-mac]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-latest
+            cpu: arm64
+          - arch: x64
+            runner: macos-15-intel
+            cpu: x86_64
+    runs-on: ${{ matrix.runner }}
+    env:
       LUCENT_VERSION: 0.1.${{ github.run_number }}
+      RID: osx-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
@@ -193,6 +272,11 @@ jobs:
         with:
           name: metal-shaders
           path: artifacts/metal-shaders
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dxc-mac
+          path: artifacts/dxc-mac
 
       - name: Check the Metal shaders compile
         run: |
@@ -212,10 +296,24 @@ jobs:
           done < <(find artifacts/metal-shaders -name '*.metal' -print0)
           exit $failed
 
+      # The editor's native pieces, built before publishing so the publish copies them next to the Lucent
+      # executable: libmp3lame (MP3 saving) and the VST3 plugin helper (src/PluginHost). Both are universal.
+      # DXC 1.8 and the VST3 SDK still set CMake policies that CMake 4 (on the Mac runners) no longer allows.
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
+
+      - name: Build LAME for MP3 saving
+        run: tools/build-lame-mac.sh
+
+      - name: Build the VST3 plugin helper
+        run: tools/build-pluginhost-mac.sh
+
+
       - name: Publish the Mac app
         run: >
           dotnet publish src/Lucent.Mac/Lucent.Mac.csproj
-          -c Release -r osx-arm64 --self-contained true
+          -c Release -r ${{ env.RID }} --self-contained true
           -p:Version=${{ env.LUCENT_VERSION }}
           -o publish-mac
 
@@ -238,21 +336,178 @@ jobs:
           afconvert -f AIFF -d BEI16 test.wav test.aiff
 
       - name: Self-test (decoding and every visual)
-        run: publish-mac/Lucent --self-test --sheet mac-visuals.png test.wav test.m4a test-alac.m4a test.flac test.aiff
+        run: publish-mac/Lucent --self-test --sheet mac-visuals-${{ matrix.arch }}.png test.wav test.m4a test-alac.m4a test.flac test.aiff
+
+      - name: Set up signing
+        id: signing
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGN_APP_IDENTITY: ${{ secrets.MACOS_SIGN_APP_IDENTITY }}
+          MACOS_INSTALLER_CERTIFICATE_P12: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_P12 }}
+          MACOS_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_PASSWORD }}
+          MACOS_SIGN_INSTALL_IDENTITY: ${{ secrets.MACOS_SIGN_INSTALL_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          # No certificate (pull requests from forks never get secrets either): sign ad hoc.
+          if [ -z "$MACOS_CERTIFICATE_P12" ] || [ -z "$MACOS_SIGN_APP_IDENTITY" ]; then
+            echo "::notice::No Developer ID certificate in the secrets, so Lucent is signed ad hoc and not notarized."
+            echo "identity=-" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A keychain just for this job, holding the certificates, and the notary credentials.
+          keychain="$RUNNER_TEMP/lucent-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/app.p12"
+          security import "$RUNNER_TEMP/app.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/app.p12"
+          if [ -n "$MACOS_INSTALLER_CERTIFICATE_P12" ] && [ -n "$MACOS_SIGN_INSTALL_IDENTITY" ]; then
+            echo "$MACOS_INSTALLER_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
+            security import "$RUNNER_TEMP/installer.p12" -k "$keychain" -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" \
+              -T /usr/bin/productbuild -T /usr/bin/productsign
+            rm -f "$RUNNER_TEMP/installer.p12"
+            echo "install_identity=$MACOS_SIGN_INSTALL_IDENTITY" >> "$GITHUB_OUTPUT"
+          fi
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "identity=$MACOS_SIGN_APP_IDENTITY" >> "$GITHUB_OUTPUT"
+          echo "keychain=$keychain" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
+            xcrun notarytool store-credentials lucent-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
+            echo "notary_profile=lucent-notary" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No notarization credentials in the secrets, so Lucent is signed but not notarized."
+          fi
 
       - name: Make Lucent.app
+        env:
+          MAC_SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          MAC_KEYCHAIN: ${{ steps.signing.outputs.keychain }}
+          NOTARY_PROFILE: ${{ steps.signing.outputs.notary_profile }}
         run: |
           tools/package-mac.sh publish-mac out "$LUCENT_VERSION"
-          ditto -c -k --keepParent out/Lucent.app Lucent-mac-arm64.zip
+          if [ -n "$NOTARY_PROFILE" ]; then
+            # Notarize the plain app too, and staple the ticket so it opens without going online.
+            ditto -c -k --keepParent out/Lucent.app "$RUNNER_TEMP/notarize.zip"
+            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --keychain "$MAC_KEYCHAIN" --wait
+            xcrun stapler staple out/Lucent.app
+          fi
+          ditto -c -k --keepParent out/Lucent.app "Lucent-mac-${{ matrix.arch }}.zip"
+
+      - name: Build the installer and update package
+        env:
+          SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          SIGN_INSTALL_IDENTITY: ${{ steps.signing.outputs.install_identity }}
+          KEYCHAIN: ${{ steps.signing.outputs.keychain }}
+          NOTARY_PROFILE: ${{ steps.signing.outputs.notary_profile }}
+        run: |
+          # Velopack adds its updater to Lucent.app, signs it again, and makes Lucent-osx-<arch>-Setup.pkg
+          # (installs into Applications), the update package (.nupkg) and the feed installed copies check
+          # (releases.osx-<arch>.json). The Mac app is new, so its packId is "Lucent" (Windows keeps "Lucid").
+          dotnet tool install vpk --version 1.2.161 --tool-path .vpk
+          args=(pack --packId Lucent --packVersion "$LUCENT_VERSION" --packDir out/Lucent.app --mainExe Lucent
+            --packTitle Lucent --packAuthors joshuadav86 --channel "$RID" --runtime "$RID"
+            --signEntitlements tools/mac/Lucent.entitlements --outputDir releases-mac)
+          if [ "$SIGN_IDENTITY" = "-" ]; then
+            # Ad hoc: vpk signs as if for notarization, so a stand-in codesign leaves out what ad-hoc
+            # signatures can't have (see tools/mac/adhoc-codesign.sh).
+            mkdir -p "$RUNNER_TEMP/adhoc-codesign"
+            cp tools/mac/adhoc-codesign.sh "$RUNNER_TEMP/adhoc-codesign/codesign"
+            chmod +x "$RUNNER_TEMP/adhoc-codesign/codesign"
+            export PATH="$RUNNER_TEMP/adhoc-codesign:$PATH"
+            args+=(--signAppIdentity adhoc)
+          else
+            args+=(--signAppIdentity "$SIGN_IDENTITY" --keychain "$KEYCHAIN")
+            if [ -n "$SIGN_INSTALL_IDENTITY" ]; then args+=(--signInstallIdentity "$SIGN_INSTALL_IDENTITY"); fi
+            if [ -n "$NOTARY_PROFILE" ]; then args+=(--notaryProfile "$NOTARY_PROFILE"); fi
+          fi
+          .vpk/vpk "${args[@]}"
+          ls -l releases-mac
+
+          # Check the installable app is signed and still runs, and gather what the release needs.
+          mkdir -p check mac-release
+          ditto -x -k "releases-mac/Lucent-$RID-Portable.zip" check
+          codesign --verify --deep --strict --verbose=2 check/Lucent.app
+          test -x check/Lucent.app/Contents/MacOS/UpdateMac
+          cp "releases-mac/Lucent-$RID-Setup.pkg" "mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg"
+          cp "Lucent-mac-${{ matrix.arch }}.zip" mac-release/
+          cp releases-mac/*.nupkg "releases-mac/releases.$RID.json" "releases-mac/assets.$RID.json" "releases-mac/RELEASES-$RID" mac-release/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Lucent-mac-arm64
-          path: Lucent-mac-arm64.zip
+          name: Lucent-mac-${{ matrix.arch }}
+          path: Lucent-mac-${{ matrix.arch }}.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lucent-Setup-mac-${{ matrix.arch }}
+          path: mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg
+
+      # Everything the "latest" release gets from this Mac build, for the publish-mac job.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-release-${{ matrix.arch }}
+          path: mac-release
+          retention-days: 3
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mac-visuals
-          path: mac-visuals.png
+          name: mac-visuals-${{ matrix.arch }}
+          path: mac-visuals-${{ matrix.arch }}.png
           if-no-files-found: ignore
+
+      - name: Remove the signing keychain
+        if: always() && steps.signing.outputs.keychain != ''
+        run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
+
+  # Adds the Mac builds to the "latest" release once the Windows build has made it (that job replaces
+  # the whole release, so this has to come after it). A Mac build that failed is simply left out.
+  publish-mac:
+    needs: [build, mac]
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        # Nothing to download when both Mac builds failed; the next step says so.
+        continue-on-error: true
+        with:
+          pattern: mac-release-*
+          merge-multiple: true
+          path: mac-release
+
+      - name: Add the Mac downloads to "latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Same rule as the Windows build: leave the download to a newer build of main.
+          newest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$newest" != "$GITHUB_SHA" ]; then
+            echo "main has moved on to $newest; leaving the latest download to that build."
+            exit 0
+          fi
+          if [ -z "$(ls -A mac-release 2>/dev/null)" ]; then
+            echo "::warning::No Mac build to publish."
+            exit 0
+          fi
+          ls -l mac-release
+          # The release must be this build's (the Windows job just made it), not an older one.
+          target=$(gh release view latest -R "$GITHUB_REPOSITORY" --json targetCommitish --jq .targetCommitish)
+          if [ "$target" != "$GITHUB_SHA" ]; then
+            echo "::warning::The latest release is for $target, not this build; leaving it alone."
+            exit 0
+          fi
+          gh release upload latest mac-release/* -R "$GITHUB_REPOSITORY" --clobber
+          gh release edit latest -R "$GITHUB_REPOSITORY" --notes "Automatic build of the newest version on main.
+
+          Windows: download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download Lucent-win-x64.zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself).
+
+          Mac (macOS 12 or later): download Lucent-Setup-mac-arm64.pkg for Apple silicon Macs (M1 and later) or Lucent-Setup-mac-x64.pkg for Intel Macs, and open it to install Lucent into Applications; it keeps itself up to date from here. Or download Lucent-mac-arm64.zip or Lucent-mac-x64.zip and open Lucent.app from it (that copy doesn't update itself). If macOS says it can't check the app or installer, open System Settings > Privacy & Security and click Open Anyway."
