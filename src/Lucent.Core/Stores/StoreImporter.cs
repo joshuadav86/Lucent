@@ -101,10 +101,15 @@ public sealed class StoreImporter
                 ? ImportZip(path, knownStore)
                 : AudioReaderFactory.IsSupported(path) ? ImportTrack(path, knownStore) : StoreImportResult.NotFromStore;
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or CorruptFileException)
         {
-            // Still being written, locked by the browser or virus scanner, or not a finished zip yet.
+            // Still being written, locked by the browser or virus scanner, or not a finished zip or song yet.
             return StoreImportResult.NotReady;
+        }
+        catch (UnsupportedFormatException)
+        {
+            // A song whose tags TagLib can't read can't be told apart as a store's.
+            result = StoreImportResult.NotFromStore;
         }
 
         // Files that aren't from a store are remembered too, so a big zip isn't opened again every start.

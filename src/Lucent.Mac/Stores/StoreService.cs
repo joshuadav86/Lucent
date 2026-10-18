@@ -186,6 +186,11 @@ public sealed class StoreService : IDisposable
             SetStatus(problem);
             return null;
         }
+        catch (Exception ex)
+        {
+            SetStatus(Unexpected(ex));
+            return null;
+        }
     }
 
     /// <summary>Marks these purchases as synced without downloading them.</summary>
@@ -217,13 +222,17 @@ public sealed class StoreService : IDisposable
                 ? $"Added {Count(result.Downloaded)} to your library. {Count(result.Failed)} didn't download and will be tried again next sync: {result.Problems[0]}"
                 : $"Added {Count(result.Downloaded)} to your library.");
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
             SetStatus("Stopped. The rest download next sync.");
         }
         catch (Exception ex) when (Describe(ex) is { } problem)
         {
             SetStatus(problem);
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Unexpected(ex));
         }
         finally
         {
@@ -265,7 +274,7 @@ public sealed class StoreService : IDisposable
 
     private static string Count(int purchases) => purchases == 1 ? "1 purchase" : $"{purchases} purchases";
 
-    /// <summary>A sentence for the problems a sync can run into, or null for anything else (which isn't caught).</summary>
+    /// <summary>A sentence for the problems a sync can run into, or null for anything else (see <see cref="Unexpected"/>).</summary>
     private static string? Describe(Exception ex) => ex switch
     {
         BandcampSignInException => ex.Message,
@@ -276,6 +285,13 @@ public sealed class StoreService : IDisposable
         UnauthorizedAccessException => "Lucent isn't allowed to save in the music folder. Choose another one.",
         _ => null,
     };
+
+    /// <summary>Anything else: logged for a bug report, and the store window says so, rather than Lucent closing.</summary>
+    private static string Unexpected(Exception ex)
+    {
+        ErrorLog.Write("Bandcamp", ex);
+        return $"Something went wrong talking to Bandcamp ({ex.Message}). Try again; if it keeps happening, send a bug report.";
+    }
 
     /// <summary>The stores whose music comes into the library: those importing downloads, and Bandcamp while syncing.</summary>
     private IEnumerable<MusicStore> ActiveStores()
@@ -358,7 +374,20 @@ public sealed class StoreService : IDisposable
             var importer = _importer;
             foreach (var (path, attempts) in _pending.ToList())
             {
-                var result = await Task.Run(() => importer.Import(path));
+                StoreImportResult result;
+                try
+                {
+                    result = await Task.Run(() => importer.Import(path));
+                }
+                catch (Exception ex)
+                {
+                    // One download Lucent can't handle mustn't take the player down; it's left where it is.
+                    ErrorLog.Write("Store import", ex);
+                    _pending.Remove(path);
+                    SetStatus($"Couldn't import {Path.GetFileName(path)}: {ex.Message}");
+                    continue;
+                }
+
                 if (result.Outcome == StoreImportOutcome.NotReady && attempts + 1 < MaxAttempts && File.Exists(path))
                 {
                     _pending[path] = attempts + 1;
