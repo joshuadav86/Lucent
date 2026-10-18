@@ -2,6 +2,11 @@ using WinampInspiredVisualizer.Editor.Effects;
 
 namespace WinampInspiredVisualizer.Editor;
 
+/// <summary>One entry in the editor's history list.</summary>
+/// <param name="Details">More about the step than its description says (a plugin chain's plugins), or null.</param>
+/// <param name="IsUndone">True for a step that was undone and can be redone.</param>
+public sealed record HistoryEntry(string Description, string? Details, DateTime Time, bool IsUndone);
+
 /// <summary>A range of frames: where it starts and how long it is.</summary>
 public readonly record struct FrameRange(int Start, int Length)
 {
@@ -42,6 +47,9 @@ public sealed class EditSession
     private long _savedStepId;
     // The state below the oldest step still in the undo history (0 is the file as opened).
     private long _baseStepId;
+    // What the history list shows for that state: the file as opened, or the steps forgotten to save memory.
+    private string _baseDescription = "Opened";
+    private DateTime _baseTime = DateTime.Now;
 
     public EditSession(AudioBuffer audio)
     {
@@ -102,6 +110,50 @@ public sealed class EditSession
 
     public string? RedoDescription => _redo.Count > 0 ? _redo[^1].Description : null;
 
+    /// <summary>
+    /// Everything done to the audio, oldest first: the state it started from, then each step, then the steps
+    /// that were undone (and could be redone), nearest first. <see cref="HistoryPosition"/> is the one the
+    /// audio is at now; <see cref="JumpTo"/> goes to any of them.
+    /// </summary>
+    public IReadOnlyList<HistoryEntry> History
+    {
+        get
+        {
+            var entries = new List<HistoryEntry>(_undo.Count + _redo.Count + 1)
+            {
+                new(_baseDescription, null, _baseTime, IsUndone: false),
+            };
+            entries.AddRange(_undo.Select(step => new HistoryEntry(step.Description, step.Details, step.Time, IsUndone: false)));
+            entries.AddRange(Enumerable.Reverse(_redo).Select(step => new HistoryEntry(step.Description, step.Details, step.Time, IsUndone: true)));
+            return entries;
+        }
+    }
+
+    /// <summary>Which entry of <see cref="History"/> the audio is at now.</summary>
+    public int HistoryPosition => _undo.Count;
+
+    /// <summary>
+    /// Undoes or redoes as many steps as it takes to get to an entry of <see cref="History"/>. Returns the
+    /// range the last of them affected, to select it.
+    /// </summary>
+    public FrameRange? JumpTo(int position)
+    {
+        // Counted as moves, not as a target size: on a long jump the oldest steps may be let go part way.
+        var moves = Math.Clamp(position, 0, _undo.Count + _redo.Count) - _undo.Count;
+        FrameRange? range = null;
+        for (; moves < 0 && CanUndo; moves++)
+        {
+            range = Undo() ?? range;
+        }
+
+        for (; moves > 0 && CanRedo; moves--)
+        {
+            range = Redo() ?? range;
+        }
+
+        return range;
+    }
+
     /// <summary>True when the audio differs from the file on disk (or the last save).</summary>
     public bool IsModified => CurrentStepId != _savedStepId;
 
@@ -159,7 +211,7 @@ public sealed class EditSession
         var description = channel is null || Audio.ChannelCount < 2
             ? effect.Description
             : $"{effect.Description} ({(channel == 0 ? "left" : "right")})";
-        Commit(description, new[] { new Change(range.Start, range.Length, result) });
+        Commit(description, new[] { new Change(range.Start, range.Length, result) }, details: effect.Details);
         return (new FrameRange(range.Start, result.Frames), context.Note);
     }
 
@@ -497,7 +549,7 @@ public sealed class EditSession
     /// </summary>
     /// <remarks>Changes are made one at a time, in order, so a later one can be worked out from the audio the earlier ones left.</remarks>
     private void Commit(string description, IEnumerable<Change> changes, List<int>? splitsAfter = null,
-        IReadOnlyList<Edit>? edits = null, List<Marker>? markersAfter = null)
+        IReadOnlyList<Edit>? edits = null, List<Marker>? markersAfter = null, string? details = null)
     {
         var splitsBefore = _splits;
         var markersBefore = _markers;
@@ -531,7 +583,7 @@ public sealed class EditSession
         // A step that only moves splits or markers leaves the audio as it was, so it keeps the same id and the
         // audio doesn't count as changed since the last save.
         var id = inverse.Count > 0 ? _nextStepId++ : CurrentStepId;
-        _undo.Add(new HistoryStep(id, description, inverse, splitsBefore, markersBefore));
+        _undo.Add(new HistoryStep(id, description, details, DateTime.Now, inverse, splitsBefore, markersBefore));
         _redo.Clear();
         TrimHistory();
         if (inverse.Count > 0)
@@ -602,7 +654,7 @@ public sealed class EditSession
 
         inverse.Reverse();
         // The step keeps its id, so undoing back to the saved state counts as unmodified again.
-        to.Add(new HistoryStep(step.Id, step.Description, inverse, _splits, _markers));
+        to.Add(step with { Changes = inverse, Splits = _splits, Markers = _markers });
         _splits = step.Splits;
         _markers = step.Markers;
         TrimHistory();
@@ -637,6 +689,8 @@ public sealed class EditSession
         while (_undo.Count > 1 && Size(_undo) + Size(_redo) > HistoryBudgetBytes)
         {
             _baseStepId = _undo[0].Id;
+            _baseDescription = "Earlier steps (let go to save memory)";
+            _baseTime = _undo[0].Time;
             _undo.RemoveAt(0);
         }
 
@@ -655,7 +709,9 @@ public sealed class EditSession
 
     /// <param name="Splits">Where the splits go when this step is undone (or redone).</param>
     /// <param name="Markers">Where the markers go when this step is undone (or redone).</param>
-    private sealed record HistoryStep(long Id, string Description, IReadOnlyList<Change> Changes, List<int> Splits, List<Marker> Markers)
+    /// <param name="Time">When the step was first made (redoing it keeps the time).</param>
+    private sealed record HistoryStep(long Id, string Description, string? Details, DateTime Time, IReadOnlyList<Change> Changes,
+        List<int> Splits, List<Marker> Markers)
     {
         public long SizeInBytes => Changes.Sum(change => change.Replacement.SizeInBytes);
     }

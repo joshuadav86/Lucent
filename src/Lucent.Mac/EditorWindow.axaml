@@ -15,6 +15,41 @@
         <StreamGeometry x:Key="ZoomInIcon">M6.5,1.5 A5,5 0 1 1 6.49,1.5 Z M10.2,10.2 L14.5,14.5 M4,6.5 H9 M6.5,4 V9</StreamGeometry>
         <StreamGeometry x:Key="ZoomOutIcon">M6.5,1.5 A5,5 0 1 1 6.49,1.5 Z M10.2,10.2 L14.5,14.5 M4,6.5 H9</StreamGeometry>
         <StreamGeometry x:Key="ZoomFitIcon">M1,8 H15 M4,5 L1,8 L4,11 M12,5 L15,8 L12,11</StreamGeometry>
+        <StreamGeometry x:Key="ChevronLeftIcon">M5,1 L1,5 L5,9</StreamGeometry>
+        <!-- A clock face, for the history panel. -->
+        <StreamGeometry x:Key="HistoryIcon">M8,1.5 A6.5,6.5 0 1 1 7.99,1.5 Z M8,4.5 V8 L10.5,9.5</StreamGeometry>
+
+        <!-- A small glyph button on a plugin in the chain (move it, take it out). -->
+        <ControlTheme x:Key="ChipButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="FontSize" Value="11" />
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.3" />
+            </Style>
+        </ControlTheme>
+
+        <!-- One step in the history list: lit while it's where the audio is (class "current"). -->
+        <ControlTheme x:Key="HistoryRow" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Chrome" CornerRadius="6" Padding="10,6" Background="{TemplateBinding Background}">
+                        <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalAlignment="Stretch" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Chrome">
+                <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            </Style>
+            <Style Selector="^.current /template/ Border#Chrome">
+                <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            </Style>
+        </ControlTheme>
 
         <!-- A thin progress bar in the accent colours. -->
         <ControlTheme x:Key="ThinProgress" TargetType="ProgressBar">
@@ -125,6 +160,9 @@
                     <Button x:Name="RedoButton" Theme="{StaticResource DimmingIconButton}" Click="OnRedo" ToolTip.Tip="Redo (⇧⌘Z)">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource RedoIcon}" />
                     </Button>
+                    <ToggleButton x:Name="HistoryToggle" Theme="{StaticResource ToolToggle}" Margin="4,0,0,0" Click="OnHistoryToggle"
+                                  Content="History"
+                                  ToolTip.Tip="Everything you've done to the sound, in order (H). Click a step to go back to it." />
                     <Border Width="1" Height="20" Margin="8,0" Background="{DynamicResource HairlineBrush}" />
                     <Button Theme="{StaticResource IconButton}" Click="OnZoomOut" ToolTip.Tip="Zoom out (-, or scroll)">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ZoomOutIcon}" />
@@ -162,8 +200,26 @@
                              WindowBorderBrush="{DynamicResource AccentBrush}"
                              ToolTip.Tip="The whole sound. Click or drag to move around; scrolling zooms." />
 
-        <!-- The waveform -->
-        <Grid Grid.Row="3" Margin="14,8,14,10">
+        <!-- The waveform, and the history beside it while it's open -->
+        <Grid Grid.Row="3" Margin="14,8,14,10" ColumnDefinitions="*,Auto">
+            <Border x:Name="HistoryPanel" Grid.Column="1" Width="270" Margin="10,0,0,0" IsVisible="False" CornerRadius="10"
+                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                    Padding="8,10,8,8">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="6,0,0,6">
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource ChipButton}" Click="OnHistoryToggle" ToolTip.Tip="Close the history">
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource CloseIcon}" />
+                        </Button>
+                        <TextBlock Text="HISTORY" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Bottom" Theme="{StaticResource OptionHint}" Margin="6,6,4,0" TextWrapping="Wrap"
+                               Text="Click a step to go back to it. The steps after it stay here, dimmed, until you make a new change." />
+                    <ScrollViewer x:Name="HistoryScroller" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="HistoryList" />
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
             <editor:WaveformView x:Name="Waveform"
                                  WaveBrush="{DynamicResource AccentBrush}"
                                  SelectedWaveBrush="#F2F0EA"
@@ -180,32 +236,42 @@
             </StackPanel>
         </Grid>
 
-        <!-- The plugin that's open, while one is -->
+        <!-- The plugins that are open, in the order the sound goes through them -->
         <Border x:Name="PluginBar" Grid.Row="4" IsVisible="False" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,10">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="PluginWindowButton" Theme="{StaticResource ToolButton}" Content="Show its window"
-                            Click="OnShowPluginWindow" ToolTip.Tip="Bring the plugin's settings window to the front" />
-                    <Button x:Name="PluginPreviewButton" Theme="{StaticResource ToolButton}" Content="Preview" Click="OnPreviewPlugin"
-                            ToolTip.Tip="Play the selection (or from the cursor) through the plugin. Changes in its window are heard straight away." />
-                    <Button Theme="{StaticResource ToolButton}" Click="OnApplyPlugin" Foreground="{DynamicResource AccentBrush}"
-                            ToolTip.Tip="Run the selection (or the whole sound) through the plugin, as one step you can undo">
-                        <TextBlock Text="Apply" FontWeight="SemiBold" />
-                    </Button>
-                    <Button Theme="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnClosePlugin"
-                            ToolTip.Tip="Close the plugin. Its settings are remembered for next time." />
-                </StackPanel>
-                <StackPanel VerticalAlignment="Center" Margin="2,0,12,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="PLUGIN" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource MutedTextBrush}" />
-                        <TextBlock x:Name="PluginName" Margin="10,0,0,0" FontSize="13" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+            <StackPanel>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="ChainAddButton" Theme="{StaticResource ToolButton}" Click="OnAddToChain"
+                                ToolTip.Tip="Add another plugin to the end of the chain">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Theme="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" Margin="0,0,6,0" Width="11" Height="11" Stretch="Uniform" />
+                                <TextBlock Text="Add plugin" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ChainMenuButton" Theme="{StaticResource ToolButton}" Click="OnChainMenu"
+                                ToolTip.Tip="Save this chain, open one you saved, or bring in an FX chain from REAPER">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Chains" VerticalAlignment="Center" />
+                                <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Border Width="1" Height="20" Margin="2,0,8,0" Background="{DynamicResource HairlineBrush}" />
+                        <Button x:Name="PluginPreviewButton" Theme="{StaticResource ToolButton}" Content="Preview" Click="OnPreviewPlugin"
+                                ToolTip.Tip="Play the selection (or from the cursor) through the chain. Changes in the plugins' windows, and switching one off, are heard straight away." />
+                        <Button Theme="{StaticResource ToolButton}" Click="OnApplyPlugin" Foreground="{DynamicResource AccentBrush}"
+                                ToolTip.Tip="Run the selection (or the whole sound) through every plugin that's switched on, as one step you can undo">
+                            <TextBlock Text="Apply" FontWeight="SemiBold" />
+                        </Button>
+                        <Button Theme="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnClosePlugin"
+                                ToolTip.Tip="Close every plugin. Their settings are remembered for next time." />
                     </StackPanel>
-                    <TextBlock x:Name="PluginHint" Theme="{StaticResource OptionHint}" Margin="0,3,0,0" TextWrapping="Wrap" />
-                </StackPanel>
-            </DockPanel>
+                    <TextBlock Text="PLUGINS" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="2,0,12,0"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </DockPanel>
+                <WrapPanel x:Name="ChainPanel" Margin="0,8,0,0" />
+                <TextBlock x:Name="PluginHint" Theme="{StaticResource OptionHint}" Margin="2,4,0,0" TextWrapping="Wrap" />
+            </StackPanel>
         </Border>
 
         <!-- Processing -->

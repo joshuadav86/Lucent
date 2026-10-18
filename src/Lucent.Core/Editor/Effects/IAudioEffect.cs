@@ -16,6 +16,9 @@ public interface IAudioEffect
     /// <summary>What the effect did, in a few words, for the Undo button: "Normalize to -1 dB".</summary>
     string Description { get; }
 
+    /// <summary>More about what it did, for the history list, when the description doesn't say it all.</summary>
+    string? Details => null;
+
     /// <summary>Renders the effect. Throws <see cref="OperationCanceledException"/> if cancelled.</summary>
     AudioBuffer Process(AudioBuffer input, EffectContext context);
 }
