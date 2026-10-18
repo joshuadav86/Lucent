@@ -8,7 +8,7 @@ using WinampInspiredVisualizer.Settings;
 namespace Lucent.Mac;
 
 /// <summary>
-/// The Mac menu bar: the app menu (About, Check for Updates, Options, Hide, Quit) and the player's main commands.
+/// The Mac menu bar: the app menu (About, Check for Updates, Settings, Services, Hide, Quit) and the player's main commands.
 /// Every Lucent window shows the same menus, so they're there whichever window is in front.
 /// </summary>
 /// <remarks>
@@ -22,7 +22,16 @@ public partial class MainWindow
     {
         if (Application.Current is { } app)
         {
-            NativeMenu.SetMenu(app, AppMenu());
+            // Avalonia hands macOS the app menu once, at startup, before any window exists: with none
+            // set it makes one holding only "About Avalonia", and never looks at a menu set later. So
+            // Lucent's items go into that same menu, which macOS then shows.
+            var menu = NativeMenu.GetMenu(app);
+            if (menu is null)
+            {
+                NativeMenu.SetMenu(app, menu = new NativeMenu());
+            }
+
+            FillAppMenu(menu);
         }
 
         NativeMenu.SetMenu(this, MenuBar());
@@ -33,20 +42,43 @@ public partial class MainWindow
     }
 
     /// <summary>The menu under Lucent's name.</summary>
-    private NativeMenu AppMenu()
+    private void FillAppMenu(NativeMenu menu)
     {
-        var menu = new NativeMenu();
+        menu.Items.Clear();
         menu.Add(Item("About Lucent", ShowAbout));
         menu.Add(Item("Check for Updates…", CheckForUpdatesFromMenu));
         menu.Add(new NativeMenuItemSeparator());
-        menu.Add(Item("Options…", OpenOptions, new KeyGesture(Key.OemComma, KeyModifiers.Meta)));
+        menu.Add(Item("Settings…", OpenOptions, new KeyGesture(Key.OemComma, KeyModifiers.Meta)));
         menu.Add(new NativeMenuItemSeparator());
+        if (ServicesMenu() is { } services)
+        {
+            menu.Add(new NativeMenuItem("Services") { Menu = services });
+            menu.Add(new NativeMenuItemSeparator());
+        }
+
         menu.Add(Item("Hide Lucent", AppKit.HideApp, new KeyGesture(Key.H, KeyModifiers.Meta)));
         menu.Add(Item("Hide Others", AppKit.HideOtherApps, new KeyGesture(Key.H, KeyModifiers.Meta | KeyModifiers.Alt)));
         menu.Add(Item("Show All", AppKit.ShowAllApps));
         menu.Add(new NativeMenuItemSeparator());
         menu.Add(Item("Quit Lucent", Close, new KeyGesture(Key.Q, KeyModifiers.Meta)));
-        return menu;
+    }
+
+    /// <summary>
+    /// The Services submenu, which macOS fills in. Avalonia marks it with a property it keeps to
+    /// itself, so it's found by name; without it the app menu just goes without Services.
+    /// </summary>
+    private static NativeMenu? ServicesMenu()
+    {
+        var field = Type.GetType("Avalonia.Native.MacOSNativeMenuCommands, Avalonia.Native")
+            ?.GetField("IsServicesSubmenuProperty", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        if (field?.GetValue(null) is not AttachedProperty<bool> property)
+        {
+            return null;
+        }
+
+        var services = new NativeMenu();
+        services.SetValue(property, true);
+        return services;
     }
 
     /// <summary>File, Playback, Window and Help.</summary>

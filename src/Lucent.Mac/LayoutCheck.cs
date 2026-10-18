@@ -1,7 +1,9 @@
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Lucent.Mac.Interop;
 using Lucent.Mac.Visuals;
 using Lucent.Mac.Windows;
 
@@ -12,7 +14,7 @@ namespace Lucent.Mac;
 /// few times and writes down after each whether the Metal view and layer filled the space the layout
 /// gave them. A mismatch shows as the visuals squashed into part of the window. Then it minimizes
 /// the player and checks the windows around it went to the Dock too, and came back with it, and quits
-/// the way people do. Run again on the same settings with LUCENT_LAYOUT_CHECK_REOPENED=1, it first
+/// the way people do. On the way it checks the app menu has Lucent's items, Quit among them. Run again on the same settings with LUCENT_LAYOUT_CHECK_REOPENED=1, it first
 /// checks the windows came back as they were left: the visuals open, the equalizer under the player.
 /// </summary>
 internal static class LayoutCheck
@@ -64,6 +66,7 @@ internal static class LayoutCheck
                 lines.Add(line);
             }
 
+            lines.AddRange(CheckAppMenu());
             lines.AddRange(await CheckMinimizeAsync(main));
 
             // Where the visuals and equalizer were left, for the run after this one to find them there again.
@@ -127,6 +130,31 @@ internal static class LayoutCheck
 
     private static string Describe(Window window) =>
         $"{window.Left():0},{window.Top():0} {window.ActualWidth():0} x {window.ActualHeight():0}";
+
+    /// <summary>The menu under Lucent's name in the menu bar, as macOS shows it: Lucent's own items, with Quit.</summary>
+    private static List<string> CheckAppMenu()
+    {
+        var titles = new List<string>();
+        var bar = ObjC.Send(ObjC.Send(ObjC.Class("NSApplication"), "sharedApplication"), "mainMenu");
+        var appMenu = bar == IntPtr.Zero ? IntPtr.Zero : ObjC.Send(ObjC.Send(bar, "itemAtIndex:", IntPtr.Zero), "submenu");
+        if (appMenu != IntPtr.Zero)
+        {
+            var count = (long)ObjC.Send(appMenu, "numberOfItems");
+            for (var i = 0L; i < count; i++)
+            {
+                var item = ObjC.Send(appMenu, "itemAtIndex:", (IntPtr)i);
+                if (!ObjC.SendBool(item, "isSeparatorItem"))
+                {
+                    titles.Add(Marshal.PtrToStringUTF8(ObjC.Send(ObjC.Send(item, "title"), "UTF8String")) ?? string.Empty);
+                }
+            }
+        }
+
+        var shown = string.Join(", ", titles);
+        var right = titles.Contains("Quit Lucent") && titles.Contains("About Lucent")
+            && !titles.Any(title => title.Contains("Avalonia", StringComparison.OrdinalIgnoreCase));
+        return new List<string> { right ? $"app menu: {shown}" : $"MISMATCH app menu should have About Lucent and Quit Lucent, has: {shown}" };
+    }
 
     private static async Task<List<string>> CheckMinimizeAsync(Window main)
     {
