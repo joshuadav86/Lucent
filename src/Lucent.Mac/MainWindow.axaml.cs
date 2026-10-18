@@ -1134,32 +1134,43 @@ public partial class MainWindow : Window
     private void OnMinimize(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     /// <summary>
-    /// The windows that went down to the Dock with the player, to bring back with it. As on Windows,
+    /// The windows put away while the player is in the Dock, to bring back with it. As on Windows,
     /// the windows the player owns (visuals, queue, library, equalizer and the rest) go with it.
+    /// macOS won't send a window that belongs to another to the Dock, so they're taken off the
+    /// screen instead, natively: to Avalonia (and the saved settings) they're still open.
     /// </summary>
-    private readonly List<Window> _minimizedWithPlayer = new();
+    private readonly List<Window> _awayWithPlayer = new();
 
     private void OnPlayerWindowStateChanged(WindowState previous)
     {
         if (WindowState == WindowState.Minimized)
         {
-            foreach (var window in OwnedWindows.Where(window => window.IsVisible && window.WindowState != WindowState.Minimized).ToList())
+            foreach (var window in OwnedWindows.Where(window => window.IsVisible).ToList())
             {
-                _minimizedWithPlayer.Add(window);
-                window.WindowState = WindowState.Minimized;
+                if (NativeWindow(window) is var native && native != IntPtr.Zero)
+                {
+                    _awayWithPlayer.Add(window);
+                    Interop.ObjC.SendVoid(native, "orderOut:", IntPtr.Zero);
+                }
             }
         }
         else if (previous == WindowState.Minimized)
         {
-            foreach (var window in _minimizedWithPlayer.Where(window => window.IsVisible && window.WindowState == WindowState.Minimized))
+            foreach (var window in _awayWithPlayer.Where(window => window.IsVisible))
             {
-                window.WindowState = WindowState.Normal;
+                if (NativeWindow(window) is var native && native != IntPtr.Zero)
+                {
+                    Interop.ObjC.SendVoid(native, "orderFront:", IntPtr.Zero);
+                }
             }
 
-            _minimizedWithPlayer.Clear();
+            _awayWithPlayer.Clear();
             Activate();
         }
     }
+
+    private static IntPtr NativeWindow(Window window) =>
+        window.TryGetPlatformHandle() is Avalonia.Platform.IMacOSTopLevelPlatformHandle { NSWindow: var native } ? native : IntPtr.Zero;
 
     private void OnCloseWindow(object? sender, RoutedEventArgs e) => Close();
 
