@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucent for Windows and Mac</title>
-<meta name="description" content="Lucent is a modern, Winamp-inspired music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer, and 200 live GPU visuals. Free for Windows and Mac.">
+<meta name="description" content="Lucent is a modern, Winamp-inspired music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer, and 202 live GPU visuals. Free for Windows and Mac.">
 <meta property="og:title" content="Lucent">
-<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer, and 200 live GPU visuals.">
+<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer, and 202 live GPU visuals.">
 <meta property="og:image" content="https://lucentaudio.net/img/player-layout.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#09090C">
@@ -362,7 +362,7 @@ footer a:hover { color: var(--fg); }
         <p class="eyebrow">Built for audio nerds · Windows and Mac</p>
         <h1 id="hero-title">Play it. Shape it. <span class="grad">Watch&nbsp;it.</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a modern take on Winamp built for audio nerds. A real audio editor, a studio analyzer, and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 200 visuals. Free for Windows and Mac.</p>
+          <p class="lede">Lucent is a modern take on Winamp built for audio nerds. A real audio editor, a studio analyzer, and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 202 visuals. Free for Windows and Mac.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -387,7 +387,7 @@ footer a:hover { color: var(--fg); }
 
   <div class="readout">
     <div class="wrap" aria-label="Lucent in numbers">
-      <span><b>200</b>live visuals</span>
+      <span><b>202</b>live visuals</span>
       <span><b>31</b>ray traced</span>
       <span><b>57</b>particle</span>
       <span><b>4–32</b>EQ bands</span>
@@ -434,7 +434,7 @@ footer a:hover { color: var(--fg); }
   <section class="band" id="visuals" aria-labelledby="visuals-title">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">200 visuals</p>
+        <p class="eyebrow">202 visuals</p>
         <h2 id="visuals-title">Every frame is drawn live on your graphics card.</h2>
         <p class="lede">Each visual listens to the bass, mids, treble, and beat of what's playing. Physically lit scenes with real reflections, hundreds of thousands of particles per frame, endless fractals and kaleidoscopes, and calm geometric and minimal pieces.</p>
       </div>
@@ -761,7 +761,7 @@ footer a:hover { color: var(--fg); }
     b.onclick = () => { chips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); showFam(key); };
     chips.append(b);
   };
-  famBtn("all", "All", 200);
+  famBtn("all", "All", 202);
   for (const k in V) famBtn(k, V[k][0], V[k][1]);
   function showFam(key) {
     const items = key === "all" ? ALL.map(([f, i]) => [f, V[f][2][i]]) : V[key][2].map(x => [key, x]);

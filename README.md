@@ -3,7 +3,7 @@
 <h1 align="center">Lucent</h1>
 
 <p align="center"><b>Built for audio nerds.</b><br>
-Winamp's soul, a 2026 graphics card's muscle: a player, editor, and analyzer for Windows, with 200 live GPU visuals, ray-traced scenes, and particle storms that move to every beat.</p>
+Winamp's soul, a 2026 graphics card's muscle: a player, editor, and analyzer for Windows, with 202 live GPU visuals, ray-traced scenes, and particle storms that move to every beat.</p>
 
 <p align="center">
   <a href="../../releases/tag/latest"><img src="https://img.shields.io/badge/download-latest%20build-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download the latest build"></a>
@@ -12,13 +12,13 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor, and analyzer for
 
 <p align="center">
   <img src="https://img.shields.io/badge/Windows-10%20%26%2011-22D3EE?style=flat-square" alt="Windows 10 and 11">
-  <img src="https://img.shields.io/badge/visuals-200-D946EF?style=flat-square" alt="200 visuals">
+  <img src="https://img.shields.io/badge/visuals-202-D946EF?style=flat-square" alt="202 visuals">
   <img src="https://img.shields.io/badge/Direct3D-11-F97316?style=flat-square" alt="Direct3D 11">
   <img src="https://img.shields.io/badge/license-MIT-10B981?style=flat-square" alt="MIT license">
 </p>
 
 <p align="center">
-  <a href="#200-visuals">Visuals</a> ·
+  <a href="#202-visuals">Visuals</a> ·
   <a href="#the-player">Player</a> ·
   <a href="#equalizer">Equalizer</a> ·
   <a href="#analyzer">Analyzer</a> ·
@@ -33,14 +33,14 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor, and analyzer for
 
 | | |
 |---|---|
-| ✨ **200 visuals** | Geometric patterns, minimal pieces, and endless fractals; ray-traced glass, chrome, and planets; and particle storms of fire, smoke, sparks, and starlings. |
+| ✨ **202 visuals** | Geometric patterns, minimal pieces, and endless fractals; ray-traced glass, chrome, and planets; and particle storms of fire, smoke, sparks, and starlings. |
 | 📊 **Analyzer** | A scrolling spectrogram heatmap like Winamp's Vision plugin, with a live spectrum, waveform, and stereo spread scope. |
 | 🎨 **Skins and themes** | Five skins change the shape, type, and finish of every window, and any skin goes with any of the eight themes. |
 | 🎚️ **Studio equalizer** | 4, 8, 16, 24, or 32 mixing-desk faders over the music's live spectrum. |
 | 🧲 **Snapping windows** | The player, equalizer, queue, library, and visuals snap together like Winamp's and move as one. |
 | ✂️ **Built-in tools** | An audio editor, a converter, and a tag editor, all a right-click away. |
 
-## 200 visuals
+## 202 visuals
 
 Every visual is drawn live on your graphics card and listens to the bass, mids, treble, and beat of what's playing. Auto mode studies each sound ahead of time and changes visual right on a downbeat, with morphs that melt, glow, fly, or fold one visual into the next.
 
