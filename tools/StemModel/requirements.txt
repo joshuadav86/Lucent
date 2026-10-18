@@ -1,0 +1,8 @@
+# What export_htdemucs.py needs, on Python 3.11. PyTorch's own index has the builds without CUDA, a much smaller download.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+torchaudio==2.5.1+cpu
+demucs==4.0.1
+onnx==1.18.0
+# The same version as the apps' ONNX Runtime.
+onnxruntime==1.23.0

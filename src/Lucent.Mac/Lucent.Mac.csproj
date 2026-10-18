@@ -32,6 +32,8 @@
     <PackageReference Include="Avalonia.Headless" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
     <PackageReference Include="SharpMetal" Version="1.1.0" />
+    <!-- ONNX Runtime's native library (with Core ML, for the graphics card), for the editor's stem splitter. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.23.0" />
     <!-- In-app updates, the same version as the Windows app's. -->
     <PackageReference Include="Velopack" Version="1.2.161" />
     <!-- SPIRV-Cross, for translating the user's own visuals to Metal as the app runs (with DXC, below). -->

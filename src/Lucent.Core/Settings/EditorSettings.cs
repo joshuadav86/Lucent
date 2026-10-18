@@ -58,6 +58,9 @@ public sealed class EditorSettings
 
     public double StereoWidth { get; set; } = 1.2;
 
+    /// <summary>The stems the stem splitter keeps ("vocals", "drums", "bass", "other"); at first, all but the vocals.</summary>
+    public List<string> StemsKept { get; set; } = new() { "drums", "bass", "other" };
+
     private static string FilePath => Path.Combine(AppDataFolder.Path, "editor.json");
 
     public static EditorSettings Load()

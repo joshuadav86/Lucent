@@ -10,7 +10,62 @@ permissions:
   contents: write
 
 jobs:
+  # The audio editor's stem splitter model: Demucs' HTDemucs exported to ONNX and checked against Demucs
+  # itself (see tools/StemModel). It's cached until the export changes, tested by the Windows and Mac
+  # self-tests, and published once as the release the app downloads it from.
+  stem-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: stem-model
+          key: stem-model-${{ hashFiles('tools/StemModel/**') }}
+
+      - uses: actions/setup-python@v5
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          python-version: '3.11'
+
+      - name: Export the model and check it against Demucs
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install -r tools/StemModel/requirements.txt
+          mkdir -p stem-model
+          python tools/StemModel/export_htdemucs.py stem-model/htdemucs.onnx
+          cd stem-model
+          sha256sum htdemucs.onnx > htdemucs.onnx.sha256
+          ls -l
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stem-model
+          path: stem-model/htdemucs.onnx*
+
+      - name: Publish the model for the app to download
+        # Only once per model version, so the file people download never changes under them.
+        # Pull requests from forks can't write to the repository, and don't need to.
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="stem-model-$(grep -oP 'const string Version = "\K[^"]+' src/Lucent.Core/Editor/Stems/StemModel.cs)"
+          if gh release view "$tag" --json assets --jq '.assets[].name' 2> /dev/null | grep -qx htdemucs.onnx; then
+            echo "$tag is already published."
+            exit 0
+          fi
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --prerelease --latest=false --title "Stem splitter model ($tag)" --notes \
+              "The audio editor's stem splitter downloads this the first time it's used. It's Demucs' HTDemucs model by Meta AI (MIT licence, see LICENSE-Demucs.txt), exported to ONNX by tools/StemModel."
+          fi
+          cp tools/StemModel/LICENSE-Demucs.txt stem-model/
+          gh release upload "$tag" stem-model/htdemucs.onnx stem-model/htdemucs.onnx.sha256 stem-model/LICENSE-Demucs.txt --clobber
+
   build:
+    needs: stem-model
     runs-on: windows-latest
     # Merging several pull requests close together starts several builds of main at once. Only the
     # newest one should publish the Windows download, so a newer build of main cancels an older Windows
@@ -111,14 +166,14 @@ jobs:
           -p:Version=${{ env.LUCENT_VERSION }}
           -o publish
 
-      - name: Check the MP3 encoder, plugin helper and WebView2 loader are next to Lucent.exe
+      - name: Check the MP3 encoder, plugin helper, WebView2 loader and ONNX Runtime are next to Lucent.exe
         shell: pwsh
         run: |
           # The converter's MP3 encoder is a separate native DLL (LAME), and the plugin helper a separate
           # program, and WebView2's loader (the Bandcamp sign-in page) is native too. They must sit beside
           # Lucent.exe, not inside the single-file bundle, to be found.
           Get-ChildItem publish | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
-          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll", "LucentPluginHost.exe", "WebView2Loader.dll") {
+          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll", "LucentPluginHost.exe", "WebView2Loader.dll", "onnxruntime.dll", "DirectML.dll") {
             if (-not (Test-Path "publish/$dll")) { Write-Host "::error::$dll is missing from the published app"; exit 1 }
           }
 
@@ -205,8 +260,15 @@ jobs:
           [TestMusic]::Write()
           Get-ChildItem test.* | Format-Table Name, Length -AutoSize | Out-String | Write-Host
 
-      - name: Self-test (decoding and every visual)
+      - uses: actions/download-artifact@v4
+        with:
+          name: stem-model
+          path: stem-model
+
+      - name: Self-test (decoding, every visual, and the stem splitter)
         shell: pwsh
+        env:
+          LUCENT_STEM_MODEL: ${{ github.workspace }}\stem-model\htdemucs.onnx
         run: |
           # Lucent.exe is a windowed program: piping its output makes PowerShell wait for it, shows what it
           # writes and sets $LASTEXITCODE. The runner has no graphics card, so Direct3D draws in software.
@@ -418,7 +480,7 @@ jobs:
   #   APPLE_TEAM_ID                    (optional, for notarizing) the team ID
   #   APPLE_APP_PASSWORD               (optional, for notarizing) an app-specific password for that Apple ID
   mac:
-    needs: [metal-shaders, dxc-mac]
+    needs: [metal-shaders, dxc-mac, stem-model]
     strategy:
       fail-fast: false
       matrix:
@@ -513,7 +575,14 @@ jobs:
           afconvert -f flac -d flac test.wav test.flac
           afconvert -f AIFF -d BEI16 test.wav test.aiff
 
-      - name: Self-test (decoding and every visual)
+      - uses: actions/download-artifact@v4
+        with:
+          name: stem-model
+          path: stem-model
+
+      - name: Self-test (decoding, every visual, and the stem splitter)
+        env:
+          LUCENT_STEM_MODEL: ${{ github.workspace }}/stem-model/htdemucs.onnx
         run: publish-mac/Lucent --self-test --sheet mac-visuals-${{ matrix.arch }}.png test.wav test.m4a test-alac.m4a test.flac test.aiff
 
       - name: Set up signing
