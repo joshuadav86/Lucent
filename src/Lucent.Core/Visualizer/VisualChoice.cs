@@ -31,6 +31,9 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>Its tags, such as "Calm" and "Space", in the order the picker lists tags.</summary>
     public IReadOnlyList<string> Tags { get; }
 
+    /// <summary>A MilkDrop preset, listed in the MilkDrop folder.</summary>
+    public bool IsMilkDrop => Family == VisualStyles.MilkDropFamily;
+
     /// <summary>Who made it (MilkDrop presets), or null.</summary>
     public string? Author { get; }
 
