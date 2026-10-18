@@ -21,6 +21,9 @@ public sealed class AppSettings
     /// <summary>Folders inside the library folders that were taken out of the library.</summary>
     public List<string> HiddenLibraryFolders { get; set; } = new();
 
+    /// <summary>Single music files added to the library on their own (dropped on it), outside its folders.</summary>
+    public List<string> LibraryFiles { get; set; } = new();
+
     /// <summary>
     /// Whether the music that comes with Lucent still has to be put in the library and the queue. Only a first
     /// start (no settings file yet) sets it, so people updating from an older Lucent don't get it.

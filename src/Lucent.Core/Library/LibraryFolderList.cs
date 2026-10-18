@@ -41,6 +41,10 @@ public static class LibraryFolderList
         }
     }
 
+    /// <summary>Takes the single files in a folder, or in the folders inside it, out of the library.</summary>
+    public static void RemoveFilesIn(List<string> files, string folder) =>
+        files.RemoveAll(file => IsInside(file, folder));
+
     /// <summary>The folders taken out of this linked folder.</summary>
     public static List<string> HiddenIn(string root, IEnumerable<string> hidden) =>
         hidden.Where(h => IsInside(h, root)).ToList();

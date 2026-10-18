@@ -5,7 +5,7 @@
         Icon="Assets/Lucent.ico"
         Width="520" SizeToContent="Height" ResizeMode="CanMinimize"
         Background="{DynamicResource SurfaceBrush}"
-        AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver"
+        AllowDrop="True" PreviewDrop="OnDrop" PreviewDragEnter="OnDragOver" PreviewDragOver="OnDragOver"
         PreviewKeyDown="OnPreviewKeyDown"
         Closing="OnClosing"
         Closed="OnClosed">

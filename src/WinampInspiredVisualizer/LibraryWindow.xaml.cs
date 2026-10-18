@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
 using SavedPlaylists = WinampInspiredVisualizer.Playlist.SavedPlaylists;
 using Track = WinampInspiredVisualizer.Playlist.Track;
@@ -510,12 +511,41 @@ public partial class LibraryWindow : ToolWindow
         ApplyLibraryFolders();
     }
 
+    /// <summary>
+    /// Music dropped on the library goes into it: folders become library folders, and single files are
+    /// added on their own. Nothing is played or queued.
+    /// </summary>
+    protected override void OnMusicDropped(IReadOnlyList<string> paths)
+    {
+        var changed = false;
+        foreach (var path in paths)
+        {
+            if (Directory.Exists(path))
+            {
+                LibraryFolderList.Add(_settings.LibraryFolders, _settings.HiddenLibraryFolders, path);
+                changed = true;
+            }
+            else if (File.Exists(path) && AudioReaderFactory.IsSupported(path)
+                && !_settings.LibraryFiles.Contains(path, StringComparer.OrdinalIgnoreCase))
+            {
+                _settings.LibraryFiles.Add(path);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            ApplyLibraryFolders();
+        }
+    }
+
     /// <summary>Takes folders out of the library. Only the library forgets them; the files stay on disk.</summary>
     private void RemoveLibraryFolders(IEnumerable<string> folders)
     {
         foreach (var folder in folders)
         {
             LibraryFolderList.Remove(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder);
+            LibraryFolderList.RemoveFilesIn(_settings.LibraryFiles, folder);
         }
 
         HighlightFolders(Array.Empty<string>());
@@ -525,7 +555,7 @@ public partial class LibraryWindow : ToolWindow
     private void ApplyLibraryFolders()
     {
         _settings.Save();
-        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders);
+        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
         UpdateLibraryStatus();
     }
 
@@ -613,6 +643,7 @@ public partial class LibraryWindow : ToolWindow
 
         _settings.LibraryFolders.Clear();
         _settings.HiddenLibraryFolders.Clear();
+        _settings.LibraryFiles.Clear();
         HighlightFolders(Array.Empty<string>());
         ApplyLibraryFolders();
     }

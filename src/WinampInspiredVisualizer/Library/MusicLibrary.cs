@@ -20,6 +20,7 @@ public sealed class MusicLibrary : IDisposable
     private CancellationTokenSource? _scan;
     private IReadOnlyList<string> _folders = Array.Empty<string>();
     private IReadOnlyList<string> _hidden = Array.Empty<string>();
+    private IReadOnlyList<string> _files = Array.Empty<string>();
 
     public MusicLibrary()
     {
@@ -47,9 +48,16 @@ public sealed class MusicLibrary : IDisposable
 
     public bool IsScanning { get; private set; }
 
-    /// <summary>Lists the music in these folders, leaving out what's in the hidden folders inside them.</summary>
-    public void SetFolders(IEnumerable<string> folders, IEnumerable<string> hidden)
+    /// <summary>
+    /// Lists the music in these folders, leaving out what's in the hidden folders inside them, plus any
+    /// single files added on their own (dropped on the library).
+    /// </summary>
+    public void SetFolders(IEnumerable<string> folders, IEnumerable<string> hidden, IEnumerable<string> files)
     {
+        _files = files
+            .Where(file => !string.IsNullOrWhiteSpace(file))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         _folders = folders
             .Where(folder => !string.IsNullOrWhiteSpace(folder))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -72,7 +80,8 @@ public sealed class MusicLibrary : IDisposable
         {
             var folders = _folders;
             var hidden = _hidden;
-            var found = await Task.Run(() => FindFiles(folders, hidden, scan.Token), scan.Token);
+            var files = _files;
+            var found = await Task.Run(() => FindFiles(folders, hidden, files, scan.Token), scan.Token);
             if (scan.IsCancellationRequested)
             {
                 return;
@@ -184,7 +193,8 @@ public sealed class MusicLibrary : IDisposable
         }
     }
 
-    private static List<FoundFile> FindFiles(IReadOnlyList<string> folders, IReadOnlyList<string> hidden, CancellationToken token)
+    private static List<FoundFile> FindFiles(IReadOnlyList<string> folders, IReadOnlyList<string> hidden,
+        IReadOnlyList<string> files, CancellationToken token)
     {
         var options = new EnumerationOptions
         {
@@ -213,19 +223,8 @@ public sealed class MusicLibrary : IDisposable
                         continue;
                     }
 
-                    DateTime added;
-                    try
-                    {
-                        var info = new FileInfo(path);
-                        added = info.CreationTime > info.LastWriteTime ? info.CreationTime : info.LastWriteTime;
-                    }
-                    catch (Exception)
-                    {
-                        added = DateTime.MinValue;
-                    }
-
                     var directory = System.IO.Path.GetDirectoryName(path) ?? root;
-                    results[path] = new FoundFile(path, FolderLabel(root, directory), directory, added);
+                    results[path] = new FoundFile(path, FolderLabel(root, directory), directory, AddedTime(path));
                 }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -234,7 +233,33 @@ public sealed class MusicLibrary : IDisposable
             }
         }
 
+        // Single files go under a heading of the folder they're in, unless a library folder already lists them.
+        foreach (var path in files)
+        {
+            token.ThrowIfCancellationRequested();
+            if (results.ContainsKey(path) || !AudioReaderFactory.IsSupported(path) || !File.Exists(path))
+            {
+                continue;
+            }
+
+            var directory = System.IO.Path.GetDirectoryName(path) ?? path;
+            results[path] = new FoundFile(path, FolderLabel(directory, directory), directory, AddedTime(path));
+        }
+
         return results.Values.ToList();
+    }
+
+    private static DateTime AddedTime(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.CreationTime > info.LastWriteTime ? info.CreationTime : info.LastWriteTime;
+        }
+        catch (Exception)
+        {
+            return DateTime.MinValue;
+        }
     }
 
     /// <summary>"Music", or "Music / Albums / Some Album" for files in subfolders.</summary>
