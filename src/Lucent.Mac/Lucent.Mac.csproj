@@ -66,6 +66,13 @@
     <None Include="$(DxcLibraryFolder)/LICENSE-*.txt" Link="Licenses/DXC/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- ONNX Runtime's package copies its Windows DLLs into every build that isn't 32-bit; a Mac has no use for them. -->
+  <Target Name="LeaveOutOnnxRuntimeWindowsLibraries" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Remove="@(None)" Condition="'%(Link)' == 'onnxruntime.dll' Or '%(Link)' == 'onnxruntime_providers_shared.dll'" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="WarnWithoutMetalShaders" BeforeTargets="Build" Condition="!Exists('$(MetalShadersFolder)')">
     <Warning Text="No Metal shaders in $(MetalShadersFolder), so the app will have no visuals. Make them with: dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders" />
   </Target>
