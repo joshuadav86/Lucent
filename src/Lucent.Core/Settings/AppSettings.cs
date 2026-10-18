@@ -67,6 +67,9 @@ public sealed class AppSettings
     /// <summary>Take the output for Lucent alone and send each track at its own format: bit-perfect playback.</summary>
     public bool ExclusiveOutput { get; set; }
 
+    /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
+    public bool EveryBuild { get; set; }
+
     /// <summary>Where each window was last left, by name ("Player", "Visuals", "Queue", "Library").</summary>
     public Dictionary<string, WindowBounds> Windows { get; set; } = new();
 

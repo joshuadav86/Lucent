@@ -1,0 +1,84 @@
+name: Release
+
+# Makes a stable release out of the build on the "Latest build" release, as it is: the same files
+# people have been trying, not a fresh build. Installed copies on stable releases (the default) update
+# to it; the download buttons can point at it with GitHub's releases/latest/download/<file> links.
+#
+# Run it from the Actions tab once the Windows and both Mac builds of the commit have reached
+# "Latest build". Afterwards, raise the first two numbers of LUCENT_VERSION in build.yml (1.0 to 1.1,
+# say) so later builds count up from the new release.
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'Name of the release, e.g. "Lucent 1.0"'
+        required: true
+      notes:
+        description: "What's new, in a sentence or a few (shown above the download instructions)"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy the latest build to a stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: ${{ inputs.title }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          # The Windows build names the release "Latest build (<version>)" and points it at its commit.
+          IFS=$'\t' read -r name commit < <(gh release view latest --json name,targetCommitish --jq '[.name, .targetCommitish] | @tsv')
+          version=$(sed -n 's/^Latest build (\(.*\))$/\1/p' <<< "$name")
+          if [ -z "$version" ]; then
+            echo "::error::Couldn't read the version from the latest build's name: $name"
+            exit 1
+          fi
+          tag="v$version"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "::error::$version is already released as $tag."
+            exit 1
+          fi
+
+          mkdir files
+          gh release download latest -D files
+
+          # Every platform's update feed must be for this same build: the Mac builds finish after the
+          # Windows one, and until they do, "Latest build" still has the previous Mac files.
+          missing=0
+          for feed in releases.win.json releases.osx-arm64.json releases.osx-x64.json; do
+            if [ ! -f "files/$feed" ]; then
+              echo "::error::$feed isn't on the latest build yet."
+              missing=1
+            elif ! jq -e --arg v "$version" '.Assets | any(.Version == $v)' "files/$feed" > /dev/null; then
+              echo "::error::$feed is for an older build than $version: its build hasn't finished yet."
+              missing=1
+            fi
+          done
+          for file in Lucent-Setup.exe Lucent-win-x64.zip Lucent-Setup-mac-arm64.pkg Lucent-Setup-mac-x64.pkg Lucent-mac-arm64.zip Lucent-mac-x64.zip; do
+            [ -f "files/$file" ] || { echo "::error::$file isn't on the latest build."; missing=1; }
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Try again once every build of $commit has finished."
+            exit 1
+          fi
+
+          {
+            if [ -n "$NOTES" ]; then printf '%s\n\n' "$NOTES"; fi
+            cat << 'NOTES'
+          Windows: download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download Lucent-win-x64.zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself).
+
+          Mac (macOS 12 or later): download Lucent-Setup-mac-arm64.pkg for Apple silicon Macs (M1 and later) or Lucent-Setup-mac-x64.pkg for Intel Macs, and open it to install Lucent into Applications; it keeps itself up to date from here. Or download Lucent-mac-arm64.zip or Lucent-mac-x64.zip and open Lucent.app from it (that copy doesn't update itself). If macOS says it can't check the app or installer, open System Settings > Privacy & Security and click Open Anyway.
+          NOTES
+          } > release-notes.md
+
+          gh release create "$tag" files/* --target "$commit" --title "$TITLE" --notes-file release-notes.md --latest
+          echo "Released $version as $tag: $(gh release view "$tag" --json url --jq .url)"

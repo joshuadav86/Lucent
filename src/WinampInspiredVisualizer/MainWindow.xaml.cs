@@ -244,6 +244,7 @@ public partial class MainWindow : Window
             UpdateButton.ToolTip = $"Lucent {version} is ready. Click to restart into it now, or it installs when you close Lucent.";
             UpdateButton.Visibility = Visibility.Visible;
         });
+        _updater.EveryBuild = _settings.EveryBuild;
         _ = _updater.RunAsync();
     }
 
@@ -1086,9 +1087,10 @@ public partial class MainWindow : Window
         VisualsTab.Visibility = tab == "Visuals" ? Visibility.Visible : Visibility.Collapsed;
         SoundTab.Visibility = tab == "Sound" ? Visibility.Visible : Visibility.Collapsed;
         ThemeTab.Visibility = tab == "Theme" ? Visibility.Visible : Visibility.Collapsed;
+        UpdatesTab.Visibility = tab == "Updates" ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>A choice in one of the option rows (resolution, detail, glow, timing, skin, theme).</summary>
+    /// <summary>A choice in one of the option rows (resolution, detail, glow, timing, skin, theme, updates).</summary>
     private void OnOptionChosen(object sender, RoutedEventArgs e)
     {
         if (sender is not RadioButton { GroupName: var group, Tag: string value })
@@ -1124,6 +1126,13 @@ public partial class MainWindow : Window
                 ApplyLook();
                 ShowOptionValues();
                 break;
+            case "Updates":
+                _settings.EveryBuild = value == "EveryBuild";
+                _settings.Save();
+                _updater.EveryBuild = _settings.EveryBuild;
+                _updater.ChannelChanged();
+                UpdateButton.Visibility = Visibility.Collapsed;
+                return;
             default:
                 return;
         }
@@ -1172,6 +1181,7 @@ public partial class MainWindow : Window
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
                 "Theme" => ThemeManager.Find(_settings.Theme).Name,
                 "Skin" => SkinManager.Find(_settings.Skin).Name,
+                "Updates" => _settings.EveryBuild ? "EveryBuild" : "Stable",
                 _ => null,
             };
             if (current is not null)
@@ -1184,6 +1194,7 @@ public partial class MainWindow : Window
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
+        VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
     }
 

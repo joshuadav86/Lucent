@@ -21,8 +21,9 @@ jobs:
       cancel-in-progress: true
     env:
       # Every build gets a higher version than the last, so the installer and in-app updates can
-      # tell which is newer.
-      LUCENT_VERSION: 0.1.${{ github.run_number }}
+      # tell which is newer. The first two numbers are the release being worked towards: a build
+      # chosen to be that release is published as it is (see release.yml), so they go up after it.
+      LUCENT_VERSION: 1.0.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -338,7 +339,7 @@ jobs:
       group: ${{ github.event_name == 'push' && format('publish-latest-mac-{0}', matrix.arch) || format('mac-{0}-{1}', github.run_id, matrix.arch) }}
       cancel-in-progress: false
     env:
-      LUCENT_VERSION: 0.1.${{ github.run_number }}
+      LUCENT_VERSION: 1.0.${{ github.run_number }}
       RID: osx-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4

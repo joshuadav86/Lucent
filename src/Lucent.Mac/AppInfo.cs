@@ -7,7 +7,7 @@ namespace Lucent.Mac;
 /// <summary>The facts about this copy of Lucent and this Mac that a bug report needs.</summary>
 public static class AppInfo
 {
-    /// <summary>Lucent's version, as CI stamps it (0.1.build).</summary>
+    /// <summary>Lucent's version, as CI stamps it (1.0.build).</summary>
     public static string Version { get; } = ReadVersion();
 
     private static string ReadVersion()

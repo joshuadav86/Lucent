@@ -79,6 +79,7 @@
                                                      ToolTip="When and how visuals change" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                                     </UniformGrid>
                                 </Border>
 
@@ -183,6 +184,19 @@
                                                Text="Each skin comes with a theme it was made for. Pick another theme below to mix and match." />
                                     <TextBlock Style="{StaticResource OptionLabel}" Text="Theme: colours for everything around the visuals" />
                                     <UniformGrid x:Name="ThemeSwatches" Columns="2" Margin="-2,0,-8,-6" />
+                                </StackPanel>
+
+                                <StackPanel x:Name="UpdatesTab" Visibility="Collapsed">
+                                    <TextBlock Style="{StaticResource OptionLabel}" Text="Update to" />
+                                    <Border Style="{StaticResource SegmentBar}">
+                                        <UniformGrid Rows="1">
+                                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Updates" Tag="Stable" Content="Stable releases" Click="OnOptionChosen" />
+                                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Updates" Tag="EveryBuild" Content="Every build" Click="OnOptionChosen" />
+                                        </UniformGrid>
+                                    </Border>
+                                    <TextBlock Style="{StaticResource OptionHint}"
+                                               Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
+                                    <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" Margin="2,8,0,0" />
                                 </StackPanel>
 
                                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->

@@ -234,7 +234,7 @@ Skins decide the shape, type, and finish of every window. Themes decide the colo
 1. Download [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
 2. Run it. Lucent installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
 
-Installed Lucent keeps itself up to date. It checks for a newer build when it starts and every hour while it runs, downloads it in the background, and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists, and visuals are kept. Uninstall it from Windows' **Installed apps** list.
+Installed Lucent keeps itself up to date. It checks for a newer version when it starts and every hour while it runs, downloads it in the background, and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists, and visuals are kept. It updates to stable releases; to get every new build as soon as it's made, choose **Every build** under **Options > Updates**. (Until the first stable release is out, everyone gets every build.) Uninstall it from Windows' **Installed apps** list.
 
 If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
 
@@ -360,6 +360,10 @@ tools/package-mac.sh publish-mac . 0.1.0
 ```
 
 CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, and every visual drawn on the graphics card), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, they're added to the Latest build release. Adding Apple signing and notarization later only needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml).
+
+### Releases
+
+Every push to main replaces the **Latest build** release, and copies of Lucent set to **Every build** update to it. To make a stable release, run the **Release** workflow from the Actions tab once the Windows and both Mac builds of a commit have reached Latest build: it copies those exact files to a new release (tagged `v1.0.412`, say, with the title you give it) that everyone on stable releases then updates to. Afterwards, raise the first two numbers of `LUCENT_VERSION` in [`build.yml`](.github/workflows/build.yml) (1.0 to 1.1, say), so later builds count up from the new release.
 
 `Lucent --screenshots <folder>` draws each window to a PNG without a screen (on any OS, Linux included), for checking the Mac windows by eye.
 
