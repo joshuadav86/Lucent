@@ -30,8 +30,11 @@ public class ToolWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        // Closing only hides it; it goes away for good when the player closes.
-        if (Player is { IsShuttingDown: false })
+        // Closing only hides it; it goes away for good when the player closes. Avalonia asks a
+        // window's owned windows before the window itself, so when the player (or the app) is
+        // closing this runs before the player knows, and the reason is what tells them apart:
+        // hiding then would stop the player closing, and leave the window off for next time.
+        if (e.CloseReason == WindowCloseReason.WindowClosing && Player is { IsShuttingDown: false })
         {
             e.Cancel = true;
             Hide();
