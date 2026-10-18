@@ -89,10 +89,10 @@ public partial class MainWindow
             case MediaCommand.PlayPause:
                 TogglePlayPause();
                 break;
-            case MediaCommand.Play when !_player.IsPlaying:
+            case MediaCommand.Play when !ShownIsPlaying:
                 TogglePlayPause();
                 break;
-            case MediaCommand.Pause when _player.IsPlaying:
+            case MediaCommand.Pause when ShownIsPlaying:
                 TogglePlayPause();
                 break;
             case MediaCommand.Stop:
@@ -114,6 +114,14 @@ public partial class MainWindow
     {
         if (_mediaControls is not { IsAvailable: true } controls)
         {
+            return;
+        }
+
+        if (_remote is not null)
+        {
+            // The app being controlled is in Windows' media controls itself, so the media keys go straight to it.
+            controls.ShowTrack(null);
+            controls.ShowState(MediaState.Closed, canSkip: false);
             return;
         }
 

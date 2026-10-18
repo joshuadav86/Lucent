@@ -457,7 +457,7 @@ public sealed partial class Spectrogram : Control
         }
 
         var sampleRate = _capture.SampleRate;
-        var delay = sampleRate * AudioPlayer.OutputLatencyMs / 1000 * 2 / 3;
+        var delay = _capture.DelaySamples;
         UpdatePanels((float)deltaTime, delay);
 
         // The picture glides left continuously, by however far this frame's time takes it, and a new

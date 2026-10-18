@@ -23,7 +23,7 @@ public partial class MainWindow
     /// </summary>
     public void AddPlaybackItems(ItemsControl menu)
     {
-        if (_player.HasTrack && !string.IsNullOrWhiteSpace(NowPlayingText.Text))
+        if (ShownHasTrack && !string.IsNullOrWhiteSpace(NowPlayingText.Text))
         {
             menu.Items.Add(new MenuItem
             {
@@ -32,12 +32,12 @@ public partial class MainWindow
             });
         }
 
-        if (_player.HasTrack && _player.Duration > TimeSpan.Zero)
+        if (ShownHasTrack && ShownDuration > TimeSpan.Zero)
         {
             menu.Items.Add(SeekItem());
         }
 
-        menu.Items.Add(PlaybackItem(_player.IsPlaying ? "Pause" : "Play", "Space", TogglePlayPause));
+        menu.Items.Add(PlaybackItem(ShownIsPlaying ? "Pause" : "Play", "Space", TogglePlayPause));
         menu.Items.Add(PlaybackItem("Stop", "", StopPlayback));
         menu.Items.Add(PlaybackItem("Next track", "X", () => PlayNext(wrap: true)));
         menu.Items.Add(PlaybackItem("Previous track", "Z", PlayPrevious));
@@ -46,13 +46,13 @@ public partial class MainWindow
 
     private MenuItem SeekItem()
     {
-        var duration = _player.Duration;
+        var duration = ShownDuration;
         var time = new TextBlock { Width = 82, VerticalAlignment = VerticalAlignment.Center };
         var slider = new Slider
         {
             Minimum = 0,
             Maximum = duration.TotalSeconds,
-            Value = Math.Min(_player.Position.TotalSeconds, duration.TotalSeconds),
+            Value = Math.Min(ShownPosition.TotalSeconds, duration.TotalSeconds),
             Width = 150,
             VerticalAlignment = VerticalAlignment.Center,
             Focusable = false,
@@ -68,13 +68,13 @@ public partial class MainWindow
         var follow = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         follow.Tick += (_, _) =>
         {
-            if (dragging || !_player.HasTrack)
+            if (dragging || !ShownHasTrack)
             {
                 return;
             }
 
             updating = true;
-            slider.Value = Math.Min(_player.Position.TotalSeconds, slider.Maximum);
+            slider.Value = Math.Min(ShownPosition.TotalSeconds, slider.Maximum);
             updating = false;
             ShowTime();
         };
@@ -92,7 +92,7 @@ public partial class MainWindow
             }
 
             dragging = false;
-            _player.Position = TimeSpan.FromSeconds(slider.Value);
+            SeekTo(TimeSpan.FromSeconds(slider.Value));
         }
 
         slider.AddHandler(PointerPressedEvent, (_, _) => Start(), RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -105,7 +105,7 @@ public partial class MainWindow
             ShowTime();
             if (!updating && !dragging)
             {
-                _player.Position = TimeSpan.FromSeconds(e.NewValue);
+                SeekTo(TimeSpan.FromSeconds(e.NewValue));
             }
         };
         slider.AddHandler(PointerWheelChangedEvent, (_, e) =>

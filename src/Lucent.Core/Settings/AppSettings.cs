@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Streaming;
 using WinampInspiredVisualizer.Visualizer;
 
 namespace WinampInspiredVisualizer.Settings;
@@ -237,6 +238,15 @@ public sealed class AppSettings
 
     /// <summary>The format to download purchases in (Bandcamp's own names, like "flac" or "mp3-320").</summary>
     public string BandcampFormat { get; set; } = "flac";
+
+    /// <summary>
+    /// Whether the visuals, meter, equalizer's spectrum and analyzer listen to every app's sound (Spotify, a
+    /// browser, anything) instead of only Lucent's own music.
+    /// </summary>
+    public bool ListenToOtherApps { get; set; }
+
+    /// <summary>The other app the player shows and controls instead of Lucent's own music, if any.</summary>
+    public RemoteApp RemoteApp { get; set; }
 
     private static string FilePath => Path.Combine(AppDataFolder.Path, "settings.json");
 
