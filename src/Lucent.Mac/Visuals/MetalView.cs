@@ -37,16 +37,19 @@ public sealed class MetalView : NativeControlHost
             return base.CreateNativeControlCore(parent);
         }
 
+        // The view makes its own Metal layer (makeBackingLayer:, below) and AppKit keeps that layer
+        // exactly the view's size, as it does for any layer-backed view. A layer set from outside
+        // is left for the app to size, and Core Animation's own resizing of it went wrong as the
+        // window changed size: the picture ended up squashed into a strip along the bottom. The
+        // view itself mustn't autoresize either: Avalonia sets its frame before its holder's, so
+        // autoresizing would then add the holder's change in size on top.
         _view = ObjC.Send(ObjC.Send(ViewClass(), "alloc"), "initWithFrame:", new ObjC.CGRect { Width = 100, Height = 100 });
-        _layer = ObjC.Send(ObjC.Send(ObjC.Class("CAMetalLayer"), "layer"), "retain");
+        ObjC.SendVoid(_view, "setWantsLayer:", true);
+        _layer = ObjC.Send(ObjC.Send(_view, "layer"), "retain");
         ObjC.SendVoid(_layer, "setDevice:", _engine.Device.NativePtr);
         ObjC.SendVoid(_layer, "setPixelFormat:", (ulong)MTLPixelFormat.BGRA8Unorm);
         ObjC.SendVoid(_layer, "setFramebufferOnly:", true);
         ObjC.SendVoid(_layer, "setOpaque:", true);
-        // Follow the view's size; kCALayerWidthSizable | kCALayerHeightSizable.
-        ObjC.SendVoid(_layer, "setAutoresizingMask:", 2UL | 16UL);
-        ObjC.SendVoid(_view, "setLayer:", _layer);
-        ObjC.SendVoid(_view, "setWantsLayer:", true);
 
         Renderer = new MetalRenderer(_layer, _engine);
         UpdateSize();
@@ -56,11 +59,17 @@ public sealed class MetalView : NativeControlHost
     }
 
     /// <summary>An NSView that's never the target of a click: hitTest: answers nil, so AppKit hands the click to the window's own view.</summary>
+    /// <remarks>Its layer is a CAMetalLayer, made by makeBackingLayer.</remarks>
     private static unsafe IntPtr ViewClass() =>
-        ObjC.Subclass("LucentVisualsView", "NSView", ("hitTest:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, ObjC.CGPoint, IntPtr>)&HitTest, "@@:{CGPoint=dd}"));
+        ObjC.Subclass("LucentVisualsView", "NSView",
+            ("hitTest:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, ObjC.CGPoint, IntPtr>)&HitTest, "@@:{CGPoint=dd}"),
+            ("makeBackingLayer", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr>)&MakeBackingLayer, "@@:"));
 
     [UnmanagedCallersOnly]
     private static IntPtr HitTest(IntPtr self, IntPtr selector, ObjC.CGPoint point) => IntPtr.Zero;
+
+    [UnmanagedCallersOnly]
+    private static IntPtr MakeBackingLayer(IntPtr self, IntPtr selector) => ObjC.Send(ObjC.Class("CAMetalLayer"), "layer");
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
@@ -85,6 +94,33 @@ public sealed class MetalView : NativeControlHost
         {
             UpdateSize();
         }
+    }
+
+    /// <summary>
+    /// Where the native view and its Metal layer are, against where the Avalonia layout put this
+    /// control, as one line, and whether they agree (for the launch check in CI).
+    /// </summary>
+    internal (bool Matches, string Report) CheckGeometry()
+    {
+        if (_view == IntPtr.Zero || _layer == IntPtr.Zero)
+        {
+            return (false, "no native view yet");
+        }
+
+        var view = ObjC.ReadValue<ObjC.CGRect>(_view, "frame");
+        var layer = ObjC.ReadValue<ObjC.CGRect>(_layer, "bounds");
+        var drawable = ObjC.ReadValue<ObjC.CGSize>(_layer, "drawableSize");
+        var superview = ObjC.Send(_view, "superview");
+        var holder = superview == IntPtr.Zero ? default : ObjC.ReadValue<ObjC.CGRect>(superview, "bounds");
+        var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
+        static bool Near(double a, double b) => Math.Abs(a - b) < 1.5;
+        var matches = Near(view.Width, Bounds.Width) && Near(view.Height, Bounds.Height)
+            && Near(layer.Width, Bounds.Width) && Near(layer.Height, Bounds.Height)
+            && Near(drawable.Width, Bounds.Width * scale) && Near(drawable.Height, Bounds.Height * scale);
+        return (matches,
+            $"layout {Bounds.Width:0} x {Bounds.Height:0}, view {view.Width:0} x {view.Height:0} at {view.X:0},{view.Y:0}, " +
+            $"layer {layer.Width:0} x {layer.Height:0}, holder {holder.Width:0} x {holder.Height:0}, " +
+            $"drawable {drawable.Width:0} x {drawable.Height:0} (scale {scale:0.##})");
     }
 
     /// <summary>Tells the renderer the view's size in pixels, and the layer how sharp to be on Retina screens.</summary>

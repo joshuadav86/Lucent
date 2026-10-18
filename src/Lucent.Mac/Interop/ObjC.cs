@@ -71,6 +71,26 @@ internal static partial class ObjC
     public static void SendVoid(IntPtr receiver, string selector, CGSize argument) =>
         void_objc_msgSend_CGSize(receiver, Selector(selector), argument);
 
+    /// <summary>A size or rectangle property read through key-value coding, so it needs no struct-returning call.</summary>
+    public static unsafe T ReadValue<T>(IntPtr receiver, string key) where T : unmanaged
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(key + "\0");
+        IntPtr name;
+        fixed (byte* utf8 = bytes)
+        {
+            name = Send(Class("NSString"), "stringWithUTF8String:", (IntPtr)utf8);
+        }
+
+        T result = default;
+        var value = Send(receiver, "valueForKey:", name);
+        if (value != IntPtr.Zero)
+        {
+            void_objc_msgSend_IntPtr_ULong(value, Selector("getValue:size:"), (IntPtr)(&result), (ulong)sizeof(T));
+        }
+
+        return result;
+    }
+
     public static double SendDouble(IntPtr receiver, string selector) => double_objc_msgSend(receiver, Selector(selector));
 
     public static bool SendBool(IntPtr receiver, string selector) => byte_objc_msgSend(receiver, Selector(selector)) != 0;
@@ -150,6 +170,9 @@ internal static partial class ObjC
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial void void_objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr argument);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial void void_objc_msgSend_IntPtr_ULong(IntPtr receiver, IntPtr selector, IntPtr argument, ulong size);
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial void void_objc_msgSend_Byte(IntPtr receiver, IntPtr selector, byte argument);

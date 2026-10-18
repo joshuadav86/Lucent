@@ -697,6 +697,20 @@ jobs:
           fi
           kill "$app"
           echo "Lucent launched and was still running after 20 seconds."
+          # Open it again and resize the visuals window a few times: the Metal view has to fill the
+          # space the layout gives it, or the visuals show squashed into part of the window.
+          export LUCENT_DATA_FOLDER="$RUNNER_TEMP/layout-check"
+          export LUCENT_LAYOUT_CHECK="$RUNNER_TEMP/layout-check.txt"
+          check/Lucent.app/Contents/MacOS/Lucent > "$RUNNER_TEMP/layout.log" 2>&1 &
+          app=$!
+          for _ in $(seq 1 90); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
+          kill "$app" 2> /dev/null || true
+          cat "$LUCENT_LAYOUT_CHECK" 2> /dev/null || { echo "::error::The visuals layout check wrote nothing."; cat "$RUNNER_TEMP/layout.log"; exit 1; }
+          if ! grep -qx PASSED "$LUCENT_LAYOUT_CHECK"; then
+            echo "::error::The visuals don't fill their window."
+            exit 1
+          fi
+          unset LUCENT_LAYOUT_CHECK
           unset LUCENT_DATA_FOLDER
           cp "releases-mac/Lucent-$RID-Setup.pkg" "mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg"
           cp "Lucent-mac-${{ matrix.arch }}.zip" mac-release/
