@@ -8,13 +8,14 @@ public sealed class VisualChoice : INotifyPropertyChanged
 {
     private bool _isFavorite;
 
-    public VisualChoice(string name, int index, string family, IReadOnlyList<string> tags)
+    public VisualChoice(string name, int index, string family, IReadOnlyList<string> tags, string? author = null)
     {
         Name = name;
         Index = index;
         Family = family;
         Tags = tags;
-        SearchKey = SearchText.Key(new[] { name, family }.Concat(tags));
+        Author = author;
+        SearchKey = SearchText.Key(new[] { name, family, author ?? string.Empty }.Concat(tags));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -30,11 +31,17 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>Its tags, such as "Calm" and "Space", in the order the picker lists tags.</summary>
     public IReadOnlyList<string> Tags { get; }
 
+    /// <summary>Who made it (MilkDrop presets), or null.</summary>
+    public string? Author { get; }
+
+    /// <summary>The name with its author, "Reaction Diffusion by Geiss", for the name shown over the visuals.</summary>
+    public string Label => PresetSource.LabelFor(Name, Author);
+
     /// <summary>Its name, family and tags, ready for the picker's search box to look in.</summary>
     public string SearchKey { get; }
 
     /// <summary>"Fractal · Calm, Geometric", shown when the mouse rests on the visual in the picker.</summary>
-    public string StyleText => Tags.Count == 0 ? Family : $"{Family} · {string.Join(", ", Tags)}";
+    public string StyleText => (Author is null ? Family : $"{Family} · by {Author}") + (Tags.Count == 0 ? "" : $" · {string.Join(", ", Tags)}");
 
     public bool IsFavorite
     {

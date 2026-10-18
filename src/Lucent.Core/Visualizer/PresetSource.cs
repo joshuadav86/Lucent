@@ -36,8 +36,79 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
         ? VisualStyles.TagNames("Retro")
         : VisualStyles.TagNames(ReadHeader(TagsPattern, Code) + (SimulatePattern.IsMatch(Code) ? $", {VisualStyles.ParticlesTag}" : string.Empty));
 
-    /// <summary>A visual from its file, named by its first line.</summary>
-    public static PresetSource Load(string path, string code) => new(ReadName(path, code), path, code);
+    /// <summary>
+    /// Who made it, for MilkDrop presets named the community's way ("Geiss - Reaction Diffusion.milk"),
+    /// or null. The name is then just the title.
+    /// </summary>
+    public string? Author { get; init; }
+
+    /// <summary>The name with its author, as MilkDrop listed it ("Reaction Diffusion by Geiss"), for showing on screen.</summary>
+    public string Label => LabelFor(Name, Author);
+
+    /// <summary>"Title by Author", or just the name when there's no author or the name already carries it ("Tunnel (Geiss)").</summary>
+    public static string LabelFor(string name, string? author) =>
+        author is null || name.EndsWith($"({author})", StringComparison.OrdinalIgnoreCase) ? name : $"{name} by {author}";
+
+    /// <summary>A visual from its file, named by its first line (MilkDrop presets by their file name).</summary>
+    public static PresetSource Load(string path, string code)
+    {
+        if (!IsMilkDropFile(path))
+        {
+            return new(ReadName(path, code), path, code);
+        }
+
+        var (title, author) = MilkDropName(path);
+        return new(title, path, code) { Author = author };
+    }
+
+    /// <summary>
+    /// The title and author in a MilkDrop preset's file name. Preset packs name them "Author - Title" (and
+    /// collaborations "Author1 + Author2 - Title"); a name without " - " is all title.
+    /// </summary>
+    public static (string Title, string? Author) MilkDropName(string path)
+    {
+        var name = Path.GetFileNameWithoutExtension(path).Trim();
+        var split = name.IndexOf(" - ", StringComparison.Ordinal);
+        if (split <= 0)
+        {
+            return (name, null);
+        }
+
+        var author = name[..split].Trim();
+        var title = name[(split + 3)..].Trim();
+        return title.Length == 0 || author.Length == 0 ? (name, null) : (title, author);
+    }
+
+    /// <summary>
+    /// Gives every visual its own name, since favorites, lists and the last visual shown are kept by name.
+    /// A MilkDrop preset whose title another visual already has gets its author added, "Tunnel (Geiss)",
+    /// and anything still the same is numbered.
+    /// </summary>
+    public static IReadOnlyList<PresetSource> WithUniqueNames(IReadOnlyList<PresetSource> presets)
+    {
+        var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new PresetSource[presets.Count];
+        // Lucent's own visuals keep their names; MilkDrop presets give way.
+        foreach (var (preset, index) in presets.Select((preset, index) => (preset, index)).OrderBy(item => item.preset.IsMilkDrop))
+        {
+            var name = preset.Name;
+            if (taken.Contains(name) && preset.Author is not null)
+            {
+                name = $"{preset.Name} ({preset.Author})";
+            }
+
+            var unique = name;
+            for (var n = 2; taken.Contains(unique); n++)
+            {
+                unique = $"{name} ({n})";
+            }
+
+            taken.Add(unique);
+            result[index] = unique == preset.Name ? preset : preset with { Name = unique };
+        }
+
+        return result;
+    }
 
     /// <summary>Whether a file is a MilkDrop preset, by its .milk extension.</summary>
     public static bool IsMilkDropFile(string path) => path.EndsWith(".milk", StringComparison.OrdinalIgnoreCase);

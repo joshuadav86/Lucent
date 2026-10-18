@@ -105,7 +105,7 @@ public partial class VisualizerWindow : ToolWindow
 
         var index = Math.Clamp(_host.PresetIndex, 0, _presetNames.Count - 1);
         var current = _choices[index];
-        PresetName.Text = current.Name;
+        PresetName.Text = current.Label;
         PresetList.SelectedItem = _shown.Contains(current) ? current : null;
         _settings.LastVisual = current.Name;
         UpdateFavoriteButton();
@@ -217,7 +217,7 @@ public partial class VisualizerWindow : ToolWindow
             // Presets and names come from the same load, so they line up; the fallback is just in case.
             var preset = index < presets.Count ? presets[index] : null;
             var tags = (preset?.Tags ?? Array.Empty<string>()).OrderBy(VisualStyles.TagOrder).ThenBy(tag => tag, StringComparer.OrdinalIgnoreCase).ToList();
-            return new VisualChoice(name, index, preset?.Family ?? VisualStyles.OtherFamily, tags) { IsFavorite = favorites.Contains(name) };
+            return new VisualChoice(name, index, preset?.Family ?? VisualStyles.OtherFamily, tags, preset?.Author) { IsFavorite = favorites.Contains(name) };
         }).ToList();
 
         // One tick box for every tag some visual uses. Ticks saved for tags no visual has any more are dropped,

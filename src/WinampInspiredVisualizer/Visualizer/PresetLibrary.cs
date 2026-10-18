@@ -50,10 +50,11 @@ public static class PresetLibrary
             files = files.Where(file => !ownNames.Contains(Path.GetFileName(file.Path))).Concat(own).ToList();
         }
 
-        return files
+        return PresetSource.WithUniqueNames(files
             .Select(file => PresetSource.Load(file.Path, file.Code))
             .OrderBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .ThenBy(preset => preset.Author, StringComparer.OrdinalIgnoreCase)
+            .ToList());
     }
 
     /// <summary>The .hlsl visuals in a folder, and the MilkDrop presets in it and in the folders inside it.</summary>
