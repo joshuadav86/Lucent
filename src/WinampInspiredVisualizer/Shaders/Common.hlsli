@@ -32,7 +32,7 @@ cbuffer Params : register(b0)
     float ParticleCount;       // how many particles a particle visual has (see Particles.hlsli)
     float ParticleReset;       // 1 on a particle visual's first frame, when every particle spawns
     float ParticleWeight;      // how bright each particle is drawn: 1 on Normal detail, less with more particles
-    float Reserved;
+    float PlainOutput;         // 1 while a MilkDrop preset shows: no glow or tone-mapping, as MilkDrop looked (used by the engine)
 };
 
 Texture2D PreviousFrame : register(t0);

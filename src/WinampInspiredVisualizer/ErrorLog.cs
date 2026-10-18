@@ -28,18 +28,24 @@ public static class ErrorLog
 
     public static void Write(string where, Exception? exception)
     {
-        if (exception is null)
+        if (exception is not null)
         {
-            return;
+            Append(where, exception.ToString());
         }
+    }
 
+    /// <summary>Records a problem that didn't throw, such as part of a MilkDrop preset that had to be left out.</summary>
+    public static void Write(string where, string message) => Append(where, message);
+
+    private static void Append(string where, string text)
+    {
         try
         {
             lock (Gate)
             {
                 Directory.CreateDirectory(AppDataFolder.Path);
                 TrimIfLarge();
-                File.AppendAllText(Path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {where} ({AppInfo.Version}): {exception}{Environment.NewLine}{Environment.NewLine}", Encoding.UTF8);
+                File.AppendAllText(Path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {where} ({AppInfo.Version}): {text}{Environment.NewLine}{Environment.NewLine}", Encoding.UTF8);
             }
         }
         catch (Exception)
