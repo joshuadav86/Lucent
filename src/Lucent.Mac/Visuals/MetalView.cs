@@ -87,6 +87,33 @@ public sealed class MetalView : NativeControlHost
         }
     }
 
+    /// <summary>
+    /// Where the native view and its Metal layer are, against where the Avalonia layout put this
+    /// control, as one line, and whether they agree (for the launch check in CI).
+    /// </summary>
+    internal (bool Matches, string Report) CheckGeometry()
+    {
+        if (_view == IntPtr.Zero || _layer == IntPtr.Zero)
+        {
+            return (false, "no native view yet");
+        }
+
+        var view = ObjC.ReadValue<ObjC.CGRect>(_view, "frame");
+        var layer = ObjC.ReadValue<ObjC.CGRect>(_layer, "bounds");
+        var drawable = ObjC.ReadValue<ObjC.CGSize>(_layer, "drawableSize");
+        var superview = ObjC.Send(_view, "superview");
+        var holder = superview == IntPtr.Zero ? default : ObjC.ReadValue<ObjC.CGRect>(superview, "bounds");
+        var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
+        static bool Near(double a, double b) => Math.Abs(a - b) < 1.5;
+        var matches = Near(view.Width, Bounds.Width) && Near(view.Height, Bounds.Height)
+            && Near(layer.Width, Bounds.Width) && Near(layer.Height, Bounds.Height)
+            && Near(drawable.Width, Bounds.Width * scale) && Near(drawable.Height, Bounds.Height * scale);
+        return (matches,
+            $"layout {Bounds.Width:0} x {Bounds.Height:0}, view {view.Width:0} x {view.Height:0} at {view.X:0},{view.Y:0}, " +
+            $"layer {layer.Width:0} x {layer.Height:0}, holder {holder.Width:0} x {holder.Height:0}, " +
+            $"drawable {drawable.Width:0} x {drawable.Height:0} (scale {scale:0.##})");
+    }
+
     /// <summary>Tells the renderer the view's size in pixels, and the layer how sharp to be on Retina screens.</summary>
     private void UpdateSize()
     {

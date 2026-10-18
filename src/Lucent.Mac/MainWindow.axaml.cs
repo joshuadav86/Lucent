@@ -306,6 +306,7 @@ public partial class MainWindow : Window
         AlignBesidePlayerSoon();
         Activate();
         RequestAnimationFrame(OnFrame);
+        LayoutCheck.RunIfAsked(this, _visuals);
 
         _updater.UpdateReady += version => Dispatcher.UIThread.Post(() =>
         {
