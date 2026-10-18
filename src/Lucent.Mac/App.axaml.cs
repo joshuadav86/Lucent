@@ -11,6 +11,7 @@ public sealed partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        ErrorLog.Watch();
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Like Windows: closing the player closes Lucent, whatever else is open.

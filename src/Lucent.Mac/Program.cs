@@ -39,7 +39,6 @@ public static class Program
             return Screenshots.Run(args[1..]);
         }
 
-        ErrorLog.Watch();
         // Settings, playlists and visuals from before Lucent was renamed come across on the first run.
         AppDataFolder.CopyFromOldName();
 
