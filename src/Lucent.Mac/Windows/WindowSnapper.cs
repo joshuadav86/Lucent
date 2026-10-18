@@ -102,7 +102,7 @@ public sealed class WindowSnapper
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Window window || e.Handled || !e.GetCurrentPoint(window).Properties.IsLeftButtonPressed
-            || e.ClickCount > 1 || window.WindowState != WindowState.Normal || !OnCaption(e.Source as Visual, window))
+            || e.ClickCount > 1 || window.WindowState != WindowState.Normal || FullScreen.Fills(window) || !OnCaption(e.Source as Visual, window))
         {
             return;
         }
@@ -736,7 +736,7 @@ public sealed class WindowSnapper
     {
         foreach (var window in _windows)
         {
-            if (window == self || !window.IsVisible || window.WindowState != WindowState.Normal
+            if (window == self || !window.IsVisible || window.WindowState != WindowState.Normal || FullScreen.Fills(window)
                 || _carried.Any(carried => carried.Window == window) || _linked.Any(linked => linked.Window == window))
             {
                 continue;
@@ -751,7 +751,7 @@ public sealed class WindowSnapper
     {
         foreach (var window in _windows)
         {
-            if (window != _main && window.PlatformImpl is not null && window.WindowState == WindowState.Normal)
+            if (window != _main && window.PlatformImpl is not null && window.WindowState == WindowState.Normal && !FullScreen.Fills(window))
             {
                 yield return (window, BoxOf(window));
             }

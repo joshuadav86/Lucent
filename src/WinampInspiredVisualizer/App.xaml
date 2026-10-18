@@ -99,6 +99,9 @@
         <Geometry x:Key="MinimizeIcon">M0,5.5 H10</Geometry>
         <Geometry x:Key="MaximizeIcon">M0.5,0.5 H9.5 V9.5 H0.5 Z</Geometry>
         <Geometry x:Key="RestoreIcon">M2.5,0.5 H9.5 V7.5 M0.5,2.5 H7.5 V9.5 H0.5 Z</Geometry>
+        <!-- Full screen in a title bar: corners pointing out, and in to leave it. -->
+        <Geometry x:Key="FullScreenCaptionIcon">M0.5,3.5 V0.5 H3.5 M6.5,0.5 H9.5 V3.5 M9.5,6.5 V9.5 H6.5 M3.5,9.5 H0.5 V6.5</Geometry>
+        <Geometry x:Key="ExitFullScreenCaptionIcon">M3.5,0.5 V3.5 H0.5 M6.5,0.5 V3.5 H9.5 M9.5,6.5 H6.5 V9.5 M3.5,9.5 V6.5 H0.5</Geometry>
         <Geometry x:Key="CloseIcon">M0.5,0.5 L9.5,9.5 M9.5,0.5 L0.5,9.5</Geometry>
         <!-- The visual picker's glyph on a 20 x 20 grid: a screen drawn as a line, with a spark filled in. -->
         <Geometry x:Key="VisualsScreenIcon">M4.75,3.75 H15.25 A3,3 0 0 1 18.25,6.75 V13.25 A3,3 0 0 1 15.25,16.25 H4.75 A3,3 0 0 1 1.75,13.25 V6.75 A3,3 0 0 1 4.75,3.75 Z</Geometry>

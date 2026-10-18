@@ -22,6 +22,7 @@ public partial class AnalyzerWindow : Window
 
     private readonly AppSettings _settings;
     private readonly Spectrogram _spectrogram;
+    private readonly FullScreen _fullScreen;
 
     private AnalyzerWindow(AudioPlayer player, AppSettings settings)
     {
@@ -29,6 +30,8 @@ public partial class AnalyzerWindow : Window
         _settings = settings;
         Width = Math.Max(MinWidth, settings.AnalyzerWindowWidth);
         Height = Math.Max(MinHeight, settings.AnalyzerWindowHeight);
+        _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
+        _fullScreen.Changed += (_, _) => OnWindowStateChanged(this, EventArgs.Empty);
 
         _spectrogram = new Spectrogram(player.Capture)
         {
@@ -217,9 +220,25 @@ public partial class AnalyzerWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (FullScreen.IsToggleKey(e))
+        {
+            _fullScreen.Toggle();
+            e.Handled = true;
+            return;
+        }
+
+        // Esc leaves full screen first, then closes the window.
         if (e.Key == Key.Escape)
         {
-            Close();
+            if (_fullScreen.IsOn)
+            {
+                _fullScreen.Toggle();
+            }
+            else
+            {
+                Close();
+            }
+
             e.Handled = true;
             return;
         }
@@ -242,7 +261,8 @@ public partial class AnalyzerWindow : Window
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
         // A maximized borderless window hangs slightly off-screen; pad it back in.
-        WindowRoot.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+        WindowRoot.Margin = WindowState == WindowState.Maximized && !_fullScreen.IsOn ? new Thickness(7) : new Thickness(0);
+        BorderThickness = new Thickness(_fullScreen.IsOn ? 0 : 1);
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)

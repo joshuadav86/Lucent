@@ -93,6 +93,9 @@
                            Foreground="{DynamicResource TextBrush}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button x:Name="FullScreenButton" Theme="{StaticResource CaptionButton}">
+                    <Path x:Name="FullScreenIcon" Theme="{StaticResource CaptionIcon}" />
+                </Button>
                 <Button Theme="{StaticResource CaptionButton}" ToolTip.Tip="Minimize" Click="OnMinimize">
                     <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource MinimizeIcon}" />
                 </Button>

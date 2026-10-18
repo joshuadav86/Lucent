@@ -123,6 +123,10 @@
                            Foreground="{DynamicResource TextBrush}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button x:Name="FullScreenButton" Style="{StaticResource CaptionButton}"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Path x:Name="FullScreenIcon" Style="{StaticResource CaptionIcon}" />
+                </Button>
                 <Button Style="{StaticResource CaptionButton}" ToolTip="Minimize"
                         WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMinimize">
                     <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource MinimizeIcon}" />
