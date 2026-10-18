@@ -331,8 +331,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// On a first start, puts the music that comes with Lucent in the library and the queue, so the play
-    /// button has something to play. It's an ordinary library folder from then on, and can be taken out.
+    /// On a first start, puts the music that comes with Lucent in the library and the queue and plays it.
+    /// It's an ordinary library folder from then on, and can be taken out.
     /// </summary>
     private async void AddStarterMusic()
     {
@@ -351,9 +351,17 @@ public partial class MainWindow : Window
         }
 
         LinkLibraryFolder(StarterMusic.Folder);
-        foreach (var track in tracks)
+        var first = new PlaylistEntry(tracks[0]);
+        _playlist.Add(first);
+        foreach (var track in tracks.Skip(1))
         {
             _playlist.Add(new PlaylistEntry(track));
+        }
+
+        // It starts playing, with the visuals moving to it, unless something else was put on meanwhile.
+        if (!_player.HasTrack)
+        {
+            PlayEntry(first);
         }
     }
 
