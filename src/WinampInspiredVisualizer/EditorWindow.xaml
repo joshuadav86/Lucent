@@ -40,6 +40,79 @@
             </Style.Triggers>
         </Style>
 
+        <!-- An insert's name in the channel strip: click it to bring the plugin's window back. -->
+        <Style x:Key="SlotName" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" CornerRadius="4" Padding="4,3" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- An insert's power button in the channel strip: a dot, lit while the plugin is on. -->
+        <Style x:Key="SlotPower" TargetType="ToggleButton">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Chrome" CornerRadius="11" Background="Transparent">
+                            <Ellipse x:Name="Dot" Width="10" Height="10" Fill="Transparent" StrokeThickness="1.5"
+                                     Stroke="{DynamicResource FaintTextBrush}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Dot" Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- An empty insert slot in the channel strip: click it to add a plugin there. -->
+        <Style x:Key="EmptySlot" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" CornerRadius="6" Padding="4,0" Background="Transparent"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- One step in the history list: lit while it's where the audio is, dimmed once undone. -->
         <Style x:Key="HistoryItem" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand" />
@@ -202,7 +275,10 @@
                     <Button x:Name="RedoButton" Style="{StaticResource DimmingIconButton}" Click="OnRedo" ToolTip="Redo (Ctrl+Y)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource RedoIcon}" />
                     </Button>
-                    <ToggleButton x:Name="HistoryToggle" Style="{StaticResource ToolToggle}" Margin="4,0,0,0" Click="OnHistoryToggle"
+                    <ToggleButton x:Name="InsertsToggle" Style="{StaticResource ToolToggle}" Margin="4,0,0,0" Content="Inserts"
+                                  Click="OnInsertsToggle"
+                                  ToolTip="The channel strip: your plugins in order, top to bottom (I). Click an empty slot to add one." />
+                    <ToggleButton x:Name="HistoryToggle" Style="{StaticResource ToolToggle}" Margin="0" Click="OnHistoryToggle"
                                   ToolTip="Everything you've done to the sound, in order (H). Click a step to go back to it.">
                         <StackPanel Orientation="Horizontal">
                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource HistoryIcon}" Margin="0,0,6,0" />
@@ -246,13 +322,53 @@
                              WindowBorderBrush="{DynamicResource AccentBrush}"
                              ToolTip="The whole sound. Click or drag to move around; the wheel zooms." />
 
-        <!-- The waveform, and the history beside it while it's open -->
+        <!-- The waveform, with the channel strip and the history beside it while they're open -->
         <Grid Grid.Row="3" Margin="14,8,14,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Border x:Name="HistoryPanel" Grid.Column="1" Width="270" Margin="10,0,0,0" Visibility="Collapsed" CornerRadius="10"
+            <!-- The channel strip: the plugins in the order the sound goes through them, top to bottom, like a
+                 mixer's insert slots. -->
+            <Border x:Name="PluginBar" Grid.Column="1" Width="250" Margin="10,0,0,0" Visibility="Collapsed" CornerRadius="10"
+                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                    Padding="8,10,8,8">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="6,0,0,8">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource ChipButton}" Click="OnInsertsToggle"
+                                ToolTip="Hide the channel strip (the plugins stay open)">
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource CloseIcon}" />
+                        </Button>
+                        <Button x:Name="ChainMenuButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="0,0,6,0"
+                                Click="OnChainMenu" ToolTip="Save this chain, open one you saved, bring in an FX chain from REAPER, or close every plugin">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="CHAINS" VerticalAlignment="Center" />
+                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="6,1,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="INSERTS" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </DockPanel>
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <TextBlock x:Name="PluginHint" Style="{StaticResource OptionHint}" Margin="4,0,4,8" TextWrapping="Wrap" />
+                        <UniformGrid Columns="2">
+                            <Button x:Name="PluginPreviewButton" Style="{StaticResource ToolButton}" Margin="0,0,3,0" Content="Preview"
+                                    Click="OnPreviewPlugin"
+                                    ToolTip="Play the selection (or from the cursor) through the chain. Changes in the plugins' windows, and switching one off, are heard straight away." />
+                            <Button x:Name="PluginApplyButton" Style="{StaticResource ToolButton}" Margin="3,0,0,0" Click="OnApplyPlugin"
+                                    Foreground="{DynamicResource AccentBrush}"
+                                    ToolTip="Run the selection (or the whole sound) through every plugin that's switched on, as one step you can undo">
+                                <TextBlock Text="Apply" FontWeight="SemiBold" />
+                            </Button>
+                        </UniformGrid>
+                    </StackPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="ChainPanel" />
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+            <Border x:Name="HistoryPanel" Grid.Column="2" Width="270" Margin="10,0,0,0" Visibility="Collapsed" CornerRadius="10"
                     Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                     Padding="8,10,8,8">
                 <DockPanel>
@@ -285,44 +401,6 @@
                 <ProgressBar x:Name="LoadingProgress" Style="{StaticResource ThinProgress}" Margin="0,12,0,0" />
             </StackPanel>
         </Grid>
-
-        <!-- The plugins that are open, in the order the sound goes through them -->
-        <Border x:Name="PluginBar" Grid.Row="4" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}"
-                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,10">
-            <StackPanel>
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="ChainAddButton" Style="{StaticResource ToolButton}" Click="OnAddToChain"
-                                ToolTip="Add another plugin to the end of the chain">
-                            <StackPanel Orientation="Horizontal">
-                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" Margin="0,0,6,0" Width="11" Height="11" Stretch="Uniform" />
-                                <TextBlock Text="Add plugin" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                        <Button x:Name="ChainMenuButton" Style="{StaticResource ToolButton}" Click="OnChainMenu"
-                                ToolTip="Save this chain, open one you saved, or bring in an FX chain from REAPER">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Chains" VerticalAlignment="Center" />
-                                <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
-                            </StackPanel>
-                        </Button>
-                        <Border Width="1" Height="20" Margin="2,0,8,0" Background="{DynamicResource HairlineBrush}" />
-                        <Button x:Name="PluginPreviewButton" Style="{StaticResource ToolButton}" Content="Preview" Click="OnPreviewPlugin"
-                                ToolTip="Play the selection (or from the cursor) through the chain. Changes in the plugins' windows, and switching one off, are heard straight away." />
-                        <Button Style="{StaticResource ToolButton}" Click="OnApplyPlugin" Foreground="{DynamicResource AccentBrush}"
-                                ToolTip="Run the selection (or the whole sound) through every plugin that's switched on, as one step you can undo">
-                            <TextBlock Text="Apply" FontWeight="SemiBold" />
-                        </Button>
-                        <Button Style="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnClosePlugin"
-                                ToolTip="Close every plugin. Their settings are remembered for next time." />
-                    </StackPanel>
-                    <TextBlock Text="PLUGINS" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="2,0,12,0"
-                               Foreground="{DynamicResource MutedTextBrush}" />
-                </DockPanel>
-                <WrapPanel x:Name="ChainPanel" Margin="0,8,0,0" />
-                <TextBlock x:Name="PluginHint" Style="{StaticResource OptionHint}" Margin="2,4,0,0" TextWrapping="Wrap" />
-            </StackPanel>
-        </Border>
 
         <!-- Processing -->
         <Border x:Name="ProcessBar" Grid.Row="5" Background="{DynamicResource SurfaceBrush}"
