@@ -98,7 +98,7 @@ public partial class VideoExportWindow : Window
         }
 
         var presets = _template.Presets;
-        var name = _presetIndex >= 0 && _presetIndex < presets.Count ? presets[_presetIndex].Name : "No visual";
+        var name = _presetIndex >= 0 && _presetIndex < presets.Count ? presets[_presetIndex].Label : "No visual";
         VisualText.Text = _auto ? $"Auto, starting with {name}" : name;
         VisualHint.Text = _auto
             ? $"Changes visual about every {TimeFormat.Format(TimeSpan.FromSeconds(_template.AutoCycleSeconds))}, landing on a downbeat, as Auto does on screen."
@@ -263,7 +263,7 @@ public partial class VideoExportWindow : Window
             var folder = new MenuItem { Header = family.Key };
             foreach (var index in family.OrderBy(index => presets[index].Name, StringComparer.OrdinalIgnoreCase))
             {
-                var item = new MenuItem { Header = presets[index].Name, IsChecked = index == _presetIndex };
+                var item = new MenuItem { Header = presets[index].Label, IsChecked = index == _presetIndex };
                 var chosen = index;
                 item.Click += (_, _) =>
                 {
