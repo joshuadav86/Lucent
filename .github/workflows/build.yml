@@ -9,16 +9,16 @@ on:
 permissions:
   contents: write
 
-# Merging several pull requests close together starts several builds of main at once. Only the
-# newest one should publish the "latest" download, so a newer build of main cancels an older one
-# that's still running (pull request builds each keep their own group).
-concurrency:
-  group: ${{ github.event_name == 'push' && 'publish-latest' || format('build-{0}', github.run_id) }}
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: windows-latest
+    # Merging several pull requests close together starts several builds of main at once. Only the
+    # newest one should publish the Windows download, so a newer build of main cancels an older Windows
+    # build that's still running (pull request builds each keep their own group). The Mac builds queue
+    # instead of cancelling (see the mac job), since they take longer than the gap between merges.
+    concurrency:
+      group: ${{ github.event_name == 'push' && 'publish-latest-windows' || format('build-{0}', github.run_id) }}
+      cancel-in-progress: true
     env:
       # Every build gets a higher version than the last, so the installer and in-app updates can
       # tell which is newer.
@@ -165,13 +165,25 @@ jobs:
             echo "main has moved on to $newest; leaving the latest download to that build."
             exit 0
           fi
+          # Recreating the release would drop the Mac downloads, which come from a slower job that may
+          # still be running; keep the newest ones until that job replaces them.
+          mkdir -p mac-carry
+          gh release download latest -p '*mac*' -p '*osx*' -D mac-carry 2> /dev/null || true
+          cat > release-notes.md << 'NOTES'
+          Automatic build of the newest version on main.
+
+          Windows: download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download Lucent-win-x64.zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself).
+
+          Mac (macOS 12 or later): download Lucent-Setup-mac-arm64.pkg for Apple silicon Macs (M1 and later) or Lucent-Setup-mac-x64.pkg for Intel Macs, and open it to install Lucent into Applications; it keeps itself up to date from here. Or download Lucent-mac-arm64.zip or Lucent-mac-x64.zip and open Lucent.app from it (that copy doesn't update itself). If macOS says it can't check the app or installer, open System Settings > Privacy & Security and click Open Anyway.
+          NOTES
           gh release delete latest --cleanup-tag --yes || true
           # The .nupkg and the releases/assets files are what installed copies of Lucent update from.
           gh release create latest Lucent-Setup.exe Lucent-win-x64.zip \
             releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES \
             --target "$GITHUB_SHA" --prerelease \
             --title "Latest build ($LUCENT_VERSION)" \
-            --notes "Automatic build of the newest version on main. Download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself)."
+            --notes-file release-notes.md
+          if [ -n "$(ls -A mac-carry)" ]; then gh release upload latest mac-carry/* --clobber; fi
 
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
   # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
@@ -280,6 +292,12 @@ jobs:
             runner: macos-15-intel
             cpu: x86_64
     runs-on: ${{ matrix.runner }}
+    # Builds of main queue up per chip rather than cancelling each other: a Mac build (the Intel one
+    # especially) takes longer than the gap between merges, so cancelling would mean none ever finished
+    # and published. GitHub keeps only the newest waiting build, so the queue never grows past one.
+    concurrency:
+      group: ${{ github.event_name == 'push' && format('publish-latest-mac-{0}', matrix.arch) || format('mac-{0}-{1}', github.run_id, matrix.arch) }}
+      cancel-in-progress: false
     env:
       LUCENT_VERSION: 0.1.${{ github.run_number }}
       RID: osx-${{ matrix.arch }}
@@ -473,7 +491,7 @@ jobs:
           name: Lucent-Setup-mac-${{ matrix.arch }}
           path: mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg
 
-      # Everything the "latest" release gets from this Mac build, for the publish-mac job.
+      # Everything the "latest" release gets from this Mac build.
       - uses: actions/upload-artifact@v4
         with:
           name: mac-release-${{ matrix.arch }}
@@ -487,49 +505,30 @@ jobs:
           path: mac-visuals-${{ matrix.arch }}.png
           if-no-files-found: ignore
 
-      - name: Remove the signing keychain
-        if: always() && steps.signing.outputs.keychain != ''
-        run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
-
-  # Adds the Mac builds to the "latest" release once the Windows build has made it (that job replaces
-  # the whole release, so this has to come after it). A Mac build that failed is simply left out.
-  publish-mac:
-    needs: [build, mac]
-    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        # Nothing to download when both Mac builds failed; the next step says so.
-        continue-on-error: true
-        with:
-          pattern: mac-release-*
-          merge-multiple: true
-          path: mac-release
-
-      - name: Add the Mac downloads to "latest"
+      # Each Mac build adds its own downloads to "latest" as soon as it's done, without waiting for the
+      # other chip's. The Windows build makes that release (and carries the Mac files over when it
+      # replaces it), so wait for it to exist, and retry if the Windows build is replacing it right then.
+      - name: Add this Mac's downloads to "latest"
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Same rule as the Windows build: leave the download to a newer build of main.
-          newest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
-          if [ "$newest" != "$GITHUB_SHA" ]; then
-            echo "main has moved on to $newest; leaving the latest download to that build."
-            exit 0
-          fi
-          if [ -z "$(ls -A mac-release 2>/dev/null)" ]; then
-            echo "::warning::No Mac build to publish."
-            exit 0
-          fi
-          ls -l mac-release
-          # The release must be this build's (the Windows job just made it), not an older one.
-          target=$(gh release view latest -R "$GITHUB_REPOSITORY" --json targetCommitish --jq .targetCommitish)
-          if [ "$target" != "$GITHUB_SHA" ]; then
-            echo "::warning::The latest release is for $target, not this build; leaving it alone."
-            exit 0
-          fi
-          gh release upload latest mac-release/* -R "$GITHUB_REPOSITORY" --clobber
-          gh release edit latest -R "$GITHUB_REPOSITORY" --notes "Automatic build of the newest version on main.
+          for attempt in $(seq 1 60); do
+            if gh release view latest -R "$GITHUB_REPOSITORY" > /dev/null 2>&1 &&
+               gh release upload latest mac-release/* -R "$GITHUB_REPOSITORY" --clobber; then
+              # Drop this chip's update packages from older builds; the feed only lists this one.
+              for old in $(gh release view latest -R "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -- "-$RID-.*\.nupkg$"); do
+                [ -e "mac-release/$old" ] || gh release delete-asset latest "$old" -R "$GITHUB_REPOSITORY" --yes || true
+              done
+              echo "Added the $RID downloads to the latest release."
+              exit 0
+            fi
+            echo "The latest release isn't there yet (attempt $attempt); trying again in 30 seconds."
+            sleep 30
+          done
+          echo "::error::Couldn't add the Mac downloads to the latest release."
+          exit 1
 
-          Windows: download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download Lucent-win-x64.zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself).
-
-          Mac (macOS 12 or later): download Lucent-Setup-mac-arm64.pkg for Apple silicon Macs (M1 and later) or Lucent-Setup-mac-x64.pkg for Intel Macs, and open it to install Lucent into Applications; it keeps itself up to date from here. Or download Lucent-mac-arm64.zip or Lucent-mac-x64.zip and open Lucent.app from it (that copy doesn't update itself). If macOS says it can't check the app or installer, open System Settings > Privacy & Security and click Open Anyway."
+      - name: Remove the signing keychain
+        if: always() && steps.signing.outputs.keychain != ''
+        run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
