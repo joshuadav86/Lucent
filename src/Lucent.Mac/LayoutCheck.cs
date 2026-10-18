@@ -19,7 +19,9 @@ internal static class LayoutCheck
 {
     private static readonly (double Width, double Height)[] Sizes =
     {
-        (820, 560), (700, 900), (1000, 420), (500, 1000), (900, 700),
+        // The last one fits on the runners' small screens: a window taller than the screen is shrunk
+        // to fit when Lucent reopens, which the reopened run would count as moved.
+        (820, 560), (700, 900), (1000, 420), (500, 1000), (860, 480),
     };
 
     public static void RunIfAsked(Window main, Window visuals)
