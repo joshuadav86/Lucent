@@ -15,7 +15,8 @@ namespace Lucent.Mac;
 /// Checks the Mac app works without a window, for CI on a Mac: decodes the given music files with
 /// Core Audio, then compiles every visual's Metal shaders and draws a few frames of each to music
 /// made up on the spot, and can save a contact sheet of what they look like. It also translates
-/// visuals from HLSL as the app does for the user's own, and checks the result matches the build's.
+/// visuals from HLSL as the app does for the user's own, and checks the result matches the build's,
+/// and puts a made-up track in macOS's Now Playing controls and reads it back.
 /// </summary>
 /// <remarks>Usage: Lucent --self-test [--sheet picture.png] [music files...]</remarks>
 public static class SelfTest
@@ -57,6 +58,7 @@ public static class SelfTest
 
         failures += TestVisuals(sheetPath);
         failures += TestRuntimeTranslation();
+        failures += TestMediaControls();
         failures += WinampInspiredVisualizer.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
@@ -406,6 +408,72 @@ public static class SelfTest
         {
             userFolder.Delete(recursive: true);
             cacheFolder.Delete(recursive: true);
+        }
+
+        return problems;
+    }
+
+    /// <summary>
+    /// Puts a made-up track (with a cover) in macOS's Now Playing controls as the player does, then reads
+    /// MPNowPlayingInfoCenter back: the title has to be there, every remote command has to have Lucent's
+    /// method on it, and the cover has to come back through the artwork block.
+    /// </summary>
+    private static int TestMediaControls()
+    {
+        var problems = 0;
+        try
+        {
+            using var pool = AutoreleasePool.Begin();
+            using var controls = new Audio.MediaControls();
+            if (!controls.IsAvailable)
+            {
+                Console.WriteLine("::error::Lucent couldn't join macOS's Now Playing controls (MediaPlayer.framework).");
+                return 1;
+            }
+
+            // A file that isn't there is titled by its name, as untagged music is.
+            const string title = "Lucent self-test track";
+            var track = WinampInspiredVisualizer.Playlist.Track.FromFile(Path.Combine(Path.GetTempPath(), title + ".mp3"));
+            controls.ShowTrack(track);
+            controls.ShowState(Audio.MediaState.Playing, canSkip: true);
+            controls.ShowPosition(TimeSpan.FromSeconds(42), TimeSpan.FromMinutes(3));
+            using (var cover = new SKBitmap(16, 16))
+            {
+                cover.Erase(SKColors.Teal);
+                using var jpeg = cover.Encode(SKEncodedImageFormat.Jpeg, 90);
+                controls.ShowCover(jpeg.ToArray());
+            }
+
+            var (shownTitle, commandsReady, coverReturned) = controls.ReadBack();
+            if (shownTitle != title)
+            {
+                problems++;
+                Console.WriteLine($"::error::macOS's Now Playing info has the title \"{shownTitle}\" instead of \"{title}\".");
+            }
+
+            if (!commandsReady)
+            {
+                problems++;
+                Console.WriteLine("::error::Not every Now Playing command (play, pause, next, seek...) has Lucent's handler on it.");
+            }
+
+            if (coverReturned != true)
+            {
+                problems++;
+                Console.WriteLine(coverReturned is null
+                    ? "::error::macOS's Now Playing info has no cover."
+                    : "::error::The Now Playing cover's artwork block gave back no picture.");
+            }
+
+            if (problems == 0)
+            {
+                Console.WriteLine("Now Playing controls work: the track, its cover, and the remote commands.");
+            }
+        }
+        catch (Exception ex)
+        {
+            problems++;
+            Console.WriteLine($"::error::Setting up macOS's Now Playing controls failed: {ex.Message}");
         }
 
         return problems;

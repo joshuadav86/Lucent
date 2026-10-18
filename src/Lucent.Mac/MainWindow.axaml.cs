@@ -1886,6 +1886,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Media keys work everywhere, even while typing.
+        if (MediaCommandFor(e.Key) is { } media)
+        {
+            RunMediaCommand(media, fromKey: true);
+            e.Handled = true;
+            return;
+        }
+
         // Typing in a text box (or using ⌘, ⌃ or ⌥ shortcuts) isn't a shortcut for the player.
         if (e.Source is TextBox || e.KeyModifiers is KeyModifiers.Meta or KeyModifiers.Control or KeyModifiers.Alt)
         {
@@ -1895,18 +1903,12 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.Space:
-            case Key.MediaPlayPause:
                 TogglePlayPause();
                 break;
-            case Key.MediaStop:
-                StopPlayback();
-                break;
             case Key.Z:
-            case Key.MediaPreviousTrack:
                 PlayPrevious();
                 break;
             case Key.X:
-            case Key.MediaNextTrack:
                 PlayNext(wrap: true);
                 break;
             case Key.F11:
@@ -2109,6 +2111,7 @@ public partial class MainWindow : Window
         // The play triangle looks centred when nudged slightly right.
         PlayPauseIcon.Margin = playing ? new Thickness(0) : new Thickness(2, 0, 0, 0);
         UpdatePlayState();
+        UpdateMediaControls();
     }
 
     /// <summary>The little play / pause / stop mark next to the time.</summary>
@@ -2121,6 +2124,7 @@ public partial class MainWindow : Window
     private void ShowNowPlaying(Track? track)
     {
         ArtworkWindow.ShowTrack(track);
+        UpdateMediaControls();
         UpdateTrackFavoriteButton();
         if (track is null)
         {

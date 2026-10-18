@@ -255,7 +255,7 @@ Rather not install? Download `Lucent-mac-arm64.zip` or `Lucent-mac-x64.zip`, ope
 
 ## Keyboard shortcuts
 
-Shortcuts work from any Lucent window, and your keyboard's media keys work while Lucent has focus.
+Shortcuts work from any Lucent window. Your keyboard's media keys work even when Lucent isn't in front, and the playing song (with its cover, play, pause, next, and previous buttons, and a seek bar) shows in Windows' media controls by the volume flyout and on the lock screen, or in the Mac's Now Playing in Control Center, the menu bar, and the lock screen, where AirPods and other headphones' buttons control it too.
 
 | Playback | | Windows | | Visuals | |
 |---|---|---|---|---|---|
@@ -362,7 +362,7 @@ dotnet publish src/Lucent.Mac -c Release -r osx-arm64 --self-contained -o publis
 tools/package-mac.sh publish-mac . 0.1.0
 ```
 
-CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, and every visual drawn on the graphics card), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, they're added to the Latest build release. Adding Apple signing and notarization later only needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml).
+CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, every visual drawn on the graphics card, and a track shown in Now Playing), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, they're added to the Latest build release. Adding Apple signing and notarization later only needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml).
 
 ### Releases
 
