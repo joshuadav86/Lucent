@@ -207,7 +207,7 @@ public partial class EditorWindow
         menu.Items.Add(new Separator());
 
         var crossfade = MenuEntry("Crossfade joins",
-            tip: "When cutting, pasting or moving clips, each side of a join fades into the other over this long, so there's no click");
+            tip: "When cutting, pasting, or moving clips, each side of a join fades into the other over this long, so there's no click");
         foreach (var ms in EditorSettings.CrossfadeChoices)
         {
             var item = new MenuItem
