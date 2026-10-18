@@ -40,11 +40,11 @@ public sealed class MetalView : NativeControlHost
         // The view makes its own Metal layer (makeBackingLayer:, below) and AppKit keeps that layer
         // exactly the view's size, as it does for any layer-backed view. A layer set from outside
         // is left for the app to size, and Core Animation's own resizing of it went wrong as the
-        // window changed size: the picture ended up squashed into a strip along the bottom.
+        // window changed size: the picture ended up squashed into a strip along the bottom. The
+        // view itself mustn't autoresize either: Avalonia sets its frame before its holder's, so
+        // autoresizing would then add the holder's change in size on top.
         _view = ObjC.Send(ObjC.Send(ViewClass(), "alloc"), "initWithFrame:", new ObjC.CGRect { Width = 100, Height = 100 });
         ObjC.SendVoid(_view, "setWantsLayer:", true);
-        // Fill whatever the view is put in; NSViewWidthSizable | NSViewHeightSizable.
-        ObjC.SendVoid(_view, "setAutoresizingMask:", 2UL | 16UL);
         _layer = ObjC.Send(ObjC.Send(_view, "layer"), "retain");
         ObjC.SendVoid(_layer, "setDevice:", _engine.Device.NativePtr);
         ObjC.SendVoid(_layer, "setPixelFormat:", (ulong)MTLPixelFormat.BGRA8Unorm);
