@@ -1094,6 +1094,9 @@ public partial class EditorWindow : Window
                 LoopToggle.IsChecked = LoopToggle.IsChecked != true;
                 SetLoop(LoopToggle.IsChecked == true);
                 break;
+            case Key.G when !ctrl:
+                SetHandTool(HandToggle.IsChecked != true);
+                break;
             case Key.H:
                 ShowHistoryPanel(HistoryPanel.Visibility != Visibility.Visible);
                 break;

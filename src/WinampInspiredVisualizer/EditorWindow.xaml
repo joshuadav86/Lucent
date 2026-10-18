@@ -191,6 +191,8 @@
                     <ToggleButton x:Name="SpectrogramToggle" Style="{StaticResource ToolToggle}" Content="Spectrogram"
                                   Click="OnViewToggle"
                                   ToolTip="Show the frequencies over time instead of the waveform (V). Hum, hiss, clipping, and an MP3's cut-off show up clearly." />
+                    <ToggleButton x:Name="HandToggle" Style="{StaticResource ToolToggle}" Content="Hand" Click="OnHandToggle"
+                                  ToolTip="The hand tool (G): drag a clip's waveform to slide it left or right, leaving silence behind it. Turn it off to select again." />
                     <ToggleButton x:Name="SnapToggle" Style="{StaticResource ToolToggle}" Content="Snap" Click="OnSnapToggle"
                                   ToolTip="Snap the cursor and selection to the nearest zero crossing, so cuts don't click. Hold Ctrl to place them freely." />
                     <Border Width="1" Height="20" Margin="4,0,8,0" Background="{DynamicResource HairlineBrush}" />
