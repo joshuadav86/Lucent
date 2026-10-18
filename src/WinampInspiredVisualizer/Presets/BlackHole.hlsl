@@ -2,6 +2,7 @@
 // A black hole bends a glowing nebula into rings around itself; its disk burns violet where it rushes towards you and amber where it flees, and spacetime ripples on every beat.
 // Family: Cosmic
 // Tags: Space, Dark, 3D
+// Added: 2026-10-16 23:54
 
 // Units: the event horizon has radius 1. The photon sphere is at 1.5, the shadow's edge at an impact
 // parameter of 2.6, and the disk's innermost stable orbit at 3.

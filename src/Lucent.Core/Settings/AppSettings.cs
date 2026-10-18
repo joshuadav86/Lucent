@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Visualizer;
 
 namespace WinampInspiredVisualizer.Settings;
 
@@ -122,6 +123,12 @@ public sealed class AppSettings
 
     /// <summary>Family folders in the visual picker the user has closed.</summary>
     public List<string> CollapsedVisualFamilies { get; set; } = new();
+
+    /// <summary>The order the visual picker lists visuals in (inside each family folder, when they're on).</summary>
+    public VisualSort VisualSort { get; set; } = VisualSort.Name;
+
+    /// <summary>Visuals picked in the visual picker, by name, most recent first, for its "Recently used" order.</summary>
+    public List<string> RecentVisuals { get; set; } = new();
 
     /// <summary>
     /// Tags ticked in the visual picker. When any are ticked, the picker shows (and Auto, N and B play) only

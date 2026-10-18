@@ -3,6 +3,7 @@
 // rosette in the dark; every beat gives it a push, so it races round faster when the music is busy.
 // Family: Minimal
 // Tags: Minimal, Space, Calm, Dark
+// Added: 2026-10-17 21:37
 
 static const float LoEccentricity = 0.62;
 static const float LoAxis = 0.5;

@@ -2,6 +2,7 @@
 // A quarter of a million grains of light ride swirling currents, painting long silky strands that curl around drifting whirlpools and surge with the beat.
 // Family: Particles
 // Tags: Calm, Colourful
+// Added: 2026-10-16 23:51
 // Particles: 262144
 
 // Three whirlpools wander the screen; the bass spins them harder.

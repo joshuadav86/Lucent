@@ -2,6 +2,7 @@
 // A thick knot of flawless glass turns slowly in a dark studio, bending and mirroring the coloured light strips around it into rainbow-fringed streaks, and pooling bright caustics on the floor below; every strip of light glows with its own part of the music.
 // Family: Ray traced
 // Tags: Dark, Colourful, 3D
+// Added: 2026-10-17 17:12
 
 // The knot is a trefoil: it winds twice round its centre while looping three times through the
 // middle, a tube of glass following that path. Light strips stand in a ring around it.

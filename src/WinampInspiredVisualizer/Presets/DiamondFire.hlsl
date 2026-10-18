@@ -2,6 +2,7 @@
 // A brilliant-cut diamond turns slowly above black velvet, ray traced colour by colour as light bends and bounces inside it, so it throws flashes of rainbow fire; the treble makes it sparkle.
 // Family: Ray traced
 // Tags: Dark, Geometric, 3D
+// Added: 2026-10-17 17:06
 
 // The classic round brilliant, girdle radius 1: 57% table, 34.5 degree crown, 40.75 degree pavilion.
 static const int FacetCount = 73;

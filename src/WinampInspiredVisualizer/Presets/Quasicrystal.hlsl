@@ -3,6 +3,7 @@
 // drawn as fine contour lines like a map of shimmering hills; every few bars the number of waves changes and new symmetry blooms.
 // Family: Geometric
 // Tags: Colourful, Geometric
+// Added: 2026-10-17 21:44
 
 // Number of crossing waves in each section; the pattern shows twice that many-fold symmetry.
 static const float QC_WAVES[6] = { 7.0, 5.0, 9.0, 7.0, 11.0, 6.0 };

@@ -2,6 +2,7 @@
 // Racing down the nave of an infinite fractal cathedral that folds itself like a kaleidoscope.
 // Family: Kaleidoscope
 // Tags: Intense, Colourful, 3D
+// Added: 2026-10-16 20:36
 
 float block(float3 p, float3 size)
 {

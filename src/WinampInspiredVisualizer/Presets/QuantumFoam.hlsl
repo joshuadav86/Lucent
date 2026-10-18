@@ -2,6 +2,7 @@
 // Drifting through a vast foam of iridescent soap-film bubbles that swell, glow and pop in and out of existence.
 // Family: Ray traced
 // Tags: Calm, 3D
+// Added: 2026-10-16 23:54
 
 static const float3 FoamHeading = float3(0.31, 0.17, 0.935);   // flight line, tilted across the lattice
 

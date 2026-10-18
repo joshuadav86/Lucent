@@ -2,6 +2,7 @@
 // Newton's method for finding roots, deliberately knocked off balance: ornate chains of jewelled lace and scrolling paisley grow along the seams between calm pools of colour. Its parameters drift slowly so the ornaments unfurl and reshape, swelling with the bass.
 // Family: Fractal
 // Tags: Colourful
+// Added: 2026-10-17 21:50
 
 float2 novaMultiply(float2 a, float2 b)
 {

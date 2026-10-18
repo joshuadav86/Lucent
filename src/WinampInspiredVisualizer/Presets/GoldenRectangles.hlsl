@@ -3,6 +3,7 @@
 // forever inward towards the spiral's eye, with pulses of light running down the curve in time with the music.
 // Family: Geometric
 // Tags: Calm, Minimal, Geometric
+// Added: 2026-10-17 21:44
 
 static const float GR_PHI = 1.61803399;
 static const float GR_LOG_PHI = 0.48121183;

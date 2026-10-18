@@ -2,6 +2,7 @@
 // A glowing sphere of dust settles onto an endless saddle-shaped surface, revealing its looping channels as it slowly turns; the dust drifts faster with the bass, the surface swells and shifts on every beat, and each layer of the sphere shines with its own part of the spectrum.
 // Family: Particles
 // Tags: Geometric, 3D
+// Added: 2026-10-17 22:17
 // Particles: 262144
 
 // The gyroid is a surface that curves the same way everywhere, like a saddle repeated forever,

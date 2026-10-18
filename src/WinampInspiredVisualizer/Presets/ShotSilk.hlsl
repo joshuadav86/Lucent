@@ -2,6 +2,7 @@
 // Billowing folds of shot silk that flash between two colours as they turn, with sheen gliding along every fold and a shiver running through the cloth on each beat.
 // Family: Organic
 // Tags: Calm
+// Added: 2026-10-16 23:54
 
 // Height of the silk at p: long folds bending into S-curves, merging and parting as they flow.
 float silkHeight(float2 p, float2 along, float depth)

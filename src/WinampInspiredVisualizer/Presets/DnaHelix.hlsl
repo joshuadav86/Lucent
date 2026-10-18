@@ -2,6 +2,7 @@
 // A great double helix of flowing light twists slowly through the dark, its base pairs glowing like an equaliser along its length; on every beat a stretch of it unzips and zips back up, while loose nucleotides drift around it.
 // Family: Particles
 // Tags: Geometric, Neon, 3D
+// Added: 2026-10-17 17:12
 // Particles: 294912
 
 // The helix is built along its own axis (local y), then tilted across the screen. Two backbone

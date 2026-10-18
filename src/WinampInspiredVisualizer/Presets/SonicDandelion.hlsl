@@ -2,6 +2,7 @@
 // A glowing seed head of four thousand filaments, each one a band of the spectrum, stretching, swaying and bursting outward with the music as it turns in the dark.
 // Family: Particles
 // Tags: Colourful
+// Added: 2026-10-17 00:03
 // Particles: 262144
 
 // Each filament is a line of dots from the surface of the head out to its tip.

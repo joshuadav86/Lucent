@@ -3,6 +3,7 @@
 // unfold outward layer after layer, flare open on the beat and stretch with the spectrum.
 // Family: Kaleidoscope
 // Tags: Calm, Colourful
+// Added: 2026-10-16 23:54
 
 float lbStroke(float d, float halfWidth, float px)
 {

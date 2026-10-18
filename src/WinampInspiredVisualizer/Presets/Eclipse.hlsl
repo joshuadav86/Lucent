@@ -3,6 +3,7 @@
 // stir with the music, while beads of sunlight flash along the edge on the beat.
 // Family: Minimal
 // Tags: Space, Minimal, Calm, Dark
+// Added: 2026-10-17 21:37
 
 // Fine silky streamer texture at an angle round the sun and a height above its edge.
 float ecStreamers(float angle, float height, float drift)

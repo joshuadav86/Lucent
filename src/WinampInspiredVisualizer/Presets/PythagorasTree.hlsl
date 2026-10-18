@@ -2,6 +2,7 @@
 // A tree of glass squares, each branching into two smaller squares on the sides of a right-angled triangle, swaying as if in a breeze. Its branches bend with the mids, every beat runs a pulse of light up from the trunk, and blossoms of light shimmer at the tips with the music.
 // Family: Fractal
 // Tags: Geometric, Calm
+// Added: 2026-10-17 21:50
 
 static const int TreeMaxDepth = 12;
 

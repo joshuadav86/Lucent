@@ -3,6 +3,7 @@
 // one ring for each part of the spectrum, each arc growing and shrinking with how loud its band is.
 // Family: Minimal
 // Tags: Minimal, Calm, Geometric
+// Added: 2026-10-17 21:41
 
 static const float RingCount = 22.0;
 static const float InnerRadius = 0.16;

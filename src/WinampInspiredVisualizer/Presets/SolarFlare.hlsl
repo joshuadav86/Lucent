@@ -2,6 +2,7 @@
 // Glowing plasma streams along great magnetic arches above the boiling surface of the sun; each arch swells with its own part of the music, and on the beat one snaps in a blinding flare that hurls plasma out into space.
 // Family: Particles
 // Tags: Space, Fire, Intense
+// Added: 2026-10-17 17:06
 // Particles: 262144
 
 static const float SunRadius = 10.0;

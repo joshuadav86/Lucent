@@ -2,6 +2,7 @@
 // Neon lanes of light race round a twisting Möbius strip, crossing from one edge to the other on every lap; every few bars a tight new twist appears and unwinds its way round the loop, and the lanes glow with their own slices of the spectrum.
 // Family: Particles
 // Tags: Geometric, 3D, Neon
+// Added: 2026-10-17 22:17
 // Particles: 262144
 
 // The strip is a ribbon round a circle, its cross-section turning as it goes. With an odd number

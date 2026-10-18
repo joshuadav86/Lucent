@@ -2,6 +2,7 @@
 // The Mandelbrot set turned into stained glass: jewel-coloured panes of amber, sapphire and ruby bloom along its spirals and inside its bulbs, while the camera glides between seahorse valleys and lightning-bolt filaments. The glass is cut by shapes that move with the music, so every beat re-leads the window.
 // Family: Fractal
 // Tags: Colourful
+// Added: 2026-10-17 22:02
 
 // Every point c is followed along its path z -> z^2 + c. Instead of only asking whether the path
 // escapes, we watch how close it comes to three "traps": a wandering point, a turning line and a

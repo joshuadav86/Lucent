@@ -2,6 +2,7 @@
 // Glowing smoke rings puff out one on every beat, rolling forward and slowly widening as they drift towards you; now and then one catches up with the ring ahead, slips through its middle and leapfrogs it, before each ring wobbles, frays and dissolves into the dark.
 // Family: Particles
 // Tags: Calm, Dark, 3D
+// Added: 2026-10-17 17:15
 // Particles: 262144
 
 // Rings come in pairs: one on an even beat, its partner on the next. A pair of smoke rings

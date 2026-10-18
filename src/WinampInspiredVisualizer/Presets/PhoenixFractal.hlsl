@@ -2,6 +2,7 @@
 // The Phoenix fractal's twin firebirds: their lace wings morph and coil into paisley spirals while plasma feathers stream from every edge.
 // Family: Fractal
 // Tags: Calm, Dark
+// Added: 2026-10-16 23:54
 
 float3 phoenixPlasma(float t)
 {

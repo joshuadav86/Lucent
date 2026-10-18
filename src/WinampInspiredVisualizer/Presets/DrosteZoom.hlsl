@@ -3,6 +3,7 @@
 // copy of itself, which holds another, falling forever inward along a logarithmic spiral that pulses with the beat.
 // Family: Kaleidoscope
 // Tags: Calm, Geometric
+// Added: 2026-10-16 23:54
 
 float dzLine(float d, float halfWidth, float px)
 {

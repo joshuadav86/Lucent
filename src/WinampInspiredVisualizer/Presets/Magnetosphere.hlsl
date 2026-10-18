@@ -2,6 +2,7 @@
 // The solar wind streams in from the Sun and swerves round the Earth's invisible magnetic shield, piling up into a glowing bow wave, while stray particles spiral down the field lines to light green and red aurorae over the poles; gusts of wind arrive with the beat.
 // Family: Particles
 // Tags: Space, Colourful, 3D
+// Added: 2026-10-17 17:02
 // Particles: 262144
 
 // The Earth sits at the origin with radius 1 and the Sun far off to the left (-x). Its magnetic

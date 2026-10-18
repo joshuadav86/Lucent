@@ -2,6 +2,7 @@
 // Glass lenses, crystal balls and prisms drift above a glowing neon grid, magnifying it, flipping it upside down and splitting its lines into rainbows at their edges; they tip and sway to the beat while the grid pulses with the spectrum.
 // Family: Ray traced
 // Tags: Neon, Geometric, 3D
+// Added: 2026-10-17 17:02
 
 static const int ObjectCount = 5;
 // Kinds of glass.

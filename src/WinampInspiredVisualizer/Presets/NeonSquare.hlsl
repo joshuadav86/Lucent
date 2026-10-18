@@ -3,6 +3,7 @@
 // The tube glows brighter and wider with the bass and flickers ever so slightly with the treble.
 // Family: Minimal
 // Tags: Neon, Minimal, Dark, 3D
+// Added: 2026-10-17 21:41
 
 static const float TubeRadius = 0.011;
 

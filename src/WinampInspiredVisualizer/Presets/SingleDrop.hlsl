@@ -3,6 +3,7 @@
 // and clean rings spread out across the water, catching the moonlight as they pass.
 // Family: Minimal
 // Tags: Minimal, Calm, Water, Dark
+// Added: 2026-10-17 21:41
 
 // Memory: four pixels at the top-left of the feedback buffer, stored far too dim to see.
 // Pixel 0: the beat detector. Pixel 1: when the last three drops fell (as a fraction of DropPeriod).

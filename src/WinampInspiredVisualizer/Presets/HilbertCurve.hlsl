@@ -3,6 +3,7 @@
 // before starting over, while bright pulses race along its whole length and the square breathes with the bass.
 // Family: Geometric
 // Tags: Geometric, Neon, Minimal
+// Added: 2026-10-17 21:37
 
 static const int HcMaxOrder = 7;
 

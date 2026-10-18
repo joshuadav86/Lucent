@@ -2,6 +2,7 @@
 // A pool of black magnetic liquid in a steel dish rises into a crown of glossy spikes that grow and sink with the music, its mirror-smooth surface reflecting the coloured studio lights.
 // Family: Ray traced
 // Tags: Dark, 3D
+// Added: 2026-10-17 17:06
 
 static const float DishRadius = 1.9;
 static const float Spacing = 0.22;     // between neighbouring spikes

@@ -2,6 +2,7 @@
 // A glass hourglass in a polished brass frame hangs in a dark room, glowing sand pouring through its narrow waist and heaping up below in time with the bass; every few bars, on a strong downbeat, it turns itself over and starts again.
 // Family: Ray traced
 // Tags: Calm, 3D
+// Added: 2026-10-17 17:12
 // Particles: 131072
 
 // The glass, the brass frame and the two heaps of sand are ray traced; the falling stream, the

@@ -2,6 +2,7 @@
 // A glass-like Klein bottle drawn in streams of light: particles pour down its narrow neck, slip through its own wall and flow out round the belly back to the mouth, turning inside to outside on every lap; the bass drives the flow and beats send bright rings sliding down the bottle.
 // Family: Particles
 // Tags: Geometric, 3D
+// Added: 2026-10-17 22:17
 
 // A Klein bottle is a surface with only one side. Ours is the classic "bottle" shape: its neck
 // bends round and passes in through the wall to join the base from inside. u runs along the

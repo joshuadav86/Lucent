@@ -3,6 +3,7 @@
 // of them melts into its mirror-twin (the cube into the octahedron, the icosahedron into the dodecahedron), lit by the spectrum.
 // Family: Geometric
 // Tags: Neon, 3D, Geometric
+// Added: 2026-10-17 21:44
 
 // Corners of six solids on the unit sphere: icosahedron, dodecahedron, cube, octahedron and two opposite tetrahedra.
 static const float3 PW_VERTS[54] = {

@@ -76,6 +76,11 @@
             </Grid>
 
             <DockPanel Grid.Row="2" Margin="8,0,4,8">
+                <!-- Closes every folder heading at once, or opens them all again when they're all closed. -->
+                <Button x:Name="FoldAllButton" DockPanel.Dock="Right" Theme="{StaticResource IconButton}" Width="26" Height="26"
+                        Margin="2,0,0,0" ToolTip.Tip="Close every folder" Click="OnFoldAllFolders">
+                    <Path x:Name="FoldAllIcon" Theme="{StaticResource LineIcon}" Data="{StaticResource CollapseAllIcon}" />
+                </Button>
                 <Button x:Name="GroupFoldersButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}"
                         Content="FOLDERS" ToolTip.Tip="Show or hide folder headings" Click="OnToggleGroupFolders" />
                 <Button x:Name="PlaylistsButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Margin="0,0,6,0"

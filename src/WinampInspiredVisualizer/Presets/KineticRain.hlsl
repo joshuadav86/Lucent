@@ -2,6 +2,7 @@
 // Hundreds of polished copper droplets hang on fine wires and rise and fall in slow, choreographed waves, each one mirroring its neighbours and the warm lights of the hall; the waves swell and shift with the spectrum.
 // Family: Ray traced
 // Tags: Calm, Geometric, 3D
+// Added: 2026-10-17 17:02
 
 // The droplets hang in a square grid, one per cell. A ray is walked through the grid cell by cell
 // (like a line drawn across graph paper), so only the droplet in each cell it crosses needs

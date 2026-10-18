@@ -2,6 +2,7 @@
 // A dark globe turns slowly in space, wrapped in rivers of light that trace the planet's winds: trade winds, meandering jet streams and spiralling storms, flowing faster with the mids while storms spin up on every beat.
 // Family: Particles
 // Tags: Calm, Colourful, 3D
+// Added: 2026-10-17 17:12
 // Particles: 262144
 
 // Every particle is a little puff of air riding the winds over the surface of a unit globe. It

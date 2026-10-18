@@ -3,6 +3,7 @@
 // sun takes minutes to rise and set, laying a glittering path across the water.
 // Family: Minimal
 // Tags: Minimal, Calm, Water
+// Added: 2026-10-17 21:37
 
 // The horizon's height at x: almost flat, carrying a softened copy of the waveform near the middle.
 float hlHorizon(float x)

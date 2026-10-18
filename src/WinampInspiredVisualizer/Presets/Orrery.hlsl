@@ -2,6 +2,7 @@
 // The whole solar system turning around a boiling sun: lit planets with banded clouds and Saturn's rings, an asteroid belt, a comet swinging past, and orbits that glow with their own slice of the music.
 // Family: Particles
 // Tags: Space, 3D, Colourful
+// Added: 2026-10-17 01:51
 // Particles: 262144
 
 // How the particles are shared out between the parts of the system, as running totals.

@@ -2,6 +2,7 @@
 // A quarter of a million grains of coloured sand spiral out from a single point to lay down the Sri Yantra, its nine interlocking triangles ringed by lotus petals and a gated square, shiver with the music, then are swept back into the centre and poured out again.
 // Family: Particles
 // Tags: Geometric, Colourful, Calm
+// Added: 2026-10-17 01:42
 // Particles: 262144
 
 // One full build, hold and sweep of the mandala takes this long, in seconds.

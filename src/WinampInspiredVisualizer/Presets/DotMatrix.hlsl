@@ -3,6 +3,7 @@
 // hill of larger dots, the waveform runs through it as a bright thread, and each beat sends a gentle wave across.
 // Family: Minimal
 // Tags: Minimal, Calm, Geometric
+// Added: 2026-10-17 21:41
 
 static const float DotRows = 31.0;
 

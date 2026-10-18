@@ -2,6 +2,7 @@
 // A calm, even grid of points resting on the dark; the waveform rolls through it like wind over a field, beats burst out as rings and the bass stirs slow eddies, and every point draws a fine comet tail as it's pushed before springing gently back to rest.
 // Family: Particles
 // Tags: Minimal
+// Added: 2026-10-17 22:17
 // Particles: 131072
 
 // Each point of the grid is a little bundle of particles held to its resting place by springs of

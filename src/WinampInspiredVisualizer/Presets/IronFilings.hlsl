@@ -2,6 +2,7 @@
 // Iron filings scattered on a dark plate snap into line around a handful of slowly wandering bar magnets, gathering into fine chains along glowing field lines; each magnet pulls with its own part of the spectrum and every beat jolts the filings loose before they settle again.
 // Family: Particles
 // Tags: Geometric, Dark
+// Added: 2026-10-17 17:15
 // Particles: 262144
 
 // The field of a flat bar magnet is easiest to follow through its "flux function": a number at
