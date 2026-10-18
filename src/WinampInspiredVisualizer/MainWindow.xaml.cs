@@ -243,7 +243,9 @@ public partial class MainWindow : Window
         {
             UpdateButton.ToolTip = $"Lucent {version} is ready. Click to restart into it now, or it installs when you close Lucent.";
             UpdateButton.Visibility = Visibility.Visible;
+            ShowUpdateStatus(ReadyStatus(version), readyToInstall: true);
         });
+        _updater.Downloading += version => Dispatcher.BeginInvoke(() => ShowUpdateStatus($"Downloading Lucent {version}…", readyToInstall: false));
         _updater.EveryBuild = _settings.EveryBuild;
         _ = _updater.RunAsync();
         AddStarterMusic();
@@ -1159,6 +1161,7 @@ public partial class MainWindow : Window
                 _updater.EveryBuild = _settings.EveryBuild;
                 _updater.ChannelChanged();
                 UpdateButton.Visibility = Visibility.Collapsed;
+                ShowUpdateStatus(null, readyToInstall: false);
                 return;
             default:
                 return;

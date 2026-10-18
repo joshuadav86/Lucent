@@ -8,7 +8,7 @@ using WinampInspiredVisualizer.Settings;
 namespace Lucent.Mac;
 
 /// <summary>
-/// The Mac menu bar: the app menu (About, Options, Hide, Quit) and the player's main commands.
+/// The Mac menu bar: the app menu (About, Check for Updates, Options, Hide, Quit) and the player's main commands.
 /// Every Lucent window shows the same menus, so they're there whichever window is in front.
 /// </summary>
 /// <remarks>
@@ -37,6 +37,7 @@ public partial class MainWindow
     {
         var menu = new NativeMenu();
         menu.Add(Item("About Lucent", ShowAbout));
+        menu.Add(Item("Check for Updates…", CheckForUpdatesFromMenu));
         menu.Add(new NativeMenuItemSeparator());
         menu.Add(Item("Options…", OpenOptions, new KeyGesture(Key.OemComma, KeyModifiers.Meta)));
         menu.Add(new NativeMenuItemSeparator());
@@ -142,6 +143,8 @@ public partial class MainWindow
         bar.Add(new NativeMenuItem("Window") { Menu = window });
 
         var help = new NativeMenu();
+        help.Add(Item("Check for Updates…", CheckForUpdatesFromMenu));
+        help.Add(new NativeMenuItemSeparator());
         help.Add(Item("Report a Bug…", BugReport.Open));
         help.Add(Item("Buy Me a Coffee…", SupportLink.Open));
         bar.Add(new NativeMenuItem("Help") { Menu = help });
