@@ -16,8 +16,8 @@ namespace WinampInspiredVisualizer;
 /// <summary>
 /// VST3 effects in the editor. Plugins open into a chain, each in its own helper process with its own window;
 /// the channel strip beside the waveform shows them as insert slots, top to bottom in the order the sound goes
-/// through them. Each slot switches its plugin on or off, moves it, or takes it out; empty slots add one. The strip
-/// previews the chain, applies it as one step, and saves or opens chains (Lucent's own, or REAPER's .RfxChain files).
+/// through them. Each slot switches its plugin on or off, moves it, or takes it out; empty slots add one. Play goes
+/// through the chain (unless it's bypassed); the strip applies it as one step, and saves or opens chains (Lucent's own, or REAPER's .RfxChain files).
 /// </summary>
 public partial class EditorWindow
 {
@@ -32,6 +32,11 @@ public partial class EditorWindow
     private PluginPreviewProvider? _preview;
     /// <summary>What playback is going through (a plugin or a tool), so a click while playing carries on through it.</summary>
     private Func<ISampleProvider, ISampleProvider>? _previewThrough;
+    /// <summary>Where playback was asked to stop, so it can carry on to there after the chain changes.</summary>
+    private int _playTo;
+    private int _playRequests;
+    /// <summary>Bypass in the strip: playback leaves out every plugin. Read on the audio thread.</summary>
+    private volatile bool _chainBypassed;
 
     // ---- Choosing a plugin ----
 
@@ -210,7 +215,7 @@ public partial class EditorWindow
             return;
         }
 
-        StopPreview();
+        var wasAt = PauseForChain();
         var audio = session.Audio;
         PluginHost? host = null;
         var opened = await RunBusyAsync($"Opening {plugin.Name}…", async (progress, token) =>
@@ -228,12 +233,14 @@ public partial class EditorWindow
 
         if (!opened || host is null)
         {
+            ResumeAfterChain(wasAt);
             return;
         }
 
         var slot = new ChainSlot(plugin, host);
         _chain.Add(slot);
         ShowInserts(true);
+        ResumeAfterChain(wasAt);
         ShowStatus(_chain.Count == 1 ? $"{host.Name} is open." : $"{host.Name} is open, number {_chain.Count} in the chain.");
         if (host.HasWindow)
         {
@@ -297,17 +304,19 @@ public partial class EditorWindow
         }
 
         InsertsToggle.Content = slots.Count == 0 ? "Inserts" : $"Inserts ({slots.Count})";
-        PluginPreviewButton.IsEnabled = slots.Count > 0;
+        ChainBypassToggle.IsEnabled = slots.Count > 0;
         PluginApplyButton.IsEnabled = slots.Count > 0;
         var on = slots.Count(s => !s.IsBypassed);
         PluginHint.Text = slots.Count switch
         {
-            0 => "Click an empty slot to add a VST3 plugin. The sound goes through the slots from the top down.",
+            0 => "Click an empty slot to add a VST3 plugin. Play then goes through the slots from the top down.",
+            _ when _chainBypassed => "Bypassed: Play leaves the plugins out, to compare. Switch Bypass off to hear them again.",
             1 when slots[0].Host.HasWindow =>
-                "Set it up in its window (click its name to bring it back). Preview plays the selection through it, and changes are heard as you make them.",
-            1 => "This plugin has no window of its own, so it runs with its standard settings. Preview to hear it, or add another below it.",
-            _ => $"The sound goes through them from the top down; {(on == slots.Count ? "all are on" : $"{on} of {slots.Count} are on")}. " +
-                 "Apply runs the ones that are on, as one step.",
+                "Play goes through it, and changes in its window are heard as you make them (click its name to bring the window back). " +
+                "Apply makes it part of the sound.",
+            1 => "This plugin has no window of its own, so it runs with its standard settings. Play to hear it, Apply to make it part of the sound.",
+            _ => $"Play goes through them from the top down; {(on == slots.Count ? "all are on" : $"{on} of {slots.Count} are on")}. " +
+                 "Apply makes the ones that are on part of the sound, as one step.",
         };
     }
 
@@ -413,22 +422,24 @@ public partial class EditorWindow
 
     private void MoveInChain(int from, int to)
     {
-        StopPreview();
+        var wasAt = PauseForChain();
         _chain.Move(from, to);
         ShowChain();
+        ResumeAfterChain(wasAt);
     }
 
     private async Task RemoveFromChainAsync(ChainSlot slot)
     {
-        StopPreview();
         var index = _chain.Slots.ToList().IndexOf(slot);
         if (index < 0)
         {
             return;
         }
 
+        var wasAt = PauseForChain();
         _chain.RemoveAt(index);
         ShowChain();
+        ResumeAfterChain(wasAt);
         await CloseSlotsAsync(new[] { slot });
     }
 
@@ -453,36 +464,78 @@ public partial class EditorWindow
         }
     }
 
-    private async void OnPreviewPlugin(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Plays part of the sound through the plugins in the strip, so what's heard is what Apply would make; with no
+    /// plugins open, or Bypass on, it plays as it is. Changes in the plugins' windows, and switching one off, are
+    /// heard straight away.
+    /// </summary>
+    private async void Play(int from, int to)
     {
-        if (_preview is not null && _player.IsPlaying)
+        if (_chain.Count == 0 || _toolPreview is not null)
         {
-            StopPlayback();
+            PlayFrom(from, to);
             return;
         }
 
-        if (_chain.Count == 0 || _session is not { } session || IsBusy)
+        if (_session is null || IsBusy)
         {
             return;
         }
 
-        var selection = Selection;
-        var (from, to) = selection.IsEmpty
-            ? (Waveform.CursorFrame >= session.Audio.Frames - 1 ? 0 : Waveform.CursorFrame, session.Audio.Frames)
-            : (selection.Start, selection.End);
+        // Only the latest press plays, if Play is pressed again while the plugins are getting ready.
+        var request = ++_playRequests;
         StopPlayback();
         var slots = _chain.Slots.ToList();
         try
         {
             // Starting again clears what's left in each plugin from before (an echo still ringing).
             var stages = await Task.Run(() => slots.Select(slot =>
-                new PreviewStage(slot.Host, slot.Host.Start(offline: false).Generation, () => slot.IsBypassed)).ToList());
-            // The listening volume is applied after the meters, so the plugins get the audio at its own level.
-            PlayFrom(from, to, source => _preview = new PluginPreviewProvider(source, stages, 1f));
+                new PreviewStage(slot.Host, slot.Host.Start(offline: false).Generation, () => _chainBypassed || slot.IsBypassed)).ToList());
+            if (request == _playRequests)
+            {
+                // The listening volume is applied after the meters, so the plugins get the audio at its own level.
+                PlayFrom(from, to, source => _preview = new PluginPreviewProvider(source, stages, 1f));
+            }
         }
         catch (PluginException ex)
         {
             ShowPluginProblem(ex);
+        }
+    }
+
+    private void OnChainBypass(object sender, RoutedEventArgs e) => SetChainBypassed(ChainBypassToggle.IsChecked == true);
+
+    /// <summary>Plays without the plugins, to compare, or with them again; heard at once, even while playing.</summary>
+    private void SetChainBypassed(bool bypassed)
+    {
+        _chainBypassed = bypassed;
+        ChainBypassToggle.IsChecked = bypassed;
+        ShowChain();
+        if (_chain.Count > 0)
+        {
+            ShowStatus(bypassed ? "Bypassed: playing without the plugins." : "Playing through the plugins again.");
+        }
+    }
+
+    /// <summary>Stops playback while the chain changes, saying where it was so it can carry on through the new chain.</summary>
+    private int? PauseForChain()
+    {
+        if (!_player.IsPlaying || _toolPreview is not null)
+        {
+            StopPreview();
+            return null;
+        }
+
+        var at = _player.PositionFrame;
+        StopPlayback();
+        return at;
+    }
+
+    private void ResumeAfterChain(int? at)
+    {
+        if (at is { } frame && _session is not null)
+        {
+            Play(frame, Math.Max(_playTo, frame));
         }
     }
 
@@ -612,13 +665,12 @@ public partial class EditorWindow
         }
     }
 
-    /// <summary>Puts the Preview button back when playback stops, and reports a plugin that failed while previewing.</summary>
+    /// <summary>When playback stops: reports a plugin that failed while playing.</summary>
     private void ShowPreviewStopped()
     {
         var failed = _preview?.Error;
         _preview = null;
         _previewThrough = null;
-        PluginPreviewButton.Content = "Preview";
         if (failed is PluginException problem)
         {
             ShowPluginProblem(problem);

@@ -103,6 +103,10 @@ public partial class EditorWindow : Window
         LoopToggle.IsChecked = _settings.Loop;
         HistoryToggle.IsChecked = _settings.ShowHistory;
         HistoryPanel.Visibility = _settings.ShowHistory ? Visibility.Visible : Visibility.Collapsed;
+        // Until it's set here, the editor plays as loud as the main player.
+        VolumeSlider.Value = _settings.Volume ?? _mainPlayer.Volume;
+        _player.Volume = (float)VolumeSlider.Value;
+        VolumeText.Text = $"{VolumeSlider.Value * 100:0}%";
         ShowInserts(_settings.ShowInserts);
         UpdateSnap();
         InitTools();
@@ -581,7 +585,7 @@ public partial class EditorWindow : Window
         }
 
         var playRange = onSelection ? Selection : split ? clip : new FrameRange(frame, session.Audio.Frames - frame);
-        Add(menu, onSelection || split ? $"Play {noun}" : "Play from here", () => Run(() => PlayFrom(playRange.Start, playRange.End)), "Space");
+        Add(menu, onSelection || split ? $"Play {noun}" : "Play from here", () => Run(() => Play(playRange.Start, playRange.End)), "Space");
         Add(menu, onSelection ? "Split around selection" : "Split here", () => Run(() =>
             Split(onSelection ? new[] { Selection.Start, Selection.End } : new[] { frame })), "S");
         if (split && !onSelection)
@@ -727,7 +731,7 @@ public partial class EditorWindow : Window
     {
         if (!Selection.IsEmpty)
         {
-            PlayFrom(Selection.Start, Selection.End);
+            Play(Selection.Start, Selection.End);
         }
     }
 
@@ -739,17 +743,17 @@ public partial class EditorWindow : Window
         }
         else if (!Selection.IsEmpty)
         {
-            PlayFrom(Selection.Start, Selection.End);
+            Play(Selection.Start, Selection.End);
         }
         else if (_session is not null)
         {
             // From the end, start again at the top.
             var from = Waveform.CursorFrame >= _session.Audio.Frames - 1 ? 0 : Waveform.CursorFrame;
-            PlayFrom(from, _session.Audio.Frames);
+            Play(from, _session.Audio.Frames);
         }
     }
 
-    /// <summary>Plays part of the song, through <paramref name="through"/> (a plugin preview) if given.</summary>
+    /// <summary>Plays part of the song, through <paramref name="through"/> (the plugin chain or a tool preview) if given.</summary>
     private void PlayFrom(int from, int to, Func<NAudio.Wave.ISampleProvider, NAudio.Wave.ISampleProvider>? through = null)
     {
         if (_session is null || IsBusy)
@@ -766,7 +770,8 @@ public partial class EditorWindow : Window
 
         try
         {
-            _player.Play(_session.Audio, from, to, _mainPlayer.Volume, through, _settings.Loop);
+            _player.Play(_session.Audio, from, to, through, _settings.Loop);
+            _playTo = to;
             _previewThrough = through;
             Meter.Reset();
         }
@@ -779,8 +784,18 @@ public partial class EditorWindow : Window
         _playheadTimer.Start();
         PlayIcon.Data = (Geometry)FindResource("StopIcon");
         PlayIcon.Margin = new Thickness(0);
-        PluginPreviewButton.Content = through is null || _toolPreview is not null ? "Preview" : "Stop preview";
         UpdatePlayhead();
+    }
+
+    /// <summary>The listening volume: what's heard while editing, never the audio itself.</summary>
+    private void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _player.Volume = (float)e.NewValue;
+        _settings.Volume = e.NewValue;
+        if (VolumeText is not null)
+        {
+            VolumeText.Text = $"{e.NewValue * 100:0}%";
+        }
     }
 
     private void StopPlayback()
@@ -1104,6 +1119,13 @@ public partial class EditorWindow : Window
             case Key.G when !ctrl:
                 SetHandTool(HandToggle.IsChecked != true);
                 break;
+            case Key.B:
+                if (_chain.Count > 0)
+                {
+                    SetChainBypassed(!_chainBypassed);
+                }
+
+                break;
             case Key.H:
                 ShowHistoryPanel(HistoryPanel.Visibility != Visibility.Visible);
                 break;
@@ -1158,6 +1180,12 @@ public partial class EditorWindow : Window
                 break;
             case Key.D0 or Key.NumPad0:
                 Waveform.ZoomToFit();
+                break;
+            case Key.Up when shift:
+                VolumeSlider.Value += 0.05;
+                break;
+            case Key.Down when shift:
+                VolumeSlider.Value -= 0.05;
                 break;
             case Key.Up when ctrl:
                 Waveform.AmplitudeZoom *= 2;
@@ -1249,6 +1277,8 @@ public partial class EditorWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        // Saves the listening volume, which isn't saved on every move of the fader.
+        _settings.Save();
         _playheadTimer.Stop();
         _player.Dispose();
         ClosePluginInBackground();
