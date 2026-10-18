@@ -67,6 +67,7 @@ public partial class MainWindow
         GraphicsTab.IsVisible = tab == "Graphics";
         VisualsTab.IsVisible = tab == "Visuals";
         ThemeTab.IsVisible = tab == "Theme";
+        UpdatesTab.IsVisible = tab == "Updates";
         BuildSkinSwatches(Themes.ThemeManager.Find(_settings.Theme));
         var panel = OptionsPopup.Child!;
         OptionsPopup.Child = null;
