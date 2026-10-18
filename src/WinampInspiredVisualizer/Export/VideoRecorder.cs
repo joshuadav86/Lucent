@@ -1,103 +1,8 @@
 using System.Diagnostics;
 using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Visualizer;
 
 namespace WinampInspiredVisualizer.Export;
-
-/// <summary>How much detail the encoder keeps, and so how big the file is.</summary>
-public enum VideoQuality
-{
-    Good,
-    High,
-    Best,
-}
-
-/// <summary>What to record: which song (and which part of it), drawn how, into which file.</summary>
-public sealed record VideoRecordingOptions
-{
-    public required string TrackPath { get; init; }
-
-    /// <summary>The MP4 file to make. It's replaced if it exists (the dialog asks first).</summary>
-    public required string OutputPath { get; init; }
-
-    public int Width { get; init; } = 1920;
-
-    public int Height { get; init; } = 1080;
-
-    /// <summary>30 or 60.</summary>
-    public int FrameRate { get; init; } = 60;
-
-    public VideoQuality Quality { get; init; } = VideoQuality.High;
-
-    /// <summary>Where in the song the video starts.</summary>
-    public TimeSpan From { get; init; }
-
-    /// <summary>Where it ends, or null for the end of the song.</summary>
-    public TimeSpan? To { get; init; }
-
-    /// <summary>Every visual, as the visuals window lists them, so <see cref="PresetIndex"/> means the same.</summary>
-    public required IReadOnlyList<PresetSource> Presets { get; init; }
-
-    /// <summary>The visual to record (with <see cref="Auto"/>, the one to start on).</summary>
-    public int PresetIndex { get; init; }
-
-    /// <summary>Change visual every so often, on the beat, as Auto does on screen.</summary>
-    public bool Auto { get; init; }
-
-    /// <summary>The visuals Auto picks from (by index), or null for all of them.</summary>
-    public IReadOnlyCollection<int>? AutoChoices { get; init; }
-
-    public float AutoCycleSeconds { get; init; } = 25f;
-
-    public float TransitionSeconds { get; init; } = 3f;
-
-    public bool MorphTransitionsOnly { get; init; }
-
-    /// <summary>Detail level for visuals, as on screen: 0 low, 1 normal, 2 high, 3 ultra.</summary>
-    public float Detail { get; init; } = 1f;
-
-    /// <summary>Glow, as on screen.</summary>
-    public float BloomStrength { get; init; } = 1f;
-
-    /// <summary>
-    /// The number of pixels the visuals window draws (0 for its own size). Above the video's size,
-    /// each frame is drawn bigger and shrunk, as on screen; it's never drawn smaller than the video.
-    /// </summary>
-    public int TargetPixels { get; init; }
-
-    /// <summary>The song's bars, if they've been worked out already; with Auto they're worked out otherwise.</summary>
-    public BeatMap? Beats { get; init; }
-
-    /// <summary>The video's bitrate, in bits a second: more for bigger, faster pictures and for higher quality.</summary>
-    public int VideoBitrate
-    {
-        get
-        {
-            var bitsPerPixel = Quality switch
-            {
-                VideoQuality.Good => 0.12,
-                VideoQuality.High => 0.2,
-                _ => 0.3,
-            };
-            var bitrate = (double)Width * Height * FrameRate * bitsPerPixel;
-            return (int)Math.Clamp(bitrate, 4_000_000, 160_000_000);
-        }
-    }
-
-    /// <summary>The soundtrack's bitrate (AAC), in bits a second.</summary>
-    public int AudioBitrate => 192_000;
-}
-
-/// <summary>How a recording is getting on.</summary>
-/// <param name="Stage">What's happening, in words.</param>
-/// <param name="Fraction">How far through, 0 to 1 (for the stage that's happening).</param>
-/// <param name="Speed">How many seconds of video are made each second (above 1 is faster than real time); 0 until known.</param>
-public sealed record VideoRecordingProgress(string Stage, double Fraction, double Speed);
-
-/// <summary>A finished recording.</summary>
-/// <param name="Note">How it was encoded, for the user.</param>
-public sealed record VideoRecordingResult(string Path, TimeSpan Length, TimeSpan TimeTaken, string Note);
 
 /// <summary>
 /// Records a song played through a visual as an MP4 video. The visual is drawn off screen, frame by
@@ -108,9 +13,6 @@ public sealed record VideoRecordingResult(string Path, TimeSpan Length, TimeSpan
 /// </summary>
 public static class VideoRecorder
 {
-    // Drawn but not kept before a video that starts partway through a song, so the visual is already in full flow.
-    private const double WarmUpSeconds = 2.0;
-
     /// <summary>Records on a thread of its own. Cancelling stops it and removes the unfinished file.</summary>
     public static Task<VideoRecordingResult> RecordAsync(VideoRecordingOptions options, IProgress<VideoRecordingProgress>? progress,
         CancellationToken cancellation)
@@ -181,21 +83,12 @@ public static class VideoRecorder
         {
             using var audio = new RecordingAudio(options.TrackPath);
             var rate = audio.SampleRate;
-            // 44.1 and 48 kHz both divide by 30 and 60, so every frame has a whole number of samples.
-            var samplesPerFrame = rate / fps;
-            var songSeconds = audio.Duration.TotalSeconds;
-            var from = Math.Clamp(options.From.TotalSeconds, 0, songSeconds);
-            var to = Math.Clamp(options.To?.TotalSeconds ?? songSeconds, from, songSeconds);
-            var frames = (long)Math.Ceiling((to - from) * fps - 1e-6);
-            if (frames < fps / 2)
-            {
-                throw new InvalidOperationException("That's too short to record: choose at least half a second.");
-            }
-
-            // Start on a frame boundary, and warm up from a couple of seconds before if there's song there.
-            var firstFrame = (long)Math.Round(from * fps);
-            var warmUpFrames = (int)Math.Min((long)(WarmUpSeconds * fps), firstFrame);
-            audio.Skip((firstFrame - warmUpFrames) * samplesPerFrame, cancellation);
+            // Which frames to draw, and how much sound goes with each (shared with the Mac's recorder).
+            var timeline = new VideoTimeline(options, rate, audio.Duration);
+            var samplesPerFrame = timeline.SamplesPerFrame;
+            var frames = timeline.Frames;
+            var warmUpFrames = timeline.WarmUpFrames;
+            audio.Skip(timeline.SkippedSamples, cancellation);
 
             var analyzer = new AudioAnalyzer();
             using var renderer = Renderer.CreateOffscreen(analyzer, options.Presets);
@@ -225,7 +118,7 @@ public static class VideoRecorder
 
             var picture = new byte[converter.FrameBytes];
             var pcm = Array.Empty<byte>();
-            var deltaTime = 1f / fps;
+            var deltaTime = timeline.DeltaTime;
             long written = 0;
             var recordingStarted = clock.Elapsed;
             var lastReport = TimeSpan.Zero;
@@ -242,7 +135,7 @@ public static class VideoRecorder
 
                 // Each frame hears the sound up to its own moment, then the sound that plays while it's shown goes in the soundtrack.
                 analyzer.Update(deltaTime, audio.Latest, rate);
-                var image = renderer.DrawOffscreen((double)(frame + warmUpFrames) / fps, deltaTime, (double)(firstFrame + frame) / fps);
+                var image = renderer.DrawOffscreen(timeline.Clock(frame), deltaTime, timeline.SongPosition(frame));
                 var bytes = audio.Read(samplesPerFrame, ref pcm);
                 if (frame < 0)
                 {
@@ -261,11 +154,7 @@ public static class VideoRecorder
                 if (progress is not null && now - lastReport > TimeSpan.FromMilliseconds(200))
                 {
                     lastReport = now;
-                    var seconds = (now - recordingStarted).TotalSeconds;
-                    var speed = seconds > 0.5 ? frame / (double)fps / seconds : 0;
-                    progress.Report(new VideoRecordingProgress(
-                        $"Recording… {TimeFormat.Format(TimeSpan.FromSeconds(frame / (double)fps))} of {TimeFormat.Format(TimeSpan.FromSeconds(frames / (double)fps))}",
-                        (double)frame / frames, speed));
+                    progress.Report(timeline.Progress(frame, (now - recordingStarted).TotalSeconds));
                 }
             }
 
@@ -283,7 +172,7 @@ public static class VideoRecorder
 
             SafeFile.Commit(temporary, options.OutputPath, replace: true);
             committed = true;
-            return new VideoRecordingResult(options.OutputPath, TimeSpan.FromSeconds(frames / (double)fps), clock.Elapsed, note);
+            return new VideoRecordingResult(options.OutputPath, timeline.Length, clock.Elapsed, note);
         }
         finally
         {

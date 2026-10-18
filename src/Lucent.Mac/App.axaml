@@ -397,11 +397,13 @@
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Focusable" Value="False" />
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <!-- Room either side of the label; a crowded bar (the options' five tabs) can have less. -->
+                <Setter Property="Padding" Value="8,0" />
                 <Setter Property="Template">
                     <ControlTemplate>
                         <Border Name="Chrome" CornerRadius="{DynamicResource SegmentCorner}" Background="{TemplateBinding Background}">
                             <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
-                                              HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0" />
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
                         </Border>
                     </ControlTemplate>
                 </Setter>

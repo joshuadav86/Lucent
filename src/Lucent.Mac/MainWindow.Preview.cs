@@ -66,6 +66,7 @@ public partial class MainWindow
 
         GraphicsTab.IsVisible = tab == "Graphics";
         VisualsTab.IsVisible = tab == "Visuals";
+        SoundTab.IsVisible = tab == "Sound";
         ThemeTab.IsVisible = tab == "Theme";
         UpdatesTab.IsVisible = tab == "Updates";
         BuildSkinSwatches(Themes.ThemeManager.Find(_settings.Theme));

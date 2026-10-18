@@ -385,6 +385,20 @@ jobs:
             --notes-file release-notes.md
           if [ -n "$(ls -A mac-carry)" ]; then gh release upload latest mac-carry/* --clobber; fi
 
+  # The Windows and Mac apps are kept the same: every file, setting, and piece of Lucent.Core one uses, the
+  # other does too, unless docs/PARITY.md says why not (see tools/ParityCheck).
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Check Windows and Mac have the same features
+        run: dotnet run --project tools/ParityCheck -c Release
+
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
   # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
   metal-shaders:
@@ -580,7 +594,7 @@ jobs:
           name: stem-model
           path: stem-model
 
-      - name: Self-test (decoding, every visual, and the stem splitter)
+      - name: Self-test (decoding, every visual, recording a video, and the stem splitter)
         env:
           LUCENT_STEM_MODEL: ${{ github.workspace }}/stem-model/htdemucs.onnx
         run: publish-mac/Lucent --self-test --sheet mac-visuals-${{ matrix.arch }}.png test.wav test.m4a test-alac.m4a test.flac test.aiff

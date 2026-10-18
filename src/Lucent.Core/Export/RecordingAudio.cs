@@ -11,9 +11,10 @@ namespace WinampInspiredVisualizer.Export;
 /// the visuals on screen hear what's going to the speakers.
 /// </summary>
 /// <remarks>
-/// The sound comes out at 44.1 or 48 kHz, the rates Windows' AAC encoder takes: songs at either keep
-/// theirs, anything else (96 kHz, say) is resampled to 48 kHz. Mono songs play on both sides, and
-/// songs with more than two channels keep their front pair.
+/// The sound comes out at 44.1 or 48 kHz, the rates Windows' AAC encoder takes (macOS's takes them
+/// too): songs at either keep theirs, anything else (96 kHz, say) is resampled to 48 kHz. Mono songs
+/// play on both sides, and songs with more than two channels keep their front pair. Shared by the
+/// Windows and Mac recorders.
 /// </remarks>
 public sealed class RecordingAudio : IDisposable
 {

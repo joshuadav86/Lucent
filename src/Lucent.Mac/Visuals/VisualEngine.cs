@@ -21,9 +21,10 @@ namespace Lucent.Mac.Visuals;
 /// </summary>
 /// <remarks>
 /// It draws into whatever texture it's given, so the same code draws into the window (see
-/// <see cref="MetalRenderer"/>) and into an off-screen picture for the self-test.
+/// <see cref="MetalRenderer"/>), into an off-screen picture for the self-test, and frame by frame into
+/// a video (see VisualEngine.Offscreen.cs).
 /// </remarks>
-public sealed class VisualEngine : IDisposable
+public sealed partial class VisualEngine : IDisposable
 {
     /// <summary>The visuals' own pictures: half-float, so glow and HDR have room above white.</summary>
     internal const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
@@ -98,13 +99,18 @@ public sealed class VisualEngine : IDisposable
     private int _renderWidth;
     private int _renderHeight;
 
-    public VisualEngine(MTLDevice device, AudioAnalyzer analyzer, MetalShaderFiles files, MTLPixelFormat outputFormat)
+    /// <summary>
+    /// An engine that draws with <paramref name="device"/>. Its visuals are the ones <paramref name="files"/>
+    /// finds, or <paramref name="presets"/> if given (another engine's list, so visuals are numbered the same way).
+    /// </summary>
+    public VisualEngine(MTLDevice device, AudioAnalyzer analyzer, MetalShaderFiles files, MTLPixelFormat outputFormat,
+        IReadOnlyList<PresetSource>? presets = null)
     {
         _device = device;
         _analyzer = analyzer;
         _files = files;
         _queue = device.NewCommandQueue();
-        _slots = files.LoadPresets().Select(source => new PresetSlot(source)).ToArray();
+        _slots = (presets ?? files.LoadPresets()).Select(source => new PresetSlot(source)).ToArray();
         Presets = _slots.Select(slot => slot.Source).ToList();
         PresetNames = Presets.Select(preset => preset.Name).ToList();
 
@@ -333,56 +339,67 @@ public sealed class VisualEngine : IDisposable
                 break;
             }
 
-            var slot = _slots[index];
-            try
-            {
-                using var pool = AutoreleasePool.Begin();
-                if (slot.Source.IsMilkDrop)
-                {
-                    // MilkDrop presets compile their equations, and their shaders if they have them.
-                    slot.MilkDrop = MilkDropVisual.Compile(
-                        _milkDrop ?? throw new InvalidOperationException($"MilkDrop presets can't be drawn: {_milkDropProblem}"), _files, slot.Source);
-                    Volatile.Write(ref slot.State, PresetSlot.Ready);
-                    continue;
-                }
-
-                var fragment = LoadFunction(_files.Preset(slot.Source, "PSMain"), "preset_fragment", slot.Libraries);
-                slot.Pipeline = MakePipeline(_vertexFunction, fragment, FeedbackFormat, additive: false);
-                if (slot.Source.IsParticles)
-                {
-                    var simulate = LoadFunction(_files.Preset(slot.Source, "CSMain"), "particles_simulate", slot.Libraries);
-                    var error = new NSError(IntPtr.Zero);
-                    var simulation = _device.NewComputePipelineState(simulate, ref error);
-                    if (simulation.NativePtr == IntPtr.Zero)
-                    {
-                        throw new InvalidOperationException(Describe(error, "The particle simulation couldn't be made."));
-                    }
-
-                    slot.Simulation = simulation;
-
-                    var vertices = LoadFunction(_files.Preset(slot.Source, "VSParticle"), "particles_vertex", slot.Libraries);
-                    slot.SpritePipeline = MakePipeline(vertices, _spriteFunction, FeedbackFormat, additive: true);
-                }
-
-                Volatile.Write(ref slot.State, PresetSlot.Ready);
-            }
-            catch (Exception ex)
-            {
-                Volatile.Write(ref slot.State, PresetSlot.Failed);
-                if (slot.Source.IsMilkDrop)
-                {
-                    // A broken .milk file is skipped; the log says which and why.
-                    ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
-                }
-
-                PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
-            }
+            CompilePreset(_slots[index]);
         }
 
         // The last compiler to finish a full pass tidies away translations of visuals that changed or went.
         if (Interlocked.Decrement(ref _compilersRunning) == 0 && !_stopCompiling)
         {
             _files.RemoveUnusedTranslations();
+        }
+    }
+
+    /// <summary>
+    /// Compiles one visual's pipelines and marks it ready, or failed if it doesn't compile (<see cref="PresetFailed"/>
+    /// says why). Returns the reason it failed, or null.
+    /// </summary>
+    private string? CompilePreset(PresetSlot slot)
+    {
+        try
+        {
+            using var pool = AutoreleasePool.Begin();
+            if (slot.Source.IsMilkDrop)
+            {
+                // MilkDrop presets compile their equations, and their shaders if they have them.
+                slot.MilkDrop = MilkDropVisual.Compile(
+                    _milkDrop ?? throw new InvalidOperationException($"MilkDrop presets can't be drawn: {_milkDropProblem}"), _files, slot.Source);
+                Volatile.Write(ref slot.State, PresetSlot.Ready);
+                return null;
+            }
+
+            var fragment = LoadFunction(_files.Preset(slot.Source, "PSMain"), "preset_fragment", slot.Libraries);
+            slot.Pipeline = MakePipeline(_vertexFunction, fragment, FeedbackFormat, additive: false);
+            if (slot.Source.IsParticles)
+            {
+                var simulate = LoadFunction(_files.Preset(slot.Source, "CSMain"), "particles_simulate", slot.Libraries);
+                var error = new NSError(IntPtr.Zero);
+                var simulation = _device.NewComputePipelineState(simulate, ref error);
+                if (simulation.NativePtr == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException(Describe(error, "The particle simulation couldn't be made."));
+                }
+
+                slot.Simulation = simulation;
+
+                var vertices = LoadFunction(_files.Preset(slot.Source, "VSParticle"), "particles_vertex", slot.Libraries);
+                slot.SpritePipeline = MakePipeline(vertices, _spriteFunction, FeedbackFormat, additive: true);
+            }
+
+            Volatile.Write(ref slot.State, PresetSlot.Ready);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Volatile.Write(ref slot.State, PresetSlot.Failed);
+            if (slot.Source.IsMilkDrop)
+            {
+                // A broken .milk file is skipped; the log says which and why.
+                ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
+            }
+
+            var message = $"{slot.Source.Name}: {ex.Message}";
+            PresetFailed?.Invoke(message);
+            return message;
         }
     }
 
@@ -460,7 +477,12 @@ public sealed class VisualEngine : IDisposable
             ResizeRenderTargets(commands, renderWidth, renderHeight);
         }
 
-        _analyzer.Update(deltaTime);
+        if (!_offscreen)
+        {
+            // Off screen, the recorder hands the analyzer each frame's sound itself.
+            _analyzer.Update(deltaTime);
+        }
+
         var progress = UpdatePresetChoice(now);
         if (_activePreset < 0)
         {
@@ -790,7 +812,7 @@ public sealed class VisualEngine : IDisposable
         {
             var waited = now - _lastSwitch;
             var interval = _autoCycleSeconds;
-            if (SongClock?.Read() is { } song)
+            if (CurrentSong() is { } song)
             {
                 // The song's bars are known: start the change early enough that the new visual is
                 // fully in right on a downbeat, preferring the start of a phrase.
@@ -981,6 +1003,7 @@ public sealed class VisualEngine : IDisposable
         }
 
         ReleaseRenderTargets();
+        ReleaseOffscreenOutput();
         foreach (var slot in _slots)
         {
             slot.Dispose();

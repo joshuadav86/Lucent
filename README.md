@@ -166,7 +166,7 @@ Double-click the visuals or press **F11**. Click once to pause or play, and righ
 
 ### Record a visual to video
 
-Right-click the visuals and choose **Record video…** to save the song that's playing, drawn with a visual (or with Auto, changing on the beat), as an MP4 to share: the whole song or just a part, in 1080p, 1440p, or 4K at 30 or 60 fps. Every frame is drawn in turn and none are skipped, so a recording can take more or less time than the song lasts, and the visuals and music carry on as usual meanwhile. It's encoded as H.264 with AAC sound by Windows, on the graphics card when it can be.
+Right-click the visuals and choose **Record video…** to save the song that's playing, drawn with a visual (or with Auto, changing on the beat), as an MP4 to share: the whole song or just a part, in 1080p, 1440p, or 4K at 30 or 60 fps. Every frame is drawn in turn and none are skipped, so a recording can take more or less time than the song lasts, and the visuals and music carry on as usual meanwhile. It's encoded as H.264 with AAC sound by Windows or macOS, on the graphics card or the Mac's own video encoder when it can be.
 
 ## The player
 
@@ -255,7 +255,7 @@ Rather not install? Download `Lucent-mac-arm64.zip` or `Lucent-mac-x64.zip`, ope
 
 ## Keyboard shortcuts
 
-Shortcuts work from any Lucent window, and your keyboard's media keys work while Lucent has focus.
+Shortcuts work from any Lucent window. Your keyboard's media keys work even when Lucent isn't in front, and the playing song (with its cover, play, pause, next, and previous buttons, and a seek bar) shows in Windows' media controls by the volume flyout and on the lock screen, or in the Mac's Now Playing in Control Center, the menu bar, and the lock screen, where AirPods and other headphones' buttons control it too.
 
 | Playback | | Windows | | Visuals | |
 |---|---|---|---|---|---|
@@ -276,6 +276,7 @@ Shortcuts work from any Lucent window, and your keyboard's media keys work while
 - On a first start, just the player, equalizer, and visuals open, and Lucent plays a song to show them off: "Self Actualize" from Kepler North's *Pseudo Profound* EP. It sits in its own Starter Music folder in the library, so take it out like any other folder when you're done with it
 - Add files or folders with the eject button, or drag them onto Lucent like Winamp: drop on the player (or the visuals) to play them now, on the queue to add them to the end, or on the library to add them to it
 - Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
+- Sound options (**Options → Sound**), on Windows and the Mac: gapless playback, so each track runs straight into the next for live albums, DJ mixes, and albums that flow; the speakers, headphones, or DAC to play through; and **Exclusive mode: bit-perfect**, which takes the output for Lucent alone and sends each track at its own sample rate past the system's mixer (WASAPI exclusive mode on Windows, hog mode on a Mac), bit-perfect at 100% volume with the equalizer off. Underneath, Lucent shows the sample rate, format, and mode reaching the output, and whether it's bit-perfect
 - A music library, newest first, with other sort orders and folder headings you can open or close. Search by title, artist, album, or file name as you type (Ctrl+F); Esc clears it
 - Bandcamp and Beatport: switch them on under **Bandcamp and Beatport…** in the library's folder menu, and Lucent watches your Downloads folder. Releases and tracks you download from either store are unpacked into Music\Bandcamp or Music\Beatport, a folder per artist and release, and show up in the library. The downloads stay where they are, and other zips and songs are left alone (each store tags the files it sells, which is how Lucent recognises them)
 - Bandcamp collection sync (experimental): sign in to Bandcamp on its own page and Lucent downloads your purchases in the format you pick (FLAC, MP3, ALAC, AAC, or Ogg), then any new ones each time it starts. Bandcamp has no official way for apps to do this, so it uses the website's own pages and may need an update if Bandcamp changes them. The sign-in is kept encrypted for your Windows account only
@@ -298,7 +299,7 @@ Shortcuts work from any Lucent window, and your keyboard's media keys work while
 - Favorite visuals and lists: star a visual in the picker, under the visuals, or with F. The menu at the top of the picker switches between all visuals, favorites, and your lists
 - Auto mode moves to a new visual about every 25 seconds, on a downbeat at the start of a phrase where it can. The AUTO pill shows how often; click the arrow beside it to choose anything from 10 seconds to 3 minutes
 - Fullscreen: double-click or F11. Leave with Esc, a double-click, the × in the top-right corner, or the right-click menu. Click once to pause or play, in a window or fullscreen
-- The right-click menu on the visuals: fullscreen, a seek bar, play or pause, stop, next and previous track, volume, the next or previous visual, the picker, favorite, Auto and its timing, and the graphics options
+- The right-click menu on the visuals: fullscreen, a seek bar, play or pause, stop, next and previous track, volume, the next or previous visual, the picker, favorite, Auto and its timing, recording a video, and the graphics options
 - Remembers the last visual, your options, your skin, and your theme
 
 </details>
@@ -337,6 +338,8 @@ dotnet run --project src/WinampInspiredVisualizer
 
 The code is in three projects. `src/Lucent.Core` holds everything that doesn't depend on Windows (audio analysis, the equalizer, the editor's effects, export, tags, the library, playlists, and settings) and builds on any OS, for both apps. `src/WinampInspiredVisualizer` is the Windows app: its windows, the Direct3D renderer, playback, and the shaders. `src/Lucent.Mac` is the Mac app (see [Mac](#mac)).
 
+The two apps have the same features, so a change to one goes into the other in the same pull request. Anything that can only be on one platform is listed in [`docs/PARITY.md`](docs/PARITY.md) with what the other has instead, and every pull request runs `dotnet run --project tools/ParityCheck` to catch a file, setting, or shared piece of `Lucent.Core` that only one app has.
+
 VST3 plugins in the editor need the plugin helper, a small C++ program in [`src/PluginHost`](src/PluginHost). Build it first (with [CMake](https://cmake.org/) and Visual Studio's C++ tools) and the app build copies it next to `Lucent.exe`:
 
 ```
@@ -362,7 +365,7 @@ dotnet publish src/Lucent.Mac -c Release -r osx-arm64 --self-contained -o publis
 tools/package-mac.sh publish-mac . 0.1.0
 ```
 
-CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, and every visual drawn on the graphics card), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, they're added to the Latest build release. Adding Apple signing and notarization later only needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml).
+CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, every visual drawn on the graphics card, a track shown in Now Playing, and a short video recorded and checked), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, they're added to the Latest build release. Adding Apple signing and notarization later only needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml).
 
 ### Releases
 

@@ -86,6 +86,21 @@ public partial class VisualizerWindow
         if (Player is { } player)
         {
             menu.Items.Add(new Separator());
+            var record = new MenuItem { Header = "Record video…", IsEnabled = player.CanRecordVideo };
+            record.Click += (_, _) =>
+            {
+                // The recording window opens over the visuals, so come out of fullscreen for it.
+                if (_isFullscreen)
+                {
+                    ToggleFullscreen();
+                }
+
+                player.RecordVideo(this);
+            };
+            ToolTip.SetTip(record, record.IsEnabled ? "Save the song drawn with a visual as an MP4 video, to share" : "Play a song first to record it");
+            ToolTip.SetShowOnDisabled(record, true);
+            menu.Items.Add(record);
+            menu.Items.Add(new Separator());
             player.AddGraphicsItems(menu);
         }
 

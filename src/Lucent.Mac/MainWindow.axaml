@@ -51,8 +51,16 @@
                             <StackPanel x:Name="OptionsPanel">
                                 <Border Theme="{StaticResource SegmentBar}">
                                     <UniformGrid Rows="1">
+                                        <!-- Five tabs in the panel's width: a little less room around each label, so "Graphics" fits. -->
+                                        <UniformGrid.Styles>
+                                            <Style Selector="RadioButton">
+                                                <Setter Property="Padding" Value="2,0" />
+                                            </Style>
+                                        </UniformGrid.Styles>
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Graphics" Content="Graphics" Click="OnOptionsTab" IsChecked="True" />
-                                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visual changes" Click="OnOptionsTab" />
+                                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visuals" Click="OnOptionsTab"
+                                                     ToolTip.Tip="When and how visuals change" />
+                                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
                                         <RadioButton x:Name="UpdatesTabButton" Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                                     </UniformGrid>
@@ -135,6 +143,26 @@
                                               Content="MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
                                                Text="List the MilkDrop presets in the visual picker and play them in Auto." />
+                                </StackPanel>
+
+                                <StackPanel x:Name="SoundTab" IsVisible="False">
+                                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Output" />
+                                    <Button x:Name="OutputDeviceButton" Theme="{StaticResource PillButton}" HorizontalAlignment="Left"
+                                            ToolTip.Tip="The speakers, headphones, or DAC the music plays through" Click="OnChooseOutputDevice">
+                                        <TextBlock x:Name="OutputDeviceName" MaxWidth="290" TextTrimming="CharacterEllipsis" />
+                                    </Button>
+
+                                    <CheckBox x:Name="ExclusiveSwitch" Theme="{StaticResource SwitchToggle}" Content="Exclusive mode: bit-perfect"
+                                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Lucent takes the output for itself and sends each track at its own sample rate, past macOS's mixer. Other apps go quiet while it plays. Bit-perfect at 100% volume with the equalizer off." />
+                                    <TextBlock x:Name="OutputStatus" Theme="{StaticResource OptionHint}" Margin="2,8,0,0"
+                                               Foreground="{DynamicResource AccentBrush}" />
+
+                                    <CheckBox x:Name="GaplessSwitch" Theme="{StaticResource SwitchToggle}" Content="Gapless playback"
+                                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Each track runs straight into the next with no silence between, for live albums, DJ mixes, and albums that flow." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="ThemeTab" IsVisible="False">
