@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace WinampInspiredVisualizer.Visualizer;
 
-/// <summary>A visual loaded from a .hlsl file in the Presets folder.</summary>
+/// <summary>A visual loaded from a .hlsl file in the Presets folder, or a MilkDrop preset from a .milk file.</summary>
 public sealed record PresetSource(string Name, string FilePath, string Code)
 {
     public const int DefaultParticleCount = 262144;
@@ -14,24 +14,33 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     private static readonly Regex FamilyPattern = new(@"^\s*//\s*Family:(.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
     private static readonly Regex TagsPattern = new(@"^\s*//\s*Tags:(.*)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
 
+    /// <summary>A MilkDrop preset (a .milk file) rather than a Lucent shader. See Visualizer/MilkDrop.</summary>
+    public bool IsMilkDrop { get; } = IsMilkDropFile(FilePath);
+
     /// <summary>A particle visual: it defines Simulate (and Spawn and Show) as well as Render. See Shaders/Particles.hlsli.</summary>
-    public bool IsParticles { get; } = SimulatePattern.IsMatch(Code);
+    public bool IsParticles { get; } = !IsMilkDropFile(FilePath) && SimulatePattern.IsMatch(Code);
 
     /// <summary>How many particles run on Normal detail, from a "// Particles: 300000" line.</summary>
     public int NormalParticleCount { get; } = ReadParticleCount(Code);
 
-    /// <summary>The folder the visual picker lists it in, from a "// Family: Fractal" line ("Other" without one).</summary>
-    public string Family { get; } = VisualStyles.FamilyName(ReadHeader(FamilyPattern, Code));
+    /// <summary>The folder the visual picker lists it in, from a "// Family: Fractal" line ("Other" without one; "MilkDrop" for MilkDrop presets).</summary>
+    public string Family { get; } = IsMilkDropFile(FilePath)
+        ? VisualStyles.MilkDropFamily
+        : VisualStyles.FamilyName(ReadHeader(FamilyPattern, Code));
 
     /// <summary>
     /// The picker's tick boxes it answers to, from a "// Tags: Calm, Space" line (none without one).
-    /// Particle visuals are always tagged Particles too.
+    /// Particle visuals are always tagged Particles too, and MilkDrop presets Retro.
     /// </summary>
-    public IReadOnlyList<string> Tags { get; } = VisualStyles.TagNames(
-        ReadHeader(TagsPattern, Code) + (SimulatePattern.IsMatch(Code) ? $", {VisualStyles.ParticlesTag}" : string.Empty));
+    public IReadOnlyList<string> Tags { get; } = IsMilkDropFile(FilePath)
+        ? VisualStyles.TagNames("Retro")
+        : VisualStyles.TagNames(ReadHeader(TagsPattern, Code) + (SimulatePattern.IsMatch(Code) ? $", {VisualStyles.ParticlesTag}" : string.Empty));
 
     /// <summary>A visual from its file, named by its first line.</summary>
     public static PresetSource Load(string path, string code) => new(ReadName(path, code), path, code);
+
+    /// <summary>Whether a file is a MilkDrop preset, by its .milk extension.</summary>
+    public static bool IsMilkDropFile(string path) => path.EndsWith(".milk", StringComparison.OrdinalIgnoreCase);
 
     private static string? ReadHeader(Regex pattern, string code)
     {

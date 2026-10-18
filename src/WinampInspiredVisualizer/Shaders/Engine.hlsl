@@ -47,11 +47,15 @@ float4 PSPresent(VSOut input) : SV_Target
     float2 texel = max(RenderScale, 1.0) / Resolution;  // one pixel of the image being shown
     float3 colour = previous(uv);
 
+    // MilkDrop presets made their own finished picture for a plain 8-bit screen, so they skip
+    // the sharpening, glow, tone-mapping and vignette (all of it, or partly mid-transition).
+    float lucentLook = 1.0 - saturate(PlainOutput);
+
     // Sharpen: push each pixel away from its neighbours' average. This undoes the slight blur
     // that builds up as the feedback buffer is re-sampled; supersampled images need less.
     float3 neighbours = (previous(uv + float2(texel.x, 0.0)) + previous(uv - float2(texel.x, 0.0))
                        + previous(uv + float2(0.0, texel.y)) + previous(uv - float2(0.0, texel.y))) * 0.25;
-    float sharpen = 0.6 * saturate(1.5 - 0.5 * RenderScale);
+    float sharpen = 0.6 * saturate(1.5 - 0.5 * RenderScale) * lucentLook;
     colour = max(colour + (colour - neighbours) * sharpen, 0.0);
 
     // Bloom only the brightest parts, so highlights glow but dark areas stay crisp and black.
@@ -62,14 +66,14 @@ float4 PSPresent(VSOut input) : SV_Target
         float2 offset = float2(cos(angle), sin(angle)) * pixel * 6.0;
         bloom += max(previous(uv + offset) - 0.6, 0.0) + max(previous(uv + offset * 2.5) - 0.6, 0.0);
     }
-    colour += bloom / 24.0 * 0.6 * BloomStrength;
+    colour += bloom / 24.0 * 0.6 * BloomStrength * lucentLook;
 
     // A little extra saturation, and a light vignette.
-    float3 display = toneMap(colour);
+    float3 display = lerp(saturate(colour), toneMap(colour), lucentLook);
     float luminance = dot(display, float3(0.2126, 0.7152, 0.0722));
-    display = saturate(lerp(luminance.xxx, display, 1.15));
+    display = saturate(lerp(luminance.xxx, display, 1.0 + 0.15 * lucentLook));
     float2 fromCentre = uv - 0.5;
-    display *= 1.0 - dot(fromCentre, fromCentre) * 0.35;
+    display *= 1.0 - dot(fromCentre, fromCentre) * 0.35 * lucentLook;
 
     if (HdrOutput < 0.5)
     {

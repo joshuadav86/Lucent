@@ -1,0 +1,54 @@
+MILKDROP_PRESET_VERSION=201
+PSVERSION=3
+PSVERSION_WARP=3
+PSVERSION_COMP=3
+[preset00]
+fDecay=1.000000
+zoom=1.010000
+rot=0.010000
+warp=0.500000
+nWaveMode=5
+fWaveAlpha=0.500000
+b1n=-0.200000
+b1x=1.400000
+b2n=0.000000
+b2x=1.000000
+b3n=0.000000
+b3x=1.000000
+per_frame_init_1=megabuf(0) = 1; reg10 = 2; q32 = 0.5;
+per_frame_1=q1 = megabuf(0) * reg10 * 0.25; q5 = sin(time); q31 = frame % 60;
+per_frame_2=q6 = if(equal(q31, 0), 1, 0); monitor = q1;
+per_pixel_1=rot = rot + 0.01 * sin(ang * 3 + time) * (x - 0.5) * (y - 0.5);
+per_pixel_2=sx = sx + 0.01 * q5; zoomexp = 1 + rad * 0.1;
+warp_1=`// DirectX 9 habits: plain samplers, texsize uniforms, tex2D returning float4 into a float3,
+warp_2=`// a user function taking float3, sample as a variable name, tex3D on the noise volume.
+warp_3=`sampler sampler_pw_noise_lq;
+warp_4=`sampler2D sampler_noisevol_hq : register(s4);
+warp_5=`uniform float4 texsize_noise_lq;
+warp_6=`static const float3 tint = float3(1.0, 0.98, 0.96);
+warp_7=`float3 soften(float3 c) { return lerp(c, lum(c).xxx, 0.05); }
+warp_8=`
+warp_9=`shader_body
+warp_10=`{
+warp_11=`    float2 d = (tex2D(sampler_pw_noise_lq, uv * texsize.xy * texsize_noise_lq.zw * 0.25).xy - 0.5) * texsize.zw;
+warp_12=`    float3 sample = tex2D(sampler_main, uv + d);
+warp_13=`    float3 vol = tex3D(sampler_noisevol_hq, float3(uv_orig * 2.0, time * 0.05)).xyz;
+warp_14=`    float3 p = mul(float4(uv_orig - 0.5, 0.0, 1.0), rot_d1);
+warp_15=`    half3 h = half3(vol);
+warp_16=`    for (int i = 0; i < 3; i++) { sample += (GetBlur1(uv + d * i) - sample) * 0.02; }
+warp_17=`    ret = soften(sample) * tint * 0.99 + (h - 0.5) * 0.004 + p * 0.0001;
+warp_18=`    ret -= 0.003 * q6;
+warp_19=`}
+comp_1=`float4 texsize_blur3;
+comp_2=`shader_body
+comp_3=`{
+comp_4=`    float2 uv2 = (uv - 0.5) * aspect.xy;
+comp_5=`    float3 crisp = tex2d(sampler_main, uv).xyz;
+comp_6=`    float3 glow = GetBlur3(uv) * 2.0 + GetBlur2(uv) * 0.5;
+comp_7=`    float3 edges = abs(crisp - GetBlur1(uv)) * 3.0;
+comp_8=`    float3 rnd = tex2D(sampler_noise_hq, uv * 2 + rand_frame.xy).xyz;
+comp_9=`    float3 img = tex2D(sampler_clouds2, uv).xyz;
+comp_10=`    ret = crisp + glow * q32 + edges * hue_shader + (rnd - 0.5) * 0.02 + img * 0.01;
+comp_11=`    ret *= 1.0 + 0.1 * sin(ang * 6.0 + time) * rad;
+comp_12=`    ret = pow(saturate(ret), 0.9) + slow_roam_cos.xyz * 0.01 + roam_sin.x * 0.0 + texsize_blur3.x * 0.0;
+comp_13=`}

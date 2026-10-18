@@ -144,6 +144,35 @@ public sealed class AudioAnalyzer
         FillTexture();
     }
 
+    /// <summary>
+    /// Fills <paramref name="left"/> and <paramref name="right"/> with the newest stereo samples, timed
+    /// to the speakers like the rest of the analysis (for MilkDrop presets, which draw both channels).
+    /// </summary>
+    public void ReadStereoWaveform(float[] left, float[] right)
+    {
+        if (_capture is null)
+        {
+            // Drawing off screen (recording a video): only the mono mix handed to Update is known, so both
+            // channels get the newest of it.
+            var count = Math.Min(left.Length, _samples.Length);
+            Array.Clear(left);
+            Array.Clear(right);
+            _samples.AsSpan(_samples.Length - count).CopyTo(left);
+            _samples.AsSpan(_samples.Length - count).CopyTo(right);
+            return;
+        }
+
+        if (_capture.IsSilent)
+        {
+            Array.Clear(left);
+            Array.Clear(right);
+            return;
+        }
+
+        var delay = _capture.SampleRate * AudioCapture.OutputLatencyMs / 1000 * 2 / 3;
+        _capture.ReadLatestStereo(left, right, delay);
+    }
+
     private void DetectBeat(float bassNow, float deltaTime)
     {
         _sinceBeat += deltaTime;
