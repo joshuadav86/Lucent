@@ -26,8 +26,8 @@ namespace Lucent.Mac;
 /// </summary>
 /// <remarks>
 /// The rest of the window lives in partial files: EditorWindow.Clipboard.cs (cut, copy, paste),
-/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis)
-/// and EditorWindow.Plugins.cs (VST3 effects).
+/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis),
+/// EditorWindow.History.cs (the history panel) and EditorWindow.Plugins.cs (VST3 effects and chains).
 /// </remarks>
 public partial class EditorWindow : Window
 {
@@ -110,6 +110,8 @@ public partial class EditorWindow : Window
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
         LoopToggle.IsChecked = _settings.Loop;
+        HistoryToggle.IsChecked = _settings.ShowHistory;
+        HistoryPanel.IsVisible = _settings.ShowHistory;
         UpdateSnap();
         InitTools();
         SetEditingEnabled(false);
@@ -822,6 +824,7 @@ public partial class EditorWindow : Window
         ToolTip.SetTip(RedoButton, session?.RedoDescription is { } redo ? $"Redo {redo} (⇧⌘Z)" : "Redo (⇧⌘Z)");
         var name = Path.GetFileName(_path);
         FileTitle.Text = HasUnsavedChanges ? $"{name}  •  edited" : name;
+        UpdateHistoryList();
     }
 
     // ---- Playback ----
@@ -1214,6 +1217,9 @@ public partial class EditorWindow : Window
             case Key.L:
                 LoopToggle.IsChecked = LoopToggle.IsChecked != true;
                 SetLoop(LoopToggle.IsChecked == true);
+                break;
+            case Key.H when !command:
+                ShowHistoryPanel(!HistoryPanel.IsVisible);
                 break;
             case Key.V:
                 SpectrogramToggle.IsChecked = SpectrogramToggle.IsChecked != true;

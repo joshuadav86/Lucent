@@ -2,17 +2,22 @@ using NAudio.Wave;
 
 namespace WinampInspiredVisualizer.Editor.Plugins;
 
+/// <summary>One plugin a preview plays through.</summary>
+/// <param name="Generation">From the <see cref="PluginHost.Start"/> call that set up this preview.</param>
+/// <param name="IsBypassed">Asked for every block, so switching a plugin off while it plays is heard at once.</param>
+public sealed record PreviewStage(PluginHost Host, int Generation, Func<bool>? IsBypassed = null);
+
 /// <summary>
-/// Plays audio through a plugin as it's heard, so turning a knob in the plugin's window changes the sound
-/// straight away. After the audio ends it keeps going for a few seconds, so a reverb's tail can be heard.
+/// Plays audio through a plugin, or a chain of them, as it's heard, so turning a knob in a plugin's window
+/// changes the sound straight away. After the audio ends it keeps going for a few seconds, so a reverb's
+/// tail can be heard.
 /// </summary>
 public sealed class PluginPreviewProvider : ISampleProvider
 {
     private static readonly TimeSpan TailTime = TimeSpan.FromSeconds(3);
 
     private readonly ISampleProvider _source;
-    private readonly PluginHost _host;
-    private readonly int _generation;
+    private readonly IReadOnlyList<PreviewStage> _stages;
     private readonly float _volume;
     private readonly float[][] _planes;
     private int _tailLeft;
@@ -22,13 +27,18 @@ public sealed class PluginPreviewProvider : ISampleProvider
     /// <param name="generation">From the <see cref="PluginHost.Start"/> call that set up this preview.</param>
     /// <param name="volume">Applied after the plugin, so it doesn't change what the plugin hears.</param>
     public PluginPreviewProvider(ISampleProvider source, PluginHost host, int generation, float volume)
+        : this(source, new[] { new PreviewStage(host, generation) }, volume)
+    {
+    }
+
+    /// <param name="stages">The plugins in the order the audio goes through them.</param>
+    public PluginPreviewProvider(ISampleProvider source, IReadOnlyList<PreviewStage> stages, float volume)
     {
         _source = source;
-        _host = host;
-        _generation = generation;
+        _stages = stages;
         _volume = volume;
         WaveFormat = source.WaveFormat;
-        _planes = new float[host.Channels][];
+        _planes = new float[WaveFormat.Channels][];
         _tailLeft = (int)(TailTime.TotalSeconds * WaveFormat.SampleRate);
     }
 
@@ -71,10 +81,18 @@ public sealed class PluginPreviewProvider : ISampleProvider
 
         try
         {
-            // An old preview still finishing after the plugin was restarted for something else is silenced.
-            if (!_host.Process(_planes, 0, read, _generation))
+            foreach (var stage in _stages)
             {
-                return 0;
+                if (stage.IsBypassed?.Invoke() == true)
+                {
+                    continue;
+                }
+
+                // An old preview still finishing after the plugin was restarted for something else is silenced.
+                if (!stage.Host.Process(_planes, 0, read, stage.Generation))
+                {
+                    return 0;
+                }
             }
         }
         catch (Exception ex)

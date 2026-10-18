@@ -23,8 +23,8 @@ namespace WinampInspiredVisualizer;
 /// </summary>
 /// <remarks>
 /// The rest of the window lives in partial files: EditorWindow.Clipboard.cs (cut, copy, paste),
-/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis)
-/// and EditorWindow.Plugins.cs (VST3 effects).
+/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis),
+/// EditorWindow.History.cs (the history panel) and EditorWindow.Plugins.cs (VST3 effects and chains).
 /// </remarks>
 public partial class EditorWindow : Window
 {
@@ -95,6 +95,8 @@ public partial class EditorWindow : Window
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
         LoopToggle.IsChecked = _settings.Loop;
+        HistoryToggle.IsChecked = _settings.ShowHistory;
+        HistoryPanel.Visibility = _settings.ShowHistory ? Visibility.Visible : Visibility.Collapsed;
         UpdateSnap();
         InitTools();
         SetEditingEnabled(false);
@@ -707,6 +709,7 @@ public partial class EditorWindow : Window
         RedoButton.ToolTip = session?.RedoDescription is { } redo ? $"Redo {redo} (Ctrl+Y)" : "Redo (Ctrl+Y)";
         var name = Path.GetFileName(_path);
         FileTitle.Text = HasUnsavedChanges ? $"{name}  •  edited" : name;
+        UpdateHistoryList();
     }
 
     // ---- Playback ----
@@ -1090,6 +1093,9 @@ public partial class EditorWindow : Window
             case Key.L:
                 LoopToggle.IsChecked = LoopToggle.IsChecked != true;
                 SetLoop(LoopToggle.IsChecked == true);
+                break;
+            case Key.H:
+                ShowHistoryPanel(HistoryPanel.Visibility != Visibility.Visible);
                 break;
             case Key.V:
                 SpectrogramToggle.IsChecked = SpectrogramToggle.IsChecked != true;
