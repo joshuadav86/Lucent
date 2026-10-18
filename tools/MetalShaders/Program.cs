@@ -1,6 +1,7 @@
 using Lucent.Mac.Visuals;
 using Lucent.MetalShaders;
 using WinampInspiredVisualizer.Visualizer;
+using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
 // Usage: MetalShaders <app folder with Shaders/ and Presets/> <output folder>
 // Writes <output>/Engine.<entry>.metal, <output>/Particles.PSSprite.metal and
@@ -39,6 +40,40 @@ foreach (var path in Directory.EnumerateFiles(Path.Combine(appFolder, "Presets")
     {
         var code = MetalTranslation.PresetSource(common, particles, presetMain, particleMain, preset.Code, preset.IsParticles, entry);
         jobs.Add((fileName, code, entry, $"Presets/{fileName}.{entry}.metal"));
+    }
+}
+
+// MilkDrop presets: the engine's own passes, then the warp and composite shaders of the presets that
+// come with the app, made into HLSL as the app does (MilkShaderTranslator). Presets of the user's own are
+// translated as the app runs.
+var milkDropPrelude = Read("MilkDrop.hlsli");
+var milkDropEngine = MetalTranslation.MilkDropEngineSource(milkDropPrelude, Read("MilkDrop.hlsl"));
+foreach (var entry in MetalTranslation.MilkDropEngineEntryPoints)
+{
+    jobs.Add(("MilkDrop.hlsl", milkDropEngine, entry, $"MilkDrop.{entry}.metal"));
+}
+
+var milkDropPresets = Path.Combine(appFolder, "Presets", "MilkDrop");
+if (Directory.Exists(milkDropPresets))
+{
+    Directory.CreateDirectory(Path.Combine(output, "Presets", "MilkDrop"));
+    foreach (var path in Directory.EnumerateFiles(milkDropPresets, "*.milk").Order())
+    {
+        var fileName = Path.GetFileName(path);
+        var preset = MilkPreset.Parse(File.ReadAllText(path), Path.GetFileNameWithoutExtension(path));
+        foreach (var (wanted, code, kind) in new[]
+        {
+            (preset.HasWarpShader, preset.WarpShader, MilkShaderKind.Warp),
+            (preset.HasCompShader, preset.CompShader, MilkShaderKind.Composite),
+        })
+        {
+            if (wanted)
+            {
+                var shader = MilkShaderTranslator.Translate(milkDropPrelude, code, kind);
+                jobs.Add((fileName, MetalTranslation.MilkDropPresetSource(shader.Source), shader.EntryPoint,
+                    $"Presets/MilkDrop/{fileName}.{shader.EntryPoint}.metal"));
+            }
+        }
     }
 }
 

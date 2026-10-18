@@ -33,6 +33,25 @@ public static unsafe class MetalTranslation
         ["PSMain"] = "preset_fragment",
         ["CSMain"] = "particles_simulate",
         ["VSParticle"] = "particles_vertex",
+
+        // MilkDrop presets (Shaders/MilkDrop.hlsl, and each preset's own warp and composite shaders).
+        ["VSWarp"] = "milk_warp_vertex",
+        ["VSScreen"] = "milk_screen_vertex",
+        ["VSDraw"] = "milk_draw_vertex",
+        ["PSWarpClassic"] = "milk_warp_classic",
+        ["PSCompClassic"] = "milk_comp_classic",
+        ["PSDraw"] = "milk_draw",
+        ["PSDrawTextured"] = "milk_draw_textured",
+        ["PSBlurAcross"] = "milk_blur_across",
+        ["PSBlurDown"] = "milk_blur_down",
+        ["PSWarpPreset"] = "milk_warp_preset",
+        ["PSCompPreset"] = "milk_comp_preset",
+    };
+
+    /// <summary>The MilkDrop engine's entry points in Shaders/MilkDrop.hlsl, each translated on its own.</summary>
+    public static readonly IReadOnlyList<string> MilkDropEngineEntryPoints = new[]
+    {
+        "VSWarp", "VSScreen", "VSDraw", "PSWarpClassic", "PSCompClassic", "PSDraw", "PSDrawTextured", "PSBlurAcross", "PSBlurDown",
     };
 
     // DXC gives each kind of HLSL register its own range of SPIR-V bindings, so they can't collide:
@@ -40,6 +59,9 @@ public static unsafe class MetalTranslation
     private const int TextureShift = 10;
     private const int SamplerShift = 20;
     private const int UavShift = 30;
+
+    // MilkDrop uses textures up to t13, which would meet the samplers at 20, so its samplers start at 40.
+    private const int MilkDropSamplerShift = 40;
 
     /// <summary>
     /// Where each HLSL register lands in Metal. Textures keep their t# number; the constant buffer
@@ -56,6 +78,34 @@ public static unsafe class MetalTranslation
         (SamplerShift + 0, 0, 0, 0),     // s0: LinearClamp            -> sampler(0)
         (UavShift + 0, 2, 0, 0),         // u0: ParticleState          -> buffer(2)
     };
+
+    /// <summary>
+    /// Where each HLSL register lands in Metal for MilkDrop presets (see MilkDrop.hlsli and MilkDrop.hlsl):
+    /// the textures and samplers keep their numbers, and the constant and structured buffers become Metal buffers.
+    /// </summary>
+    private static readonly (uint Binding, uint Buffer, uint Texture, uint Sampler)[] MilkDropSlots = MakeMilkDropSlots();
+
+    private static (uint Binding, uint Buffer, uint Texture, uint Sampler)[] MakeMilkDropSlots()
+    {
+        var slots = new List<(uint Binding, uint Buffer, uint Texture, uint Sampler)>
+        {
+            (0, 0, 0, 0),                    // b0: MilkParams             -> buffer(0)
+            (1, 1, 0, 0),                    // b1: MdBlurParams           -> buffer(1)
+            (TextureShift + 12, 2, 0, 0),    // t12: MdMesh                -> buffer(2)
+            (TextureShift + 13, 3, 0, 0),    // t13: MdDraw                -> buffer(3)
+        };
+        for (uint texture = 0; texture < 10; texture++)
+        {
+            slots.Add((TextureShift + texture, 0, texture, 0));   // t0-t9: the main image, blurs and noise -> texture(0-9)
+        }
+
+        for (uint sampler = 0; sampler < 4; sampler++)
+        {
+            slots.Add((MilkDropSamplerShift + sampler, 0, 0, sampler));   // s0-s3                        -> sampler(0-3)
+        }
+
+        return slots.ToArray();
+    }
 
     /// <summary>
     /// Put in front of every shader before it's translated. The Windows app compiles with fxc, which
@@ -92,9 +142,12 @@ public static unsafe class MetalTranslation
     public static (string Profile, ExecutionModel Model) StageOf(string entryPoint) => entryPoint switch
     {
         "CSMain" => ("cs_6_0", ExecutionModel.GLCompute),
-        "VSMain" or "VSParticle" => ("vs_6_0", ExecutionModel.Vertex),
+        "VSMain" or "VSParticle" or "VSWarp" or "VSScreen" or "VSDraw" => ("vs_6_0", ExecutionModel.Vertex),
         _ => ("ps_6_0", ExecutionModel.Fragment),
     };
+
+    /// <summary>Whether an entry point is one of MilkDrop's, whose resources sit at MilkDrop's slots.</summary>
+    public static bool IsMilkDrop(string entryPoint) => MetalNames.TryGetValue(entryPoint, out var name) && name.StartsWith("milk_", StringComparison.Ordinal);
 
     /// <summary>DXC's options, apart from the input and output files.</summary>
     public static IReadOnlyList<string> DxcArguments(string entryPoint)
@@ -113,7 +166,7 @@ public static unsafe class MetalTranslation
             "-fvk-use-dx-layout",
             "-fvk-b-shift", "0", "0",
             "-fvk-t-shift", $"{TextureShift}", "0",
-            "-fvk-s-shift", $"{SamplerShift}", "0",
+            "-fvk-s-shift", $"{(IsMilkDrop(entryPoint) ? MilkDropSamplerShift : SamplerShift)}", "0",
             "-fvk-u-shift", $"{UavShift}", "0",
             // Not -fvk-invert-y: Metal's clip space points y up like Direct3D's, so the shaders' own maths is right as it is.
         };
@@ -135,6 +188,15 @@ public static unsafe class MetalTranslation
         var assembled = api + "\n#line 1\n" + code + "\n";
         return Prelude + assembled + (entryPoint == "PSMain" ? presetMain : particleMain);
     }
+
+    /// <summary>
+    /// A MilkDrop engine pass (Shaders/MilkDrop.hlsl, VSWarp...), assembled as the Windows renderer does
+    /// (MilkDropRenderer): the presets' prelude, then the engine's passes.
+    /// </summary>
+    public static string MilkDropEngineSource(string prelude, string engine) => Prelude + prelude + "\n" + engine;
+
+    /// <summary>A preset's warp or composite shader, already made into HLSL by MilkShaderTranslator.</summary>
+    public static string MilkDropPresetSource(string translated) => Prelude + translated;
 
     /// <summary>A short fingerprint of a shader's assembled HLSL and how it's translated, to tell whether a translation is still current.</summary>
     public static string SourceHash(string hlsl, string entryPoint)
@@ -215,7 +277,7 @@ public static unsafe class MetalTranslation
             Check(api, api.CompilerOptionsSetUint(options, CompilerOption.MslPlatform, 1), context, "target macOS");
             Check(api, api.CompilerInstallCompilerOptions(compiler, options), context, "apply the compiler options");
 
-            foreach (var slot in Slots)
+            foreach (var slot in IsMilkDrop(entryPoint) ? MilkDropSlots : Slots)
             {
                 var binding = new MslResourceBinding
                 {

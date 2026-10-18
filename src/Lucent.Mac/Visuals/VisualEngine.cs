@@ -25,7 +25,8 @@ namespace Lucent.Mac.Visuals;
 /// </remarks>
 public sealed class VisualEngine : IDisposable
 {
-    private const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
+    /// <summary>The visuals' own pictures: half-float, so glow and HDR have room above white.</summary>
+    internal const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
     private const int ConstantCount = 24;
     private const int ParticleStride = 48;
     private const int MaxParticleCount = 4 * 1024 * 1024;
@@ -57,6 +58,8 @@ public sealed class VisualEngine : IDisposable
     private readonly RenderTarget?[] _feedback = new RenderTarget?[2];
     private readonly RenderTarget?[] _transitionTargets = new RenderTarget?[2];
     private readonly List<MTLLibrary> _engineLibraries = new();
+    private readonly MilkDropRenderer? _milkDrop;
+    private readonly string? _milkDropProblem;
     private MTLFunction _vertexFunction;
     private MTLFunction _spriteFunction;
     private MTLFunction _presentFunction;
@@ -78,6 +81,9 @@ public sealed class VisualEngine : IDisposable
     private DisplayInfo _display = DisplayInfo.Standard;
     private int _compilersRunning;
     private int _frame;
+    private int _frameSlot;
+    private double _frameTime;
+    private float _frameDelta;
     private int _current;
     private int _frameCount;
     private int _activePreset = -1;
@@ -105,6 +111,20 @@ public sealed class VisualEngine : IDisposable
         CreateResources();
         CompileEngineShaders();
         PresentPipelineFor(outputFormat);
+        if (_slots.Any(slot => slot.Source.IsMilkDrop))
+        {
+            try
+            {
+                using var pool = AutoreleasePool.Begin();
+                _milkDrop = new MilkDropRenderer(device, files, FramesInFlight);
+            }
+            catch (Exception ex)
+            {
+                // Without MilkDrop's own shaders the presets are skipped; Lucent's visuals carry on.
+                _milkDropProblem = ex.Message;
+                ErrorLog.Write("MilkDrop presets", ex);
+            }
+        }
     }
 
     /// <summary>Raised (on a compile thread) when a visual fails to compile; it is skipped.</summary>
@@ -274,72 +294,13 @@ public sealed class VisualEngine : IDisposable
         return pipeline;
     }
 
-    /// <summary>Compiles Metal source and returns one of its functions. The library is kept in <paramref name="libraries"/> to be freed later.</summary>
-    private MTLFunction LoadFunction(string source, string name, List<MTLLibrary> libraries)
-    {
-        var options = new MTLCompileOptions
-        {
-            LanguageVersion = MTLLanguageVersion.Version21,
-            // Strict maths, like the HLSL compiler: the particle shaders check isfinite() to respawn
-            // particles whose numbers went bad, which fast maths is allowed to assume never happens.
-            FastMathEnabled = false,
-        };
-        var error = new NSError(IntPtr.Zero);
-        var library = _device.NewLibrary(StringHelper.Create(source), options, ref error);
-        options.Dispose();
-        if (library.NativePtr == IntPtr.Zero)
-        {
-            throw new InvalidOperationException(Describe(error, "The Metal shader didn't compile."));
-        }
+    private MTLFunction LoadFunction(string source, string name, List<MTLLibrary> libraries) =>
+        MetalPipelines.LoadFunction(_device, source, name, libraries);
 
-        lock (libraries)
-        {
-            libraries.Add(library);
-        }
+    private MTLRenderPipelineState MakePipeline(MTLFunction vertex, MTLFunction fragment, MTLPixelFormat format, bool additive) =>
+        MetalPipelines.Make(_device, vertex, fragment, format, additive ? MetalBlend.Add : MetalBlend.None);
 
-        var function = library.NewFunction(StringHelper.Create(name));
-        if (function.NativePtr == IntPtr.Zero)
-        {
-            throw new InvalidOperationException($"The Metal shader has no {name} function.");
-        }
-
-        return function;
-    }
-
-    private MTLRenderPipelineState MakePipeline(MTLFunction vertex, MTLFunction fragment, MTLPixelFormat format, bool additive)
-    {
-        var description = new MTLRenderPipelineDescriptor
-        {
-            VertexFunction = vertex,
-            FragmentFunction = fragment,
-        };
-        var colour = description.ColorAttachments.Object(0);
-        colour.PixelFormat = format;
-        if (additive)
-        {
-            // Particles are glowing dots added on top of each other.
-            ObjC.SendVoid(colour.NativePtr, "setBlendingEnabled:", true);
-            colour.RgbBlendOperation = MTLBlendOperation.Add;
-            colour.AlphaBlendOperation = MTLBlendOperation.Add;
-            colour.SourceRGBBlendFactor = MTLBlendFactor.One;
-            colour.DestinationRGBBlendFactor = MTLBlendFactor.One;
-            colour.SourceAlphaBlendFactor = MTLBlendFactor.One;
-            colour.DestinationAlphaBlendFactor = MTLBlendFactor.One;
-        }
-
-        var error = new NSError(IntPtr.Zero);
-        var pipeline = _device.NewRenderPipelineState(description, ref error);
-        description.Dispose();
-        if (pipeline.NativePtr == IntPtr.Zero)
-        {
-            throw new InvalidOperationException(Describe(error, "A Metal pipeline couldn't be made."));
-        }
-
-        return pipeline;
-    }
-
-    private static string Describe(NSError error, string fallback) =>
-        error.NativePtr != IntPtr.Zero ? StringHelper.Read(error.LocalizedDescription) ?? fallback : fallback;
+    private static string Describe(NSError error, string fallback) => MetalPipelines.Describe(error, fallback);
 
     // ---- Compiling visuals in the background ----
 
@@ -376,6 +337,15 @@ public sealed class VisualEngine : IDisposable
             try
             {
                 using var pool = AutoreleasePool.Begin();
+                if (slot.Source.IsMilkDrop)
+                {
+                    // MilkDrop presets compile their equations, and their shaders if they have them.
+                    slot.MilkDrop = MilkDropVisual.Compile(
+                        _milkDrop ?? throw new InvalidOperationException($"MilkDrop presets can't be drawn: {_milkDropProblem}"), _files, slot.Source);
+                    Volatile.Write(ref slot.State, PresetSlot.Ready);
+                    continue;
+                }
+
                 var fragment = LoadFunction(_files.Preset(slot.Source, "PSMain"), "preset_fragment", slot.Libraries);
                 slot.Pipeline = MakePipeline(_vertexFunction, fragment, FeedbackFormat, additive: false);
                 if (slot.Source.IsParticles)
@@ -399,6 +369,12 @@ public sealed class VisualEngine : IDisposable
             catch (Exception ex)
             {
                 Volatile.Write(ref slot.State, PresetSlot.Failed);
+                if (slot.Source.IsMilkDrop)
+                {
+                    // A broken .milk file is skipped; the log says which and why.
+                    ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
+                }
+
                 PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
             }
         }
@@ -463,6 +439,9 @@ public sealed class VisualEngine : IDisposable
         var commands = _queue.CommandBuffer();
         _inFlight[slot] = ObjC.Send(commands.NativePtr, "retain");
         _frame++;
+        _frameSlot = slot;
+        _frameTime = now;
+        _frameDelta = deltaTime;
 
         var width = (int)output.Width;
         var height = (int)output.Height;
@@ -526,6 +505,7 @@ public sealed class VisualEngine : IDisposable
         _constants[17] = display.SdrWhiteNits / 80f;
         _constants[18] = display.PeakNits / 80f;
         _constants[19] = _frameCount++;
+        _constants[23] = PlainOutputAmount(progress);
 
         var target = _feedback[_current]!;
         var previous = _feedback[1 - _current]!;
@@ -560,6 +540,12 @@ public sealed class VisualEngine : IDisposable
     private void DrawPreset(MTLCommandBuffer commands, MTLTexture audio, RenderTarget destination, RenderTarget source, int presetIndex)
     {
         var slot = _slots[presetIndex];
+        if (slot.MilkDrop is { } milkDrop && _milkDrop is not null)
+        {
+            DrawMilkDrop(commands, destination, presetIndex, milkDrop);
+            return;
+        }
+
         MTLTexture? particleLayer = null;
         if (slot.Simulation is { } simulation)
         {
@@ -568,6 +554,62 @@ public sealed class VisualEngine : IDisposable
         }
 
         DrawPass(commands, audio, destination.Texture, _renderWidth, _renderHeight, slot.Pipeline, source.Texture, null, particleLayer);
+    }
+
+    private void DrawMilkDrop(MTLCommandBuffer commands, RenderTarget destination, int presetIndex, MilkDropVisual milkDrop)
+    {
+        var slot = _slots[presetIndex];
+        if (!milkDrop.NotesLogged)
+        {
+            // What had to be left out of it, logged when it's first shown rather than for a whole pack at every start.
+            milkDrop.NotesLogged = true;
+            if (milkDrop.Notes.Count > 0)
+            {
+                ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)}", string.Join(Environment.NewLine, milkDrop.Notes));
+            }
+        }
+
+        if (HasFailed(presetIndex))
+        {
+            return;
+        }
+
+        try
+        {
+            _milkDrop!.Draw(
+                milkDrop, commands, destination.Texture, _renderWidth, _renderHeight, _analyzer,
+                _frame, _frameSlot, _frameTime, _frameDelta, _quality, _autoCycleSeconds);
+        }
+        catch (Exception ex)
+        {
+            // A preset that goes wrong while drawing (rather than while compiling) is dropped for the rest
+            // of the session and the visuals move on, instead of the whole visualizer stopping.
+            Volatile.Write(ref slot.State, PresetSlot.Failed);
+            ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} stopped", ex);
+            PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
+            var next = NextUsable(presetIndex);
+            if (_requestedPreset == presetIndex && next >= 0)
+            {
+                _requestedPreset = next;
+                PresetChanged?.Invoke(next);
+            }
+        }
+    }
+
+    /// <summary>
+    /// How much of the picture is a MilkDrop preset's (1 when one is showing, part-way during a
+    /// transition to or from one), which the screen pass shows without Lucent's glow and tone-mapping.
+    /// </summary>
+    private float PlainOutputAmount(float progress)
+    {
+        var to = _slots[_activePreset].Source.IsMilkDrop ? 1f : 0f;
+        if (_fromPreset < 0)
+        {
+            return to;
+        }
+
+        var from = _slots[_fromPreset].Source.IsMilkDrop ? 1f : 0f;
+        return from + (to - from) * progress;
     }
 
     /// <summary>
@@ -854,6 +896,7 @@ public sealed class VisualEngine : IDisposable
         if (presetIndex >= 0 && presetIndex != _activePreset)
         {
             _slots[presetIndex].ReleaseParticles();
+            _slots[presetIndex].MilkDrop?.ReleaseImages();
         }
     }
 
@@ -958,6 +1001,7 @@ public sealed class VisualEngine : IDisposable
             library.Dispose();
         }
 
+        _milkDrop?.Dispose();
         _sampler.Dispose();
         _queue.Dispose();
     }
@@ -979,6 +1023,9 @@ public sealed class VisualEngine : IDisposable
         public MTLBuffer? Particles;
         public int ParticleCount;
         public bool ParticlesFresh;
+
+        // MilkDrop presets only: the running preset and its shaders, drawn instead of Pipeline.
+        public MilkDropVisual? MilkDrop;
 
         public PresetSlot(PresetSource source) => Source = source;
 
@@ -1006,6 +1053,7 @@ public sealed class VisualEngine : IDisposable
             }
 
             Simulation?.Dispose();
+            MilkDrop?.Dispose();
             foreach (var library in Libraries)
             {
                 library.Dispose();

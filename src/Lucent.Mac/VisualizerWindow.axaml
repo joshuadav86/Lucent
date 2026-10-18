@@ -248,6 +248,10 @@
                                                           HorizontalAlignment="Stretch">
                                                     <Expander.Header>
                                                         <DockPanel>
+                                                            <!-- Only the MilkDrop folder has it. -->
+                                                            <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="20" Padding="8,0"
+                                                                    Margin="8,0,0,0" Content="IMPORT" IsVisible="{Binding IsMilkDrop}"
+                                                                    ToolTip.Tip="Add MilkDrop presets of your own" Click="OnImportIntoMilkDropFolder" />
                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
                                                                        Margin="8,0,2,0" VerticalAlignment="Center"
                                                                        Foreground="{DynamicResource FaintTextBrush}" />

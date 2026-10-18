@@ -49,6 +49,8 @@ public partial class VisualizerWindow
             menu.Items.Add(favourite);
         }
 
+        menu.Items.Add(MilkDropMenu());
+
         menu.Items.Add(new Separator());
         var auto = Item("Auto", new KeyGesture(Key.A), () =>
         {
