@@ -280,6 +280,7 @@ public partial class MainWindow : Window
     // True while the windows are being opened at start-up, when one window showing mustn't count
     // as the others being switched off.
     private bool _openingWindows;
+    private bool _restartIntoUpdate;
 
     /// <summary>
     /// The player's height can change after it opens: Windows takes its standard frame away once
@@ -1042,8 +1043,14 @@ public partial class MainWindow : Window
 
     private void OnInstallUpdate(object sender, RoutedEventArgs e)
     {
-        _updater.InstallOnExit(restart: true);
+        // The update is handed over once the player has closed, so if something stops it closing,
+        // such as unsaved edits, nothing has changed.
+        _restartIntoUpdate = true;
         SystemCommands.CloseWindow(this);
+        if (IsLoaded)
+        {
+            _restartIntoUpdate = false;
+        }
     }
 
     private void OnBuyMeACoffee(object sender, RoutedEventArgs e)
@@ -2018,6 +2025,6 @@ public partial class MainWindow : Window
         CompositionTarget.Rendering -= OnMeterFrame;
         _visualizer.Dispose();
         _player.Dispose();
-        _updater.InstallOnExit(restart: false);
+        _updater.InstallOnExit(restart: _restartIntoUpdate);
     }
 }

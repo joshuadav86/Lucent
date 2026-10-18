@@ -67,6 +67,7 @@ public partial class MainWindow : Window
     private double _marqueeDistance;
     private double _wheel;
     private bool _closed;
+    private bool _restartIntoUpdate;
 
     public MainWindow()
     {
@@ -1177,8 +1178,18 @@ public partial class MainWindow : Window
 
     private void OnInstallUpdate(object? sender, RoutedEventArgs e)
     {
-        _updater.InstallOnExit(restart: true);
+        // Shutting down before closing, so the windows around the player close with it instead of
+        // hiding (which would stop the player closing, and save them as closed for after the restart).
+        // The update is handed over once the player has closed; if something stops it closing, such
+        // as unsaved edits, nothing has changed.
+        _restartIntoUpdate = true;
+        IsShuttingDown = true;
         Close();
+        if (!_closed)
+        {
+            _restartIntoUpdate = false;
+            IsShuttingDown = false;
+        }
     }
 
     private void OnBuyMeACoffee(object? sender, RoutedEventArgs e)
@@ -2203,6 +2214,6 @@ public partial class MainWindow : Window
         _positionTimer.Stop();
         _visualizer.Dispose();
         _player.Dispose();
-        _updater.InstallOnExit(restart: false);
+        _updater.InstallOnExit(restart: _restartIntoUpdate);
     }
 }
