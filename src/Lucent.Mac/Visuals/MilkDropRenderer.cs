@@ -414,12 +414,14 @@ public sealed class MilkDropRenderer : IDisposable
 
     /// <summary>
     /// One frame's uploads (the warp meshes and the shapes and waves), one after another in a buffer the
-    /// CPU writes and the GPU reads. A buffer that fills up is swapped for one twice the size; the frames
-    /// already encoded keep their hold on the old one until the GPU has finished with it.
+    /// CPU writes and the GPU reads. A buffer that fills up is swapped for one twice the size. The old one
+    /// is kept until the next frame in this slot: this frame may not have handed it to the GPU yet (the
+    /// mesh is put before the shapes, and bound after), and once it has, the frame keeps its own hold on it.
     /// </summary>
     private sealed class UploadBuffer : IDisposable
     {
         private readonly MTLDevice _device;
+        private readonly List<MTLBuffer> _retired = new();
         private MTLBuffer _buffer;
         private ulong _used;
 
@@ -429,7 +431,17 @@ public sealed class MilkDropRenderer : IDisposable
             _buffer = device.NewBuffer(1024 * 1024, MTLResourceOptions.ResourceStorageModeShared);
         }
 
-        public void Reset() => _used = 0;
+        /// <summary>Starts this slot's next frame: the frame that last used it has finished on the GPU.</summary>
+        public void Reset()
+        {
+            _used = 0;
+            foreach (var buffer in _retired)
+            {
+                buffer.Dispose();
+            }
+
+            _retired.Clear();
+        }
 
         public (MTLBuffer Buffer, ulong Offset) Put(float[] data, int count)
         {
@@ -437,7 +449,7 @@ public sealed class MilkDropRenderer : IDisposable
             if (_used + bytes > _buffer.Length)
             {
                 var size = Math.Max(_buffer.Length * 2, bytes + UploadAlignment);
-                _buffer.Dispose();
+                _retired.Add(_buffer);
                 _buffer = _device.NewBuffer(size, MTLResourceOptions.ResourceStorageModeShared);
                 _used = 0;
             }
@@ -448,6 +460,10 @@ public sealed class MilkDropRenderer : IDisposable
             return (_buffer, offset);
         }
 
-        public void Dispose() => _buffer.Dispose();
+        public void Dispose()
+        {
+            Reset();
+            _buffer.Dispose();
+        }
     }
 }
