@@ -2,7 +2,14 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!--
+      The Windows 10 SDK version brings in the WinRT APIs, for Lucent's place in Windows' media controls
+      (the volume flyout and lock screen, see Audio/MediaControls.cs). It still runs on any Windows 10 or 11:
+      the version below (1809, the oldest .NET's WinRT support works on) is what the code is checked
+      against, and on anything older the media controls quietly fall back to plain media-key hotkeys.
+    -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -29,6 +36,7 @@
     <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
+    <PackageReference Include="Vortice.MediaFoundation" Version="3.8.3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,9 +51,11 @@
   <ItemGroup>
     <!-- Shaders are compiled when the app starts, so they ship as plain files people can edit. -->
     <None Include="Presets\*.hlsl" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="Presets\MilkDrop\*.milk" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="Shaders\*.hlsl*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Copies inside Lucent.exe too, for when it's run without its folder (say, straight from the zip). -->
     <EmbeddedResource Include="Presets\*.hlsl" LogicalName="Presets/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Presets\MilkDrop\*.milk" LogicalName="Presets/MilkDrop/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Shaders\*.hlsl*" LogicalName="Shaders/%(Filename)%(Extension)" />
   </ItemGroup>
 

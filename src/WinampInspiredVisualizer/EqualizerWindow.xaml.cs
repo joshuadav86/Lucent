@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -25,6 +24,7 @@ public partial class EqualizerWindow : Window
     private readonly AudioPlayer _player;
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _saveTimer;
+    private readonly DispatcherTimer _headroomTimer;
     private readonly List<Slider> _bandSliders = new();
     private EqualizerBands _bands;
     private double _columnWidth;
@@ -88,6 +88,11 @@ public partial class EqualizerWindow : Window
             _saveTimer.Stop();
             _settings.Save();
         };
+
+        // How far the music is turned down depends on the music, so it's checked as it plays.
+        _headroomTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _headroomTimer.Tick += (_, _) => ShowHeadroom();
+        _headroomTimer.Start();
 
         foreach (var count in EqualizerBands.Counts)
         {
@@ -347,17 +352,18 @@ public partial class EqualizerWindow : Window
         StatusText.SetResourceReference(TextBlock.ForegroundProperty, "MutedTextBrush");
     }
 
-    private void ShowHeadroom(EqualizerDesign design)
+    private void ShowHeadroom()
     {
-        HeadroomText.Text = Eq.Enabled && design.HeadroomDb >= 0.5
-            ? $"Turned down {design.HeadroomDb:0} dB so boosts don't distort"
+        var headroom = _player.Equalizer.HeadroomDb;
+        HeadroomText.Text = Eq.Enabled && headroom >= 0.5
+            ? $"Turned down {headroom:0} dB so boosts don't distort"
             : "";
     }
 
     private void RedrawCurve()
     {
         var design = _player.Equalizer.Preview;
-        ShowHeadroom(design);
+        ShowHeadroom();
 
         var width = _columnWidth * _bands.Count;
         var height = CurveFrame.Height - 2;
@@ -653,7 +659,7 @@ public partial class EqualizerWindow : Window
 
     private void OnPresetsClicked(object sender, RoutedEventArgs e)
     {
-        var menu = new ContextMenu { PlacementTarget = PresetsButton, Placement = PlacementMode.Bottom, VerticalOffset = 4 };
+        var menu = new ContextMenu();
         foreach (var preset in EqualizerPresets.BuiltIn)
         {
             menu.Items.Add(PresetItem(preset.Name, preset.Curve));
@@ -679,7 +685,8 @@ public partial class EqualizerWindow : Window
             menu.Items.Add(delete);
         }
 
-        menu.IsOpen = true;
+        // Long enough to run under the taskbar on a short screen, so it opens where it fits.
+        DropDownMenu.Open(menu, PresetsButton);
     }
 
     private MenuItem PresetItem(string name, EqualizerCurve curve)
@@ -704,7 +711,7 @@ public partial class EqualizerWindow : Window
 
     private void ShowDeleteMenu()
     {
-        var menu = new ContextMenu { PlacementTarget = PresetsButton, Placement = PlacementMode.Bottom, VerticalOffset = 4 };
+        var menu = new ContextMenu();
         foreach (var saved in Eq.CustomPresets)
         {
             var item = new MenuItem { Header = $"Delete “{saved.Name}”" };
@@ -722,7 +729,7 @@ public partial class EqualizerWindow : Window
             menu.Items.Add(item);
         }
 
-        menu.IsOpen = true;
+        DropDownMenu.Open(menu, PresetsButton);
     }
 
     private void StartSaving()
@@ -841,6 +848,7 @@ public partial class EqualizerWindow : Window
 
         _open = null;
         _saveTimer.Stop();
+        _headroomTimer.Stop();
         _settings.Save();
     }
 

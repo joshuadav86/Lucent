@@ -231,6 +231,40 @@ public sealed class VisualizerHost : HwndHost
             throw new InvalidOperationException("Couldn't create the visualizer window.");
         }
 
+        StartRenderer(hwnd);
+        return new HandleRef(this, hwnd);
+    }
+
+    /// <summary>
+    /// Loads the visuals again (after MilkDrop presets are imported, say) and carries on with the one
+    /// showing, or with <paramref name="show"/> if it's given and loads. The renderer starts over, so
+    /// there's a moment of black.
+    /// </summary>
+    public void ReloadPresets(string? show = null)
+    {
+        if (_renderer is not { } renderer)
+        {
+            return;
+        }
+
+        var names = renderer.PresetNames;
+        if (show is not null)
+        {
+            StartPresetName = show;
+        }
+        else if (_presetIndex >= 0 && _presetIndex < names.Count)
+        {
+            StartPresetName = names[_presetIndex];
+        }
+
+        // The new renderer draws into the same window, so the old one has to have let go of it first.
+        _renderer = null;
+        renderer.Stop(TimeSpan.FromSeconds(10));
+        StartRenderer(Handle);
+    }
+
+    private void StartRenderer(IntPtr hwnd)
+    {
         var dispatcher = Dispatcher;
         _renderer = new Renderer(hwnd, _analyzer);
         var startIndex = StartPresetName is null ? -1 : IndexOfName(_renderer.PresetNames, StartPresetName);
@@ -263,8 +297,6 @@ public sealed class VisualizerHost : HwndHost
         _renderer.FrameRateMeasured += stats => dispatcher.InvokeAsync(() => FrameRateMeasured?.Invoke(this, stats));
         _renderer.DisplayChanged += display => dispatcher.InvokeAsync(() => DisplayChanged?.Invoke(this, display));
         _renderer.Start();
-
-        return new HandleRef(this, hwnd);
     }
 
     private static int IndexOfName(IReadOnlyList<string> names, string name)

@@ -184,13 +184,13 @@
                     </UniformGrid>
                 </Border>
                 <TextBlock Theme="{StaticResource OptionHint}"
-                           Text="Mono mixes the channels into one: good for speech, podcasts and single speakers, in files about half the size." />
+                           Text="Mono mixes the channels into one: good for speech, podcasts, and single speakers, in files about half the size." />
 
                 <!-- Converting: processing done to every song on the way -->
                 <StackPanel x:Name="StepsArea">
                     <DockPanel Margin="0,14,0,6">
                         <Button x:Name="AddStepButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="ADD STEP"
-                                Click="OnAddStep" ToolTip.Tip="Normalize, limit, trim silence, remove hum and more, done to every sound" />
+                                Click="OnAddStep" ToolTip.Tip="Normalize, limit, trim silence, remove hum, and more, done to every sound" />
                         <TextBlock Theme="{StaticResource OptionLabel}" Margin="2,0,0,0" VerticalAlignment="Center" Text="Process each sound" />
                     </DockPanel>
                     <StackPanel x:Name="StepsList" />

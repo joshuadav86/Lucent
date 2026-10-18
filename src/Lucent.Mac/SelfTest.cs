@@ -151,6 +151,7 @@ public static class SelfTest
         var pixels = new byte[Width * Height * 4];
         var dark = new List<string>();
         var slow = new List<string>();
+        var heavy = new List<string>();
         var drawingErrors = 0;
         var now = 0.0;
         var music = new MadeUpMusic();
@@ -167,6 +168,7 @@ public static class SelfTest
             var drawn = 0;
             var waitedFor = Stopwatch.StartNew();
             MTLCommandBuffer? last = null;
+            MTLCommandBuffer? latest = null;
             var brightness = 0.0;
             while (!engine.HasFailed(index) && waitedFor.Elapsed < TimeSpan.FromSeconds(120))
             {
@@ -178,6 +180,7 @@ public static class SelfTest
                 if (engine.ActivePreset == index)
                 {
                     drawn++;
+                    latest = commands;
                     if (drawn >= FramesPerVisual && (drawn - FramesPerVisual) % CheckEvery == 0)
                     {
                         commands.WaitUntilCompleted();
@@ -212,6 +215,26 @@ public static class SelfTest
             if (engine.HasFailed(index))
             {
                 continue;
+            }
+
+            if (last is null && latest is { } newest)
+            {
+                // On screen but drawing too slowly to reach FramesPerVisual in time, as a heavy visual can
+                // on a slow or virtual GPU: check the newest frame it drew instead.
+                newest.WaitUntilCompleted();
+                if (newest.Status == MTLCommandBufferStatus.Error)
+                {
+                    drawingErrors++;
+                    Console.WriteLine($"::error::{name}: the GPU reported an error drawing it: {StringHelper.Read(newest.Error.LocalizedDescription)}");
+                    continue;
+                }
+
+                last = newest;
+                heavy.Add($"{name} ({drawn} frames in {waitedFor.Elapsed.TotalSeconds:0} s)");
+                if (canRead)
+                {
+                    brightness = Brightness(output, pixels);
+                }
             }
 
             if (last is null)
@@ -252,6 +275,11 @@ public static class SelfTest
         if (slow.Count > 0)
         {
             Console.WriteLine($"Slow starters, black after {FramesPerVisual} frames but drawing later: {string.Join(", ", slow)}");
+        }
+
+        if (heavy.Count > 0)
+        {
+            Console.WriteLine($"::warning::Drew too slowly on this GPU to reach {FramesPerVisual} frames: {string.Join(", ", heavy)}");
         }
 
         if (dark.Count > 0)

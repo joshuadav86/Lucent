@@ -9,20 +9,21 @@ on:
 permissions:
   contents: write
 
-# Merging several pull requests close together starts several builds of main at once. Only the
-# newest one should publish the "latest" download, so a newer build of main cancels an older one
-# that's still running (pull request builds each keep their own group).
-concurrency:
-  group: ${{ github.event_name == 'push' && 'publish-latest' || format('build-{0}', github.run_id) }}
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: windows-latest
+    # Merging several pull requests close together starts several builds of main at once. Only the
+    # newest one should publish the Windows download, so a newer build of main cancels an older Windows
+    # build that's still running (pull request builds each keep their own group). The Mac builds queue
+    # instead of cancelling (see the mac job), since they take longer than the gap between merges.
+    concurrency:
+      group: ${{ github.event_name == 'push' && 'publish-latest-windows' || format('build-{0}', github.run_id) }}
+      cancel-in-progress: true
     env:
       # Every build gets a higher version than the last, so the installer and in-app updates can
-      # tell which is newer.
-      LUCENT_VERSION: 0.1.${{ github.run_number }}
+      # tell which is newer. The first two numbers are the release being worked towards: a build
+      # chosen to be that release is published as it is (see release.yml), so they go up after it.
+      LUCENT_VERSION: 1.0.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +59,11 @@ jobs:
           $particles = Get-Content "$root/Shaders/Particles.hlsli" -Raw
           $particleMain = Get-Content "$root/Shaders/ParticleMain.hlsli" -Raw
           if (-not (Test-Shader "Particles" ($common + "`n" + $particles) "PSSprite" "ps_5_0")) { $failed = $true }
+          # Recording a video turns frames into the encoder's NV12 pictures with these (it stands alone).
+          $video = Get-Content "$root/Shaders/VideoEncode.hlsl" -Raw
+          if (-not (Test-Shader "VideoEncode" $video "VSMain" "vs_5_0")) { $failed = $true }
+          if (-not (Test-Shader "VideoEncode" $video "PSLuma" "ps_5_0")) { $failed = $true }
+          if (-not (Test-Shader "VideoEncode" $video "PSChroma" "ps_5_0")) { $failed = $true }
           foreach ($preset in Get-ChildItem "$root/Presets/*.hlsl") {
             # Same assembly as Renderer.CompileLoop does at runtime. Particle visuals (they define
             # Simulate) also get the particle API, a compute shader and a vertex shader.
@@ -70,6 +76,23 @@ jobs:
               if (-not (Test-Shader $preset.BaseName ($source + $particleMain) "CSMain" "cs_5_0")) { $failed = $true }
               if (-not (Test-Shader $preset.BaseName ($source + $particleMain) "VSParticle" "vs_5_0")) { $failed = $true }
             }
+          }
+          # MilkDrop presets: the engine's own passes, then the sample presets' shaders as the app
+          # translates them. MilkDropCheck also checks the expression language and runs each preset.
+          $milkDrop = (Get-Content "$root/Shaders/MilkDrop.hlsli" -Raw) + "`n" + (Get-Content "$root/Shaders/MilkDrop.hlsl" -Raw)
+          foreach ($entry in "VSWarp", "VSScreen", "VSDraw") {
+            if (-not (Test-Shader "MilkDrop" $milkDrop $entry "vs_5_0")) { $failed = $true }
+          }
+          foreach ($entry in "PSWarpClassic", "PSCompClassic", "PSDraw", "PSDrawTextured", "PSBlurAcross", "PSBlurDown") {
+            if (-not (Test-Shader "MilkDrop" $milkDrop $entry "ps_5_0")) { $failed = $true }
+          }
+          $milkShaders = Join-Path $env:RUNNER_TEMP "milkdrop"
+          dotnet run --project tools/MilkDropCheck -c Release -- --shaders $milkShaders | Out-Host
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::MilkDropCheck failed"; $failed = $true }
+          foreach ($shader in Get-ChildItem "$milkShaders/*Preset.hlsl") {
+            $entry = $shader.BaseName.Split('.')[-1]
+            & $fxc.FullName /nologo /T ps_5_0 /E $entry /Fo $out $shader.FullName | Out-Host
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::$($shader.Name) failed to compile"; $failed = $true }
           }
           if ($failed) { exit 1 }
 
@@ -99,12 +122,146 @@ jobs:
             if (-not (Test-Path "publish/$dll")) { Write-Host "::error::$dll is missing from the published app"; exit 1 }
           }
 
+      - name: Make test music
+        shell: pwsh
+        run: |
+          # A few seconds of tones as WAV and AIFF, which NAudio reads itself, and as MP3, which goes through
+          # Media Foundation, encoded with the LAME that ships beside Lucent.exe.
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.IO;
+          using System.Runtime.InteropServices;
+          using System.Text;
+
+          public static class TestMusic
+          {
+              private const int Rate = 44100;
+              private const int Frames = Rate * 3;
+
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern IntPtr lame_init();
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_set_in_samplerate(IntPtr lame, int rate);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_set_num_channels(IntPtr lame, int channels);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_init_params(IntPtr lame);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_encode_buffer_interleaved(IntPtr lame, short[] pcm, int frames, byte[] mp3, int size);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_encode_flush(IntPtr lame, byte[] mp3, int size);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_close(IntPtr lame);
+
+              public static void Write()
+              {
+                  // 220 Hz in stereo, a quarter of a second loud then a quarter quiet.
+                  var pcm = new short[Frames * 2];
+                  for (var i = 0; i < Frames; i++)
+                  {
+                      var v = (short)(12000 * Math.Sin(2 * Math.PI * 220 * i / Rate) * ((i / 11025) % 2 == 0 ? 1 : 0.3));
+                      pcm[i * 2] = v;
+                      pcm[i * 2 + 1] = v;
+                  }
+
+                  var data = pcm.Length * 2;
+                  using (var wav = new BinaryWriter(File.Create("test.wav")))
+                  {
+                      wav.Write(Encoding.ASCII.GetBytes("RIFF")); wav.Write(36 + data); wav.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
+                      wav.Write(16); wav.Write((short)1); wav.Write((short)2); wav.Write(Rate); wav.Write(Rate * 4); wav.Write((short)4); wav.Write((short)16);
+                      wav.Write(Encoding.ASCII.GetBytes("data")); wav.Write(data);
+                      foreach (var sample in pcm) { wav.Write(sample); }
+                  }
+
+                  // AIFF is big-endian, and gives its sample rate as an 80-bit float (44100 is 400E AC44 0000 0000 0000).
+                  using (var aiff = new BinaryWriter(File.Create("test.aiff")))
+                  {
+                      aiff.Write(Encoding.ASCII.GetBytes("FORM")); BigEndian(aiff, 4 + 26 + 16 + data, 4); aiff.Write(Encoding.ASCII.GetBytes("AIFFCOMM"));
+                      BigEndian(aiff, 18, 4); BigEndian(aiff, 2, 2); BigEndian(aiff, Frames, 4); BigEndian(aiff, 16, 2);
+                      aiff.Write(new byte[] { 0x40, 0x0E, 0xAC, 0x44, 0, 0, 0, 0, 0, 0 });
+                      aiff.Write(Encoding.ASCII.GetBytes("SSND")); BigEndian(aiff, 8 + data, 4); BigEndian(aiff, 0, 4); BigEndian(aiff, 0, 4);
+                      foreach (var sample in pcm) { BigEndian(aiff, sample, 2); }
+                  }
+
+                  var lame = lame_init();
+                  lame_set_in_samplerate(lame, Rate);
+                  lame_set_num_channels(lame, 2);
+                  if (lame_init_params(lame) < 0) { throw new InvalidOperationException("LAME wouldn't start."); }
+                  var mp3 = new byte[pcm.Length * 5 / 4 + 7200];
+                  var written = lame_encode_buffer_interleaved(lame, pcm, Frames, mp3, mp3.Length);
+                  var end = new byte[7200];
+                  var flushed = lame_encode_flush(lame, end, end.Length);
+                  lame_close(lame);
+                  if (written < 0 || flushed < 0) { throw new InvalidOperationException("LAME couldn't encode the test music."); }
+                  using (var file = File.Create("test.mp3"))
+                  {
+                      file.Write(mp3, 0, written);
+                      file.Write(end, 0, flushed);
+                  }
+              }
+
+              private static void BigEndian(BinaryWriter writer, int value, int bytes)
+              {
+                  for (var i = bytes - 1; i >= 0; i--) { writer.Write((byte)(value >> (8 * i))); }
+              }
+          }
+          '@
+          # The files go in the current folder, and LAME is found through PATH.
+          [System.IO.Directory]::SetCurrentDirectory($PWD.Path)
+          $env:PATH = "$((Resolve-Path publish).Path);$env:PATH"
+          [TestMusic]::Write()
+          Get-ChildItem test.* | Format-Table Name, Length -AutoSize | Out-String | Write-Host
+
+      - name: Self-test (decoding and every visual)
+        shell: pwsh
+        run: |
+          # Lucent.exe is a windowed program: piping its output makes PowerShell wait for it, shows what it
+          # writes and sets $LASTEXITCODE. The runner has no graphics card, so Direct3D draws in software.
+          publish/Lucent.exe --self-test --sheet windows-visuals.png test.wav test.aiff test.mp3 | Out-Host
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-visuals
+          path: windows-visuals.png
+          if-no-files-found: ignore
+
       - name: Zip app
         shell: pwsh
         run: Compress-Archive -Path publish/* -DestinationPath Lucent-win-x64.zip
 
+      # Signing: without a certificate, Lucent and its installer are unsigned, so SmartScreen warns
+      # people the first time (More info > Run anyway). To sign with Azure Trusted Signing (Artifact
+      # Signing), add these repository secrets and nothing else needs to change:
+      #   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET  an app registration given the
+      #                                    "Trusted Signing Certificate Profile Signer" role on the account
+      #   TRUSTED_SIGNING_ENDPOINT         the account's region endpoint, e.g. https://eus.codesigning.azure.net
+      #   TRUSTED_SIGNING_ACCOUNT          the signing account's name
+      #   TRUSTED_SIGNING_PROFILE          the certificate profile's name
+      - name: Set up signing
+        id: signing
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          TRUSTED_SIGNING_ENDPOINT: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT: ${{ secrets.TRUSTED_SIGNING_ACCOUNT }}
+          TRUSTED_SIGNING_PROFILE: ${{ secrets.TRUSTED_SIGNING_PROFILE }}
+        run: |
+          # No account (pull requests from forks never get secrets either): leave it unsigned.
+          if (-not $env:AZURE_CLIENT_ID -or -not $env:TRUSTED_SIGNING_ENDPOINT -or -not $env:TRUSTED_SIGNING_ACCOUNT -or -not $env:TRUSTED_SIGNING_PROFILE) {
+            Write-Host "::notice::No Trusted Signing account in the secrets, so Lucent for Windows is unsigned."
+            exit 0
+          }
+          $metadata = Join-Path $env:RUNNER_TEMP "trusted-signing.json"
+          @{
+            Endpoint = $env:TRUSTED_SIGNING_ENDPOINT
+            CodeSigningAccountName = $env:TRUSTED_SIGNING_ACCOUNT
+            CertificateProfileName = $env:TRUSTED_SIGNING_PROFILE
+          } | ConvertTo-Json | Set-Content -Path $metadata -Encoding utf8
+          "metadata=$metadata" >> $env:GITHUB_OUTPUT
+
       - name: Build the installer
         shell: pwsh
+        env:
+          # Read by the signing client to sign in to Azure, when signing is set up.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          SIGNING_METADATA: ${{ steps.signing.outputs.metadata }}
         run: |
           # Velopack makes Lucent-Setup.exe (installs for the current user, no admin needed) and the
           # update package and feed that installed copies check for new builds.
@@ -112,11 +269,14 @@ jobs:
           # and identifies the app to Velopack, so changing it would strand copies already installed.
           # The title and main exe can change: Velopack renames and retargets shortcuts when it updates.
           dotnet tool install vpk --version 1.2.161 --tool-path .vpk
+          # With signing set up, Velopack signs Lucent.exe, the other programs and libraries that aren't
+          # signed already, the installer and the updater.
+          $signing = if ($env:SIGNING_METADATA) { @("--azureTrustedSignFile", $env:SIGNING_METADATA) } else { @() }
           .vpk/vpk pack --packId Lucid --packVersion $env:LUCENT_VERSION --packDir publish --mainExe Lucent.exe `
             --packTitle Lucent --packAuthors joshuadav86 `
             --icon src/WinampInspiredVisualizer/Assets/Lucent.ico `
             --splashImage assets/lucent-icon.png --splashProgressColor "#8B5CF6" `
-            --outputDir releases
+            --outputDir releases @signing
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item releases/Lucid-win-Setup.exe Lucent-Setup.exe
           Get-ChildItem releases | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
@@ -143,13 +303,25 @@ jobs:
             echo "main has moved on to $newest; leaving the latest download to that build."
             exit 0
           fi
+          # Recreating the release would drop the Mac downloads, which come from a slower job that may
+          # still be running; keep the newest ones until that job replaces them.
+          mkdir -p mac-carry
+          gh release download latest -p '*mac*' -p '*osx*' -D mac-carry 2> /dev/null || true
+          cat > release-notes.md << 'NOTES'
+          Automatic build of the newest version on main.
+
+          Windows: download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download Lucent-win-x64.zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself).
+
+          Mac (macOS 12 or later): download Lucent-Setup-mac-arm64.pkg for Apple silicon Macs (M1 and later) or Lucent-Setup-mac-x64.pkg for Intel Macs, and open it to install Lucent into Applications; it keeps itself up to date from here. Or download Lucent-mac-arm64.zip or Lucent-mac-x64.zip and open Lucent.app from it (that copy doesn't update itself). If macOS says it can't check the app or installer, open System Settings > Privacy & Security and click Open Anyway.
+          NOTES
           gh release delete latest --cleanup-tag --yes || true
           # The .nupkg and the releases/assets files are what installed copies of Lucent update from.
           gh release create latest Lucent-Setup.exe Lucent-win-x64.zip \
             releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES \
             --target "$GITHUB_SHA" --prerelease \
             --title "Latest build ($LUCENT_VERSION)" \
-            --notes "Automatic build of the newest version on main. Download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download the zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself)."
+            --notes-file release-notes.md
+          if [ -n "$(ls -A mac-carry)" ]; then gh release upload latest mac-carry/* --clobber; fi
 
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
   # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
@@ -258,8 +430,14 @@ jobs:
             runner: macos-15-intel
             cpu: x86_64
     runs-on: ${{ matrix.runner }}
+    # Builds of main queue up per chip rather than cancelling each other: a Mac build (the Intel one
+    # especially) takes longer than the gap between merges, so cancelling would mean none ever finished
+    # and published. GitHub keeps only the newest waiting build, so the queue never grows past one.
+    concurrency:
+      group: ${{ github.event_name == 'push' && format('publish-latest-mac-{0}', matrix.arch) || format('mac-{0}-{1}', github.run_id, matrix.arch) }}
+      cancel-in-progress: false
     env:
-      LUCENT_VERSION: 0.1.${{ github.run_number }}
+      LUCENT_VERSION: 1.0.${{ github.run_number }}
       RID: osx-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
@@ -437,6 +615,20 @@ jobs:
           ditto -x -k "releases-mac/Lucent-$RID-Portable.zip" check
           codesign --verify --deep --strict --verbose=2 check/Lucent.app
           test -x check/Lucent.app/Contents/MacOS/UpdateMac
+          # Open it the way people do and make sure the player is still up after a while: the self-test
+          # above never starts the app's window loop, so a crash at launch would otherwise ship.
+          export LUCENT_DATA_FOLDER="$RUNNER_TEMP/launch-check"
+          check/Lucent.app/Contents/MacOS/Lucent > "$RUNNER_TEMP/launch.log" 2>&1 &
+          app=$!
+          for _ in $(seq 1 20); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
+          if ! kill -0 "$app" 2> /dev/null; then
+            echo "::error::Lucent quit at launch."
+            cat "$RUNNER_TEMP/launch.log"
+            exit 1
+          fi
+          kill "$app"
+          echo "Lucent launched and was still running after 20 seconds."
+          unset LUCENT_DATA_FOLDER
           cp "releases-mac/Lucent-$RID-Setup.pkg" "mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg"
           cp "Lucent-mac-${{ matrix.arch }}.zip" mac-release/
           cp releases-mac/*.nupkg "releases-mac/releases.$RID.json" "releases-mac/assets.$RID.json" "releases-mac/RELEASES-$RID" mac-release/
@@ -451,7 +643,7 @@ jobs:
           name: Lucent-Setup-mac-${{ matrix.arch }}
           path: mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg
 
-      # Everything the "latest" release gets from this Mac build, for the publish-mac job.
+      # Everything the "latest" release gets from this Mac build.
       - uses: actions/upload-artifact@v4
         with:
           name: mac-release-${{ matrix.arch }}
@@ -465,49 +657,30 @@ jobs:
           path: mac-visuals-${{ matrix.arch }}.png
           if-no-files-found: ignore
 
-      - name: Remove the signing keychain
-        if: always() && steps.signing.outputs.keychain != ''
-        run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
-
-  # Adds the Mac builds to the "latest" release once the Windows build has made it (that job replaces
-  # the whole release, so this has to come after it). A Mac build that failed is simply left out.
-  publish-mac:
-    needs: [build, mac]
-    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        # Nothing to download when both Mac builds failed; the next step says so.
-        continue-on-error: true
-        with:
-          pattern: mac-release-*
-          merge-multiple: true
-          path: mac-release
-
-      - name: Add the Mac downloads to "latest"
+      # Each Mac build adds its own downloads to "latest" as soon as it's done, without waiting for the
+      # other chip's. The Windows build makes that release (and carries the Mac files over when it
+      # replaces it), so wait for it to exist, and retry if the Windows build is replacing it right then.
+      - name: Add this Mac's downloads to "latest"
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Same rule as the Windows build: leave the download to a newer build of main.
-          newest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
-          if [ "$newest" != "$GITHUB_SHA" ]; then
-            echo "main has moved on to $newest; leaving the latest download to that build."
-            exit 0
-          fi
-          if [ -z "$(ls -A mac-release 2>/dev/null)" ]; then
-            echo "::warning::No Mac build to publish."
-            exit 0
-          fi
-          ls -l mac-release
-          # The release must be this build's (the Windows job just made it), not an older one.
-          target=$(gh release view latest -R "$GITHUB_REPOSITORY" --json targetCommitish --jq .targetCommitish)
-          if [ "$target" != "$GITHUB_SHA" ]; then
-            echo "::warning::The latest release is for $target, not this build; leaving it alone."
-            exit 0
-          fi
-          gh release upload latest mac-release/* -R "$GITHUB_REPOSITORY" --clobber
-          gh release edit latest -R "$GITHUB_REPOSITORY" --notes "Automatic build of the newest version on main.
+          for attempt in $(seq 1 60); do
+            if gh release view latest -R "$GITHUB_REPOSITORY" > /dev/null 2>&1 &&
+               gh release upload latest mac-release/* -R "$GITHUB_REPOSITORY" --clobber; then
+              # Drop this chip's update packages from older builds; the feed only lists this one.
+              for old in $(gh release view latest -R "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -- "-$RID-.*\.nupkg$"); do
+                [ -e "mac-release/$old" ] || gh release delete-asset latest "$old" -R "$GITHUB_REPOSITORY" --yes || true
+              done
+              echo "Added the $RID downloads to the latest release."
+              exit 0
+            fi
+            echo "The latest release isn't there yet (attempt $attempt); trying again in 30 seconds."
+            sleep 30
+          done
+          echo "::error::Couldn't add the Mac downloads to the latest release."
+          exit 1
 
-          Windows: download Lucent-Setup.exe and run it to install Lucent; it keeps itself up to date from here. Or download Lucent-win-x64.zip, unzip it, and run Lucent.exe without installing (that copy doesn't update itself).
-
-          Mac (macOS 12 or later): download Lucent-Setup-mac-arm64.pkg for Apple silicon Macs (M1 and later) or Lucent-Setup-mac-x64.pkg for Intel Macs, and open it to install Lucent into Applications; it keeps itself up to date from here. Or download Lucent-mac-arm64.zip or Lucent-mac-x64.zip and open Lucent.app from it (that copy doesn't update itself). If macOS says it can't check the app or installer, open System Settings > Privacy & Security and click Open Anyway."
+      - name: Remove the signing keychain
+        if: always() && steps.signing.outputs.keychain != ''
+        run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true

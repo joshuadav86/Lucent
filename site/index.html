@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lucent for Windows</title>
-<meta name="description" content="Lucent is a music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer and 200 live GPU visuals. Free for Windows, coming to Mac.">
+<title>Lucent for Windows and Mac</title>
+<meta name="description" content="Lucent is a modern, Winamp-inspired music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer, and 200 live GPU visuals. Free for Windows and Mac.">
 <meta property="og:title" content="Lucent">
-<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer and 200 live GPU visuals.">
+<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer, and 200 live GPU visuals.">
 <meta property="og:image" content="https://lucentaudio.net/img/player-layout.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#09090C">
@@ -321,10 +321,10 @@ ol.steps code { font: 400 14px var(--font-mono); color: var(--fg); }
 .coffee span { color: var(--muted); font-size: 15px; }
 .coffee-btn { background: #FFDD00; color: #1A1408; box-shadow: 0 8px 24px -12px #FFDD00; }
 .coffee-btn:hover { box-shadow: 0 12px 30px -10px #FFDD00; }
-.mac-soon { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border-radius: calc(var(--r) * .7); border: 1px dashed var(--line); background: color-mix(in srgb, var(--surface) 60%, transparent); max-width: 460px; }
-.mac-soon svg { width: 22px; height: 22px; flex: none; color: var(--a2); margin-top: 2px; }
-.mac-soon div { display: grid; gap: 2px; min-width: 0; }
-.mac-soon span { color: var(--muted); font-size: 15px; }
+.mac-note { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border-radius: calc(var(--r) * .7); border: 1px dashed var(--line); background: color-mix(in srgb, var(--surface) 60%, transparent); max-width: 460px; }
+.mac-note svg { width: 22px; height: 22px; flex: none; color: var(--a2); margin-top: 2px; }
+.mac-note div { display: grid; gap: 2px; min-width: 0; }
+.mac-note span { color: var(--muted); font-size: 15px; }
 .reqs dd { margin: 0; }
 
 footer { border-top: 1px solid var(--line); }
@@ -359,22 +359,25 @@ footer a:hover { color: var(--fg); }
     <canvas id="heroBars" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="hero-copy">
-        <p class="eyebrow">Built for audio nerds · Windows, coming to Mac</p>
+        <p class="eyebrow">Built for audio nerds · Windows and Mac</p>
         <h1 id="hero-title">Play it. Shape it. <span class="grad">Watch&nbsp;it.</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a music player built for audio nerds. A real audio editor, a studio analyzer and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 200 visuals. On Windows now, with a Mac version on the way.</p>
+          <p class="lede">Lucent is a modern take on Winamp built for audio nerds. A real audio editor, a studio analyzer, and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 200 visuals. Free for Windows and Mac.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
               Download for Windows
             </a>
-            <a class="btn ghost" href="#player">Tour the player</a>
+            <a class="btn ghost" href="#download">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8-.7 0-1.9-.8-3-.8-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.2.8 1.1 1.7 2.3 2.9 2.3 1.2-.1 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.6zM14.1 5.6c.6-.8 1.1-1.8 1-2.9-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.7-1.3z"/></svg>
+              Download for Mac
+            </a>
           </div>
-          <p class="fine">Lucent-Setup.exe · Windows 10 and 11 · No admin needed · Updates itself</p>
+          <p class="fine">Windows 10 and 11 · macOS 12 or later · Updates itself</p>
         </div>
       </div>
       <figure class="hero-shot">
-        <div class="screen"><img src="img/player-layout.jpg" width="1740" height="962" alt="The Lucent player with its library, equalizer, queue and the Cosmic Jellyfish visual docked together"></div>
+        <div class="screen"><img src="img/player-layout.jpg" width="1740" height="962" alt="The Lucent player with its library, equalizer, queue, and the Cosmic Jellyfish visual docked together"></div>
         <figcaption class="callouts" aria-hidden="true">
           <span style="left:2%">Library</span><span style="left:23%">Player and equalizer</span><span style="left:52%">Visuals, docked beside</span>
         </figcaption>
@@ -398,7 +401,7 @@ footer a:hover { color: var(--fg); }
       <div class="stack">
         <p class="eyebrow">The player</p>
         <h2 id="player-title">A small player. Windows that snap together.</h2>
-        <p class="lede">The equalizer, queue, library, analyzer, artwork and visuals each get their own window. Edges snap to each other and to the screen, and docked windows travel together when you drag.</p>
+        <p class="lede">Inspired by Winamp's classic layout, rebuilt for today. The equalizer, queue, library, analyzer, artwork, and visuals each get their own window. Edges snap to each other and to the screen, and docked windows travel together when you drag.</p>
         <div class="keys">
           <div><kbd>D</kbd> Tidy every window into one neat rectangle</div>
           <div><kbd>G</kbd> Fill the screen</div>
@@ -433,14 +436,14 @@ footer a:hover { color: var(--fg); }
       <div class="section-head">
         <p class="eyebrow">200 visuals</p>
         <h2 id="visuals-title">Every frame is drawn live on your graphics card.</h2>
-        <p class="lede">Each visual listens to the bass, mids, treble and beat of what's playing. Physically lit scenes with real reflections, hundreds of thousands of particles per frame, endless fractals and kaleidoscopes, and calm geometric and minimal pieces.</p>
+        <p class="lede">Each visual listens to the bass, mids, treble, and beat of what's playing. Physically lit scenes with real reflections, hundreds of thousands of particles per frame, endless fractals and kaleidoscopes, and calm geometric and minimal pieces.</p>
       </div>
       <div class="chips" role="group" aria-label="Filter visuals by family" id="chips"></div>
       <div class="gallery" id="gallery" aria-live="polite"></div>
       <div class="visual-notes">
-        <div><h3>Auto mode lands on the downbeat</h3><p>Lucent studies each sound ahead of time and changes visual at the start of a phrase, with morphs that melt, glow, fly or fold one into the next.</p></div>
-        <div><h3>Find one in seconds</h3><p>Press <kbd>V</kbd> and start typing. Visuals sit in family folders with tags like Calm, Minimal, Neon and Space. Star your favorites and Auto sticks to them.</p></div>
-        <div><h3>Up to 4K, with HDR</h3><p>Render at 1080p, 1440p or 4K supersampled down, from Low to Ultra detail with up to four times the particles. Highlights shine past white on HDR screens.</p></div>
+        <div><h3>Auto mode lands on the downbeat</h3><p>Lucent studies each sound ahead of time and changes visual at the start of a phrase, with morphs that melt, glow, fly, or fold one into the next.</p></div>
+        <div><h3>Find one in seconds</h3><p>Press <kbd>V</kbd> and start typing. Visuals sit in family folders with tags like Calm, Minimal, Neon, and Space. Star your favorites and Auto sticks to them.</p></div>
+        <div><h3>Up to 4K, with HDR</h3><p>Render at 1080p, 1440p, or 4K supersampled down, from Low to Ultra detail with up to four times the particles. Highlights shine past white on HDR screens.</p></div>
       </div>
     </div>
   </section>
@@ -449,8 +452,8 @@ footer a:hover { color: var(--fg); }
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow">Audio editor</p>
-        <h2 id="ed-title">Edit, repair and measure without leaving your player.</h2>
-        <p class="lede">Right-click any sound and choose Open in editor. Cut it, clean it up, check its loudness and master it with studio meters and your own VST3 effects. Every change has undo, and nothing is saved over the original until you say so.</p>
+        <h2 id="ed-title">Edit, repair, and measure without leaving your player.</h2>
+        <p class="lede">Right-click any sound and choose Open in editor. Cut it, clean it up, check its loudness, and master it with studio meters and your own VST3 effects. Every change has undo, and nothing is saved over the original until you say so.</p>
       </div>
       <div class="editor">
         <div class="ed-top">
@@ -492,14 +495,14 @@ footer a:hover { color: var(--fg); }
         <div class="ed-foot"><span id="edSel">No selection: edits apply to the whole sound</span><span id="edPeak">Peak −0.8 dB</span><span id="edMsg">Drag across the waveform to select</span></div>
       </div>
       <div class="analyzer-notes ed-features">
-        <div><h3>Cut, copy and paste</h3><p>Joins crossfade so nothing clicks, Snap lands selections on zero crossings, and paste works between sounds and other apps.</p></div>
-        <div><h3>Analyze</h3><p>Peak, true peak, loudness, loudness range, DC offset, stereo correlation and spectrum, plus a finder that jumps to every clipped spot.</p></div>
+        <div><h3>Cut, copy, and paste</h3><p>Joins crossfade so nothing clicks, Snap lands selections on zero crossings, and paste works between sounds and other apps.</p></div>
+        <div><h3>Analyze</h3><p>Peak, true peak, loudness, loudness range, DC offset, stereo correlation, and spectrum, plus a finder that jumps to every clipped spot.</p></div>
         <div><h3>Meters and views</h3><p>A level meter with true peak and LUFS as you play or loop a section, and a spectrogram view in place of the waveform.</p></div>
-        <div><h3>Repair</h3><p>Take out 50 or 60 Hz hum, clicks and crackle, background noise and DC offset.</p></div>
-        <div><h3>EQ and dynamics</h3><p>A 7-band parametric EQ, a compressor and a true-peak limiter, all heard live, next to your own VST3 effects.</p></div>
+        <div><h3>Repair</h3><p>Take out 50 or 60 Hz hum, clicks and crackle, background noise, and DC offset.</p></div>
+        <div><h3>EQ and dynamics</h3><p>A 7-band parametric EQ, a compressor, and a true-peak limiter, all heard live, next to your own VST3 effects.</p></div>
         <div><h3>Tempo and pitch</h3><p>Tempo from 50 to 200%, keeping the pitch or not, or the pitch alone in 0.1 semitone steps.</p></div>
-        <div><h3>Channels and markers</h3><p>Swap, invert, mix to mono, widen the stereo or edit one side alone, and drop markers to jump between parts.</p></div>
-        <div><h3>Batch it</h3><p>The converter can normalize, limit, EQ, compress, de-hum, trim silence and fade every sound in a batch, with tags and artwork carried across.</p></div>
+        <div><h3>Channels and markers</h3><p>Swap, invert, mix to mono, widen the stereo, or edit one side alone, and drop markers to jump between parts.</p></div>
+        <div><h3>Batch it</h3><p>The converter can normalize, limit, EQ, compress, de-hum, trim silence, and fade every sound in a batch, with tags and artwork carried across.</p></div>
       </div>
     </div>
   </section>
@@ -509,7 +512,7 @@ footer a:hover { color: var(--fg); }
       <div class="section-head">
         <p class="eyebrow">Analyzer</p>
         <h2 id="an-title">See the whole sound in detail.</h2>
-        <p class="lede">A scrolling spectrogram heatmap of everything you play, with a waveform, a live spectrum and a stereo spread scope. Press <kbd>Y</kbd> to open it, and point at the heatmap to read any frequency.</p>
+        <p class="lede">A scrolling spectrogram heatmap of everything you play, with a waveform, a live spectrum, and a stereo spread scope. Press <kbd>Y</kbd> to open it, and point at the heatmap to read any frequency.</p>
       </div>
       <div class="an-controls">
         <div class="seg" role="group" aria-label="Heatmap colors" id="mapSeg">
@@ -558,9 +561,9 @@ footer a:hover { color: var(--fg); }
         <p class="eyebrow">Studio equalizer</p>
         <h2 id="eq-title">Faders like a mixing desk, over the music's live spectrum.</h2>
         <ul class="ticks">
-          <li><b>4, 8, 16, 24 or 32 bands.</b> Switching keeps your curve, and the new faders rise into place.</li>
+          <li><b>4, 8, 16, 24, or 32 bands.</b> Switching keeps your curve, and the new faders rise into place.</li>
           <li><b>See problem frequencies</b> as peaks behind the response curve.</li>
-          <li><b>15 presets</b> like Bass Boost, Vocal, Late Night and Small Speakers, or save your own.</li>
+          <li><b>15 presets</b> like Bass Boost, Vocal, Late Night, and Small Speakers, or save your own.</li>
           <li><b>Safe boosting.</b> Lucent lowers the preamp a touch when you boost, so nothing distorts.</li>
         </ul>
       </div>
@@ -585,14 +588,14 @@ footer a:hover { color: var(--fg); }
       <div class="stack">
         <p class="eyebrow">Skins and themes</p>
         <h2 id="skins-title">Five skins. Eight themes. Any combination.</h2>
-        <p class="lede">Skins decide the shape, type and finish of every window. Themes decide the colors. Pick one here and this page changes with it.</p>
+        <p class="lede">Skins decide the shape, type, and finish of every window. Themes decide the colors. Pick one here and this page changes with it.</p>
         <div class="skins" role="group" aria-label="Skins" id="skinList"></div>
       </div>
       <div class="stack">
         <div class="themes" role="group" aria-label="Themes" id="themeList"></div>
         <p class="try-hint" id="themeHint">Theme: Midnight · Skin: Lucent</p>
         <div class="screen"><img src="img/fullscreen-menu.jpg" width="1600" height="900" alt="Lucent fullscreen on the Neon Downpour visual, with the right-click menu open" loading="lazy"></div>
-        <p class="try-hint">Fullscreen with <kbd>F11</kbd>. Right-click for a seek bar, volume and every graphics option.</p>
+        <p class="try-hint">Fullscreen with <kbd>F11</kbd>. Right-click for a seek bar, volume, and every graphics option.</p>
       </div>
     </div>
   </section>
@@ -604,14 +607,15 @@ footer a:hover { color: var(--fg); }
         <h2 id="extras-title">Everything else you'd reach for.</h2>
       </div>
       <div class="extras">
-        <div><h3>Library</h3><p>Link a folder and every sound shows up, searchable as you type. Switch to Playlists to make, play and tidy your playlists right there.</p></div>
+        <div><h3>Library</h3><p>Link a folder and every sound shows up, searchable as you type. Switch to Playlists to make, play, and tidy your playlists right there.</p></div>
         <div><h3>Favorites and playlists</h3><p>Heart sounds, star visuals, and save standard .m3u8 playlists that other players can open too.</p></div>
         <div><h3>Artwork window</h3><p>The playing sound's cover, as big as you like, pinned on top if you want it.</p></div>
         <div><h3>Keyboard first</h3><p>One key for every window and visual, and your media keys work while Lucent has focus.</p></div>
-        <div><h3>Tag editor</h3><p>Titles, artists, lyrics and cover art, saved to a checked copy first.</p></div>
+        <div><h3>Tag editor</h3><p>Titles, artists, lyrics, and cover art, saved to a checked copy first.</p></div>
         <div><h3>Bandcamp and Beatport</h3><p>Downloads from either store file themselves into your library, and your Bandcamp collection can sync on its own (experimental).</p></div>
-        <div><h3>Converter</h3><p>Make MP3, FLAC or WAV, stereo or mono, with tags and artwork carried across a whole batch.</p></div>
-        <div><h3>Report a bug in one click</h3><p>The options panel opens a bug report with your version, graphics card and recent errors already filled in.</p></div>
+        <div><h3>Import from another player</h3><p>Bring playlists, play counts and ratings over from Apple Music, MusicBee, foobar2000, Plex, or YouTube Music.</p></div>
+        <div><h3>Converter</h3><p>Make MP3, FLAC, or WAV, stereo or mono, with tags and artwork carried across a whole batch.</p></div>
+        <div><h3>Report a bug in one click</h3><p>The options panel opens a bug report with your version, graphics card, and recent errors already filled in.</p></div>
         <div><h3>Make your own visuals</h3><p>Each visual is one HLSL shader. Drop yours in a folder and it shows up in the picker.</p></div>
       </div>
       <p class="formats">Plays <b>MP3</b> · <b>FLAC</b> · <b>WAV</b> · <b>AAC/M4A</b> · <b>ALAC</b> · <b>WMA</b> · <b>OGG Vorbis</b> · <b>Opus</b> · <b>AIFF</b></p>
@@ -622,8 +626,8 @@ footer a:hover { color: var(--fg); }
     <div class="wrap dl-grid">
       <div class="stack">
         <img class="dl-icon" src="img/icon.png" width="96" height="96" alt="Lucent icon">
-        <h2 id="dl-title">Get Lucent for Windows.</h2>
-        <p class="lede">Free and open source under the MIT license. A Mac version is in the works.</p>
+        <h2 id="dl-title">Get Lucent.</h2>
+        <p class="lede">Free and open source under the MIT license, for Windows and Mac.</p>
         <div class="hero-cta">
           <a class="btn" href="https://github.com/joshuadav86/Lucid/releases/download/latest/Lucent-Setup.exe">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -631,14 +635,21 @@ footer a:hover { color: var(--fg); }
           </a>
           <a class="btn ghost" href="https://github.com/joshuadav86/Lucid/releases/download/latest/Lucent-win-x64.zip">Portable .zip</a>
         </div>
-        <div class="mac-soon">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8-.7 0-1.9-.8-3-.8-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.2.8 1.1 1.7 2.3 2.9 2.3 1.2-.1 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.6zM14.1 5.6c.6-.8 1.1-1.8 1-2.9-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.7-1.3z"/></svg>
-          <div><b>Lucent for Mac is coming.</b><span>The same player, editor and analyzer, with visuals drawn through Metal.</span></div>
+        <div class="hero-cta">
+          <a class="btn" href="https://github.com/joshuadav86/Lucid/releases/download/latest/Lucent-Setup-mac-arm64.pkg">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8-.7 0-1.9-.8-3-.8-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.2.8 1.1 1.7 2.3 2.9 2.3 1.2-.1 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.6zM14.1 5.6c.6-.8 1.1-1.8 1-2.9-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.7-1.3z"/></svg>
+            Mac with Apple silicon
+          </a>
+          <a class="btn ghost" href="https://github.com/joshuadav86/Lucid/releases/download/latest/Lucent-Setup-mac-x64.pkg">Intel Mac</a>
+        </div>
+        <div class="mac-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+          <div><b>First time on a Mac?</b><span>Lucent isn't signed by Apple yet, so macOS may say it can't check the installer. Open System Settings, then Privacy &amp; Security, scroll down, and click Open Anyway.</span></div>
         </div>
         <dl class="reqs">
-          <dt>System</dt><dd>Windows 10 or 11, 64-bit. macOS coming soon.</dd>
-          <dt>Graphics</dt><dd>Any Direct3D 11 GPU. A recent one gets you Ultra and 4K.</dd>
-          <dt>Install</dt><dd>Your account only, no admin rights</dd>
+          <dt>System</dt><dd>Windows 10 or 11, 64-bit. macOS 12 or later, on Apple silicon or Intel.</dd>
+          <dt>Graphics</dt><dd>Any Direct3D 11 GPU on Windows, or any Metal GPU on a Mac. A recent one gets you Ultra and 4K.</dd>
+          <dt>Install</dt><dd>Your account only on Windows, no admin rights. Into Applications on a Mac.</dd>
         </dl>
         <div class="coffee">
           <div><b>Lucent is free, and always will be.</b><span>If it's earned a spot in your setup, you can help keep it going.</span></div>
@@ -649,9 +660,9 @@ footer a:hover { color: var(--fg); }
         </div>
       </div>
       <ol class="steps">
-        <li><h3>Download the installer</h3><p>Grab <code>Lucent-Setup.exe</code> from the <a href="https://github.com/joshuadav86/Lucid/releases/tag/latest">latest build</a>.</p></li>
-        <li><h3>Run it</h3><p>Lucent installs for your Windows account, adds Start menu and desktop shortcuts, and opens with the player, equalizer and visuals ready.</p></li>
-        <li><h3>Forget about updates</h3><p>Lucent checks for a newer build when it starts and every hour while it runs, then installs it when you close Lucent. Want it now? Click <b>UPDATE</b> in the title bar. Your settings, playlists and visuals stay put.</p></li>
+        <li><h3>Download the installer</h3><p>Grab <code>Lucent-Setup.exe</code> for Windows, or the <code>.pkg</code> for your Mac, from the <a href="https://github.com/joshuadav86/Lucid/releases/tag/latest">latest build</a>.</p></li>
+        <li><h3>Run it</h3><p>On Windows, Lucent installs for your account and adds Start menu and desktop shortcuts. On a Mac, it goes into Applications. Either way it opens with the player, equalizer, and visuals ready.</p></li>
+        <li><h3>Forget about updates</h3><p>Lucent checks for a newer build when it starts and every hour while it runs, then installs it when you close Lucent. Want it now? Click <b>UPDATE</b> in the title bar. Your settings, playlists, and visuals stay put.</p></li>
       </ol>
     </div>
   </section>
@@ -1199,9 +1210,9 @@ footer a:hover { color: var(--fg); }
     "Rosé":        { bg: "#120A0D", surface: "#22141A", fg: "#FFEFF4", muted: "#C29FAC", a1: "#F472B6", a2: "#FB923C" }
   };
   const SKINS = [
-    ["Lucent", "Soft corners, hairlines and calm, modern type", "Midnight", { r: "14px", glow: "0 0 0 transparent" }],
-    ["Classic", "Square corners, raised buttons and a black LCD, like the players of 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
-    ["Glass", "Frosted panes, soft light and big round buttons", "Deep Ocean", { r: "24px", glow: "0 0 0 1px rgba(255,255,255,.06)" }],
+    ["Lucent", "Soft corners, hairlines, and calm, modern type", "Midnight", { r: "14px", glow: "0 0 0 transparent" }],
+    ["Classic", "Square corners, raised buttons, and a black LCD, like the players of 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
+    ["Glass", "Frosted panes, soft light, and big round buttons", "Deep Ocean", { r: "24px", glow: "0 0 0 1px rgba(255,255,255,.06)" }],
     ["Neon", "Hard edges that glow in the accent color, over scan lines", "Ultraviolet", { r: "0px", glow: "0 0 18px -2px var(--a1)" }],
     ["Studio", "Brushed metal and an inset display, like rack-mounted hi-fi gear", "Graphite", { r: "6px", glow: "inset 0 1px 0 rgba(255,255,255,.08)" }]
   ];

@@ -64,6 +64,18 @@ public sealed class AppSettings
 
     public double Volume { get; set; } = 0.8;
 
+    /// <summary>Run each track straight into the next, with no gap between them.</summary>
+    public bool Gapless { get; set; } = true;
+
+    /// <summary>The output to play through (a Windows device id), or null for Windows' default.</summary>
+    public string? OutputDevice { get; set; }
+
+    /// <summary>Take the output for Lucent alone and send each track at its own format: bit-perfect playback.</summary>
+    public bool ExclusiveOutput { get; set; }
+
+    /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
+    public bool EveryBuild { get; set; }
+
     /// <summary>Where each window was last left, by name ("Player", "Visuals", "Queue", "Library").</summary>
     public Dictionary<string, WindowBounds> Windows { get; set; } = new();
 
@@ -119,6 +131,9 @@ public sealed class AppSettings
 
     /// <summary>Songs marked as favourites, by file path.</summary>
     public List<string> FavoriteTracks { get; set; } = new();
+
+    /// <summary>Identifies this copy of Lucent to Plex when signing in to import a Plex library.</summary>
+    public string? PlexClientId { get; set; }
 
     /// <summary>The name the favourites go by in lists of visuals; no list of the user's can take it.</summary>
     public const string FavoritesListName = "Favorites";

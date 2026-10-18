@@ -6,7 +6,8 @@ namespace WinampInspiredVisualizer.Visualizer;
 /// <summary>
 /// Turns the captured audio into the numbers visuals react to: a smoothed
 /// spectrum, the waveform, bass/mid/treble levels and a beat pulse.
-/// Runs once per frame on the render thread.
+/// Runs once per frame on the render thread. When recording a video, the audio is handed over
+/// frame by frame instead, from the decoded file (see <see cref="Update(float, ReadOnlySpan{float}, int)"/>).
 /// </summary>
 public sealed class AudioAnalyzer
 {
@@ -16,10 +17,13 @@ public sealed class AudioAnalyzer
     private const int FftExponent = 11;
     private const int FftSize = 1 << FftExponent;
     private const int BandCount = 64;
+
+    /// <summary>How many of the newest samples each frame looks at (about 46 ms at 44.1 kHz).</summary>
+    public const int WindowSamples = FftSize;
     private const float LowestFrequency = 30f;
     private const float HighestFrequency = 16000f;
 
-    private readonly AudioCapture _capture;
+    private readonly AudioCapture? _capture;
     private readonly float[] _samples = new float[FftSize];
     private readonly Complex[] _fft = new Complex[FftSize];
     private readonly float[] _window = new float[FftSize];
@@ -32,8 +36,14 @@ public sealed class AudioAnalyzer
     private double _sinceBeat = 10;
 
     public AudioAnalyzer(AudioCapture capture)
+        : this()
     {
         _capture = capture;
+    }
+
+    /// <summary>An analyzer with no capture to read: it's handed each frame's audio instead.</summary>
+    public AudioAnalyzer()
+    {
         for (var i = 0; i < FftSize; i++)
         {
             _window[i] = (float)FastFourierTransform.HannWindow(i, FftSize);
@@ -59,8 +69,7 @@ public sealed class AudioAnalyzer
 
     public void Update(float deltaTime)
     {
-        var silent = _capture.IsSilent;
-        if (silent)
+        if (_capture is null || _capture.IsSilent)
         {
             Array.Clear(_samples);
         }
@@ -70,7 +79,25 @@ public sealed class AudioAnalyzer
             _capture.ReadLatest(_samples, delay);
         }
 
-        EnsureBands(_capture.SampleRate);
+        Analyze(deltaTime, _capture?.SampleRate ?? 44100);
+    }
+
+    /// <summary>
+    /// The same as <see cref="Update(float)"/>, but for audio handed over rather than captured:
+    /// <paramref name="latest"/> ends at the moment being drawn (a mono mix, at <paramref name="sampleRate"/>).
+    /// Only its newest samples are used; a shorter span is treated as silence before it.
+    /// </summary>
+    public void Update(float deltaTime, ReadOnlySpan<float> latest, int sampleRate)
+    {
+        var count = Math.Min(latest.Length, FftSize);
+        Array.Clear(_samples, 0, FftSize - count);
+        latest[^count..].CopyTo(_samples.AsSpan(FftSize - count));
+        Analyze(deltaTime, sampleRate);
+    }
+
+    private void Analyze(float deltaTime, int sampleRate)
+    {
+        EnsureBands(sampleRate);
 
         var sumSquares = 0f;
         for (var i = 0; i < FftSize; i++)
@@ -115,6 +142,35 @@ public sealed class AudioAnalyzer
 
         DetectBeat(bassNow, deltaTime);
         FillTexture();
+    }
+
+    /// <summary>
+    /// Fills <paramref name="left"/> and <paramref name="right"/> with the newest stereo samples, timed
+    /// to the speakers like the rest of the analysis (for MilkDrop presets, which draw both channels).
+    /// </summary>
+    public void ReadStereoWaveform(float[] left, float[] right)
+    {
+        if (_capture is null)
+        {
+            // Drawing off screen (recording a video): only the mono mix handed to Update is known, so both
+            // channels get the newest of it.
+            var count = Math.Min(left.Length, _samples.Length);
+            Array.Clear(left);
+            Array.Clear(right);
+            _samples.AsSpan(_samples.Length - count).CopyTo(left);
+            _samples.AsSpan(_samples.Length - count).CopyTo(right);
+            return;
+        }
+
+        if (_capture.IsSilent)
+        {
+            Array.Clear(left);
+            Array.Clear(right);
+            return;
+        }
+
+        var delay = _capture.SampleRate * AudioCapture.OutputLatencyMs / 1000 * 2 / 3;
+        _capture.ReadLatestStereo(left, right, delay);
     }
 
     private void DetectBeat(float bassNow, float deltaTime)

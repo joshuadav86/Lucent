@@ -10,6 +10,9 @@ public enum LibrarySort
     Title,
     Artist,
     FileName,
+    MostPlayed,
+    RecentlyPlayed,
+    Rating,
 }
 
 public static class LibrarySorts
@@ -22,6 +25,9 @@ public static class LibrarySorts
         LibrarySort.Oldest => "Oldest first",
         LibrarySort.Title => "Title",
         LibrarySort.Artist => "Artist",
+        LibrarySort.MostPlayed => "Most played",
+        LibrarySort.RecentlyPlayed => "Recently played",
+        LibrarySort.Rating => "Rating",
         _ => "File name",
     };
 }
@@ -43,11 +49,17 @@ public sealed class LibraryItemComparer : IComparer
             LibrarySort.Oldest => a.Added.CompareTo(b.Added),
             LibrarySort.Title => CompareText(a.Title, b.Title),
             LibrarySort.Artist => CompareArtists(a, b),
+            LibrarySort.MostPlayed => Then(b.Plays.CompareTo(a.Plays), a, b),
+            LibrarySort.RecentlyPlayed => Then((b.LastPlayed ?? DateTime.MinValue).CompareTo(a.LastPlayed ?? DateTime.MinValue), a, b),
+            LibrarySort.Rating => Then(b.Rating.CompareTo(a.Rating), a, b),
             _ => CompareText(a.FileName, b.FileName),
         };
 
         return result != 0 ? result : string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>Songs that tie on plays or rating are listed by artist, then title.</summary>
+    private static int Then(int result, LibraryItem a, LibraryItem b) => result != 0 ? result : CompareArtists(a, b);
 
     private static int CompareArtists(LibraryItem a, LibraryItem b)
     {

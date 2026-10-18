@@ -37,7 +37,7 @@
                         <Path Theme="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
                     </ToggleButton>
                     <ToggleButton x:Name="OptionsButton" Theme="{StaticResource PanelToggle}" Padding="7,0"
-                                  ToolTip.Tip="Options: graphics, visual changes, skins and themes (O)" Click="OnToggleOptions">
+                                  ToolTip.Tip="Options: graphics, visual changes, skins, and themes (O)" Click="OnToggleOptions">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource OptionsIcon}" StrokeThickness="1.3" />
                     </ToggleButton>
 
@@ -54,6 +54,7 @@
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Graphics" Content="Graphics" Click="OnOptionsTab" IsChecked="True" />
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visual changes" Click="OnOptionsTab" />
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
+                                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                                     </UniformGrid>
                                 </Border>
 
@@ -128,16 +129,29 @@
                                     <CheckBox x:Name="MorphsOnlySwitch" Theme="{StaticResource SwitchToggle}"
                                               Content="Morphing transitions only" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
-                                               Text="Visuals melt, glow, fly or fold into each other, without the wipes and fades." />
+                                               Text="Visuals melt, glow, fly, or fold into each other, without the wipes and fades." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="ThemeTab" IsVisible="False">
-                                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Skin: the shape, type and finish of every window" />
+                                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Skin: the shape, type, and finish of every window" />
                                     <UniformGrid x:Name="SkinSwatches" Columns="2" Margin="-2,0,-8,-6" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
                                                Text="Each skin comes with a theme it was made for. Pick another theme below to mix and match." />
                                     <TextBlock Theme="{StaticResource OptionLabel}" Text="Theme: colours for everything around the visuals" />
                                     <UniformGrid x:Name="ThemeSwatches" Columns="2" Margin="-2,0,-8,-6" />
+                                </StackPanel>
+
+                                <StackPanel x:Name="UpdatesTab" IsVisible="False">
+                                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Update to" />
+                                    <Border Theme="{StaticResource SegmentBar}">
+                                        <UniformGrid Rows="1">
+                                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Updates" Tag="Stable" Content="Stable releases" Click="OnOptionChosen" />
+                                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Updates" Tag="EveryBuild" Content="Every build" Click="OnOptionChosen" />
+                                        </UniformGrid>
+                                    </Border>
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
+                                    <TextBlock x:Name="VersionText" Theme="{StaticResource OptionHint}" Margin="2,8,0,0" />
                                 </StackPanel>
 
                                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->
@@ -147,7 +161,7 @@
                                                    Text="Enjoying Lucent? It's free, and tips keep it going. Something broken? Tell us." />
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                             <Button Theme="{StaticResource PillButton}" Content="🐞  Report a bug" Margin="0,0,8,0"
-                                                    ToolTip.Tip="Opens a bug report on GitHub with your Lucent version, macOS version, graphics chip and recent errors filled in. You can check it before sending."
+                                                    ToolTip.Tip="Opens a bug report on GitHub with your Lucent version, macOS version, graphics chip, and recent errors filled in. You can check it before sending."
                                                     Click="OnReportBug" />
                                             <Button Theme="{StaticResource PillButton}" Content="☕  Buy me a coffee"
                                                     Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="Opens Lucent's Buy Me a Coffee page"

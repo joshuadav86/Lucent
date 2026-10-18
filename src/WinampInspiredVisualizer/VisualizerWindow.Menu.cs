@@ -49,6 +49,8 @@ public partial class VisualizerWindow
             menu.Items.Add(favourite);
         }
 
+        menu.Items.Add(MilkDropMenu());
+
         menu.Items.Add(new Separator());
         var auto = Item("Auto", "A", () =>
         {
@@ -77,6 +79,21 @@ public partial class VisualizerWindow
         menu.Items.Add(often);
         if (Player is { } player)
         {
+            menu.Items.Add(new Separator());
+            var record = Item("Record video…", "", () =>
+            {
+                // The recording window opens over the visuals, so come out of fullscreen for it.
+                if (_isFullscreen)
+                {
+                    ToggleFullscreen();
+                }
+
+                player.RecordVideo(this);
+            });
+            record.IsEnabled = player.CanRecordVideo;
+            record.ToolTip = record.IsEnabled ? "Save the song drawn with a visual as an MP4 video, to share" : "Play a song first to record it";
+            ToolTipService.SetShowOnDisabled(record, true);
+            menu.Items.Add(record);
             menu.Items.Add(new Separator());
             player.AddGraphicsItems(menu);
         }

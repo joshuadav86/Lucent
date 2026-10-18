@@ -1,0 +1,26 @@
+MILKDROP_PRESET_VERSION=201
+PSVERSION=2
+PSVERSION_WARP=2
+PSVERSION_COMP=2
+[preset00]
+fDecay=0.950000
+zoom=1.020000
+nWaveMode=3
+wave_a=1.0
+per_frame_1=// The second line can't be parsed, so the per-frame equations are left out;
+per_frame_2=zoom = 1.05 + ;
+per_pixel_1=// ...but these still run, and an unknown function just counts as 0.
+per_pixel_2=rot = 0.02 * frobnicate(rad) + 0.01 * rad;
+per_pixel_3=dx = log(0) * 0; dy = sqrt(-4) * 0.0001;
+wavecode_0_enabled=1
+wavecode_0_samples=600
+wave_0_per_point1=x = sample; y = 0.5 + value1 / 0;
+shapecode_0_enabled=1
+shapecode_0_sides=500
+shapecode_0_num_inst=5000
+shape_0_per_frame1=rad = 0.01 + instance * 0.00001; x = rand(100) * 0.01; a = 1 / 0;
+warp_1=`shader_body
+warp_2=`{
+warp_3=`    ret = tex2D(sampler_main, uv).xyz * undefined_thing;
+warp_4=`}
+comp_1=`there is no body here

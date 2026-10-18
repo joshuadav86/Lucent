@@ -753,10 +753,14 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
+                        <!-- Scrolls when there are more items than fit on the screen. -->
                         <Border MinWidth="190" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
                                 Background="{DynamicResource SurfaceRaisedBrush}"
                                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
-                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                            <ScrollViewer Focusable="False" CanContentScroll="False"
+                                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                            </ScrollViewer>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -790,7 +794,10 @@
                                 <Border MinWidth="150" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
                                         Background="{DynamicResource SurfaceRaisedBrush}"
                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
-                                    <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                                    <ScrollViewer Focusable="False" CanContentScroll="False"
+                                                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                                    </ScrollViewer>
                                 </Border>
                             </Popup>
                         </Grid>

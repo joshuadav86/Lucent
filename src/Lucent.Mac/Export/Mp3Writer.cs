@@ -39,7 +39,7 @@ public static class Mp3Writer
     {
         var lame = Load() ?? throw new IOException(
             "MP3 files can't be made because Lucent's MP3 encoder (LAME) is missing. Reinstalling Lucent puts it back; " +
-            "until then, FLAC, WAV and AIFF work.");
+            "until then, FLAC, WAV, and AIFF work.");
         lame.Encode(source, path, quality, framesWritten, cancellation);
         return null;
     }
