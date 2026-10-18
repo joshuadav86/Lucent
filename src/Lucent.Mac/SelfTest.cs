@@ -16,9 +16,10 @@ namespace Lucent.Mac;
 /// Core Audio, then compiles every visual's Metal shaders and draws a few frames of each to music
 /// made up on the spot, and can save a contact sheet of what they look like. It also translates
 /// visuals from HLSL as the app does for the user's own, and checks the result matches the build's.
+/// The sound checks (listing the outputs, and gapless playback) are in SelfTest.Sound.cs.
 /// </summary>
 /// <remarks>Usage: Lucent --self-test [--sheet picture.png] [music files...]</remarks>
-public static class SelfTest
+public static partial class SelfTest
 {
     private const int Width = 320;
     private const int Height = 180;
@@ -55,6 +56,8 @@ public static class SelfTest
             failures += TestDecoding(path) ? 0 : 1;
         }
 
+        failures += TestOutputDevices();
+        failures += TestGapless();
         failures += TestVisuals(sheetPath);
         failures += TestRuntimeTranslation();
         failures += WinampInspiredVisualizer.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
