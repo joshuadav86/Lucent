@@ -46,6 +46,12 @@ public sealed class MusicLibrary : IDisposable
 
     public IReadOnlyList<string> Folders => _folders;
 
+    /// <summary>
+    /// The folders each listed under one heading, with a subheading for each folder inside: the Bandcamp and
+    /// Beatport folders. Asked for at every scan, so it follows the settings.
+    /// </summary>
+    public Func<IReadOnlyList<string>> SectionFolders { get; set; } = () => Array.Empty<string>();
+
     public bool IsScanning { get; private set; }
 
     /// <summary>
@@ -81,7 +87,8 @@ public sealed class MusicLibrary : IDisposable
             var folders = _folders;
             var hidden = _hidden;
             var files = _files;
-            var found = await Task.Run(() => FindFiles(folders, hidden, files, scan.Token), scan.Token);
+            var sections = SectionFolders();
+            var found = await Task.Run(() => FindFiles(folders, hidden, files, sections, scan.Token), scan.Token);
             if (scan.IsCancellationRequested)
             {
                 return;
@@ -92,9 +99,9 @@ public sealed class MusicLibrary : IDisposable
             {
                 // Keep items (and their tags) for files that haven't changed since the last scan.
                 if (!_byPath.TryGetValue(file.Path, out var item) || item.Added != file.Added || item.Folder != file.Folder
-                    || item.Directory != file.Directory)
+                    || item.Directory != file.Directory || item.Section != (file.Section ?? file.Folder))
                 {
-                    item = new LibraryItem(file.Path, file.Folder, file.Directory, file.Added);
+                    item = new LibraryItem(file.Path, file.Folder, file.Directory, file.Added, file.Section, file.SectionDirectory);
                     _byPath[file.Path] = item;
                 }
 
@@ -194,7 +201,7 @@ public sealed class MusicLibrary : IDisposable
     }
 
     private static List<FoundFile> FindFiles(IReadOnlyList<string> folders, IReadOnlyList<string> hidden,
-        IReadOnlyList<string> files, CancellationToken token)
+        IReadOnlyList<string> files, IReadOnlyList<string> sections, CancellationToken token)
     {
         var options = new EnumerationOptions
         {
@@ -224,7 +231,7 @@ public sealed class MusicLibrary : IDisposable
                     }
 
                     var directory = System.IO.Path.GetDirectoryName(path) ?? root;
-                    results[path] = new FoundFile(path, FolderLabel(root, directory), directory, AddedTime(path));
+                    results[path] = Found(path, LibraryHeadings.For(root, directory, sections), directory);
                 }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -243,7 +250,7 @@ public sealed class MusicLibrary : IDisposable
             }
 
             var directory = System.IO.Path.GetDirectoryName(path) ?? path;
-            results[path] = new FoundFile(path, FolderLabel(directory, directory), directory, AddedTime(path));
+            results[path] = Found(path, LibraryHeadings.For(directory, directory, sections), directory);
         }
 
         return results.Values.ToList();
@@ -262,20 +269,8 @@ public sealed class MusicLibrary : IDisposable
         }
     }
 
-    /// <summary>"Music", or "Music / Albums / Some Album" for files in subfolders.</summary>
-    private static string FolderLabel(string root, string directory)
-    {
-        var rootName = System.IO.Path.GetFileName(System.IO.Path.TrimEndingDirectorySeparator(root));
-        if (string.IsNullOrEmpty(rootName))
-        {
-            rootName = root; // a whole drive, like D:\
-        }
-
-        var relative = System.IO.Path.GetRelativePath(root, directory);
-        return relative == "."
-            ? rootName
-            : rootName + " / " + relative.Replace(System.IO.Path.DirectorySeparatorChar.ToString(), " / ");
-    }
+    private static FoundFile Found(string path, LibraryHeading heading, string directory) =>
+        new(path, heading.Folder, directory, AddedTime(path), heading.Section, heading.SectionDirectory);
 
     private void WatchFolders()
     {
@@ -318,5 +313,6 @@ public sealed class MusicLibrary : IDisposable
         _rescanDelay.Start();
     });
 
-    private sealed record FoundFile(string Path, string Folder, string Directory, DateTime Added);
+    private sealed record FoundFile(string Path, string Folder, string Directory, DateTime Added, string? Section,
+        string? SectionDirectory);
 }

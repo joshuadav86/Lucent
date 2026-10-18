@@ -72,7 +72,13 @@ public sealed class StoreImporter
     public string MusicFolder { get; }
 
     /// <summary>The folder a store's music goes in, like "Music\Bandcamp".</summary>
-    public string FolderFor(MusicStore store) => Path.Combine(MusicFolder, store.ToString());
+    public string FolderFor(MusicStore store) => FolderFor(MusicFolder, store);
+
+    /// <summary>Every store's folder inside this music folder, whether or not it's importing.</summary>
+    public static IReadOnlyList<string> StoreFolders(string musicFolder) =>
+        Enum.GetValues<MusicStore>().Select(store => FolderFor(musicFolder, store)).ToList();
+
+    private static string FolderFor(string musicFolder, MusicStore store) => Path.Combine(musicFolder, store.ToString());
 
     /// <summary>
     /// Imports a downloaded zip or song if it's from one of the stores. <paramref name="knownStore"/> skips the

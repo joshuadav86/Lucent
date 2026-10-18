@@ -186,34 +186,60 @@ public partial class LibraryWindow : ToolWindow
         _groups = new List<FolderHeading>();
         if (ShowingPlaylists || _settings.GroupLibraryByFolder)
         {
+            // A store's folder (Bandcamp, Beatport) is one heading, with a subheading for each folder inside it.
+            var sections = new List<FolderHeading>();
             var byName = new Dictionary<string, FolderHeading>(StringComparer.Ordinal);
             foreach (var item in items)
             {
-                if (!byName.TryGetValue(item.Folder, out var heading))
+                if (!byName.TryGetValue(item.Section, out var heading))
                 {
-                    // While searching every heading is open, so no match is hidden in a closed one.
-                    heading = new FolderHeading(item.Folder, IsSearching || !_collapsedFolders.Contains(item.Folder))
-                    {
-                        IsHighlighted = _highlightedFolders.Contains(item.Folder),
-                    };
-                    heading.PropertyChanged += OnHeadingChanged;
-                    byName[item.Folder] = heading;
-                    _groups.Add(heading);
+                    heading = NewHeading(item.Section);
+                    byName[item.Section] = heading;
+                    sections.Add(heading);
                 }
 
                 heading.Items.Add(item);
+                if (item.IsInSection)
+                {
+                    var key = "\0" + item.Folder;
+                    if (!byName.TryGetValue(key, out var sub))
+                    {
+                        sub = NewHeading(item.Folder, item.SubFolder);
+                        byName[key] = sub;
+                        heading.Subheadings.Add(sub);
+                    }
+
+                    sub.Items.Add(item);
+                }
+            }
+
+            foreach (var heading in sections)
+            {
+                _groups.Add(heading);
+                _groups.AddRange(heading.Subheadings);
+            }
+
+            FolderHeading NewHeading(string name, string? label = null)
+            {
+                // While searching every heading is open, so no match is hidden in a closed one.
+                var heading = new FolderHeading(name, IsSearching || !_collapsedFolders.Contains(name), label, label is not null)
+                {
+                    IsHighlighted = _highlightedFolders.Contains(name),
+                };
+                heading.PropertyChanged += OnHeadingChanged;
+                return heading;
             }
         }
 
         var rows = new List<object>(items.Count + _groups.Count);
         if (_groups.Count > 0)
         {
-            foreach (var heading in _groups)
+            foreach (var heading in _groups.Where(heading => !heading.IsSubheading))
             {
                 rows.Add(heading);
                 if (heading.IsExpanded)
                 {
-                    rows.AddRange(heading.Items);
+                    rows.AddRange(heading.OpenRows());
                 }
             }
         }
@@ -931,7 +957,7 @@ public partial class LibraryWindow : ToolWindow
     {
         var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.Pointer };
         var groups = HighlightedGroups();
-        var songs = groups.SelectMany(group => group.Items).ToList();
+        var songs = groups.SelectMany(group => group.Items).Distinct().ToList();
         if (songs.Count > 0)
         {
             var play = new MenuItem { Header = groups.Count == 1 ? "Play this folder" : "Play these folders" };
@@ -966,7 +992,7 @@ public partial class LibraryWindow : ToolWindow
 
         if (groups.Count == 1 && songs.Count > 0)
         {
-            var directory = songs[0].Directory;
+            var directory = groups[0].Directory ?? songs[0].Directory;
             menu.Items.Add(new Separator());
             var show = new MenuItem { Header = "Show in Finder" };
             show.Click += (_, _) => Player?.ShowInExplorer(directory);
@@ -1052,7 +1078,7 @@ public partial class LibraryWindow : ToolWindow
 
     /// <summary>The folders on disk behind the highlighted headings.</summary>
     private List<string> HighlightedDirectories() => HighlightedGroups()
-        .Select(group => group.Items.FirstOrDefault()?.Directory)
+        .Select(group => group.Directory)
         .OfType<string>()
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToList();
@@ -1114,7 +1140,7 @@ public partial class LibraryWindow : ToolWindow
 
         if (heading.IsExpanded)
         {
-            _rows.InsertRange(at + 1, heading.Items);
+            _rows.InsertRange(at + 1, heading.OpenRows());
         }
         else
         {
@@ -1127,7 +1153,7 @@ public partial class LibraryWindow : ToolWindow
                 }
             }
 
-            _rows.RemoveRange(at + 1, heading.Items.Count);
+            _rows.RemoveRange(at + 1, heading.OpenRows().Count());
         }
     }
 
@@ -1239,7 +1265,8 @@ public partial class LibraryWindow : ToolWindow
 
         if (_groups.Count > 0)
         {
-            return _groups.SelectMany(group => group.Items)
+            // A store's heading lists only the songs right in its folder; its subheadings list the rest.
+            return _groups.SelectMany(group => group.Subheadings.Count == 0 ? group.Items : group.Items.Where(item => !item.IsInSection))
                 .Where(item => !item.IsPlaceholder)
                 .ToList();
         }
