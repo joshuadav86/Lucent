@@ -14,6 +14,7 @@ public sealed unsafe class AudioQueueOutput : IWavePlayer
 
     private readonly object _lock = new();
     private readonly int _latencyMs;
+    private readonly string? _deviceId;
     private IWaveProvider? _source;
     private byte[] _scratch = Array.Empty<byte>();
     private GCHandle _self;
@@ -23,7 +24,12 @@ public sealed unsafe class AudioQueueOutput : IWavePlayer
     private float _volume = 1f;
 
     /// <param name="latencyMs">How much audio is queued ahead of the speakers, split between the buffers.</param>
-    public AudioQueueOutput(int latencyMs) => _latencyMs = latencyMs;
+    /// <param name="deviceId">The UID of the output to play through (see <see cref="OutputDevices"/>), or null for macOS's default.</param>
+    public AudioQueueOutput(int latencyMs, string? deviceId = null)
+    {
+        _latencyMs = latencyMs;
+        _deviceId = deviceId;
+    }
 
     public event EventHandler<StoppedEventArgs>? PlaybackStopped;
 
@@ -122,6 +128,10 @@ public sealed unsafe class AudioQueueOutput : IWavePlayer
         _self = GCHandle.Alloc(this);
         Check(AudioQueueNewOutput(&description, &OnBufferFree, GCHandle.ToIntPtr(_self), IntPtr.Zero, IntPtr.Zero, 0, out _queue),
             "open the sound output");
+        if (_deviceId is not null)
+        {
+            ChooseDevice(_deviceId);
+        }
 
         var bytesPerBuffer = format.AverageBytesPerSecond * _latencyMs / 1000 / BufferCount;
         bytesPerBuffer -= bytesPerBuffer % format.BlockAlign;
@@ -132,6 +142,30 @@ public sealed unsafe class AudioQueueOutput : IWavePlayer
         {
             Check(AudioQueueAllocateBuffer(_queue, (uint)bytesPerBuffer, out var buffer), "make a sound buffer");
             Fill(buffer);
+        }
+    }
+
+    // Points the queue at one output instead of whichever is macOS's default. It has to be done before it starts.
+    private void ChooseDevice(string deviceId)
+    {
+        var uid = CreateString(deviceId);
+        if (uid == IntPtr.Zero)
+        {
+            return;
+        }
+
+        try
+        {
+            var status = AudioQueueSetProperty(_queue, QueueCurrentDeviceProperty, &uid, (uint)sizeof(IntPtr));
+            if (status != 0)
+            {
+                // Unplugged since it was chosen, most likely: the music plays through the default output instead.
+                ErrorLog.Write("Audio output", new IOException($"Couldn't play through output {deviceId} (Core Audio error {status})."));
+            }
+        }
+        finally
+        {
+            CFRelease(uid);
         }
     }
 

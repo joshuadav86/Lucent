@@ -111,6 +111,7 @@ public partial class MainWindow : Window
                 var count => $"{count} tracks",
             };
             _shuffleHistory.RemoveAll(entry => !_playlist.Contains(entry));
+            ForgetUpNext();
             ShowNowPlaying(_current?.Track);
         };
 
@@ -118,6 +119,8 @@ public partial class MainWindow : Window
         _player.Volume = (float)VolumeSlider.Value;
         _player.Equalizer.Apply(_settings.Equalizer);
         _player.TrackEnded += (_, _) => OnTrackEnded();
+        _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
+        ApplySoundSettings();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -125,6 +128,7 @@ public partial class MainWindow : Window
         {
             UpdatePosition();
             UpdateSongClock();
+            LineUpNext();
         };
         _positionTimer.Start();
 
@@ -1284,6 +1288,7 @@ public partial class MainWindow : Window
         var tab = (sender as RadioButton)?.Tag as string;
         GraphicsTab.IsVisible = tab == "Graphics";
         VisualsTab.IsVisible = tab == "Visuals";
+        SoundTab.IsVisible = tab == "Sound";
         ThemeTab.IsVisible = tab == "Theme";
         UpdatesTab.IsVisible = tab == "Updates";
     }
@@ -1402,6 +1407,7 @@ public partial class MainWindow : Window
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
+        ShowSoundValues();
     }
 
     /// <summary>Applies the chosen theme and skin to every window.</summary>
@@ -1665,6 +1671,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        ForgetUpNext();
+        _player.Play();
+        ShowEntryPlaying(entry);
+    }
+
+    /// <summary>Shows <paramref name="entry"/> as the track playing, once the player has it.</summary>
+    private void ShowEntryPlaying(PlaylistEntry entry)
+    {
         if (_current is not null)
         {
             _current.IsCurrent = false;
@@ -1680,8 +1694,8 @@ public partial class MainWindow : Window
         _queue.PlaylistView.SelectedItem = entry;
         _queue.PlaylistView.ScrollIntoView(entry);
 
-        _player.Play();
         ShowNowPlaying(entry.Track);
+        OutputStatus.Text = DescribeOutput();
         UpdatePlayPauseButton();
         UpdatePosition();
         UpdateSongClock();
@@ -1711,40 +1725,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_settings.Shuffle)
+        // The track already lined up to follow is the one to play, so a shuffle doesn't pick twice.
+        var next = _upNext is { RepeatsCurrent: false } lined ? lined : ChooseNext(wrap);
+        if (next is null)
         {
-            var unplayed = _playlist.Where(entry => !_shuffleHistory.Contains(entry)).ToList();
-            if (unplayed.Count == 0)
-            {
-                if (!wrap)
-                {
-                    StopAtEnd();
-                    return;
-                }
-
-                // Everything has played: start a fresh round, avoiding an instant repeat of this track.
-                _shuffleHistory.Clear();
-                unplayed = _playlist.Where(entry => entry != _current || _playlist.Count == 1).ToList();
-            }
-
-            PlayEntry(unplayed[_random.Next(unplayed.Count)]);
+            StopAtEnd();
             return;
         }
 
-        var index = _current is null ? -1 : _playlist.IndexOf(_current);
-        var next = index + 1;
-        if (next >= _playlist.Count)
+        if (next.StartsNewRound)
         {
-            if (!wrap)
-            {
-                StopAtEnd();
-                return;
-            }
-
-            next = 0;
+            _shuffleHistory.Clear();
         }
 
-        PlayEntry(_playlist[next]);
+        PlayEntry(next.Entry);
     }
 
     /// <summary>End of the queue: rewind the last track and stop.</summary>
@@ -1795,6 +1789,7 @@ public partial class MainWindow : Window
             _shuffleHistory.Add(_current);
         }
 
+        ForgetUpNext();
         UpdateShuffleRepeatButtons();
         _settings.Save();
     }
@@ -1809,6 +1804,7 @@ public partial class MainWindow : Window
             RepeatMode.All => RepeatMode.One,
             _ => RepeatMode.Off,
         };
+        ForgetUpNext();
         UpdateShuffleRepeatButtons();
         _settings.Save();
     }

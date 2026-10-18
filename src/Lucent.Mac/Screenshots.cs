@@ -37,6 +37,7 @@ public static class Screenshots
         ("Player-Studio", () => PreviewPlayer("Studio")),
         ("Player-Options", () => PreviewOptions("Graphics")),
         ("Player-Options-Visuals", () => PreviewOptions("Visuals")),
+        ("Player-Options-Sound", () => PreviewOptions("Sound")),
         ("Player-Options-Look", () => PreviewOptions("Theme")),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
