@@ -1545,6 +1545,11 @@ public partial class MainWindow : Window
 
     private void OnTrackEnded()
     {
+        if (_current is { } ended)
+        {
+            CountPlay(ended.Track.Path);
+        }
+
         if (_settings.Repeat == RepeatMode.One && _current is not null)
         {
             PlayEntry(_current);

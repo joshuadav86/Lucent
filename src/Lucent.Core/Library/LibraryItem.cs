@@ -51,8 +51,28 @@ public sealed class LibraryItem : INotifyPropertyChanged
     public string DurationText => _durationText;
 
     public string Details => IsPlaceholder ? string.Empty : string.IsNullOrEmpty(_artist)
-        ? Added.ToString("d")
-        : $"{_artist}  ·  {Added:d}";
+        ? $"{Added:d}{StatsText}"
+        : $"{_artist}  ·  {Added:d}{StatsText}";
+
+    /// <summary>How many times it's been played, here and in players it was imported from.</summary>
+    public int Plays => IsPlaceholder ? 0 : TrackStats.Shared.PlaysOf(Path);
+
+    /// <summary>Stars, 1 to 5, or 0 for none.</summary>
+    public int Rating => IsPlaceholder ? 0 : TrackStats.Shared.RatingOf(Path);
+
+    public DateTime? LastPlayed => IsPlaceholder ? null : TrackStats.Shared.LastPlayedOf(Path);
+
+    /// <summary>"  ·  ★★★★  ·  12 plays", leaving out what isn't known.</summary>
+    private string StatsText
+    {
+        get
+        {
+            var rating = Rating;
+            var plays = Plays;
+            var text = rating > 0 ? $"  ·  {TrackStats.Stars(rating)}" : string.Empty;
+            return plays > 0 ? $"{text}  ·  {plays:N0} {(plays == 1 ? "play" : "plays")}" : text;
+        }
+    }
 
     /// <summary>The track with its tags, once they have been read.</summary>
     public Track? Track { get; private set; }
@@ -76,6 +96,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
         Raise(nameof(DurationText));
         Raise(nameof(Details));
     }
+
+    /// <summary>Shows a new play count or rating.</summary>
+    public void StatsChanged() => Raise(nameof(Details));
 
     private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

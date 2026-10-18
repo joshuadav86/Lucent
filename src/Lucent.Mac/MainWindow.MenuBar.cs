@@ -62,6 +62,7 @@ public partial class MainWindow
         file.Add(Item("Save the Queue as a Playlist…", () => SaveQueueAsPlaylist(this)));
         file.Add(new NativeMenuItemSeparator());
         file.Add(Item("Bandcamp and Beatport…", ShowStores));
+        file.Add(Item("Import from Another Player…", ShowImport));
         bar.Add(new NativeMenuItem("File") { Menu = file });
 
         var playback = new NativeMenu();

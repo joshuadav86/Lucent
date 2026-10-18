@@ -93,6 +93,7 @@ public partial class LibraryWindow : ToolWindow
             }
         };
         library.ScanningChanged += (_, _) => UpdateLibraryStatus();
+        TrackStats.Shared.Changed += (_, _) => Dispatcher.UIThread.Post(StatsChanged);
         SortLabel.Text = LibrarySorts.Label(settings.LibrarySort);
         UpdateGroupFoldersButton();
         UpdateLibraryStatus();
@@ -100,6 +101,42 @@ public partial class LibraryWindow : ToolWindow
     }
 
     private bool ShowingPlaylists => _settings.LibraryShowPlaylists;
+
+    /// <summary>Shows new play counts and ratings, and re-sorts if the order depends on them.</summary>
+    private void StatsChanged()
+    {
+        foreach (var item in _library.Items.Concat(_playlistItems))
+        {
+            item.StatsChanged();
+        }
+
+        if (!ShowingPlaylists && _settings.LibrarySort is LibrarySort.MostPlayed or LibrarySort.RecentlyPlayed or LibrarySort.Rating)
+        {
+            RefreshView();
+        }
+    }
+
+    /// <summary>The Rating submenu for the chosen songs: one to five stars, or none.</summary>
+    private static MenuItem RatingMenu(IReadOnlyList<LibraryItem> items)
+    {
+        var paths = items.Select(item => item.Path).ToList();
+        var current = items.Select(item => item.Rating).Distinct().ToList();
+        var menu = new MenuItem { Header = "Rating" };
+        for (var stars = 5; stars >= 0; stars--)
+        {
+            var value = stars;
+            var item = new MenuItem
+            {
+                Header = stars == 0 ? "No rating" : TrackStats.Stars(stars),
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = current.Count == 1 && current[0] == stars,
+            };
+            item.Click += (_, _) => Task.Run(() => TrackStats.Shared.SetRating(paths, value));
+            menu.Items.Add(item);
+        }
+
+        return menu;
+    }
 
     /// <summary>A new list: re-filtered, re-sorted and regrouped, with nothing selected.</summary>
     private void RebuildLibraryView()
@@ -639,6 +676,10 @@ public partial class LibraryWindow : ToolWindow
         ToolTip.SetTip(stores, "Add the music you buy on Bandcamp and Beatport to the library");
         stores.Click += (_, _) => Player?.ShowStores();
         menu.Items.Add(stores);
+        var import = new MenuItem { Header = "Import from another player…" };
+        ToolTip.SetTip(import, "Bring playlists, play counts and ratings over from Apple Music, foobar2000, Plex or YouTube Music");
+        import.Click += (_, _) => Player?.ShowImport();
+        menu.Items.Add(import);
         if (RemoveAllFoldersMenuItem() is { } removeAll)
         {
             menu.Items.Add(removeAll);
@@ -813,6 +854,7 @@ public partial class LibraryWindow : ToolWindow
         }
 
         _songMenuItems.Add(Player.FavoriteMenuItem(items.Select(item => item.Path).ToList()));
+        _songMenuItems.Add(RatingMenu(items));
         _songMenuItems.Add(Player.AddToPlaylistMenu(this, () => Task.Run(() => items.Select(item => item.ToTrack()).ToList())));
         _songMenuItems.Add(new Separator());
         var at = LibraryMenu.Items.IndexOf(SongMenuItemsStart) + 1;
