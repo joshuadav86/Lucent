@@ -9,7 +9,14 @@ public partial class MainWindow
 {
     private void OnToggleArtwork(object? sender, RoutedEventArgs e) => ToggleArtwork();
 
-    private void ToggleArtwork() => ArtToggle.IsChecked = ArtworkWindow.Toggle(this, _player, _settings, _current?.Track);
+    private void ToggleArtwork()
+    {
+        ArtToggle.IsChecked = ArtworkWindow.Toggle(this, _player, _settings, _current?.Track);
+        if (_remote is not null)
+        {
+            ArtworkWindow.ShowRemote(_remote.State?.Track, _remote.Artwork);
+        }
+    }
 
     private void OnArtworkOpenChanged(object? sender, EventArgs e) => ArtToggle.IsChecked = ArtworkWindow.IsOpen;
 

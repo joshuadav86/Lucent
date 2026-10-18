@@ -164,6 +164,7 @@ jobs:
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
           -p:Version=${{ env.LUCENT_VERSION }}
+          -p:SpotifyClientId=${{ secrets.SPOTIFY_CLIENT_ID }}
           -o publish
 
       - name: Check the MP3 encoder, plugin helper, WebView2 loader and ONNX Runtime are next to Lucent.exe
@@ -569,6 +570,7 @@ jobs:
           dotnet publish src/Lucent.Mac/Lucent.Mac.csproj
           -c Release -r ${{ env.RID }} --self-contained true
           -p:Version=${{ env.LUCENT_VERSION }}
+          -p:SpotifyClientId=${{ secrets.SPOTIFY_CLIENT_ID }}
           -o publish-mac
 
       - name: Make test music

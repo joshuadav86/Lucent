@@ -251,6 +251,7 @@ public partial class MainWindow : Window
         _updater.EveryBuild = _settings.EveryBuild;
         _ = _updater.RunAsync();
         AddStarterMusic();
+        StartStreaming();
     }
 
     /// <summary>
@@ -1334,6 +1335,7 @@ public partial class MainWindow : Window
         folder.Click += (_, _) => AddFolderFromDialog(this);
         menu.Items.Add(files);
         menu.Items.Add(folder);
+        AddStreamingItems(menu);
         menu.IsOpen = true;
     }
 
@@ -1511,6 +1513,8 @@ public partial class MainWindow : Window
 
     public void PlayEntry(PlaylistEntry entry)
     {
+        // Playing Lucent's own music: the other app being controlled pauses, and the player is Lucent's again.
+        StopControllingRemote(pause: true);
         try
         {
             _player.Load(entry.Track.Path);
@@ -1570,6 +1574,11 @@ public partial class MainWindow : Window
 
     private void PlayNext(bool wrap)
     {
+        if (RemoteTakes(remote => remote.NextAsync()))
+        {
+            return;
+        }
+
         if (_playlist.Count == 0)
         {
             return;
@@ -1600,6 +1609,11 @@ public partial class MainWindow : Window
 
     private void PlayPrevious()
     {
+        if (RemoteTakes(remote => remote.PreviousAsync()))
+        {
+            return;
+        }
+
         if (_playlist.Count == 0)
         {
             return;
@@ -1681,6 +1695,11 @@ public partial class MainWindow : Window
 
     private void StopPlayback()
     {
+        if (RemoteTakes(remote => remote.PauseAsync()))
+        {
+            return;
+        }
+
         _player.Stop();
         UpdatePlayPauseButton();
         UpdatePosition();
@@ -1692,6 +1711,11 @@ public partial class MainWindow : Window
 
     private void TogglePlayPause()
     {
+        if (RemoteTakes(remote => remote.PlayPauseAsync()))
+        {
+            return;
+        }
+
         if (!_player.HasTrack)
         {
             var entry = _queue.PlaylistView.SelectedItem as PlaylistEntry ?? _playlist.FirstOrDefault();
@@ -1848,7 +1872,7 @@ public partial class MainWindow : Window
     private void OnSeekDragCompleted(object sender, DragCompletedEventArgs e)
     {
         _isDraggingSeek = false;
-        _player.Position = TimeSpan.FromSeconds(SeekBar.Value);
+        SeekTo(TimeSpan.FromSeconds(SeekBar.Value));
     }
 
     private void OnSeekValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -1860,12 +1884,12 @@ public partial class MainWindow : Window
 
         if (_isDraggingSeek)
         {
-            ShowTime(TimeSpan.FromSeconds(e.NewValue), _player.Duration);
+            ShowTime(TimeSpan.FromSeconds(e.NewValue), ShownDuration);
             return;
         }
 
         // A click on the bar (rather than a drag) jumps straight there.
-        _player.Position = TimeSpan.FromSeconds(e.NewValue);
+        SeekTo(TimeSpan.FromSeconds(e.NewValue));
     }
 
     // ---- Display ----
@@ -1896,11 +1920,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        var duration = _player.Duration;
-        var position = _player.Position;
+        var duration = ShownDuration;
+        var position = ShownPosition;
 
         _updatingSeekBar = true;
-        SeekBar.IsEnabled = _player.HasTrack && duration > TimeSpan.Zero;
+        SeekBar.IsEnabled = ShownHasTrack && duration > TimeSpan.Zero;
         SeekBar.Maximum = Math.Max(1, duration.TotalSeconds);
         SeekBar.Value = Math.Min(position.TotalSeconds, SeekBar.Maximum);
         _updatingSeekBar = false;
@@ -1918,7 +1942,7 @@ public partial class MainWindow : Window
 
     private void UpdatePlayPauseButton()
     {
-        var playing = _player.IsPlaying;
+        var playing = ShownIsPlaying;
         PlayPauseIcon.Data = (Geometry)FindResource(playing ? "PauseIcon" : "PlayIcon");
         // The play triangle looks centred when nudged slightly right.
         PlayPauseIcon.Margin = playing ? new Thickness(0) : new Thickness(2, 0, 0, 0);
@@ -1929,12 +1953,19 @@ public partial class MainWindow : Window
     /// <summary>The little play / pause / stop mark next to the time.</summary>
     private void UpdatePlayState()
     {
-        var icon = _player.IsPlaying ? "PlaySmallIcon" : _player.HasTrack && _player.Position > TimeSpan.Zero ? "PauseIcon" : "StopIcon";
+        var icon = ShownIsPlaying ? "PlaySmallIcon" : ShownHasTrack && ShownPosition > TimeSpan.Zero ? "PauseIcon" : "StopIcon";
         PlayStateIcon.Data = (Geometry)FindResource(icon);
     }
 
     private void ShowNowPlaying(Track? track)
     {
+        if (_remote is not null)
+        {
+            ShowRemote();
+            UpdateMediaControls();
+            return;
+        }
+
         ArtworkWindow.ShowTrack(track);
         UpdateMediaControls();
         UpdateTrackFavoriteButton();
@@ -2033,6 +2064,7 @@ public partial class MainWindow : Window
         _library.Dispose();
         _stores.Dispose();
         _positionTimer.Stop();
+        StopStreaming();
         CompositionTarget.Rendering -= OnMeterFrame;
         _visualizer.Dispose();
         _player.Dispose();

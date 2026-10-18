@@ -7,6 +7,10 @@ namespace WinampInspiredVisualizer.Audio;
 /// right channels, so the visualizer and analyzer can look at it. Written by the audio thread, read by the render thread.
 /// </summary>
 /// <remarks>
+/// It can also listen to every app's sound instead (see each app's Audio/SystemAudio.cs). While it does,
+/// what the player writes is left out, since the player's own sound is part of what's heard anyway.
+/// </remarks>
+/// <remarks>
 /// The audio thread writes in blocks (one sound card buffer, about 75 ms, at a time), so reading
 /// "the newest samples" would only move on when a block arrives: about 13 times a second, which
 /// makes the meters look choppy. Instead the read position glides through the newest block at
@@ -23,6 +27,8 @@ public sealed class AudioCapture
     private readonly Stopwatch _sinceLastWrite = Stopwatch.StartNew();
     private long _written;
     private int _lastBlock;
+    private bool _external;
+    private int _playerRate = 44100;
 
     /// <summary>How far ahead of the speakers the audio is decoded, in milliseconds.</summary>
     public const int OutputLatencyMs = 150;
@@ -32,39 +38,100 @@ public sealed class AudioCapture
     /// <summary>True when no audio has arrived recently (paused, stopped, or nothing loaded).</summary>
     public bool IsSilent => _sinceLastWrite.Elapsed > TimeSpan.FromMilliseconds(250);
 
+    /// <summary>True while it's listening to every app's sound rather than the player's.</summary>
+    public bool IsExternal => _external;
+
+    /// <summary>
+    /// How many of the newest samples the speakers haven't played yet, for <see cref="ReadLatest"/>. The
+    /// player decodes ahead of the speakers; other apps' sound is caught as it's played, so there's no wait.
+    /// </summary>
+    public int DelaySamples => _external ? 0 : SampleRate * OutputLatencyMs / 1000 * 2 / 3;
+
     public void Reset(int sampleRate)
     {
         lock (_lock)
         {
-            SampleRate = sampleRate;
-            Array.Clear(_ring);
-            Array.Clear(_leftRing);
-            Array.Clear(_rightRing);
-            _written = 0;
-            _lastBlock = 0;
+            // Kept for later while other apps are being listened to.
+            _playerRate = sampleRate;
+            if (!_external)
+            {
+                Clear(sampleRate);
+            }
+        }
+    }
+
+    /// <summary>Starts taking other apps' sound, at <paramref name="sampleRate"/>, through <see cref="WriteExternal"/>.</summary>
+    public void BeginExternal(int sampleRate)
+    {
+        lock (_lock)
+        {
+            _external = true;
+            Clear(sampleRate);
+        }
+    }
+
+    /// <summary>Goes back to the player's own sound.</summary>
+    public void EndExternal()
+    {
+        lock (_lock)
+        {
+            _external = false;
+            Clear(_playerRate);
         }
     }
 
     /// <summary>Adds mono audio; the left and right channels both get the same.</summary>
     public void Write(ReadOnlySpan<float> samples) => Write(samples, samples, samples);
 
-    /// <summary>Adds audio as its mono mix and its left and right channels, all the same length.</summary>
+    /// <summary>Adds the player's audio as its mono mix and its left and right channels, all the same length.</summary>
     public void Write(ReadOnlySpan<float> samples, ReadOnlySpan<float> left, ReadOnlySpan<float> right)
     {
         lock (_lock)
         {
-            for (var i = 0; i < samples.Length; i++)
+            if (!_external)
             {
-                var at = _written % Capacity;
-                _ring[at] = samples[i];
-                _leftRing[at] = left[i];
-                _rightRing[at] = right[i];
-                _written++;
+                Append(samples, left, right);
             }
-
-            _lastBlock = Math.Min(samples.Length, Capacity / 4);
-            _sinceLastWrite.Restart();
         }
+    }
+
+    /// <summary>Adds other apps' sound, as <see cref="Write(ReadOnlySpan{float}, ReadOnlySpan{float}, ReadOnlySpan{float})"/> does the player's.</summary>
+    public void WriteExternal(ReadOnlySpan<float> samples, ReadOnlySpan<float> left, ReadOnlySpan<float> right)
+    {
+        lock (_lock)
+        {
+            if (_external)
+            {
+                Append(samples, left, right);
+            }
+        }
+    }
+
+    // Call while holding the lock.
+    private void Clear(int sampleRate)
+    {
+        SampleRate = sampleRate;
+        Array.Clear(_ring);
+        Array.Clear(_leftRing);
+        Array.Clear(_rightRing);
+        _written = 0;
+        _lastBlock = 0;
+    }
+
+    // Call while holding the lock.
+    private void Append(ReadOnlySpan<float> samples, ReadOnlySpan<float> left, ReadOnlySpan<float> right)
+    {
+        for (var i = 0; i < samples.Length; i++)
+        {
+            var at = _written % Capacity;
+            _ring[at] = samples[i];
+            _leftRing[at] = left[i];
+            _rightRing[at] = right[i];
+            _written++;
+        }
+
+        _lastBlock = Math.Min(samples.Length, Capacity / 4);
+        _sinceLastWrite.Restart();
     }
 
     /// <summary>

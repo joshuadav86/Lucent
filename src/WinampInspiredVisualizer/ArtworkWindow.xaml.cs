@@ -7,6 +7,7 @@ using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Streaming;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace WinampInspiredVisualizer;
@@ -25,6 +26,7 @@ public partial class ArtworkWindow : Window
     private readonly AudioPlayer _player;
     private readonly AppSettings _settings;
     private Track? _track;
+    private RemoteTrack? _remote;
     private CoverImage? _cover;
     private CancellationTokenSource? _loading;
 
@@ -77,14 +79,30 @@ public partial class ArtworkWindow : Window
     /// <summary>Shows a newly playing track (or refreshed info for the same one). Does nothing while the window is closed.</summary>
     public static void ShowTrack(Track? track) => _instance?.Display(track, force: false);
 
+    /// <summary>Shows the song another app is playing (see MainWindow.Streaming.cs), with the cover that app gave.</summary>
+    public static void ShowRemote(RemoteTrack? track, byte[]? artwork) => _instance?.DisplayRemote(track, artwork);
+
+    private void DisplayRemote(RemoteTrack? track, byte[]? artwork)
+    {
+        _loading?.Cancel();
+        _track = null;
+        _remote = track;
+        TrackText.Text = track is null
+            ? string.Empty
+            : string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Title}  ·  {track.Artist}";
+        Title = track is null ? "Artwork - Lucent" : $"{track.Title} - Artwork - Lucent";
+        ShowCover(artwork is null ? null : CoverArt.Decode(artwork, MaxDisplayPixels));
+    }
+
     private void Display(Track? track, bool force)
     {
         // A refreshed Track (after editing its info) is a new object, so this reloads it too.
-        if (!force && ReferenceEquals(track, _track))
+        if (!force && _remote is null && ReferenceEquals(track, _track))
         {
             return;
         }
 
+        _remote = null;
         _track = track;
         TrackText.Text = track is null
             ? string.Empty
@@ -128,16 +146,16 @@ public partial class ArtworkWindow : Window
             ArtImage.Source = null;
             ArtImage.Visibility = Visibility.Collapsed;
             Placeholder.Visibility = Visibility.Visible;
-            PlaceholderTitle.Text = _track is null ? "Nothing playing" : "No artwork";
-            PlaceholderText.Text = _track is null
-                ? "Artwork appears here when music plays."
+            PlaceholderTitle.Text = _track is null && _remote is null ? "Nothing playing" : "No artwork";
+            PlaceholderText.Text = _remote is not null ? "The app playing this song didn't give a cover for it."
+                : _track is null ? "Artwork appears here when music plays."
                 : "Add a cover with Edit info (right-click here), or put a cover.jpg in the sound's folder.";
             return;
         }
 
         ArtImage.Source = cover.Image;
         ArtImage.ToolTip = $"{cover.SizeText} · {ImageFormats.Name(cover.MimeType)}"
-            + (cover.FilePath is null ? " · stored in the music file" : $" · {Path.GetFileName(cover.FilePath)} in the sound's folder");
+            + (_remote is not null ? " · from the app playing it" : cover.FilePath is null ? " · stored in the music file" : $" · {Path.GetFileName(cover.FilePath)} in the sound's folder");
         ArtImage.Visibility = Visibility.Visible;
         Placeholder.Visibility = Visibility.Collapsed;
         if (changed)
@@ -225,7 +243,7 @@ public partial class ArtworkWindow : Window
         var dialog = new SaveFileDialog
         {
             Title = "Save the artwork",
-            FileName = SafeFileName(_track?.Title) + extension,
+            FileName = SafeFileName(_track?.Title ?? _remote?.Title) + extension,
             Filter = $"{ImageFormats.Name(_cover.MimeType)} image|*{extension}|All files|*.*",
         };
         if (dialog.ShowDialog(this) != true)

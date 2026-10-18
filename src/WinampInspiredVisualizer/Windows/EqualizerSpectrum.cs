@@ -141,7 +141,7 @@ public sealed class EqualizerSpectrum : FrameworkElement
     private void Analyze()
     {
         var sampleRate = _capture.SampleRate;
-        var delay = sampleRate * AudioPlayer.OutputLatencyMs / 1000 * 2 / 3;
+        var delay = _capture.DelaySamples;
         _capture.ReadLatest(_samples, delay);
         for (var i = 0; i < FftSize; i++)
         {

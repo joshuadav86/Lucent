@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Lucent.Mac.Audio;
 using Lucent.Mac.Export;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Visuals;
@@ -71,12 +72,77 @@ public static partial class SelfTest
         failures += TestOutputDevices();
         failures += TestGapless();
         failures += TestVisuals(sheetPath);
+        failures += TestOtherApps();
         failures += TestRecording();
         failures += TestRuntimeTranslation();
         failures += TestMediaControls();
         failures += WinampInspiredVisualizer.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
+    }
+
+    // Listening to other apps: the capture takes their sound and leaves the player's out until it's done,
+    // then listening starts and stops for real (a warning, not a failure, where the machine has no sound to hear).
+    private static int TestOtherApps()
+    {
+        var problems = 0;
+        var capture = new AudioCapture();
+        capture.Reset(44100);
+        capture.BeginExternal(48000);
+        capture.Reset(96000);
+        capture.Write(new float[] { 1f, 1f, 1f, 1f });
+        capture.WriteExternal(new float[] { 0.5f, 0.5f, 0.5f, 0.5f }, new float[] { 0.5f, 0.5f, 0.5f, 0.5f }, new float[] { 0.5f, 0.5f, 0.5f, 0.5f });
+        // Reads glide through the newest block at the music's speed, so wait for it to have "played".
+        Thread.Sleep(50);
+        var heard = new float[4];
+        capture.ReadLatest(heard, capture.DelaySamples);
+        if (capture.SampleRate != 48000 || capture.DelaySamples != 0 || heard.Any(sample => sample != 0.5f && sample != 0f) || !heard.Contains(0.5f))
+        {
+            problems++;
+            Console.WriteLine($"::error::Listening to other apps mixed in the player's sound ({string.Join(", ", heard)} at {capture.SampleRate} Hz).");
+        }
+
+        capture.EndExternal();
+        if (capture.SampleRate != 96000 || capture.IsExternal)
+        {
+            problems++;
+            Console.WriteLine($"::error::After listening to other apps, the capture went back to {capture.SampleRate} Hz instead of the player's 96000 Hz.");
+        }
+
+        var cover = Streaming.AppleMusicRemote.ParseData("«data JPEGFFD8FFE0»");
+        if (cover is not { Length: 4 } || cover[0] != 0xFF || cover[1] != 0xD8)
+        {
+            problems++;
+            Console.WriteLine("::error::The Music app's artwork, as AppleScript gives it, didn't read back as its bytes.");
+        }
+
+        if (!SystemAudio.IsSupported)
+        {
+            Console.WriteLine("::notice::This macOS is older than 14.2, so listening to other apps wasn't tried.");
+            return problems;
+        }
+
+        try
+        {
+            using (SystemAudio.Start(capture))
+            {
+                Thread.Sleep(300);
+            }
+
+            Console.WriteLine($"Listened to other apps' sound on {SystemAudio.DefaultOutputName() ?? "the default output"}.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"::warning::Couldn't listen to other apps here: {ex.Message}");
+        }
+
+        if (capture.IsExternal)
+        {
+            problems++;
+            Console.WriteLine("::error::The capture was still listening to other apps after they were let go.");
+        }
+
+        return problems;
     }
 
     private static bool TestDecoding(string path)
