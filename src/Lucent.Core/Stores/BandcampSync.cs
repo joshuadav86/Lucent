@@ -1,5 +1,4 @@
 using System.IO;
-using System.Net.Http;
 using System.Text.Json;
 
 namespace WinampInspiredVisualizer.Stores;
@@ -97,9 +96,9 @@ public sealed class BandcampSync
                     TryDelete(file);
                 }
             }
-            catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidDataException)
+            catch (Exception ex) when (!token.IsCancellationRequested)
             {
-                // One failed purchase shouldn't stop the rest; it's tried again next sync.
+                // One failed purchase shouldn't stop the rest, whatever went wrong; it's tried again next sync.
                 problems.Add($"{name}: {ex.Message}");
             }
         }
