@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Lucent.Mac.Interop;
 using SharpMetal.Metal;
 
@@ -18,6 +19,7 @@ public sealed class MetalView : NativeControlHost
     private readonly VisualEngine _engine;
     private IntPtr _view;
     private IntPtr _layer;
+    private IDisposable? _resync;
 
     public MetalView(VisualEngine engine) => _engine = engine;
 
@@ -93,6 +95,12 @@ public sealed class MetalView : NativeControlHost
         if (change.Property == BoundsProperty)
         {
             UpdateSize();
+            // Avalonia hands the new place to AppKit, sometimes later (when AppKit is busy), and a
+            // late one can land after a newer one, leaving the view where the layout used to put it
+            // (seen when the windows are first laid out). Handing it over again once things have
+            // settled puts it right.
+            _resync?.Dispose();
+            _resync = DispatcherTimer.RunOnce(() => TryUpdateNativeControlPosition(), TimeSpan.FromMilliseconds(300));
         }
     }
 
