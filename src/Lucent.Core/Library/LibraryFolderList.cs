@@ -109,6 +109,9 @@ public static class LibraryFolderList
         return string.IsNullOrEmpty(name) ? folder : name;
     }
 
+    /// <summary>Whether a path is this folder or somewhere below it.</summary>
+    public static bool IsAtOrInside(string path, string folder) => Same(path, folder) || IsInside(path, folder);
+
     private static bool Same(string a, string b) =>
         string.Equals(Normalize(a), Normalize(b), StringComparison.OrdinalIgnoreCase);
 

@@ -121,6 +121,8 @@ public partial class LibraryWindow : ToolWindow
 
         if (ShowingPlaylists || _settings.GroupLibraryByFolder)
         {
+            // A store's folders go under its one heading; see FolderGroupStyleSelector.
+            view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LibraryItem.Section)));
             view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LibraryItem.Folder)));
         }
 
@@ -902,7 +904,7 @@ public partial class LibraryWindow : ToolWindow
     {
         var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.MousePoint };
         var groups = HighlightedGroups();
-        var songs = groups.SelectMany(group => group.Items.OfType<LibraryItem>()).ToList();
+        var songs = groups.SelectMany(SongsIn).Distinct().ToList();
         if (songs.Count > 0)
         {
             var play = new MenuItem { Header = groups.Count == 1 ? "Play this folder" : "Play these folders" };
@@ -937,7 +939,7 @@ public partial class LibraryWindow : ToolWindow
 
         if (groups.Count == 1 && songs.Count > 0)
         {
-            var directory = songs[0].Directory;
+            var directory = DirectoryOf(groups[0]) ?? songs[0].Directory;
             menu.Items.Add(new Separator());
             if (ListTogetherMenuItem(directory) is { } together)
             {
@@ -1026,19 +1028,38 @@ public partial class LibraryWindow : ToolWindow
         expander.Tag = expander.DataContext is CollectionViewGroup group
             && _highlightedFolders.Contains(group.Name?.ToString() ?? string.Empty);
 
-    private List<string> GroupNames() =>
-        _libraryView?.Groups?.Cast<CollectionViewGroup>().Select(group => group.Name?.ToString() ?? string.Empty).ToList()
-        ?? new List<string>();
+    private List<string> GroupNames() => HeadingGroups().Select(group => group.Name?.ToString() ?? string.Empty).ToList();
+
+    /// <summary>The groups that show a heading, in order: each section, and the subheadings inside a store's.</summary>
+    private List<CollectionViewGroup> HeadingGroups()
+    {
+        var headings = new List<CollectionViewGroup>();
+        foreach (var section in _libraryView?.Groups?.Cast<CollectionViewGroup>() ?? Enumerable.Empty<CollectionViewGroup>())
+        {
+            headings.Add(section);
+            headings.AddRange(section.Items.OfType<CollectionViewGroup>()
+                .Where(folder => folder.Items.OfType<LibraryItem>().FirstOrDefault() is { IsInSection: true }));
+        }
+
+        return headings;
+    }
 
     private List<CollectionViewGroup> HighlightedGroups() =>
-        _libraryView?.Groups?.Cast<CollectionViewGroup>()
-            .Where(group => _highlightedFolders.Contains(group.Name?.ToString() ?? string.Empty))
-            .ToList()
-        ?? new List<CollectionViewGroup>();
+        HeadingGroups().Where(group => _highlightedFolders.Contains(group.Name?.ToString() ?? string.Empty)).ToList();
+
+    /// <summary>The songs under a heading, through any subheadings.</summary>
+    private static IEnumerable<LibraryItem> SongsIn(CollectionViewGroup group) =>
+        group.Items.SelectMany(item => item is CollectionViewGroup inner ? SongsIn(inner) : item is LibraryItem song ? new[] { song } : Enumerable.Empty<LibraryItem>());
+
+    /// <summary>The folder on disk behind a heading: a store's own folder for its heading, or the songs' folder.</summary>
+    private static string? DirectoryOf(CollectionViewGroup group) =>
+        SongsIn(group).FirstOrDefault() is { } first
+            ? string.Equals(group.Name?.ToString(), first.Section, StringComparison.Ordinal) ? first.SectionDirectory : first.Directory
+            : null;
 
     /// <summary>The folders on disk behind the highlighted headings.</summary>
     private List<string> HighlightedDirectories() => HighlightedGroups()
-        .Select(group => group.Items.OfType<LibraryItem>().FirstOrDefault()?.Directory)
+        .Select(DirectoryOf)
         .OfType<string>()
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToList();
@@ -1095,7 +1116,8 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnFolderGroupExpanded(object sender, RoutedEventArgs e)
     {
-        if (!IsSearching && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
+        // A subheading's Expanded bubbles up through its store's heading; only the one that opened counts.
+        if (!IsSearching && e.OriginalSource == sender && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
         {
             _collapsedFolders.Remove(group.Name?.ToString() ?? string.Empty);
             UpdateFoldAllButton();
@@ -1104,7 +1126,7 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnFolderGroupCollapsed(object sender, RoutedEventArgs e)
     {
-        if (!IsSearching && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
+        if (!IsSearching && e.OriginalSource == sender && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
         {
             _collapsedFolders.Add(group.Name?.ToString() ?? string.Empty);
             UpdateFoldAllButton();
@@ -1158,7 +1180,7 @@ public partial class LibraryWindow : ToolWindow
 
         if (_libraryView.Groups is { Count: > 0 } groups)
         {
-            return groups.Cast<CollectionViewGroup>().SelectMany(group => group.Items.Cast<LibraryItem>())
+            return groups.Cast<CollectionViewGroup>().SelectMany(SongsIn)
                 .Where(item => !item.IsPlaceholder)
                 .ToList();
         }

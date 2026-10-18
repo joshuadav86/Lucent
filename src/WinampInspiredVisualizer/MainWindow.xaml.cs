@@ -124,9 +124,10 @@ public partial class MainWindow : Window
         BuildThemeSwatches();
 
         _libraryWindow.Attach(_library, _settings);
+        _stores = new StoreService(_settings, LinkLibraryFolder);
+        _library.SectionFolders = () => _stores.StoreFolders;
         _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles,
             _settings.LibraryFoldersTogether);
-        _stores = new StoreService(_settings, LinkLibraryFolder);
         _stores.Start();
 
         foreach (var window in ToolWindows)

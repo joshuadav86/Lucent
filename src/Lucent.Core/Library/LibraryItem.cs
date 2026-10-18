@@ -11,11 +11,14 @@ public sealed class LibraryItem : INotifyPropertyChanged
     private string _durationText = string.Empty;
     private string? _searchKey;
 
-    public LibraryItem(string path, string folder, string directory, DateTime added)
+    public LibraryItem(string path, string folder, string directory, DateTime added, string? section = null,
+        string? sectionDirectory = null)
     {
         Path = path;
         Folder = folder;
         Directory = directory;
+        Section = section ?? folder;
+        SectionDirectory = sectionDirectory ?? directory;
         Added = added;
         FileName = System.IO.Path.GetFileNameWithoutExtension(path);
         _title = FileName;
@@ -41,6 +44,23 @@ public sealed class LibraryItem : INotifyPropertyChanged
     /// when everything in that is listed together.
     /// </summary>
     public string Directory { get; }
+
+    /// <summary>
+    /// The top heading the file is listed under: its <see cref="Folder"/>, or a store's one heading ("Bandcamp")
+    /// that its folder is a subheading of.
+    /// </summary>
+    public string Section { get; }
+
+    /// <summary>The full path of the folder behind <see cref="Section"/>.</summary>
+    public string SectionDirectory { get; }
+
+    /// <summary>Whether <see cref="Folder"/> is a subheading under <see cref="Section"/>, not a heading of its own.</summary>
+    public bool IsInSection => !string.Equals(Section, Folder, StringComparison.Ordinal);
+
+    /// <summary>The subheading's name, without the store's in front: "Artist / Album".</summary>
+    public string SubFolder => IsInSection && Folder.StartsWith(Section + " / ", StringComparison.Ordinal)
+        ? Folder[(Section.Length + 3)..]
+        : Folder;
 
     /// <summary>When the file arrived: the later of its created and modified times.</summary>
     public DateTime Added { get; }
