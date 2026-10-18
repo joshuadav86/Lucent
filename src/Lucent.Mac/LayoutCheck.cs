@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lucent.Mac.Visuals;
@@ -8,7 +9,8 @@ namespace Lucent.Mac;
 /// <summary>
 /// For the launch check in CI: with LUCENT_LAYOUT_CHECK set to a file, resizes the visuals window a
 /// few times and writes down after each whether the Metal view and layer filled the space the layout
-/// gave them, then quits. A mismatch shows as the visuals squashed into part of the window.
+/// gave them. A mismatch shows as the visuals squashed into part of the window. Then it minimizes
+/// the player and checks the windows around it went to the Dock too, and came back with it, and quits.
 /// </summary>
 internal static class LayoutCheck
 {
@@ -50,6 +52,9 @@ internal static class LayoutCheck
                 failed |= !matched;
                 lines.Add(line);
             }
+
+            lines.AddRange(await CheckMinimizeAsync(main));
+            failed |= lines.Any(entry => entry.StartsWith("MISMATCH", StringComparison.Ordinal));
         }
         catch (Exception ex)
         {
@@ -61,6 +66,36 @@ internal static class LayoutCheck
         await File.WriteAllLinesAsync(file, lines);
         Dispatcher.UIThread.Post(main.Close);
     }
+
+    private static async Task<List<string>> CheckMinimizeAsync(Window main)
+    {
+        var lines = new List<string>();
+        var others = main.OwnedWindows.Where(window => window.IsVisible).ToList();
+        main.WindowState = WindowState.Minimized;
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        foreach (var window in others)
+        {
+            var down = !IsOnScreen(window);
+            lines.Add($"{(down ? "ok" : "MISMATCH")} player minimized: {window.Title} {(down ? "went too" : "stayed up")}");
+        }
+
+        main.WindowState = WindowState.Normal;
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        lines.Add($"{(IsOnScreen(main) ? "ok" : "MISMATCH")} player restored: {main.Title}");
+        foreach (var window in others)
+        {
+            var back = IsOnScreen(window);
+            lines.Add($"{(back ? "ok" : "MISMATCH")} player restored: {window.Title} {(back ? "came back" : "didn't come back")}");
+        }
+
+        return lines;
+    }
+
+    /// <summary>Whether macOS shows the window: up on a screen, not hidden or down in the Dock.</summary>
+    private static bool IsOnScreen(Window window) =>
+        window.TryGetPlatformHandle() is IMacOSTopLevelPlatformHandle { NSWindow: var native } && native != IntPtr.Zero
+            ? Interop.ObjC.SendBool(native, "isVisible") && !Interop.ObjC.SendBool(native, "isMiniaturized")
+            : window.IsVisible && window.WindowState != WindowState.Minimized;
 
     /// <summary>Gives the layout and AppKit a few seconds to catch up, then reports how it ended up.</summary>
     private static async Task<(bool Matched, string Line)> SettleAsync(Window visuals, string label)
