@@ -124,13 +124,14 @@
                     <!-- A folder heading: a chevron, the folder's name and how many sounds are in it. -->
                     <DataTemplate DataType="lib:FolderHeading" x:CompileBindings="True">
                         <Expander Theme="{StaticResource FolderExpander}" IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                                  Classes.highlighted="{Binding IsHighlighted}" HorizontalAlignment="Stretch">
+                                  Classes.highlighted="{Binding IsHighlighted}" HorizontalAlignment="Stretch"
+                                  Margin="{Binding Indent}">
                             <Expander.Header>
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
                                                Margin="8,0,2,0" VerticalAlignment="Center"
                                                Foreground="{DynamicResource FaintTextBrush}" />
-                                    <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="{Binding LabelWeight}"
                                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                                Foreground="{DynamicResource MutedTextBrush}" />
                                 </DockPanel>

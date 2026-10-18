@@ -59,6 +59,9 @@ public sealed class StoreService : IDisposable
     /// <summary>Where store music goes, with a folder per store inside.</summary>
     public string MusicFolder => _settings.StoreMusicFolder ?? Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
 
+    /// <summary>Each store's folder in <see cref="MusicFolder"/>, listed in the library under one heading per store.</summary>
+    public IReadOnlyList<string> StoreFolders => StoreImporter.StoreFolders(MusicFolder);
+
     private string RecordFolder => Path.Combine(AppDataFolder.Path, "Stores");
 
     private bool Importing => _settings.BandcampImport || _settings.BeatportImport;
