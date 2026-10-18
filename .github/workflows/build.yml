@@ -477,6 +477,20 @@ jobs:
           ditto -x -k "releases-mac/Lucent-$RID-Portable.zip" check
           codesign --verify --deep --strict --verbose=2 check/Lucent.app
           test -x check/Lucent.app/Contents/MacOS/UpdateMac
+          # Open it the way people do and make sure the player is still up after a while: the self-test
+          # above never starts the app's window loop, so a crash at launch would otherwise ship.
+          export LUCENT_DATA_FOLDER="$RUNNER_TEMP/launch-check"
+          check/Lucent.app/Contents/MacOS/Lucent > "$RUNNER_TEMP/launch.log" 2>&1 &
+          app=$!
+          for _ in $(seq 1 20); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
+          if ! kill -0 "$app" 2> /dev/null; then
+            echo "::error::Lucent quit at launch."
+            cat "$RUNNER_TEMP/launch.log"
+            exit 1
+          fi
+          kill "$app"
+          echo "Lucent launched and was still running after 20 seconds."
+          unset LUCENT_DATA_FOLDER
           cp "releases-mac/Lucent-$RID-Setup.pkg" "mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg"
           cp "Lucent-mac-${{ matrix.arch }}.zip" mac-release/
           cp releases-mac/*.nupkg "releases-mac/releases.$RID.json" "releases-mac/assets.$RID.json" "releases-mac/RELEASES-$RID" mac-release/

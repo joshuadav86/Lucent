@@ -20,6 +20,11 @@ public static class ErrorLog
     public static string Path { get; } = System.IO.Path.Combine(AppDataFolder.Path, "errors.log");
 
     /// <summary>Records anything thrown on the UI thread, a background thread or an unobserved task.</summary>
+    /// <remarks>
+    /// Call it once Avalonia is set up (App.OnFrameworkInitializationCompleted), not before: the first use
+    /// of Dispatcher.UIThread creates the UI thread's dispatcher, and one created before the Mac platform
+    /// is loaded can't run the app's main loop (it throws PlatformNotSupportedException at launch).
+    /// </remarks>
     public static void Watch()
     {
         Dispatcher.UIThread.UnhandledException += (_, e) => Write("UI", e.Exception);
