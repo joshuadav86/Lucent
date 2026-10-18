@@ -26,8 +26,8 @@ namespace Lucent.Mac;
 /// </summary>
 /// <remarks>
 /// The rest of the window lives in partial files: EditorWindow.Clipboard.cs (cut, copy, paste),
-/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis)
-/// and EditorWindow.Plugins.cs (VST3 effects).
+/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis),
+/// EditorWindow.History.cs (the history panel) and EditorWindow.Plugins.cs (VST3 effects and chains).
 /// </remarks>
 public partial class EditorWindow : Window
 {
@@ -50,6 +50,7 @@ public partial class EditorWindow : Window
     private bool _closeConfirmed;
     private bool _askingToClose;
     private string? _lastSavedPath;
+    private readonly FullScreen _fullScreen;
 
     /// <summary>For the XAML previewer only; Lucent opens editors with a file.</summary>
     public EditorWindow()
@@ -66,6 +67,8 @@ public partial class EditorWindow : Window
         _mainPlayer = mainPlayer;
         FileTitle.Text = Path.GetFileName(path);
         Title = $"{Path.GetFileName(path)} - Audio editor - Lucent";
+        _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
+        _fullScreen.Changed += (_, _) => UpdateMaximizeButton();
 
         _playheadTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(30) };
         _playheadTimer.Tick += (_, _) => UpdatePlayhead();
@@ -107,6 +110,8 @@ public partial class EditorWindow : Window
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
         LoopToggle.IsChecked = _settings.Loop;
+        HistoryToggle.IsChecked = _settings.ShowHistory;
+        HistoryPanel.IsVisible = _settings.ShowHistory;
         UpdateSnap();
         InitTools();
         SetEditingEnabled(false);
@@ -819,6 +824,7 @@ public partial class EditorWindow : Window
         ToolTip.SetTip(RedoButton, session?.RedoDescription is { } redo ? $"Redo {redo} (⇧⌘Z)" : "Redo (⇧⌘Z)");
         var name = Path.GetFileName(_path);
         FileTitle.Text = HasUnsavedChanges ? $"{name}  •  edited" : name;
+        UpdateHistoryList();
     }
 
     // ---- Playback ----
@@ -1134,14 +1140,26 @@ public partial class EditorWindow : Window
             return;
         }
 
+        if (FullScreen.IsToggleKey(e))
+        {
+            _fullScreen.Toggle();
+            e.Handled = true;
+            return;
+        }
+
         // ⌘ on the Mac where Windows uses Ctrl.
         var command = e.KeyModifiers.HasFlag(KeyModifiers.Meta);
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         if (IsBusy || _session is null)
         {
-            if (e.Key == Key.Escape)
+            if (e.Key == Key.Escape && IsBusy)
             {
                 _busy?.Cancel();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && _fullScreen.IsOn)
+            {
+                _fullScreen.Toggle();
                 e.Handled = true;
             }
 
@@ -1200,6 +1218,9 @@ public partial class EditorWindow : Window
                 LoopToggle.IsChecked = LoopToggle.IsChecked != true;
                 SetLoop(LoopToggle.IsChecked == true);
                 break;
+            case Key.H when !command:
+                ShowHistoryPanel(!HistoryPanel.IsVisible);
+                break;
             case Key.V:
                 SpectrogramToggle.IsChecked = SpectrogramToggle.IsChecked != true;
                 SetView(SpectrogramToggle.IsChecked == true ? EditorView.Spectrogram : EditorView.Waveform);
@@ -1215,6 +1236,10 @@ public partial class EditorWindow : Window
                 if (Waveform.IsDraggingClip)
                 {
                     Waveform.CancelClipDrag();
+                }
+                else if (_fullScreen.IsOn)
+                {
+                    _fullScreen.Toggle();
                 }
                 else if (_player.IsPlaying)
                 {
@@ -1272,10 +1297,17 @@ public partial class EditorWindow : Window
         base.OnPropertyChanged(change);
         if (change.Property == WindowStateProperty && MaximizeIcon is not null)
         {
-            var maximized = WindowState == WindowState.Maximized;
-            MaximizeIcon.Data = ThemeIcon(maximized ? "RestoreIcon" : "MaximizeIcon");
-            ToolTip.SetTip(MaximizeButton, maximized ? "Restore" : "Maximize");
+            UpdateMaximizeButton();
         }
+    }
+
+    private void UpdateMaximizeButton()
+    {
+        var maximized = WindowState == WindowState.Maximized;
+        MaximizeIcon.Data = ThemeIcon(maximized ? "RestoreIcon" : "MaximizeIcon");
+        ToolTip.SetTip(MaximizeButton, maximized ? "Restore" : "Maximize");
+        // Maximize means nothing while the window already fills the screen.
+        MaximizeButton.IsVisible = _fullScreen is not { IsOn: true };
     }
 
     /// <summary>

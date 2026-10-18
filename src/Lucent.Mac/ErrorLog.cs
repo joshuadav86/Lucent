@@ -54,6 +54,24 @@ public static class ErrorLog
         }
     }
 
+    /// <summary>A note that isn't an exception, such as what a MilkDrop preset had to leave out.</summary>
+    public static void Write(string where, string message)
+    {
+        try
+        {
+            lock (Gate)
+            {
+                Directory.CreateDirectory(AppDataFolder.Path);
+                TrimIfLarge();
+                File.AppendAllText(Path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {where} ({AppInfo.Version}): {message}{Environment.NewLine}{Environment.NewLine}", Encoding.UTF8);
+            }
+        }
+        catch (Exception)
+        {
+            // Failing to write the log mustn't make anything worse.
+        }
+    }
+
     /// <summary>The newest <paramref name="maxChars"/> characters of the log, or an empty string if there's none.</summary>
     public static string ReadTail(int maxChars)
     {

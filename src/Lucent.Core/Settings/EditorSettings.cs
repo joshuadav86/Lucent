@@ -41,6 +41,9 @@ public sealed class EditorSettings
     /// <summary>Playing the selection starts again at its beginning when it reaches the end.</summary>
     public bool Loop { get; set; }
 
+    /// <summary>The history list is open beside the waveform.</summary>
+    public bool ShowHistory { get; set; }
+
     public List<EqBand> EqBands { get; set; } = EqBand.Defaults();
 
     public CompressorSettings Compressor { get; set; } = new();

@@ -12,6 +12,7 @@ using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Editor.Effects;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer;
 
@@ -22,8 +23,8 @@ namespace WinampInspiredVisualizer;
 /// </summary>
 /// <remarks>
 /// The rest of the window lives in partial files: EditorWindow.Clipboard.cs (cut, copy, paste),
-/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis)
-/// and EditorWindow.Plugins.cs (VST3 effects).
+/// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis),
+/// EditorWindow.History.cs (the history panel) and EditorWindow.Plugins.cs (VST3 effects and chains).
 /// </remarks>
 public partial class EditorWindow : Window
 {
@@ -44,6 +45,7 @@ public partial class EditorWindow : Window
     private bool _closeWhenIdle;
     private bool _closeConfirmed;
     private string? _lastSavedPath;
+    private readonly FullScreen _fullScreen;
     private readonly EditorSettings _settings = EditorSettings.Load();
 
     public EditorWindow(string path, AudioPlayer mainPlayer)
@@ -53,6 +55,8 @@ public partial class EditorWindow : Window
         _mainPlayer = mainPlayer;
         FileTitle.Text = Path.GetFileName(path);
         Title = $"{Path.GetFileName(path)} - Audio editor - Lucent";
+        _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
+        _fullScreen.Changed += (_, _) => OnWindowStateChanged(this, EventArgs.Empty);
 
         _playheadTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(30) };
         _playheadTimer.Tick += (_, _) => UpdatePlayhead();
@@ -91,6 +95,8 @@ public partial class EditorWindow : Window
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
         LoopToggle.IsChecked = _settings.Loop;
+        HistoryToggle.IsChecked = _settings.ShowHistory;
+        HistoryPanel.Visibility = _settings.ShowHistory ? Visibility.Visible : Visibility.Collapsed;
         UpdateSnap();
         InitTools();
         SetEditingEnabled(false);
@@ -703,6 +709,7 @@ public partial class EditorWindow : Window
         RedoButton.ToolTip = session?.RedoDescription is { } redo ? $"Redo {redo} (Ctrl+Y)" : "Redo (Ctrl+Y)";
         var name = Path.GetFileName(_path);
         FileTitle.Text = HasUnsavedChanges ? $"{name}  •  edited" : name;
+        UpdateHistoryList();
     }
 
     // ---- Playback ----
@@ -1014,13 +1021,25 @@ public partial class EditorWindow : Window
             return;
         }
 
+        if (FullScreen.IsToggleKey(e))
+        {
+            _fullScreen.Toggle();
+            e.Handled = true;
+            return;
+        }
+
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
         if (IsBusy || _session is null)
         {
-            if (e.Key == Key.Escape)
+            if (e.Key == Key.Escape && IsBusy)
             {
                 _busy?.Cancel();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && _fullScreen.IsOn)
+            {
+                _fullScreen.Toggle();
                 e.Handled = true;
             }
 
@@ -1075,6 +1094,9 @@ public partial class EditorWindow : Window
                 LoopToggle.IsChecked = LoopToggle.IsChecked != true;
                 SetLoop(LoopToggle.IsChecked == true);
                 break;
+            case Key.H:
+                ShowHistoryPanel(HistoryPanel.Visibility != Visibility.Visible);
+                break;
             case Key.V:
                 SpectrogramToggle.IsChecked = SpectrogramToggle.IsChecked != true;
                 SetView(SpectrogramToggle.IsChecked == true ? EditorView.Spectrogram : EditorView.Waveform);
@@ -1090,6 +1112,10 @@ public partial class EditorWindow : Window
                 if (Waveform.IsDraggingClip)
                 {
                     Waveform.CancelClipDrag();
+                }
+                else if (_fullScreen.IsOn)
+                {
+                    _fullScreen.Toggle();
                 }
                 else if (_player.IsPlaying)
                 {
@@ -1153,9 +1179,10 @@ public partial class EditorWindow : Window
 
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
-        var maximized = WindowState == WindowState.Maximized;
+        var maximized = WindowState == WindowState.Maximized && !_fullScreen.IsOn;
         MaximizeIcon.Data = (Geometry)FindResource(maximized ? "RestoreIcon" : "MaximizeIcon");
         MaximizeButton.ToolTip = maximized ? "Restore" : "Maximize";
+        MaximizeButton.Visibility = _fullScreen.IsOn ? Visibility.Collapsed : Visibility.Visible;
         // A maximized borderless window hangs slightly off-screen; pad it back in.
         WindowRoot.Margin = maximized ? new Thickness(7) : new Thickness(0);
     }

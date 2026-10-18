@@ -335,6 +335,37 @@ public sealed class VisualizerHost : Border, IDisposable
         Child = _view;
     }
 
+    /// <summary>
+    /// Loads the visuals again (after MilkDrop presets are imported, say) and carries on with the one
+    /// showing, or with <paramref name="show"/> if it's given and loads. The engine starts over, so
+    /// there's a moment of black.
+    /// </summary>
+    public void ReloadPresets(string? show = null)
+    {
+        if (!_started || _disposed)
+        {
+            return;
+        }
+
+        if (show is not null)
+        {
+            StartPresetName = show;
+        }
+        else if (_presetIndex >= 0 && _presetIndex < _presets.Count)
+        {
+            StartPresetName = _presets[_presetIndex].Name;
+        }
+
+        _view?.Renderer?.Dispose();
+        _renderer = null;
+        _view = null;
+        Child = null;
+        _engine?.Dispose();
+        _engine = null;
+        Start();
+        UpdateVisible();
+    }
+
     private static IReadOnlyList<PresetSource> LoadPresets(MetalShaderFiles files)
     {
         try

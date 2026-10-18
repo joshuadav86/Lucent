@@ -10,7 +10,7 @@
         Background="{DynamicResource SurfaceBrush}">
 
     <!-- Same custom title bar as the main window, with native resizing. -->
-    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1">
+    <Border x:Name="Frame" BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1">
         <Grid x:Name="WindowRoot" Background="{DynamicResource PanelSheenBrush}" RowDefinitions="36,*">
 
             <!-- Title bar: the frequency under the mouse, the colours, and close. -->
@@ -29,6 +29,9 @@
                             ToolTip.Tip="The colours loudness is painted in">
                         <StackPanel x:Name="PaletteBar" Orientation="Horizontal" />
                     </Border>
+                    <Button x:Name="FullScreenButton" Theme="{StaticResource CaptionButton}" Height="36">
+                        <Path x:Name="FullScreenIcon" Theme="{StaticResource CaptionIcon}" />
+                    </Button>
                     <Button Theme="{StaticResource CloseCaptionButton}" Height="36" ToolTip.Tip="Close (Y)" Click="OnCloseWindow">
                         <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
                     </Button>

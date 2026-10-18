@@ -3,7 +3,7 @@ using WinampInspiredVisualizer.Editor.Effects;
 namespace WinampInspiredVisualizer.Editor.Plugins;
 
 /// <summary>
-/// Runs the selection through a VST3 effect with the settings it has now. Reverbs and delays ring on
+/// Runs the selection through a VST3 effect, or a chain of them one after another, with the settings they have now. Reverbs and delays ring on
 /// after the selection ends: that tail is mixed over the audio that follows (which is why the input
 /// reaches up to <see cref="MaxTail"/> past the selection), or, at the end of the song, makes it longer.
 /// </summary>
@@ -17,7 +17,7 @@ public sealed class PluginEffect : IAudioEffect
 
     private const int BlockFrames = 16384;
 
-    private readonly PluginHost _host;
+    private readonly IReadOnlyList<PluginHost> _hosts;
     private readonly int _selectionFrames;
 
     /// <param name="host">The effect, already set up the way the user wants.</param>
@@ -25,20 +25,40 @@ public sealed class PluginEffect : IAudioEffect
     /// How much of the input is the selection; the rest is the audio after it, for the tail to mix into.
     /// </param>
     public PluginEffect(PluginHost host, int selectionFrames)
+        : this(new[] { host }, selectionFrames)
     {
-        _host = host;
+    }
+
+    /// <param name="hosts">The effects in the order the audio goes through them (at least one).</param>
+    public PluginEffect(IReadOnlyList<PluginHost> hosts, int selectionFrames)
+    {
+        if (hosts.Count == 0)
+        {
+            throw new ArgumentException("There are no plugins to run.", nameof(hosts));
+        }
+
+        _hosts = hosts;
         _selectionFrames = selectionFrames;
     }
 
-    public string Description => _host.Name;
+    public string Description => _hosts.Count == 1 ? _hosts[0].Name : $"Plugin chain ({_hosts.Count} plugins)";
+
+    public string? Details => _hosts.Count == 1 ? null : string.Join(" → ", _hosts.Select(h => h.Name));
 
     public AudioBuffer Process(AudioBuffer input, EffectContext context)
     {
         var rate = input.SampleRate;
         var channels = input.ChannelCount;
         var selection = Math.Min(_selectionFrames, input.Frames);
-        var (latency, reportedTail, _) = _host.Start(offline: true);
-        latency = Math.Max(0, latency);
+        // In a chain the delays add up, and so do the tails: a reverb's tail rings on through what comes after it.
+        var latency = 0;
+        long reportedTail = 0;
+        foreach (var host in _hosts)
+        {
+            var (delay, tail, _) = host.Start(offline: true);
+            latency += Math.Max(0, delay);
+            reportedTail = reportedTail < 0 || tail < 0 ? -1 : reportedTail + tail;
+        }
 
         // How long to let it ring on. A plugin that says how long its tail is gets exactly that (up to
         // the limit); one that says it has none, or an endless one, is listened to until it falls silent.
@@ -87,7 +107,11 @@ public sealed class PluginEffect : IAudioEffect
                 }
             }
 
-            _host.Process(block, 0, BlockFrames);
+            foreach (var host in _hosts)
+            {
+                host.Process(block, 0, BlockFrames);
+            }
+
             for (var i = 0; i < BlockFrames; i++)
             {
                 var at = fed + i - latency;
@@ -145,7 +169,7 @@ public sealed class PluginEffect : IAudioEffect
         // A few frames of ringing past the end isn't worth mentioning.
         if (length - input.Frames >= rate / 10)
         {
-            context.Note = $"{_host.Name}: done. Its tail made the sound {(length - input.Frames) / (double)rate:0.0} seconds longer. Ctrl+Z undoes it.";
+            context.Note = $"{Description}: done. Its tail made the sound {(length - input.Frames) / (double)rate:0.0} seconds longer. Ctrl+Z undoes it.";
         }
 
         context.Report(1);

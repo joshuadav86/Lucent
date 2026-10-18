@@ -1,9 +1,12 @@
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
+using System.Windows.Media;
+using Microsoft.Win32;
 using NAudio.Wave;
 using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Editor.Plugins;
@@ -11,29 +14,43 @@ using WinampInspiredVisualizer.Editor.Plugins;
 namespace WinampInspiredVisualizer;
 
 /// <summary>
-/// VST3 effects in the editor. One plugin is open at a time, in its own helper process with its own window;
-/// the bar above the processing buttons previews it, applies it, or closes it.
+/// VST3 effects in the editor. Plugins open into a chain, each in its own helper process with its own window;
+/// the bar above the processing buttons switches each one on or off, reorders them, previews the chain,
+/// applies it as one step, and saves or opens chains (Lucent's own, or REAPER's .RfxChain files).
 /// </summary>
 public partial class EditorWindow
 {
     /// <summary>Above this many effects, the menu groups them by maker.</summary>
     private const int FlatMenuLimit = 20;
 
+    private readonly PluginChain _chain = new();
     private PluginCatalog? _catalog;
-    private PluginHost? _plugin;
     private PluginPreviewProvider? _preview;
     /// <summary>What playback is going through (a plugin or a tool), so a click while playing carries on through it.</summary>
     private Func<ISampleProvider, ISampleProvider>? _previewThrough;
 
     // ---- Choosing a plugin ----
 
-    private async void OnPlugins(object sender, RoutedEventArgs e)
+    private async void OnPlugins(object sender, RoutedEventArgs e) => await ShowPluginMenuAsync(PluginsButton);
+
+    private async void OnAddToChain(object sender, RoutedEventArgs e) => await ShowPluginMenuAsync(ChainAddButton);
+
+    private async Task ShowPluginMenuAsync(UIElement under)
+    {
+        if (await EnsureCatalogAsync() is not null)
+        {
+            ShowPluginMenu(under);
+        }
+    }
+
+    /// <summary>The installed plugins, looking at new and changed plugin files first. Null if that was cancelled.</summary>
+    private async Task<PluginCatalog?> EnsureCatalogAsync()
     {
         if (!PluginHost.IsAvailable)
         {
             MessageBox.Show(this, "Lucent's plugin helper (LucentPluginHost.exe) is missing from its folder, so plugins can't be used. " +
                                   "Reinstalling Lucent puts it back.", "Plugins", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            return null;
         }
 
         _catalog ??= await Task.Run(() => PluginCatalog.Load());
@@ -41,10 +58,10 @@ public partial class EditorWindow
         var unscanned = await Task.Run(() => catalog.FindUnscanned());
         if (unscanned.Count > 0 && !await ScanPluginsAsync(everything: false))
         {
-            return;
+            return null;
         }
 
-        ShowPluginMenu();
+        return catalog;
     }
 
     private async Task<bool> ScanPluginsAsync(bool everything)
@@ -64,14 +81,14 @@ public partial class EditorWindow
         return done;
     }
 
-    private void ShowPluginMenu()
+    private void ShowPluginMenu(UIElement under)
     {
         if (_catalog is not { } catalog)
         {
             return;
         }
 
-        var menu = new ContextMenu { PlacementTarget = PluginsButton, Placement = PlacementMode.Top, VerticalOffset = -6 };
+        var menu = new ContextMenu { PlacementTarget = under, Placement = PlacementMode.Top, VerticalOffset = -6 };
         var plugins = catalog.Plugins;
         if (plugins.Count == 0)
         {
@@ -105,18 +122,25 @@ public partial class EditorWindow
         }
 
         menu.Items.Add(new Separator());
+        if (under == PluginsButton)
+        {
+            var chains = new MenuItem { Header = "Chains" };
+            AddChainItems(chains.Items, saveable: _chain.Count > 0);
+            menu.Items.Add(chains);
+        }
+
         var rescan = new MenuItem { Header = "Look for plugins again", ToolTip = "After installing or updating plugins" };
         rescan.Click += async (_, _) =>
         {
             if (await ScanPluginsAsync(everything: true))
             {
-                ShowPluginMenu();
+                ShowPluginMenu(under);
             }
         };
         menu.Items.Add(rescan);
 
         var addFolder = new MenuItem { Header = "Add a plugin folder…", ToolTip = "If your plugins are somewhere other than the usual VST3 folder" };
-        addFolder.Click += async (_, _) => await AddPluginFolderAsync();
+        addFolder.Click += async (_, _) => await AddPluginFolderAsync(under);
         menu.Items.Add(addFolder);
 
         var failures = catalog.Failures;
@@ -133,18 +157,18 @@ public partial class EditorWindow
     private MenuItem PluginItem(PluginInfo plugin, string header)
     {
         var item = new MenuItem { Header = header, ToolTip = plugin.Kind is { } kind ? $"{kind}, version {plugin.Version}" : $"Version {plugin.Version}" };
-        item.Click += async (_, _) => await OpenPluginAsync(plugin);
+        item.Click += async (_, _) => await AddPluginAsync(plugin);
         return item;
     }
 
-    private async Task AddPluginFolderAsync()
+    private async Task AddPluginFolderAsync(UIElement under)
     {
         if (_catalog is not { } catalog)
         {
             return;
         }
 
-        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Choose a folder with VST3 plugins in it" };
+        var dialog = new OpenFolderDialog { Title = "Choose a folder with VST3 plugins in it" };
         if (dialog.ShowDialog(this) != true)
         {
             return;
@@ -154,7 +178,7 @@ public partial class EditorWindow
         catalog.Save();
         if (await ScanPluginsAsync(everything: false))
         {
-            ShowPluginMenu();
+            ShowPluginMenu(under);
         }
     }
 
@@ -169,38 +193,23 @@ public partial class EditorWindow
             "Plugins", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    // ---- The open plugin ----
+    // ---- The chain ----
 
-    private async Task OpenPluginAsync(PluginInfo plugin)
+    /// <summary>Opens a plugin and adds it to the end of the chain, with the settings it had last time.</summary>
+    private async Task AddPluginAsync(PluginInfo plugin)
     {
         if (_session is not { } session)
         {
             return;
         }
 
-        await ClosePluginAsync();
+        StopPreview();
         var audio = session.Audio;
         PluginHost? host = null;
         var opened = await RunBusyAsync($"Opening {plugin.Name}…", async (progress, token) =>
         {
             // Loading isn't interrupted part way; if Cancel was pressed, the plugin is closed once it's up.
-            host = await Task.Run(() =>
-            {
-                var opening = PluginHost.Open(plugin, audio.SampleRate, audio.ChannelCount);
-                if (PluginCatalog.LoadSettings(plugin) is { } saved)
-                {
-                    try
-                    {
-                        opening.SetSettings(saved);
-                    }
-                    catch (PluginException) when (!opening.IsGone)
-                    {
-                        // Settings from an older version it doesn't understand: it starts as new.
-                    }
-                }
-
-                return opening;
-            });
+            host = await Task.Run(() => OpenHost(plugin, PluginCatalog.LoadSettings(plugin), audio, out _));
             if (token.IsCancellationRequested)
             {
                 var unwanted = host;
@@ -215,37 +224,159 @@ public partial class EditorWindow
             return;
         }
 
-        _plugin = host;
-        PluginName.Text = string.IsNullOrWhiteSpace(plugin.Vendor) ? host.Name : $"{host.Name}  ·  {plugin.Vendor}";
-        PluginWindowButton.Visibility = host.HasWindow ? Visibility.Visible : Visibility.Collapsed;
-        PluginHint.Text = host.HasWindow
-            ? "Set it up in its window. Preview plays the selection through it, and changes are heard as you make them. Apply changes the selection, or the whole sound."
-            : "This plugin has no window of its own, so it runs with its standard settings. Preview to hear it, Apply to use it.";
-        PluginBar.Visibility = Visibility.Visible;
-        PluginBar.IsEnabled = true;
-        ShowStatus($"{host.Name} is open.");
+        var slot = new ChainSlot(plugin, host);
+        _chain.Add(slot);
+        ShowChain();
+        ShowStatus(_chain.Count == 1 ? $"{host.Name} is open." : $"{host.Name} is open, number {_chain.Count} in the chain.");
         if (host.HasWindow)
         {
-            await ShowPluginWindowAsync();
+            await ShowPluginWindowAsync(slot);
         }
     }
 
-    private async void OnShowPluginWindow(object sender, RoutedEventArgs e) => await ShowPluginWindowAsync();
-
-    private async Task ShowPluginWindowAsync()
+    /// <summary>
+    /// Starts a plugin's helper and gives it its settings. Waits for the plugin, so call it off the UI thread.
+    /// <paramref name="settingsRefused"/> is set when the plugin wouldn't take them (a different version of it, say).
+    /// </summary>
+    private static PluginHost OpenHost(PluginInfo plugin, byte[]? settings, AudioBuffer audio, out bool settingsRefused)
     {
-        if (_plugin is not { } host)
+        settingsRefused = false;
+        var host = PluginHost.Open(plugin, audio.SampleRate, audio.ChannelCount);
+        if (settings is not null)
+        {
+            try
+            {
+                host.SetSettings(settings);
+            }
+            catch (PluginException) when (!host.IsGone)
+            {
+                // Settings from an older version it doesn't understand: it starts as new.
+                settingsRefused = true;
+            }
+        }
+
+        return host;
+    }
+
+    /// <summary>Shows the chain's plugins in the bar, or hides the bar when there are none.</summary>
+    private void ShowChain()
+    {
+        ChainPanel.Children.Clear();
+        var slots = _chain.Slots;
+        for (var i = 0; i < slots.Count; i++)
+        {
+            ChainPanel.Children.Add(ChainChip(slots[i], i, slots.Count));
+        }
+
+        PluginBar.Visibility = slots.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        PluginBar.IsEnabled = !IsBusy;
+        var on = slots.Count(s => !s.IsBypassed);
+        PluginHint.Text = slots.Count switch
+        {
+            0 => string.Empty,
+            1 when slots[0].Host.HasWindow =>
+                "Set it up in its window (click its name to bring it back). Preview plays the selection through it, and changes are heard as you make them. " +
+                "Add plugin chains another one after it. Apply changes the selection, or the whole sound.",
+            1 => "This plugin has no window of its own, so it runs with its standard settings. Preview to hear it, Apply to use it, or add another plugin after it.",
+            _ => $"The sound goes through them from left to right; {(on == slots.Count ? "all are on" : $"{on} of {slots.Count} are on")}. " +
+                 "Switch one off to hear the chain without it, even while it plays. Apply runs the ones that are on, as one step.",
+        };
+    }
+
+    private FrameworkElement ChainChip(ChainSlot slot, int index, int count)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        var on = new CheckBox
+        {
+            Style = (Style)FindResource("SwitchToggle"),
+            IsChecked = !slot.IsBypassed,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 2, 0),
+            ToolTip = "Switch it off to hear the chain without it (even while the preview plays). Apply leaves out plugins that are off.",
+        };
+        var name = new Button
+        {
+            Style = (Style)FindResource("ToolButton"),
+            Height = 26,
+            Padding = new Thickness(8, 0, 8, 0),
+            Margin = new Thickness(0),
+            Content = $"{index + 1}. {slot.Host.Name}",
+            ToolTip = slot.Host.HasWindow ? $"{slot.Title}: show its window" : $"{slot.Title} has no window of its own",
+        };
+        name.Click += async (_, _) => await ShowPluginWindowAsync(slot);
+        on.Click += (_, _) =>
+        {
+            slot.IsBypassed = on.IsChecked != true;
+            name.Opacity = slot.IsBypassed ? 0.5 : 1;
+            ShowChain();
+            ShowStatus(slot.IsBypassed ? $"{slot.Host.Name} is off." : $"{slot.Host.Name} is on.");
+        };
+        name.Opacity = slot.IsBypassed ? 0.5 : 1;
+        row.Children.Add(on);
+        row.Children.Add(name);
+        row.Children.Add(ChipButton("ChevronLeftIcon", "Move it earlier in the chain", index > 0, () => MoveInChain(index, index - 1)));
+        row.Children.Add(ChipButton("ChevronRightIcon", "Move it later in the chain", index < count - 1, () => MoveInChain(index, index + 1)));
+        row.Children.Add(ChipButton("CloseIcon", "Take it out of the chain (its settings are remembered)", true, async () => await RemoveFromChainAsync(slot)));
+        return new Border
+        {
+            Child = row,
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(6, 3, 4, 3),
+            Margin = new Thickness(0, 0, 8, 6),
+            Background = (Brush)FindResource("SurfaceRaisedBrush"),
+            BorderBrush = (Brush)FindResource("HairlineBrush"),
+            BorderThickness = new Thickness(1),
+        };
+    }
+
+    private Button ChipButton(string icon, string tip, bool enabled, Action click)
+    {
+        var button = new Button
+        {
+            Style = (Style)FindResource("ChipButton"),
+            ToolTip = tip,
+            IsEnabled = enabled,
+            Content = new System.Windows.Shapes.Path { Style = (Style)FindResource("LineIcon"), Data = (Geometry)FindResource(icon) },
+        };
+        button.Click += (_, _) => click();
+        return button;
+    }
+
+    private void MoveInChain(int from, int to)
+    {
+        StopPreview();
+        _chain.Move(from, to);
+        ShowChain();
+    }
+
+    private async Task RemoveFromChainAsync(ChainSlot slot)
+    {
+        StopPreview();
+        var index = _chain.Slots.ToList().IndexOf(slot);
+        if (index < 0)
+        {
+            return;
+        }
+
+        _chain.RemoveAt(index);
+        ShowChain();
+        await CloseSlotsAsync(new[] { slot });
+    }
+
+    private async Task ShowPluginWindowAsync(ChainSlot slot)
+    {
+        if (!slot.Host.HasWindow || slot.Host.IsGone)
         {
             return;
         }
 
         var owner = new WindowInteropHelper(this).Handle;
         // Lets the helper's window come to the front, which Windows otherwise only allows the active program.
-        AllowSetForegroundWindow(host.ProcessId);
+        AllowSetForegroundWindow(slot.Host.ProcessId);
         try
         {
             // Off the UI thread: while the plugin's window opens it may need this window to answer.
-            await Task.Run(() => host.ShowWindow(owner, $"{host.Name} - Lucent"));
+            await Task.Run(() => slot.Host.ShowWindow(owner, $"{slot.Host.Name} - Lucent"));
         }
         catch (PluginException ex)
         {
@@ -261,7 +392,7 @@ public partial class EditorWindow
             return;
         }
 
-        if (_plugin is not { } host || _session is not { } session || IsBusy)
+        if (_chain.Count == 0 || _session is not { } session || IsBusy)
         {
             return;
         }
@@ -271,12 +402,14 @@ public partial class EditorWindow
             ? (Waveform.CursorFrame >= session.Audio.Frames - 1 ? 0 : Waveform.CursorFrame, session.Audio.Frames)
             : (selection.Start, selection.End);
         StopPlayback();
+        var slots = _chain.Slots.ToList();
         try
         {
-            // Starting again clears what's left in the plugin from before (an echo still ringing).
-            var (_, _, generation) = await Task.Run(() => host.Start(offline: false));
-            // The listening volume is applied after the meters, so the plugin gets the audio at its own level.
-            PlayFrom(from, to, source => _preview = new PluginPreviewProvider(source, host, generation, 1f));
+            // Starting again clears what's left in each plugin from before (an echo still ringing).
+            var stages = await Task.Run(() => slots.Select(slot =>
+                new PreviewStage(slot.Host, slot.Host.Start(offline: false).Generation, () => slot.IsBypassed)).ToList());
+            // The listening volume is applied after the meters, so the plugins get the audio at its own level.
+            PlayFrom(from, to, source => _preview = new PluginPreviewProvider(source, stages, 1f));
         }
         catch (PluginException ex)
         {
@@ -286,8 +419,15 @@ public partial class EditorWindow
 
     private async void OnApplyPlugin(object sender, RoutedEventArgs e)
     {
-        if (_plugin is not { } host || _session is not { } session)
+        if (_session is not { } session)
         {
+            return;
+        }
+
+        var hosts = _chain.ActiveHosts;
+        if (hosts.Count == 0)
+        {
+            ShowStatus("Every plugin in the chain is switched off, so there's nothing to apply.");
             return;
         }
 
@@ -298,101 +438,110 @@ public partial class EditorWindow
         var length = selection.IsEmpty ? audio.Frames : selection.Length;
         var maxTail = (long)(PluginEffect.MaxTail.TotalSeconds * audio.SampleRate);
         var range = new FrameRange(start, (int)Math.Min(length + maxTail, audio.Frames - start));
-        await ApplyAsync(new PluginEffect(host, length), range, selection);
-        await SavePluginSettingsAsync();
+        await ApplyAsync(new PluginEffect(hosts, length), range, selection);
+        await SavePluginSettingsAsync(_chain.Slots.ToList());
     }
 
     private async void OnClosePlugin(object sender, RoutedEventArgs e) => await ClosePluginAsync();
 
-    /// <summary>Remembers the open plugin's settings for next time.</summary>
-    private async Task SavePluginSettingsAsync()
+    /// <summary>Remembers each plugin's settings for next time.</summary>
+    private async Task SavePluginSettingsAsync(IReadOnlyList<ChainSlot> slots)
     {
-        if (_plugin is not { IsGone: false } host)
-        {
-            return;
-        }
-
-        try
-        {
-            var settings = await Task.Run(() => host.GetSettings());
-            PluginCatalog.SaveSettings(host.Plugin, settings);
-        }
-        catch (PluginException ex)
-        {
-            ShowPluginProblem(ex);
-        }
-    }
-
-    private async Task ClosePluginAsync()
-    {
-        if (_plugin is not { } host)
-        {
-            return;
-        }
-
-        if (_preview is not null)
-        {
-            StopPlayback();
-        }
-
-        await SavePluginSettingsAsync();
-        _plugin = null;
-        HidePluginBar();
-        await Task.Run(() => host.Dispose());
-    }
-
-    /// <summary>When the editor closes: saves the plugin's settings and closes it without holding the window up.</summary>
-    private void ClosePluginInBackground()
-    {
-        if (_plugin is not { } host)
-        {
-            return;
-        }
-
-        _plugin = null;
-        _ = Task.Run(() =>
+        foreach (var slot in slots.Where(s => !s.Host.IsGone))
         {
             try
             {
-                if (!host.IsGone)
-                {
-                    PluginCatalog.SaveSettings(host.Plugin, host.GetSettings());
-                }
+                var settings = await Task.Run(() => slot.Host.GetSettings());
+                PluginCatalog.SaveSettings(slot.Plugin, settings);
             }
-            catch (PluginException)
+            catch (PluginException ex)
             {
-                // Closing anyway.
+                ShowPluginProblem(ex);
             }
-
-            host.Dispose();
-        });
-    }
-
-    /// <summary>Takes the plugin bar away if the plugin crashed or was stopped (after a failed Apply, say).</summary>
-    private void ClosePluginIfGone()
-    {
-        if (_plugin is { IsGone: true } host)
-        {
-            _plugin = null;
-            HidePluginBar();
-            host.Dispose();
         }
     }
 
-    private void HidePluginBar()
+    /// <summary>Closes every plugin in the chain, remembering their settings.</summary>
+    private async Task ClosePluginAsync()
     {
-        PluginBar.Visibility = Visibility.Collapsed;
-        PluginName.Text = string.Empty;
+        if (_chain.Count == 0)
+        {
+            return;
+        }
+
+        StopPreview();
+        var slots = _chain.Clear();
+        ShowChain();
+        await CloseSlotsAsync(slots);
     }
 
-    /// <summary>Explains a plugin problem, and closes the plugin if it has stopped.</summary>
+    private async Task CloseSlotsAsync(IReadOnlyList<ChainSlot> slots)
+    {
+        await SavePluginSettingsAsync(slots);
+        await Task.Run(() =>
+        {
+            foreach (var slot in slots)
+            {
+                slot.Host.Dispose();
+            }
+        });
+    }
+
+    /// <summary>When the editor closes: saves the plugins' settings and closes them without holding the window up.</summary>
+    private void ClosePluginInBackground()
+    {
+        var slots = _chain.Clear();
+        _ = Task.Run(() =>
+        {
+            foreach (var slot in slots)
+            {
+                try
+                {
+                    if (!slot.Host.IsGone)
+                    {
+                        PluginCatalog.SaveSettings(slot.Plugin, slot.Host.GetSettings());
+                    }
+                }
+                catch (PluginException)
+                {
+                    // Closing anyway.
+                }
+
+                slot.Host.Dispose();
+            }
+        });
+    }
+
+    /// <summary>Takes plugins that crashed or were stopped (after a failed Apply, say) out of the chain.</summary>
+    private void ClosePluginIfGone()
+    {
+        var gone = _chain.RemoveGone();
+        if (gone.Count > 0)
+        {
+            ShowChain();
+            foreach (var slot in gone)
+            {
+                slot.Host.Dispose();
+            }
+        }
+    }
+
+    /// <summary>Explains a plugin problem, and takes the plugin out if it has stopped.</summary>
     private void ShowPluginProblem(PluginException problem)
     {
         ShowStatus(problem.Message);
-        if (_plugin?.IsGone == true)
+        if (_chain.Slots.Any(s => s.Host.IsGone))
         {
             ClosePluginIfGone();
             MessageBox.Show(this, problem.Message, "Plugins", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void StopPreview()
+    {
+        if (_preview is not null)
+        {
+            StopPlayback();
         }
     }
 
@@ -406,6 +555,218 @@ public partial class EditorWindow
         if (failed is PluginException problem)
         {
             ShowPluginProblem(problem);
+        }
+    }
+
+    // ---- Saving and opening chains ----
+
+    private void OnChainMenu(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = ChainMenuButton, Placement = PlacementMode.Top, VerticalOffset = -6 };
+        AddChainItems(menu.Items, saveable: _chain.Count > 0);
+        menu.IsOpen = true;
+    }
+
+    private void AddChainItems(ItemCollection items, bool saveable)
+    {
+        var save = new MenuItem
+        {
+            Header = "Save this chain…",
+            IsEnabled = saveable,
+            ToolTip = "The plugins, their order, which are on, and all their settings, to open again any time",
+        };
+        save.Click += async (_, _) => await SaveChainAsync();
+        items.Add(save);
+
+        var saved = ChainPreset.Saved();
+        if (saved.Count > 0)
+        {
+            items.Add(new Separator());
+            foreach (var (name, path) in saved)
+            {
+                var item = new MenuItem { Header = name, ToolTip = "Open this chain in place of the plugins open now" };
+                item.Click += async (_, _) => await OpenChainAsync(path);
+                items.Add(item);
+            }
+        }
+
+        items.Add(new Separator());
+        var open = new MenuItem { Header = "Open a chain file…", ToolTip = "A Lucent chain (.lucentchain) or a REAPER FX chain (.RfxChain)" };
+        open.Click += async (_, _) => await PickChainAsync(reaper: false);
+        items.Add(open);
+        var reaper = new MenuItem
+        {
+            Header = "Import a REAPER FX chain…",
+            ToolTip = "Brings in a chain saved in REAPER (.RfxChain): its VST3 plugins with their settings, in order",
+        };
+        reaper.Click += async (_, _) => await PickChainAsync(reaper: true);
+        items.Add(reaper);
+        var folder = new MenuItem { Header = "Show the chains folder" };
+        folder.Click += (_, _) => ShowChainsFolder();
+        items.Add(folder);
+    }
+
+    private async Task SaveChainAsync()
+    {
+        if (_chain.Count == 0)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(ChainPreset.Folder);
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save the plugin chain",
+            InitialDirectory = ChainPreset.Folder,
+            FileName = string.Concat(string.Join(" + ", _chain.Slots.Select(s => s.Host.Name).Take(3))
+                .Where(c => !Path.GetInvalidFileNameChars().Contains(c))),
+            DefaultExt = ChainPreset.Extension,
+            Filter = $"Lucent plugin chain|*{ChainPreset.Extension}",
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var path = dialog.FileName;
+        var slots = _chain.Slots.ToList();
+        var name = Path.GetFileNameWithoutExtension(path);
+        if (await RunBusyAsync("Saving the chain…", async (_, _) =>
+                await Task.Run(() => PluginChain.ToPreset(name, slots).Save(path))))
+        {
+            ShowStatus($"Saved the chain \"{name}\". Open it again from Chains.");
+        }
+    }
+
+    private async Task PickChainAsync(bool reaper)
+    {
+        var reaperFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "REAPER", "FXChains");
+        var dialog = new OpenFileDialog
+        {
+            Title = reaper ? "Choose a REAPER FX chain" : "Choose a plugin chain",
+            InitialDirectory = reaper && Directory.Exists(reaperFolder) ? reaperFolder : ChainPreset.Folder,
+            Filter = reaper
+                ? $"REAPER FX chains|*{ReaperChain.Extension}"
+                : $"Plugin chains|*{ChainPreset.Extension};*{ReaperChain.Extension}|All files|*.*",
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            await OpenChainAsync(dialog.FileName);
+        }
+    }
+
+    /// <summary>Opens a chain from a file in place of the plugins open now, and says what couldn't come over.</summary>
+    private async Task OpenChainAsync(string path)
+    {
+        if (_session is not { } session)
+        {
+            return;
+        }
+
+        ChainPreset preset;
+        try
+        {
+            preset = ChainPreset.Load(path);
+        }
+        catch (PluginException ex)
+        {
+            MessageBox.Show(this, ex.Message, "Plugin chains", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (await EnsureCatalogAsync() is not { } catalog)
+        {
+            return;
+        }
+
+        var resolved = preset.Resolve(catalog.Plugins);
+        var missing = resolved.Where(r => r.Plugin is null).Select(r => r.Wanted).ToList();
+        if (missing.Count == resolved.Count)
+        {
+            MessageBox.Show(this, $"None of the plugins in \"{preset.Name}\" are installed on this computer:\n\n" + Bullets(missing.Select(Named)),
+                "Plugin chains", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        await ClosePluginAsync();
+        var audio = session.Audio;
+        var opened = new List<ChainSlot>();
+        var notes = new List<string>();
+        await RunBusyAsync($"Opening \"{preset.Name}\"…", async (progress, token) =>
+        {
+            var found = resolved.Where(r => r.Plugin is not null).ToList();
+            for (var i = 0; i < found.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                var (wanted, plugin) = (found[i].Wanted, found[i].Plugin!);
+                progress.Report((double)i / found.Count);
+                try
+                {
+                    var refused = false;
+                    var host = await Task.Run(() => OpenHost(plugin, wanted.SettingsBytes() ?? PluginCatalog.LoadSettings(plugin), audio, out refused));
+                    opened.Add(new ChainSlot(plugin, host) { IsBypassed = wanted.Bypassed });
+                    if (refused)
+                    {
+                        notes.Add($"{wanted.Name}: it didn't take the saved settings (a different version?), so it starts as new.");
+                    }
+                }
+                catch (PluginException ex)
+                {
+                    notes.Add($"{wanted.Name}: {ex.Message}");
+                }
+
+                if (wanted.Note is { } note)
+                {
+                    notes.Add($"{wanted.Name}: {note}");
+                }
+            }
+        });
+
+        // Whatever opened stays open, even if Cancel was pressed part way.
+        foreach (var slot in opened)
+        {
+            _chain.Add(slot);
+        }
+
+        ShowChain();
+        if (opened.Count == 0)
+        {
+            return;
+        }
+
+        ShowStatus($"Opened \"{preset.Name}\": {opened.Count} plugin{(opened.Count == 1 ? string.Empty : "s")}.");
+        if (preset.Note is { } left)
+        {
+            notes.Add(left);
+        }
+
+        if (missing.Count > 0)
+        {
+            notes.Insert(0, "Not installed here, so left out: " + string.Join(", ", missing.Select(Named)) + ".");
+        }
+
+        if (notes.Count > 0)
+        {
+            MessageBox.Show(this, $"\"{preset.Name}\" is open, with {opened.Count} of its {resolved.Count} plugins.\n\n" + Bullets(notes),
+                "Plugin chains", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private static string Named(ChainPresetPlugin plugin) =>
+        string.IsNullOrWhiteSpace(plugin.Vendor) ? plugin.Name : $"{plugin.Name} ({plugin.Vendor})";
+
+    private static string Bullets(IEnumerable<string> lines) => string.Join("\n", lines.Select(l => $"• {l}"));
+
+    private void ShowChainsFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(ChainPreset.Folder);
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{ChainPreset.Folder}\"") { UseShellExecute = true });
+        }
+        catch (Exception)
+        {
+            ShowStatus($"The chains are in {ChainPreset.Folder}.");
         }
     }
 

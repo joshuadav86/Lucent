@@ -66,7 +66,7 @@ public partial class VisualizerWindow
         };
         if (dialog.ShowDialog(this) == true)
         {
-            ShowImport(MilkDropImport.ImportFiles(dialog.FileNames));
+            ShowImport(MilkDropImport.ImportFiles(dialog.FileNames, PresetLibrary.MilkDropFolder));
         }
     }
 
@@ -81,7 +81,7 @@ public partial class VisualizerWindow
 
         try
         {
-            ShowImport(MilkDropImport.ImportFolder(dialog.FolderName));
+            ShowImport(MilkDropImport.ImportFolder(dialog.FolderName, PresetLibrary.MilkDropFolder));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -98,9 +98,15 @@ public partial class VisualizerWindow
             1 => "Added 1 MilkDrop preset.",
             _ => $"Added {result.Added} MilkDrop presets.",
         };
-        if (result.Skipped > 0)
+        foreach (var (file, reason) in result.Skipped)
         {
-            message += $" {result.Skipped} file{(result.Skipped == 1 ? " wasn't a preset and was" : "s weren't presets and were")} left out.";
+            ErrorLog.Write($"MilkDrop preset {file} wasn't imported", reason);
+        }
+
+        var skipped = result.Skipped.Count;
+        if (skipped > 0)
+        {
+            message += $" {skipped} file{(skipped == 1 ? " wasn't a preset and was" : "s weren't presets and were")} left out.";
         }
 
         if (result.Added > 0)

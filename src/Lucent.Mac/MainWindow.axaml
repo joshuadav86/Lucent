@@ -138,6 +138,11 @@
                                               Content="Morphing transitions only" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
                                                Text="Visuals melt, glow, fly, or fold into each other, without the wipes and fades." />
+
+                                    <CheckBox x:Name="MilkDropSwitch" Theme="{StaticResource SwitchToggle}"
+                                              Content="MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="List the MilkDrop presets in the visual picker and play them in Auto." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="SoundTab" IsVisible="False">

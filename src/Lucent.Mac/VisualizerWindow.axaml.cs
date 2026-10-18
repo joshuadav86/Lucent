@@ -310,7 +310,7 @@ public partial class VisualizerWindow : ToolWindow
             // Presets and names come from the same load, so they line up; the fallback is just in case.
             var preset = index < presets.Count ? presets[index] : null;
             var tags = (preset?.Tags ?? Array.Empty<string>()).OrderBy(VisualStyles.TagOrder).ThenBy(tag => tag, StringComparer.OrdinalIgnoreCase).ToList();
-            return new VisualChoice(name, index, preset?.Family ?? VisualStyles.OtherFamily, tags)
+            return new VisualChoice(name, index, preset?.Family ?? VisualStyles.OtherFamily, tags, preset?.Author)
             {
                 IsFavorite = favorites.Contains(name),
                 Added = preset?.Added,
@@ -351,15 +351,19 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         var names = NamesInList(list);
+
+        // With MilkDrop presets switched off, they're left out of every list, and so out of Auto.
+        var choices = _settings.MilkDropVisuals ? _choices : _choices.Where(choice => !choice.IsMilkDrop).ToList();
+        var milkDropHidden = choices.Count < _choices.Count;
         List<VisualChoice> inList;
         if (names is null)
         {
-            inList = _choices;
+            inList = choices;
         }
         else
         {
             var wanted = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
-            inList = _choices.Where(choice => wanted.Contains(choice.Name)).ToList();
+            inList = choices.Where(choice => wanted.Contains(choice.Name)).ToList();
         }
 
         // Each tick box counts the visuals in this list (and matching the search) that have its tag.
@@ -374,7 +378,7 @@ public partial class VisualizerWindow : ToolWindow
         ListPickerLabel.Text = list is null ? "All visuals" : $"{list} ({inList.Count})";
 
         // Narrowed by a list, tags or a search, Auto plays from what's shown. If nothing is shown it plays from everything.
-        var narrowed = names is not null || _tickedTags.Count > 0 || _searchWords.Length > 0;
+        var narrowed = names is not null || milkDropHidden || _tickedTags.Count > 0 || _searchWords.Length > 0;
         if (_host is not null)
         {
             _host.AutoCycleNames = !narrowed || _shown.Count == 0 ? null : _shown.Select(choice => choice.Name).ToList();
@@ -594,7 +598,8 @@ public partial class VisualizerWindow : ToolWindow
             if (PresetPopup.IsOpen && !favorite)
             {
                 ListPickerLabel.Text = $"{AppSettings.FavoritesListName} ({_settings.FavoriteVisuals.Count})";
-                var playable = _choices.Where(other => other.IsFavorite && MatchesTags(other) && MatchesSearch(other))
+                var playable = _choices.Where(other => other.IsFavorite && (_settings.MilkDropVisuals || !other.IsMilkDrop)
+                    && MatchesTags(other) && MatchesSearch(other))
                     .Select(other => other.Name).ToList();
                 _host!.AutoCycleNames = playable.Count == 0 ? null : playable;
             }
@@ -1077,6 +1082,9 @@ public sealed class VisualFamilyFolder : INotifyPropertyChanged
     public IReadOnlyList<VisualChoice> Members { get; }
 
     public int ItemCount => Members.Count;
+
+    /// <summary>The MilkDrop presets' folder, which has an Import button.</summary>
+    public bool IsMilkDrop => Name == VisualStyles.MilkDropFamily;
 
     public bool IsExpanded
     {

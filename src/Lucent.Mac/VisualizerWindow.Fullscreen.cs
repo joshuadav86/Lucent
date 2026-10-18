@@ -24,10 +24,6 @@ public partial class VisualizerWindow
     private const double ExitButtonSize = 44;
     private const double ExitButtonMargin = 16;
 
-    // NSApplicationPresentationOptions: the Dock and the menu bar hide, and slide back in if the
-    // mouse goes to them, as in any Mac app's fullscreen.
-    private const ulong AutoHideDockAndMenuBar = 1UL << 0 | 1UL << 2;
-
     // The visuals are a native Metal view that Avalonia can't draw over, so the × sits in a popup
     // (its own small window) above them.
     private Popup? _exitPopup;
@@ -78,12 +74,12 @@ public partial class VisualizerWindow
                 Height = screen.Bounds.Height / screen.Scaling;
             }
 
-            SetPresentationOptions(AutoHideDockAndMenuBar);
+            AppKit.AutoHideDockAndMenuBar(true);
             Activate();
         }
         else
         {
-            SetPresentationOptions(0);
+            AppKit.AutoHideDockAndMenuBar(false);
             Chrome.UseLucentFrame(this);
             CanResize = true;
             WindowState = _stateBeforeFullscreen;
@@ -103,25 +99,6 @@ public partial class VisualizerWindow
         else
         {
             StopExitButton();
-        }
-    }
-
-    /// <summary>Hides (or brings back) the Dock and the menu bar while the visuals fill the screen.</summary>
-    private static void SetPresentationOptions(ulong options)
-    {
-        if (!OperatingSystem.IsMacOS())
-        {
-            return;
-        }
-
-        try
-        {
-            var application = ObjC.Send(ObjC.Class("NSApplication"), "sharedApplication");
-            ObjC.SendVoid(application, "setPresentationOptions:", options);
-        }
-        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
-        {
-            // Not on a Mac (the screenshot tool): nothing to hide.
         }
     }
 
