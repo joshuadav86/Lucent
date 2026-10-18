@@ -10,8 +10,10 @@ namespace WinampInspiredVisualizer.Editor;
 /// <summary>
 /// The editor's main view: a time ruler, a bar with a tab for each clip, then one lane per channel with
 /// its waveform. Click to place the cursor, drag to select (Shift extends), the wheel zooms around the
-/// mouse (Shift+wheel or a middle-button drag pans). Drag a clip's tab to move the clip; click it to
-/// select the clip. The playhead is a separate layer, so moving it never redraws the waveform.
+/// mouse (Shift+wheel or a middle-button drag pans). Drag a clip's tab to slide the clip along, leaving
+/// silence behind it (its edges snap to the other clips' edges, the cursor and the playhead; Ctrl slides it
+/// freely); Alt+drag a tab to move the clip in among the others instead. Click a tab to select the clip.
+/// The playhead is a separate layer, so moving it never redraws the waveform.
 /// </summary>
 /// <remarks>
 /// Also shows markers (flags in the ruler, which can be clicked or dragged), highlighted problem spots
@@ -53,6 +55,14 @@ public sealed class WaveformView : FrameworkElement
     private int? _draggedClip;
     private double _dragX;
     private bool _draggingClip;
+    // Where along the audio the tab was pressed; whether the drag puts the clip in among the others (Alt)
+    // rather than sliding it; and, while sliding, how far it has gone, the edge it snapped to and how far left it can go.
+    private double _pressedFrame;
+    private bool _reordering;
+    private int _slideOffset;
+    private int _slideEarliest;
+    private int? _slideSnap;
+    private int? _playheadFrame;
     private IReadOnlyList<Marker> _markers = Array.Empty<Marker>();
     private IReadOnlyList<FrameRange> _highlights = Array.Empty<FrameRange>();
     private int? _channel;
@@ -105,8 +115,11 @@ public sealed class WaveformView : FrameworkElement
     /// <summary>The user clicked (without dragging) to put the cursor somewhere.</summary>
     public event EventHandler? CursorPlaced;
 
-    /// <summary>A clip's tab was dragged and dropped: move clip <c>Clip</c> so it becomes clip number <c>ToIndex</c>.</summary>
+    /// <summary>A clip's tab was Alt+dragged and dropped: move clip <c>Clip</c> so it becomes clip number <c>ToIndex</c>.</summary>
     public event EventHandler<(int Clip, int ToIndex)>? ClipMoveRequested;
+
+    /// <summary>A clip's tab was dragged and dropped: slide clip <c>Clip</c> along by <c>Offset</c> frames.</summary>
+    public event EventHandler<(int Clip, int Offset)>? ClipSlideRequested;
 
     public Brush? WaveBrush { get => (Brush?)GetValue(WaveBrushProperty); set => SetValue(WaveBrushProperty, value); }
 
@@ -149,6 +162,9 @@ public sealed class WaveformView : FrameworkElement
 
     /// <summary>Moves a frame the user picked to a better one nearby (a zero crossing), or null to leave frames as picked.</summary>
     public Func<int, int>? Snap { get; set; }
+
+    /// <summary>How much silence is just before a clip, so how far left a dragged clip can slide.</summary>
+    public Func<int, int>? SilenceBeforeClip { get; set; }
 
     /// <summary>The markers to show, in order.</summary>
     public IReadOnlyList<Marker> Markers
@@ -272,6 +288,7 @@ public sealed class WaveformView : FrameworkElement
     {
         set
         {
+            _playheadFrame = value;
             _playhead.Opacity = value is null ? 0 : 1;
             if (value is { } frame)
             {
@@ -723,9 +740,25 @@ public sealed class WaveformView : FrameworkElement
             return;
         }
 
-        // The dragged clip follows the mouse, and a bright line shows where it will land.
         var clip = clips[dragged];
         var ghostWidth = Math.Max(4, clip.Length / _samplesPerPixel);
+        if (!_reordering)
+        {
+            // The clip where it will land, and a bright line on the edge it snapped to.
+            dc.PushOpacity(0.8);
+            dc.DrawRoundedRectangle(SelectionBrush, new Pen(SelectedWaveBrush ?? Brushes.White, 1),
+                new Rect(FrameToX(clip.Start + _slideOffset), tabTop, ghostWidth, height - tabTop), 4, 4);
+            dc.Pop();
+            if (_slideSnap is { } snapped)
+            {
+                var snapX = Math.Round(FrameToX(snapped)) + 0.5;
+                dc.DrawLine(new Pen(CursorBrush ?? Brushes.White, 2), new Point(snapX, RulerHeight), new Point(snapX, height));
+            }
+
+            return;
+        }
+
+        // The dragged clip follows the mouse, and a bright line shows where it will land.
         var ghostX = _dragX - Math.Min(ghostWidth, Math.Max(0, _pressedAt.X - FrameToX(clip.Start)));
         dc.PushOpacity(0.8);
         dc.DrawRoundedRectangle(SelectionBrush, new Pen(SelectedWaveBrush ?? Brushes.White, 1),
@@ -740,6 +773,51 @@ public sealed class WaveformView : FrameworkElement
             var x = Math.Round(FrameToX(frame)) + 0.5;
             dc.DrawLine(new Pen(CursorBrush ?? Brushes.White, 3), new Point(x, RulerHeight), new Point(x, height));
         }
+    }
+
+    /// <summary>
+    /// How far a clip slides when its tab is dragged to an x position: as far as the mouse moved, snapped (unless
+    /// Ctrl is held) so one of its edges lines up with another clip's edge, the cursor or the playhead when it's
+    /// close, and no further left than the silence before it. Also says which edge it snapped to.
+    /// </summary>
+    private (int Offset, int? Snap) SlideOffset(int dragged, double x)
+    {
+        var clip = Clips[dragged];
+        var moved = XToFrame(x) - _pressedFrame;
+        var offset = moved;
+        int? snap = null;
+        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            var best = 8 * _samplesPerPixel;
+            var targets = _splits.Prepend(0).Append(Frames).Append(_cursor)
+                .Where(t => t != clip.Start && t != clip.End);
+            if (_playheadFrame is { } playhead)
+            {
+                targets = targets.Append(playhead);
+            }
+
+            foreach (var target in targets)
+            {
+                foreach (var edge in new[] { clip.Start, clip.End })
+                {
+                    var distance = Math.Abs(target - edge - moved);
+                    if (distance < best)
+                    {
+                        best = distance;
+                        snap = target;
+                        offset = target - edge;
+                    }
+                }
+            }
+        }
+
+        var frames = (int)Math.Round(offset);
+        if (frames < _slideEarliest)
+        {
+            return (_slideEarliest, null);
+        }
+
+        return (frames, snap);
     }
 
     /// <summary>Which clip number a dragged clip becomes when dropped at a frame: after every other clip whose middle it's past.</summary>
@@ -928,10 +1006,15 @@ public sealed class WaveformView : FrameworkElement
 
         if (IsOnClipBar(position))
         {
-            // A clip's tab: dragging moves the clip, a click selects it.
+            // A clip's tab: dragging slides the clip (Alt+dragging moves it in among the others), a click selects it.
             _draggedClip = ClipIndexAt(frame);
             _draggingClip = false;
             _dragX = position.X;
+            _pressedFrame = XToFrame(position.X);
+            _reordering = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
+            _slideOffset = 0;
+            _slideSnap = null;
+            _slideEarliest = -(SilenceBeforeClip?.Invoke(_draggedClip.Value) ?? 0);
             _anchor = null;
             e.Handled = true;
             return;
@@ -966,7 +1049,9 @@ public sealed class WaveformView : FrameworkElement
         var position = e.GetPosition(this);
         if (!IsMouseCaptured && _panFrom is null)
         {
-            Cursor = MarkerAt(position) is not null || (IsOnClipBar(position) && Clips.Count > 1) ? Cursors.SizeWE : Cursors.IBeam;
+            Cursor = MarkerAt(position) is not null ? Cursors.SizeWE
+                : IsOnClipBar(position) && _peaks is not null ? Cursors.Hand
+                : Cursors.IBeam;
         }
 
         if (_pressedMarker is not null && IsMouseCaptured)
@@ -989,8 +1074,8 @@ public sealed class WaveformView : FrameworkElement
                 return;
             }
 
-            // A song in one piece has nowhere to move to.
-            _draggingClip = Clips.Count > 1;
+            // A song in one piece has nowhere to move to among the others, but can still slide along.
+            _draggingClip = !_reordering || Clips.Count > 1;
             _dragX = position.X;
             if (position.X < 0 || position.X > ActualWidth)
             {
@@ -998,6 +1083,11 @@ public sealed class WaveformView : FrameworkElement
                 _viewStart += overshoot * _samplesPerPixel * 0.5;
                 ClampView();
                 RaiseViewChanged();
+            }
+
+            if (!_reordering && _draggedClip is { } slid && slid < Clips.Count)
+            {
+                (_slideOffset, _slideSnap) = SlideOffset(slid, position.X);
             }
 
             InvalidateVisual();
@@ -1071,6 +1161,14 @@ public sealed class WaveformView : FrameworkElement
             if (!dragged && clip < clips.Count)
             {
                 Selection = clips[clip];
+            }
+            else if (dragged && !_reordering && clip < clips.Count)
+            {
+                var (offset, _) = SlideOffset(clip, e.GetPosition(this).X);
+                if (offset != 0)
+                {
+                    ClipSlideRequested?.Invoke(this, (clip, offset));
+                }
             }
             else if (dragged && DropIndex(clip, XToFrame(e.GetPosition(this).X)) is var toIndex && toIndex != clip)
             {

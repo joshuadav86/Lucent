@@ -82,7 +82,8 @@ public partial class EditorWindow
             return;
         }
 
-        await EditAsync("Cut", session => session.Delete(selection, "Cut"), () => new FrameRange(selection.Start, 0));
+        // The cut part becomes silence, so what's after it stays put; dragging the next clip's tab left closes the gap.
+        await EditAsync("Cut", session => session.SilenceRange(selection, "Cut"), () => new FrameRange(selection.Start, 0));
     }
 
     private async Task PasteAsync()
