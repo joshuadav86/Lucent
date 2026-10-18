@@ -29,6 +29,8 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="NAudio.Lame" Version="2.1.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
+    <!-- ONNX Runtime with DirectML, for the editor's stem splitter on any DirectX 12 graphics card (the same version as Lucent.Core's). -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.23.0" />
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
@@ -91,6 +93,13 @@
       <ResolvedFileToPublish Condition="'%(ResolvedFileToPublish.Filename)' == 'WebView2Loader'">
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </ResolvedFileToPublish>
+      <!-- ONNX Runtime looks for DirectML.dll beside itself, so both ship beside Lucent.exe too. -->
+      <ResolvedFileToPublish Condition="'%(ResolvedFileToPublish.Filename)' == 'onnxruntime' Or '%(ResolvedFileToPublish.Filename)' == 'onnxruntime_providers_shared' Or '%(ResolvedFileToPublish.Filename)' == 'DirectML'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+      <!-- Their debugging builds, symbols and link libraries aren't needed to run. -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(Filename)' == 'DirectML.Debug' Or ('%(Filename)' == 'DirectML' And '%(Extension)' == '.pdb') Or ('%(Filename)' == 'onnxruntime' And '%(Extension)' == '.lib')" />
     </ItemGroup>
   </Target>
 

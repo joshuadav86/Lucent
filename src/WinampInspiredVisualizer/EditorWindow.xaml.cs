@@ -1194,5 +1194,7 @@ public partial class EditorWindow : Window
         _playheadTimer.Stop();
         _player.Dispose();
         ClosePluginInBackground();
+        // The last split's stems can take hundreds of megabytes.
+        Editor.Stems.StemCache.Clear();
     }
 }

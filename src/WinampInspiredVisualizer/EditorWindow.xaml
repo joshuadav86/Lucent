@@ -282,6 +282,8 @@
                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
                         </StackPanel>
                     </Button>
+                    <Button x:Name="StemsButton" Style="{StaticResource ToolButton}" Content="Stems…" Click="OnStems"
+                            ToolTip="Split the music into vocals, drums, bass and the other instruments: remove the vocals, keep only them, or save each as a file" />
                     <Button x:Name="AnalyzeButton" Style="{StaticResource ToolButton}" Content="Analyze…" Click="OnAnalyze"
                             ToolTip="Peak, true peak, loudness, loudness range, DC offset, clipping, and the spectrum of the selection (or the sound)" />
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
@@ -539,6 +541,30 @@
                                Text="100% leaves it as it is. Lower narrows it towards mono; higher spreads it wider. Much past 150% can sound hollow in mono." />
                     <Button Style="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
                             Click="OnApplyWidth" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Stems -->
+        <Popup x:Name="StemsPopup" PlacementTarget="{Binding ElementName=StemsButton}" Placement="Top" VerticalOffset="4"
+               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+            <Border Style="{StaticResource PopupCard}" Width="360">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource OptionLabel}" Margin="0" Text="Keep" />
+                    <WrapPanel x:Name="StemChoices" Margin="0,6,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Style="{StaticResource PillButton}" Content="NO VOCALS" Click="OnStemsKaraoke"
+                                ToolTip="Everything but the vocals, for karaoke or a backing track" />
+                        <Button Style="{StaticResource PillButton}" Content="ONLY VOCALS" Margin="8,0,0,0" Click="OnStemsVocals"
+                                ToolTip="Just the vocals (an a cappella)" />
+                    </StackPanel>
+                    <TextBlock x:Name="StemsHint" Style="{StaticResource OptionHint}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Style="{StaticResource ToolButton}" Content="Save stems as files…" Click="OnSaveStems"
+                                ToolTip="Save the vocals, drums, bass and other instruments as four files, in a folder next to this one" />
+                        <Button x:Name="StemsApplyButton" Style="{StaticResource ToolButton}" Margin="0" Click="OnApplyStems"
+                                Foreground="{DynamicResource AccentBrush}" Content="Apply" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Popup>

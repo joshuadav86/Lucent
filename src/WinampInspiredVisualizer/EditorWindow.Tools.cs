@@ -31,7 +31,7 @@ public partial class EditorWindow
     /// <summary>Every card that pops up over the editor; while one is open, its sliders keep the keyboard.</summary>
     private Popup[] ToolPopups => new[]
     {
-        GainPopup, PitchPopup, TempoPopup, EqPopup, DynamicsPopup, WidthPopup, NoisePopup, ClickPopup, AnalysisPopup,
+        GainPopup, PitchPopup, TempoPopup, EqPopup, DynamicsPopup, WidthPopup, NoisePopup, ClickPopup, AnalysisPopup, StemsPopup,
     };
 
     private void InitTools()
