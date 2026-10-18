@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -15,13 +16,17 @@ namespace Lucent.Mac;
 
 /// <summary>
 /// VST3 effects in the editor. Plugins open into a chain, each in its own helper process with its own window;
-/// the bar above the processing buttons switches each one on or off, reorders them, previews the chain,
-/// applies it as one step, and saves or opens chains (Lucent's own, or REAPER's .RfxChain files).
+/// the channel strip beside the waveform shows them as insert slots, top to bottom in the order the sound goes
+/// through them. Each slot switches its plugin on or off, moves it, or takes it out; empty slots add one. The strip
+/// previews the chain, applies it as one step, and saves or opens chains (Lucent's own, or REAPER's .RfxChain files).
 /// </summary>
 public partial class EditorWindow
 {
     /// <summary>Above this many effects, the menu groups them by maker.</summary>
     private const int FlatMenuLimit = 20;
+
+    /// <summary>The strip always shows at least this many slots, so it reads as a channel strip with room to add.</summary>
+    private const int MinimumSlots = 6;
 
     private readonly PluginChain _chain = new();
     private PluginCatalog? _catalog;
@@ -32,8 +37,6 @@ public partial class EditorWindow
     // ---- Choosing a plugin ----
 
     private async void OnPlugins(object? sender, RoutedEventArgs e) => await ShowPluginMenuAsync(PluginsButton);
-
-    private async void OnAddToChain(object? sender, RoutedEventArgs e) => await ShowPluginMenuAsync(ChainAddButton);
 
     private async Task ShowPluginMenuAsync(Control under)
     {
@@ -88,7 +91,8 @@ public partial class EditorWindow
             return;
         }
 
-        var menu = MenuAbove();
+        // From the Plugins button the menu opens above it; from a slot in the strip, below the slot.
+        var menu = under == PluginsButton ? MenuAbove() : new ContextMenu { Placement = PlacementMode.BottomEdgeAlignedLeft, VerticalOffset = 2 };
         var plugins = catalog.Plugins;
         if (plugins.Count == 0)
         {
@@ -225,7 +229,7 @@ public partial class EditorWindow
 
         var slot = new ChainSlot(plugin, host);
         _chain.Add(slot);
-        ShowChain();
+        ShowInserts(true);
         ShowStatus(_chain.Count == 1 ? $"{host.Name} is open." : $"{host.Name} is open, number {_chain.Count} in the chain.");
         if (host.HasWindow)
         {
@@ -257,76 +261,130 @@ public partial class EditorWindow
         return host;
     }
 
-    /// <summary>Shows the chain's plugins in the bar, or hides the bar when there are none.</summary>
+    private void OnInsertsToggle(object? sender, RoutedEventArgs e) => ShowInserts(!PluginBar.IsVisible);
+
+    /// <summary>Shows or hides the channel strip, and remembers which for next time. The plugins stay open either way.</summary>
+    private void ShowInserts(bool show)
+    {
+        if (_settings.ShowInserts != show)
+        {
+            _settings.ShowInserts = show;
+            _settings.Save();
+        }
+
+        InsertsToggle.IsChecked = show;
+        PluginBar.IsVisible = show;
+        ShowChain();
+    }
+
+    /// <summary>Fills the channel strip: a slot for each plugin in the chain, then empty slots to add more.</summary>
     private void ShowChain()
     {
         ChainPanel.Children.Clear();
         var slots = _chain.Slots;
         for (var i = 0; i < slots.Count; i++)
         {
-            ChainPanel.Children.Add(ChainChip(slots[i], i, slots.Count));
+            ChainPanel.Children.Add(InsertSlot(slots[i], i, slots.Count));
         }
 
-        PluginBar.IsVisible = slots.Count > 0;
-        PluginBar.IsEnabled = !IsBusy;
+        for (var i = slots.Count; i < Math.Max(MinimumSlots, slots.Count + 1); i++)
+        {
+            ChainPanel.Children.Add(EmptySlot(i, first: i == slots.Count));
+        }
+
+        InsertsToggle.Content = slots.Count == 0 ? "Inserts" : $"Inserts ({slots.Count})";
+        PluginPreviewButton.IsEnabled = slots.Count > 0;
+        PluginApplyButton.IsEnabled = slots.Count > 0;
         var on = slots.Count(s => !s.IsBypassed);
         PluginHint.Text = slots.Count switch
         {
-            0 => string.Empty,
+            0 => "Click an empty slot to add a VST3 plugin. The sound goes through the slots from the top down.",
             1 when slots[0].Host.HasWindow =>
-                "Set it up in its window (click its name to bring it back). Preview plays the selection through it, and changes are heard as you make them. " +
-                "Add plugin chains another one after it. Apply changes the selection, or the whole sound.",
-            1 => "This plugin has no window of its own, so it runs with its standard settings. Preview to hear it, Apply to use it, or add another plugin after it.",
-            _ => $"The sound goes through them from left to right; {(on == slots.Count ? "all are on" : $"{on} of {slots.Count} are on")}. " +
-                 "Switch one off to hear the chain without it, even while it plays. Apply runs the ones that are on, as one step.",
+                "Set it up in its window (click its name to bring it back). Preview plays the selection through it, and changes are heard as you make them.",
+            1 => "This plugin has no window of its own, so it runs with its standard settings. Preview to hear it, or add another below it.",
+            _ => $"The sound goes through them from the top down; {(on == slots.Count ? "all are on" : $"{on} of {slots.Count} are on")}. " +
+                 "Apply runs the ones that are on, as one step.",
         };
     }
 
-    private Control ChainChip(ChainSlot slot, int index, int count)
+    private Control InsertSlot(ChainSlot slot, int index, int count)
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal };
-        var on = new CheckBox
+        var power = new ToggleButton { Theme = FindTheme("SlotPower"), IsChecked = !slot.IsBypassed };
+        ToolTip.SetTip(power, "Switch it off to hear the chain without it (even while the preview plays). Apply leaves out plugins that are off.");
+        power.Click += (_, _) =>
         {
-            Theme = FindTheme("SwitchToggle"),
-            IsChecked = !slot.IsBypassed,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 2, 0),
-        };
-        ToolTip.SetTip(on, "Switch it off to hear the chain without it (even while the preview plays). Apply leaves out plugins that are off.");
-        var name = new Button
-        {
-            Theme = FindTheme("ToolButton"),
-            Height = 26,
-            Padding = new Thickness(8, 0, 8, 0),
-            Margin = new Thickness(0),
-            Content = $"{index + 1}. {slot.Host.Name}",
-            Opacity = slot.IsBypassed ? 0.5 : 1,
-        };
-        ToolTip.SetTip(name, slot.Host.HasWindow ? $"{slot.Title}: show its window" : $"{slot.Title} has no window of its own");
-        name.Click += async (_, _) => await ShowPluginWindowAsync(slot);
-        on.Click += (_, _) =>
-        {
-            slot.IsBypassed = on.IsChecked != true;
+            slot.IsBypassed = power.IsChecked != true;
             ShowChain();
             ShowStatus(slot.IsBypassed ? $"{slot.Host.Name} is off." : $"{slot.Host.Name} is on.");
         };
-        row.Children.Add(on);
+        var name = new Button
+        {
+            Theme = FindTheme("SlotName"),
+            Content = new TextBlock
+            {
+                Text = slot.Host.Name,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Foreground = ThemeBrush("TextBrush"),
+                FontSize = 12,
+            },
+            Opacity = slot.IsBypassed ? 0.45 : 1,
+        };
+        ToolTip.SetTip(name, slot.Host.HasWindow ? $"{slot.Title}: show its window" : $"{slot.Title} has no window of its own");
+        name.Click += async (_, _) => await ShowPluginWindowAsync(slot);
+
+        var number = SlotNumber(index);
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        buttons.Children.Add(ChipButton("ChevronUpIcon", "Move it up, so the sound reaches it sooner", index > 0, () => MoveInChain(index, index - 1)));
+        buttons.Children.Add(ChipButton("ChevronDownIcon", "Move it down, so the sound reaches it later", index < count - 1, () => MoveInChain(index, index + 1)));
+        buttons.Children.Add(ChipButton("CloseIcon", "Take it out of the chain (its settings are remembered)", true, async () => await RemoveFromChainAsync(slot)));
+        DockPanel.SetDock(number, Dock.Left);
+        DockPanel.SetDock(power, Dock.Left);
+        DockPanel.SetDock(buttons, Dock.Right);
+        var row = new DockPanel { LastChildFill = true };
+        row.Children.Add(number);
+        row.Children.Add(power);
+        row.Children.Add(buttons);
         row.Children.Add(name);
-        row.Children.Add(ChipButton("ChevronLeftIcon", "Move it earlier in the chain", index > 0, () => MoveInChain(index, index - 1)));
-        row.Children.Add(ChipButton("ChevronRightIcon", "Move it later in the chain", index < count - 1, () => MoveInChain(index, index + 1)));
-        row.Children.Add(ChipButton("CloseIcon", "Take it out of the chain (its settings are remembered)", true, async () => await RemoveFromChainAsync(slot)));
         return new Border
         {
             Child = row,
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(6, 3, 4, 3),
-            Margin = new Thickness(0, 0, 8, 6),
+            Height = 34,
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(4, 0, 2, 0),
+            Margin = new Thickness(0, 0, 0, 4),
             Background = ThemeBrush("SurfaceRaisedBrush"),
-            BorderBrush = ThemeBrush("HairlineBrush"),
+            BorderBrush = ThemeBrush(slot.IsBypassed ? "HairlineBrush" : "AccentBrush"),
             BorderThickness = new Thickness(1),
         };
     }
+
+    private Button EmptySlot(int index, bool first)
+    {
+        var content = new DockPanel();
+        var number = SlotNumber(index);
+        DockPanel.SetDock(number, Dock.Left);
+        content.Children.Add(number);
+        content.Children.Add(new TextBlock
+        {
+            Text = first ? "+  Add plugin" : string.Empty,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0),
+        });
+        var button = new Button { Theme = FindTheme("EmptySlot"), Content = content };
+        ToolTip.SetTip(button, "Add a VST3 plugin at the end of the chain");
+        button.Click += async (_, _) => await ShowPluginMenuAsync(button);
+        return button;
+    }
+
+    private TextBlock SlotNumber(int index) => new()
+    {
+        Text = (index + 1).ToString(),
+        Width = 16,
+        FontSize = 11,
+        TextAlignment = TextAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Center,
+        Foreground = ThemeBrush("FaintTextBrush"),
+    };
 
     private Button ChipButton(string icon, string tip, bool enabled, Action click)
     {
@@ -439,8 +497,6 @@ public partial class EditorWindow
         await ApplyAsync(new PluginEffect(hosts, length), range, selection);
         await SavePluginSettingsAsync(_chain.Slots.ToList());
     }
-
-    private async void OnClosePlugin(object? sender, RoutedEventArgs e) => await ClosePluginAsync();
 
     /// <summary>Remembers each plugin's settings for next time.</summary>
     private async Task SavePluginSettingsAsync(IReadOnlyList<ChainSlot> slots)
@@ -560,7 +616,7 @@ public partial class EditorWindow
 
     private void OnChainMenu(object? sender, RoutedEventArgs e)
     {
-        var menu = MenuAbove();
+        var menu = new ContextMenu { Placement = PlacementMode.BottomEdgeAlignedRight, VerticalOffset = 2 };
         AddChainItems(menu.Items, saveable: _chain.Count > 0);
         menu.Open(ChainMenuButton);
     }
@@ -595,6 +651,13 @@ public partial class EditorWindow
         var folder = MenuEntry("Show the chains folder");
         folder.Click += (_, _) => ShowChainsFolder();
         items.Add(folder);
+        if (saveable)
+        {
+            items.Add(new Separator());
+            var close = MenuEntry("Close every plugin", tip: "Empties the strip; each plugin's settings are remembered for next time");
+            close.Click += async (_, _) => await ClosePluginAsync();
+            items.Add(close);
+        }
     }
 
     private async Task SaveChainAsync()
@@ -737,7 +800,7 @@ public partial class EditorWindow
             _chain.Add(slot);
         }
 
-        ShowChain();
+        ShowInserts(true);
         if (opened.Count == 0)
         {
             return;

@@ -44,6 +44,9 @@ public sealed class EditorSettings
     /// <summary>The history list is open beside the waveform.</summary>
     public bool ShowHistory { get; set; }
 
+    /// <summary>The channel strip of plugin slots is open beside the waveform.</summary>
+    public bool ShowInserts { get; set; } = true;
+
     public List<EqBand> EqBands { get; set; } = EqBand.Defaults();
 
     public CompressorSettings Compressor { get; set; } = new();

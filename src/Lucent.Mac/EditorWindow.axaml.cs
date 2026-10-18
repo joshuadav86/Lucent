@@ -112,6 +112,7 @@ public partial class EditorWindow : Window
         LoopToggle.IsChecked = _settings.Loop;
         HistoryToggle.IsChecked = _settings.ShowHistory;
         HistoryPanel.IsVisible = _settings.ShowHistory;
+        ShowInserts(_settings.ShowInserts);
         UpdateSnap();
         InitTools();
         SetEditingEnabled(false);
@@ -1220,6 +1221,9 @@ public partial class EditorWindow : Window
                 break;
             case Key.H when !command:
                 ShowHistoryPanel(!HistoryPanel.IsVisible);
+                break;
+            case Key.I when !command:
+                ShowInserts(!PluginBar.IsVisible);
                 break;
             case Key.V:
                 SpectrogramToggle.IsChecked = SpectrogramToggle.IsChecked != true;
