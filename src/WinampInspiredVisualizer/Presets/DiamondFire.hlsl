@@ -10,45 +10,95 @@ static const float GirdleHalf = 0.02;
 static const float TableHeight = 0.315;
 static const float VelvetHeight = -1.45;
 
-// Each facet as an outward normal (xyz) and its distance from the centre (w); filled once per pixel.
-static float4 Facets[FacetCount];
-
-float4 facetThrough(float3 normal, float3 onFacet)
+// Each facet as an outward normal (xyz) and its distance from the centre (w). The stone never
+// changes shape, so these are worked out once, ahead of time, rather than per pixel: an array
+// filled in every pixel lives in each pixel's own memory and is slow to read on a Mac's GPU.
+static const float4 Facets[FacetCount] =
 {
-    normal = normalize(normal);
-    return float4(normal, dot(normal, onFacet));
-}
+    // The table, the flat top.
+    float4(0.0, 1.0, 0.0, 0.315),
+    // Crown: the eight big kite-shaped bezels (34.5 degrees),
+    float4(0.56640624, 0.82412619, 0.0, 0.58288876),
+    float4(0.40050969, 0.82412619, 0.40050969, 0.58288876),
+    float4(0.0, 0.82412619, 0.56640624, 0.58288876),
+    float4(-0.40050969, 0.82412619, 0.40050969, 0.58288876),
+    float4(-0.56640624, 0.82412619, 0.0, 0.58288876),
+    float4(-0.40050969, 0.82412619, -0.40050969, 0.58288876),
+    float4(0.0, 0.82412619, -0.56640624, 0.58288876),
+    float4(0.40050969, 0.82412619, -0.40050969, 0.58288876),
+    // the eight small star facets round the table,
+    float4(0.34268583, 0.92866464, 0.14194512, 0.52137377),
+    float4(0.14194512, 0.92866464, 0.34268583, 0.52137377),
+    float4(-0.14194512, 0.92866464, 0.34268583, 0.52137377),
+    float4(-0.34268583, 0.92866464, 0.14194512, 0.52137377),
+    float4(-0.34268583, 0.92866464, -0.14194512, 0.52137377),
+    float4(-0.14194512, 0.92866464, -0.34268583, 0.52137377),
+    float4(0.14194512, 0.92866464, -0.34268583, 0.52137377),
+    float4(0.34268583, 0.92866464, -0.14194512, 0.52137377),
+    // Pavilion: the eight long mains running down to the point (40.75 degrees).
+    float4(0.65275975, -0.75756498, 0.0, 0.66791105),
+    float4(0.46157085, -0.75756498, 0.46157085, 0.66791105),
+    float4(0.0, -0.75756498, 0.65275975, 0.66791105),
+    float4(-0.46157085, -0.75756498, 0.46157085, 0.66791105),
+    float4(-0.65275975, -0.75756498, 0.0, 0.66791105),
+    float4(-0.46157085, -0.75756498, -0.46157085, 0.66791105),
+    float4(0.0, -0.75756498, -0.65275975, 0.66791105),
+    float4(0.46157085, -0.75756498, -0.46157085, 0.66791105),
+    // Crown: the sixteen upper girdle facets.
+    float4(0.65405592, 0.7451744, 0.13009981, 0.68177312),
+    float4(0.55448184, 0.7451744, 0.37049292, 0.68177312),
+    float4(0.37049292, 0.7451744, 0.55448184, 0.68177312),
+    float4(0.13009981, 0.7451744, 0.65405592, 0.68177312),
+    float4(-0.13009981, 0.7451744, 0.65405592, 0.68177312),
+    float4(-0.37049292, 0.7451744, 0.55448184, 0.68177312),
+    float4(-0.55448184, 0.7451744, 0.37049292, 0.68177312),
+    float4(-0.65405592, 0.7451744, 0.13009981, 0.68177312),
+    float4(-0.65405592, 0.7451744, -0.13009981, 0.68177312),
+    float4(-0.55448184, 0.7451744, -0.37049292, 0.68177312),
+    float4(-0.37049292, 0.7451744, -0.55448184, 0.68177312),
+    float4(-0.13009981, 0.7451744, -0.65405592, 0.68177312),
+    float4(0.13009981, 0.7451744, -0.65405592, 0.68177312),
+    float4(0.37049292, 0.7451744, -0.55448184, 0.68177312),
+    float4(0.55448184, 0.7451744, -0.37049292, 0.68177312),
+    float4(0.65405592, 0.7451744, -0.13009981, 0.68177312),
+    // Pavilion: the sixteen lower girdle facets.
+    float4(0.67568401, -0.72483601, 0.13440191, 0.70341817),
+    float4(0.57281725, -0.72483601, 0.38274425, 0.70341817),
+    float4(0.38274425, -0.72483601, 0.57281725, 0.70341817),
+    float4(0.13440191, -0.72483601, 0.67568401, 0.70341817),
+    float4(-0.13440191, -0.72483601, 0.67568401, 0.70341817),
+    float4(-0.38274425, -0.72483601, 0.57281725, 0.70341817),
+    float4(-0.57281725, -0.72483601, 0.38274425, 0.70341817),
+    float4(-0.67568401, -0.72483601, 0.13440191, 0.70341817),
+    float4(-0.67568401, -0.72483601, -0.13440191, 0.70341817),
+    float4(-0.57281725, -0.72483601, -0.38274425, 0.70341817),
+    float4(-0.38274425, -0.72483601, -0.57281725, 0.70341817),
+    float4(-0.13440191, -0.72483601, -0.67568401, 0.70341817),
+    float4(0.13440191, -0.72483601, -0.67568401, 0.70341817),
+    float4(0.38274425, -0.72483601, -0.57281725, 0.70341817),
+    float4(0.57281725, -0.72483601, -0.38274425, 0.70341817),
+    float4(0.67568401, -0.72483601, -0.13440191, 0.70341817),
+    // The girdle: a thin band of sixteen flats round the widest part.
+    float4(1.0, 0.0, 0.0, 1.0),
+    float4(0.92387953, 0.0, 0.38268343, 1.0),
+    float4(0.70710678, 0.0, 0.70710678, 1.0),
+    float4(0.38268343, 0.0, 0.92387953, 1.0),
+    float4(0.0, 0.0, 1.0, 1.0),
+    float4(-0.38268343, 0.0, 0.92387953, 1.0),
+    float4(-0.70710678, 0.0, 0.70710678, 1.0),
+    float4(-0.92387953, 0.0, 0.38268343, 1.0),
+    float4(-1.0, 0.0, 0.0, 1.0),
+    float4(-0.92387953, 0.0, -0.38268343, 1.0),
+    float4(-0.70710678, 0.0, -0.70710678, 1.0),
+    float4(-0.38268343, 0.0, -0.92387953, 1.0),
+    float4(0.0, 0.0, -1.0, 1.0),
+    float4(0.38268343, 0.0, -0.92387953, 1.0),
+    float4(0.70710678, 0.0, -0.70710678, 1.0),
+    float4(0.92387953, 0.0, -0.38268343, 1.0)
+};
 
-void cutDiamond()
-{
-    const float crown = 34.5 * PI / 180.0;
-    const float pavilion = 40.75 * PI / 180.0;
-    Facets[0] = float4(0.0, 1.0, 0.0, TableHeight);
-    [unroll]
-    for (int i = 0; i < 8; i++)
-    {
-        float a = i * (PI / 4.0);
-        float star = a + PI / 8.0;
-        float3 out1 = float3(cos(a), 0.0, sin(a));
-        float3 out2 = float3(cos(star), 0.0, sin(star));
-        // Crown: the big kite-shaped bezels, the small star facets round the table, and the upper girdle facets.
-        Facets[1 + i] = facetThrough(out1 * sin(crown) + float3(0.0, cos(crown), 0.0), out1 + float3(0.0, GirdleHalf, 0.0));
-        Facets[9 + i] = facetThrough(out2 * sin(0.38) + float3(0.0, cos(0.38), 0.0), out2 * 0.57 / cos(PI / 8.0) + float3(0.0, TableHeight, 0.0));
-        // Pavilion: the eight long mains running down to the point.
-        Facets[17 + i] = facetThrough(out1 * sin(pavilion) - float3(0.0, cos(pavilion), 0.0), out1 - float3(0.0, GirdleHalf, 0.0));
-    }
-    [unroll]
-    for (int j = 0; j < 16; j++)
-    {
-        float a = (j + 0.5) * (PI / 8.0);
-        float3 outward = float3(cos(a), 0.0, sin(a));
-        Facets[25 + j] = facetThrough(outward * sin(0.73) + float3(0.0, cos(0.73), 0.0), outward + float3(0.0, GirdleHalf, 0.0));
-        Facets[41 + j] = facetThrough(outward * sin(0.76) - float3(0.0, cos(0.76), 0.0), outward - float3(0.0, GirdleHalf, 0.0));
-        // The girdle: a thin band of sixteen flats round the widest part.
-        float g = j * (PI / 8.0);
-        Facets[57 + j] = float4(cos(g), 0.0, sin(g), 1.0);
-    }
-}
+// The whole stone fits inside this sphere (its farthest corners, at the girdle, are about 1.02 out).
+static const float StoneRadius = 1.1;
 
 // Ray against the whole stone from outside: where it enters, and that facet's normal.
 float enterDiamond(float3 origin, float3 direction, out float3 normal)
@@ -219,7 +269,6 @@ float3 Render(float2 uv, float2 p)
 {
     Turn = Time * 0.22 + sin(Time * 0.13) * 0.3;
     Tilt = 0.18 + sin(Time * 0.09) * 0.12;
-    cutDiamond();
 
     float drift = sin(Time * 0.04) * 0.5;
     float3 eye = float3(sin(drift) * 3.4, 1.9 + sin(Time * 0.07) * 0.25, -cos(drift) * 3.4);
@@ -230,6 +279,14 @@ float3 Render(float2 uv, float2 p)
     // Work in the stone's own frame, where its facets are fixed.
     float3 origin = toStone(eye);
     float3 direction = toStone(worldDirection);
+
+    // Most of the picture is velvet and lamps: a ray that misses the stone's bounding sphere
+    // skips the facets.
+    float closest = dot(origin, direction);
+    if (dot(origin, origin) - closest * closest > StoneRadius * StoneRadius)
+    {
+        return surroundings(origin, direction);
+    }
 
     float3 normal;
     float t = enterDiamond(origin, direction, normal);
