@@ -125,8 +125,44 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path publish/* -DestinationPath Lucent-win-x64.zip
 
+      # Signing: without a certificate, Lucent and its installer are unsigned, so SmartScreen warns
+      # people the first time (More info > Run anyway). To sign with Azure Trusted Signing (Artifact
+      # Signing), add these repository secrets and nothing else needs to change:
+      #   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET  an app registration given the
+      #                                    "Trusted Signing Certificate Profile Signer" role on the account
+      #   TRUSTED_SIGNING_ENDPOINT         the account's region endpoint, e.g. https://eus.codesigning.azure.net
+      #   TRUSTED_SIGNING_ACCOUNT          the signing account's name
+      #   TRUSTED_SIGNING_PROFILE          the certificate profile's name
+      - name: Set up signing
+        id: signing
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          TRUSTED_SIGNING_ENDPOINT: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT: ${{ secrets.TRUSTED_SIGNING_ACCOUNT }}
+          TRUSTED_SIGNING_PROFILE: ${{ secrets.TRUSTED_SIGNING_PROFILE }}
+        run: |
+          # No account (pull requests from forks never get secrets either): leave it unsigned.
+          if (-not $env:AZURE_CLIENT_ID -or -not $env:TRUSTED_SIGNING_ENDPOINT -or -not $env:TRUSTED_SIGNING_ACCOUNT -or -not $env:TRUSTED_SIGNING_PROFILE) {
+            Write-Host "::notice::No Trusted Signing account in the secrets, so Lucent for Windows is unsigned."
+            exit 0
+          }
+          $metadata = Join-Path $env:RUNNER_TEMP "trusted-signing.json"
+          @{
+            Endpoint = $env:TRUSTED_SIGNING_ENDPOINT
+            CodeSigningAccountName = $env:TRUSTED_SIGNING_ACCOUNT
+            CertificateProfileName = $env:TRUSTED_SIGNING_PROFILE
+          } | ConvertTo-Json | Set-Content -Path $metadata -Encoding utf8
+          "metadata=$metadata" >> $env:GITHUB_OUTPUT
+
       - name: Build the installer
         shell: pwsh
+        env:
+          # Read by the signing client to sign in to Azure, when signing is set up.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          SIGNING_METADATA: ${{ steps.signing.outputs.metadata }}
         run: |
           # Velopack makes Lucent-Setup.exe (installs for the current user, no admin needed) and the
           # update package and feed that installed copies check for new builds.
@@ -134,11 +170,14 @@ jobs:
           # and identifies the app to Velopack, so changing it would strand copies already installed.
           # The title and main exe can change: Velopack renames and retargets shortcuts when it updates.
           dotnet tool install vpk --version 1.2.161 --tool-path .vpk
+          # With signing set up, Velopack signs Lucent.exe, the other programs and libraries that aren't
+          # signed already, the installer and the updater.
+          $signing = if ($env:SIGNING_METADATA) { @("--azureTrustedSignFile", $env:SIGNING_METADATA) } else { @() }
           .vpk/vpk pack --packId Lucid --packVersion $env:LUCENT_VERSION --packDir publish --mainExe Lucent.exe `
             --packTitle Lucent --packAuthors joshuadav86 `
             --icon src/WinampInspiredVisualizer/Assets/Lucent.ico `
             --splashImage assets/lucent-icon.png --splashProgressColor "#8B5CF6" `
-            --outputDir releases
+            --outputDir releases @signing
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item releases/Lucid-win-Setup.exe Lucent-Setup.exe
           Get-ChildItem releases | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
