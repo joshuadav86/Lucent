@@ -25,6 +25,10 @@ public static class StemSelfTest
             var stopwatch = Stopwatch.StartNew();
             using var splitter = StemSplitter.Open(StemModel.FilePath);
             log($"Stem splitter: loaded on the {splitter.Device} in {stopwatch.Elapsed.TotalSeconds:0.0} s.");
+            if (splitter.GraphicsCardProblem is { } problem)
+            {
+                log($"Stem splitter: the graphics card couldn't run it ({problem}).");
+            }
             stopwatch.Restart();
             var stems = splitter.Split(music);
             log($"Stem splitter: split {music.Duration.TotalSeconds:0} s of music into {string.Join(", ", stems.Sources)} in {stopwatch.Elapsed.TotalSeconds:0.0} s.");

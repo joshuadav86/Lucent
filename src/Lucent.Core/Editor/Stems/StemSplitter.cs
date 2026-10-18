@@ -58,12 +58,16 @@ public sealed class StemSplitter : IDisposable
 
     private const string ProcessorName = "processor";
 
+    /// <summary>Why the graphics card wasn't used, when it was tried and couldn't run the model.</summary>
+    public string? GraphicsCardProblem { get; private init; }
+
     /// <summary>
     /// Loads the model, on the graphics card if one can run it (DirectML on Windows, Core ML on a Mac),
     /// otherwise on the processor. Takes a few seconds.
     /// </summary>
     public static StemSplitter Open(string modelPath, bool useGraphicsCard = true)
     {
+        string? problem = null;
         if (useGraphicsCard)
         {
             foreach (var (name, add) in GraphicsProviders())
@@ -78,6 +82,7 @@ public sealed class StemSplitter : IDisposable
                 catch (Exception ex) when (ex is OnnxRuntimeException or EntryPointNotFoundException or DllNotFoundException or NotSupportedException)
                 {
                     // This build of ONNX Runtime or this computer can't do it; try the next, then the processor.
+                    problem = $"{ex.GetType().Name}: {ex.Message}";
                 }
                 finally
                 {
@@ -87,7 +92,7 @@ public sealed class StemSplitter : IDisposable
         }
 
         using var cpu = BaseOptions();
-        return new StemSplitter(new InferenceSession(modelPath, cpu), ProcessorName);
+        return new StemSplitter(new InferenceSession(modelPath, cpu), ProcessorName) { GraphicsCardProblem = problem };
     }
 
     private static SessionOptions BaseOptions() => new()
