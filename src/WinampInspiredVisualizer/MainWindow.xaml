@@ -75,7 +75,9 @@
                                 <Border Style="{StaticResource SegmentBar}">
                                     <UniformGrid Rows="1">
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Graphics" Content="Graphics" Click="OnOptionsTab" IsChecked="True" />
-                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visual changes" Click="OnOptionsTab" />
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visuals" Click="OnOptionsTab"
+                                                     ToolTip="When and how visuals change" />
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
                                     </UniformGrid>
                                 </Border>
@@ -152,6 +154,26 @@
                                               Content="Morphing transitions only" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Style="{StaticResource OptionHint}"
                                                Text="Visuals melt, glow, fly or fold into each other, without the wipes and fades." />
+                                </StackPanel>
+
+                                <StackPanel x:Name="SoundTab" Visibility="Collapsed">
+                                    <TextBlock Style="{StaticResource OptionLabel}" Text="Output" />
+                                    <Button x:Name="OutputDeviceButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left"
+                                            ToolTip="The speakers, headphones or DAC the music plays through" Click="OnChooseOutputDevice">
+                                        <TextBlock x:Name="OutputDeviceName" MaxWidth="290" TextTrimming="CharacterEllipsis" />
+                                    </Button>
+
+                                    <CheckBox x:Name="ExclusiveSwitch" Style="{StaticResource SwitchToggle}" Content="Exclusive mode: bit-perfect"
+                                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                                    <TextBlock Style="{StaticResource OptionHint}"
+                                               Text="Lucent takes the output for itself and sends each track at its own sample rate and bit depth, past Windows' mixer. Other apps go quiet while it plays. Bit-perfect at 100% volume with the equalizer off." />
+                                    <TextBlock x:Name="OutputStatus" Style="{StaticResource OptionHint}" Margin="2,8,0,0"
+                                               Foreground="{DynamicResource AccentBrush}" />
+
+                                    <CheckBox x:Name="GaplessSwitch" Style="{StaticResource SwitchToggle}" Content="Gapless playback"
+                                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                                    <TextBlock Style="{StaticResource OptionHint}"
+                                               Text="Each track runs straight into the next with no silence between, for live albums, DJ mixes and albums that flow." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="ThemeTab" Visibility="Collapsed">

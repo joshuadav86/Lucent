@@ -1,17 +1,36 @@
 using System.IO;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
 namespace WinampInspiredVisualizer.Audio;
 
-/// <summary>Plays one track at a time and reports when it finishes.</summary>
+/// <summary>What the player is sending to the speakers, and how.</summary>
+/// <param name="Device">The output's name, or null for Windows' default output.</param>
+/// <param name="Exclusive">True when Lucent has the output to itself, bypassing Windows' mixer.</param>
+/// <param name="Bits">Bits per sample reaching the output (32 for floating point in shared mode).</param>
+/// <param name="Resampled">True when the music is converted to another sample rate on its way out.</param>
+/// <param name="SourceBits">Bits per sample in the file, or 0 when it has none of its own (MP3, AAC and other lossy formats).</param>
+/// <param name="Problem">Why exclusive mode couldn't be used, when it was asked for and isn't in use.</param>
+public sealed record OutputInfo(string? Device, bool Exclusive, int SampleRate, int Bits, int Channels, bool Resampled, int SourceBits, string? Problem);
+
+/// <summary>
+/// Plays one track at a time, carrying on into the next without a gap when it's been told what that is,
+/// and reports when a track finishes or makes way for the next.
+/// </summary>
+/// <remarks>
+/// Music normally goes through Windows' mixer, like every other app's sound. In exclusive mode Lucent
+/// takes the output for itself and sends each track at its own sample rate and bit depth, so a DAC
+/// receives exactly what's in the file: bit-perfect, as long as the volume is at 100% and the equalizer
+/// is off.
+/// </remarks>
 public sealed class AudioPlayer : IDisposable
 {
     /// <summary>How far ahead of the speakers the audio is decoded, in milliseconds.</summary>
     public const int OutputLatencyMs = AudioCapture.OutputLatencyMs;
 
-    private WaveOutEvent? _output;
-    private WaveStream? _reader;
+    private IWavePlayer? _output;
+    private TrackChain? _chain;
     private VolumeSampleProvider? _volumeProvider;
     private float _volume = 0.8f;
     private bool _stopRequested;
@@ -20,8 +39,14 @@ public sealed class AudioPlayer : IDisposable
     // Counts every Load and Close, so a file reopened after being released doesn't replace one the user chose meanwhile.
     private int _generation;
 
-    /// <summary>Raised on the UI thread when a track plays through to the end.</summary>
+    /// <summary>Raised on the UI thread when a track plays through to the end with nothing lined up after it.</summary>
     public event EventHandler? TrackEnded;
+
+    /// <summary>
+    /// Raised on the UI thread when a track has run straight on into the one lined up with
+    /// <see cref="QueueNext"/>, which is now <see cref="CurrentPath"/>.
+    /// </summary>
+    public event EventHandler? TrackAdvanced;
 
     /// <summary>Raised on the UI thread when the audio device reports an error.</summary>
     public event EventHandler<Exception>? PlaybackFailed;
@@ -32,27 +57,50 @@ public sealed class AudioPlayer : IDisposable
     /// <summary>The equalizer every track plays through. Its settings carry over from track to track.</summary>
     public Equalizer Equalizer { get; } = new();
 
-    public bool HasTrack => _reader is not null;
+    /// <summary>Whether a track lined up with <see cref="QueueNext"/> follows without a gap. Takes effect from the next track.</summary>
+    public bool Gapless { get; set; } = true;
 
-    /// <summary>The file that's loaded, or null when nothing is.</summary>
-    public string? CurrentPath { get; private set; }
+    /// <summary>The output to play through (an id from <see cref="OutputDevices"/>), or null for Windows' default. Takes effect from the next track.</summary>
+    public string? OutputDeviceId { get; set; }
+
+    /// <summary>Whether to take the output for Lucent alone, for bit-perfect playback. Takes effect from the next track.</summary>
+    public bool Exclusive { get; set; }
+
+    /// <summary>How the current track is reaching the speakers, or null when nothing is loaded.</summary>
+    public OutputInfo? Output { get; private set; }
+
+    /// <summary>
+    /// True when the samples in the file reach the output untouched: exclusive mode at the file's own
+    /// sample rate, full volume and the equalizer off.
+    /// </summary>
+    public bool IsBitPerfect => Output is { Exclusive: true, Resampled: false } output
+        && output.SourceBits > 0 && output.SourceBits <= output.Bits
+        && _volume >= 1f && Equalizer.Design.IsBypass;
+
+    public bool HasTrack => _chain is not null;
+
+    /// <summary>The file that's playing, or null when nothing is.</summary>
+    public string? CurrentPath => _chain?.Current.Path;
+
+    /// <summary>The file lined up to follow without a gap, or null when there isn't one.</summary>
+    public string? QueuedPath => _chain?.Next?.Path;
 
     public bool IsPlaying => _output?.PlaybackState == PlaybackState.Playing;
 
-    public TimeSpan Duration => _reader?.TotalTime ?? TimeSpan.Zero;
+    public TimeSpan Duration => _chain?.Current.Reader.TotalTime ?? TimeSpan.Zero;
 
     public TimeSpan Position
     {
-        get => _reader?.CurrentTime ?? TimeSpan.Zero;
+        get => _chain?.Current.Reader.CurrentTime ?? TimeSpan.Zero;
         set
         {
-            if (_reader is null)
+            if (_chain is null)
             {
                 return;
             }
 
             var clamped = value < TimeSpan.Zero ? TimeSpan.Zero : value > Duration ? Duration : value;
-            _reader.CurrentTime = clamped;
+            _chain.Current.Reader.CurrentTime = clamped;
         }
     }
 
@@ -79,16 +127,7 @@ public sealed class AudioPlayer : IDisposable
         var reader = AudioReaderFactory.Open(path);
         try
         {
-            // Equalize before capturing, so the visuals respond to what you hear, and capture before
-            // the volume control so visuals don't shrink when the music is turned down.
-            var equalized = Equalizer.Attach(reader.ToSampleProvider());
-            var captured = new CapturingSampleProvider(equalized, Capture);
-            _volumeProvider = new VolumeSampleProvider(captured) { Volume = _volume };
-            _output = new WaveOutEvent { DesiredLatency = OutputLatencyMs };
-            _output.PlaybackStopped += OnPlaybackStopped;
-            _output.Init(_volumeProvider);
-            _reader = reader;
-            CurrentPath = path;
+            Open(path, reader);
         }
         catch
         {
@@ -96,6 +135,49 @@ public sealed class AudioPlayer : IDisposable
             Close();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Opens <paramref name="path"/> and lines it up to follow the current track without a gap, or with
+    /// null forgets the one lined up. Returns false when it can't follow seamlessly (gapless playback is
+    /// off, the file won't open, or it has a different number of channels, or in exclusive mode a
+    /// different sample rate); it then plays the usual way once the current track has ended.
+    /// </summary>
+    public bool QueueNext(string? path)
+    {
+        if (_chain is null)
+        {
+            return false;
+        }
+
+        if (path is null || !Gapless)
+        {
+            _chain.SetNext(null)?.Dispose();
+            return false;
+        }
+
+        WaveStream reader;
+        try
+        {
+            reader = AudioReaderFactory.Open(path);
+        }
+        catch (Exception)
+        {
+            // Left to fail when it's played, which says what's wrong with it.
+            _chain.SetNext(null)?.Dispose();
+            return false;
+        }
+
+        // Exclusive output at the file's own rate stays bit-perfect only if the next file has that rate too.
+        var allowResampling = Output is not { Exclusive: true, Resampled: false };
+        var next = ChainedTrack.Create(path, reader, _chain.WaveFormat, allowResampling);
+        if (next is null)
+        {
+            reader.Dispose();
+        }
+
+        _chain.SetNext(next)?.Dispose();
+        return next is not null;
     }
 
     public void Play()
@@ -113,20 +195,19 @@ public sealed class AudioPlayer : IDisposable
 
     public void Stop()
     {
-        if (_output is null || _reader is null)
+        if (_output is null || _chain is null)
         {
             return;
         }
 
         _stopRequested = true;
         _output.Stop();
-        _reader.Position = 0;
+        _chain.Current.Reader.Position = 0;
     }
 
     public void Close()
     {
         _generation++;
-        CurrentPath = null;
         if (_output is not null)
         {
             _output.PlaybackStopped -= OnPlaybackStopped;
@@ -135,9 +216,16 @@ public sealed class AudioPlayer : IDisposable
             _output = null;
         }
 
-        _reader?.Dispose();
-        _reader = null;
+        if (_chain is not null)
+        {
+            _chain.Advanced -= OnAdvanced;
+            _chain.SetNext(null)?.Dispose();
+            _chain.Current.Dispose();
+            _chain = null;
+        }
+
         _volumeProvider = null;
+        Output = null;
         Equalizer.Detach();
     }
 
@@ -148,8 +236,7 @@ public sealed class AudioPlayer : IDisposable
     }
 
     /// <summary>True when <paramref name="path"/> is the file that's loaded.</summary>
-    public bool IsCurrentFile(string path) =>
-        CurrentPath is not null && string.Equals(Path.GetFullPath(CurrentPath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase);
+    public bool IsCurrentFile(string path) => SameFile(CurrentPath, path);
 
     /// <summary>
     /// Runs <paramref name="work"/> with <paramref name="path"/> closed, if it's the file being played, then opens
@@ -159,6 +246,12 @@ public sealed class AudioPlayer : IDisposable
     /// </summary>
     public async Task RunWithFileReleasedAsync(string path, Func<Task> work)
     {
+        // The track lined up next has its file open too; it's lined up again on the next tick.
+        if (SameFile(QueuedPath, path))
+        {
+            QueueNext(null);
+        }
+
         if (!IsCurrentFile(path))
         {
             await work();
@@ -181,6 +274,160 @@ public sealed class AudioPlayer : IDisposable
             {
                 Reopen(reopenPath, position, wasPlaying);
             }
+        }
+    }
+
+    private static bool SameFile(string? a, string? b) =>
+        a is not null && b is not null && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+
+    // Sets up the output for a newly opened file: exclusive if asked for and possible, else shared.
+    private void Open(string path, WaveStream reader)
+    {
+        var source = reader.ToSampleProvider().WaveFormat;
+        string? problem = null;
+        if (Exclusive)
+        {
+            try
+            {
+                if (TryOpenExclusive(path, reader, source))
+                {
+                    return;
+                }
+
+                problem = "Your output doesn't accept this track's format on its own, so it's playing through Windows' mixer.";
+            }
+            catch (Exception ex)
+            {
+                // Most often another app already has the output to itself.
+                ErrorLog.Write("Exclusive output", ex);
+                problem = "Couldn't take the output for Lucent alone (another app may have it), so it's playing through Windows' mixer.";
+                _output?.Dispose();
+                _output = null;
+            }
+        }
+
+        var first = ChainedTrack.Create(path, reader, source, allowResampling: false)!;
+        var format = WaveFormat.CreateIeeeFloatWaveFormat(source.SampleRate, source.Channels);
+        var chain = new TrackChain(first, format);
+        var device = OutputDeviceId is null ? null : OutputDevices.Open(OutputDeviceId);
+        IWavePlayer output = device is null
+            ? new WaveOutEvent { DesiredLatency = OutputLatencyMs }
+            : new WasapiOut(device, AudioClientShareMode.Shared, false, OutputLatencyMs);
+        Start(chain, output, BuildChain(chain), new OutputInfo(device?.FriendlyName, false, source.SampleRate, 32, source.Channels, false, SourceBits(path), problem));
+    }
+
+    private bool TryOpenExclusive(string path, WaveStream reader, WaveFormat source)
+    {
+        var device = OutputDevices.Open(OutputDeviceId);
+        if (device is null)
+        {
+            return false;
+        }
+
+        var sourceBits = SourceBits(path);
+        var (pcm, validBits) = ExclusiveFormat(device, source.SampleRate, source.Channels, sourceBits);
+        var resampled = false;
+        if (pcm is null)
+        {
+            // The output can't take the file's sample rate: use the rate it runs at in Windows instead.
+            using var client = device.AudioClient;
+            var mixRate = client.MixFormat.SampleRate;
+            (pcm, validBits) = ExclusiveFormat(device, mixRate, source.Channels, sourceBits);
+            resampled = true;
+        }
+
+        if (pcm is null)
+        {
+            device.Dispose();
+            return false;
+        }
+
+        var first = ChainedTrack.Create(path, reader, WaveFormat.CreateIeeeFloatWaveFormat(pcm.SampleRate, source.Channels), allowResampling: true)!;
+        var chain = new TrackChain(first, WaveFormat.CreateIeeeFloatWaveFormat(pcm.SampleRate, source.Channels));
+        var output = new WasapiOut(device, AudioClientShareMode.Exclusive, false, OutputLatencyMs);
+        Start(chain, output, new PcmOutput(BuildChain(chain), pcm, validBits),
+            new OutputInfo(device.FriendlyName, true, pcm.SampleRate, validBits, pcm.Channels, resampled, sourceBits, null));
+        return true;
+    }
+
+    // The best whole-number format the output takes at this rate in exclusive mode: the file's own bit
+    // depth if it can, otherwise the deepest. Null when it takes none.
+    private static (WaveFormat? Format, int ValidBits) ExclusiveFormat(MMDevice device, int sampleRate, int channels, int sourceBits)
+    {
+        (int Container, int Valid)[] deepestFirst = { (32, 24), (24, 24), (32, 32), (16, 16) };
+        var order = sourceBits == 16
+            ? deepestFirst.OrderBy(choice => choice.Valid == 16 ? 0 : 1).ToArray()
+            : deepestFirst;
+        using var client = device.AudioClient;
+        foreach (var (container, valid) in order)
+        {
+            var format = PcmOutput.Format(sampleRate, channels, container, valid);
+            if (client.IsFormatSupported(AudioClientShareMode.Exclusive, format))
+            {
+                return (format, valid);
+            }
+        }
+
+        return (null, 0);
+    }
+
+    // Bits per sample in the file itself (0 for lossy formats, which have none).
+    private static int SourceBits(string path)
+    {
+        try
+        {
+            using var file = TagLib.File.Create(path);
+            return file.Properties?.BitsPerSample ?? 0;
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
+
+    // Equalize before capturing, so the visuals respond to what you hear, and capture before
+    // the volume control so visuals don't shrink when the music is turned down.
+    private ISampleProvider BuildChain(TrackChain chain)
+    {
+        var equalized = Equalizer.Attach(chain);
+        var captured = new CapturingSampleProvider(equalized, Capture);
+        _volumeProvider = new VolumeSampleProvider(captured) { Volume = _volume };
+        return _volumeProvider;
+    }
+
+    private void Start(TrackChain chain, IWavePlayer output, ISampleProvider audio, OutputInfo info) =>
+        Start(chain, output, audio.ToWaveProvider(), info);
+
+    private void Start(TrackChain chain, IWavePlayer output, IWaveProvider audio, OutputInfo info)
+    {
+        _output = output;
+        _output.PlaybackStopped += OnPlaybackStopped;
+        _output.Init(audio);
+        _chain = chain;
+        _chain.Advanced += OnAdvanced;
+        Output = info;
+    }
+
+    // On the audio thread: the chain has just moved on to the track that was lined up.
+    private void OnAdvanced(ChainedTrack finished)
+    {
+        var chain = _chain;
+        Post(() =>
+        {
+            finished.Dispose();
+            if (!_disposed && _chain is { } current && ReferenceEquals(chain, current))
+            {
+                Output = Output is null ? null : Output with { SourceBits = SourceBits(current.Current.Path) };
+                TrackAdvanced?.Invoke(this, EventArgs.Empty);
+            }
+        });
+    }
+
+    private static void Post(Action action)
+    {
+        if (System.Windows.Application.Current?.Dispatcher is { } dispatcher)
+        {
+            dispatcher.BeginInvoke(action);
         }
     }
 
