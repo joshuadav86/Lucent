@@ -197,6 +197,14 @@
                                     <TextBlock Style="{StaticResource OptionHint}"
                                                Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
                                     <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" Margin="2,8,0,0" />
+                                    <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
+                                    <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionHint}" Visibility="Collapsed" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                                        <Button x:Name="RestartToUpdateButton" Style="{StaticResource PillButton}" Content="Restart and install" Margin="0,0,8,0"
+                                                Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Click="OnInstallUpdate" />
+                                        <Button x:Name="CheckUpdatesButton" Style="{StaticResource PillButton}" Content="Check for updates"
+                                                ToolTip="Looks for a newer Lucent now instead of waiting for the hourly check" Click="OnCheckForUpdates" />
+                                    </StackPanel>
                                 </StackPanel>
 
                                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->

@@ -54,7 +54,7 @@
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Graphics" Content="Graphics" Click="OnOptionsTab" IsChecked="True" />
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visual changes" Click="OnOptionsTab" />
                                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
-                                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
+                                        <RadioButton x:Name="UpdatesTabButton" Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                                     </UniformGrid>
                                 </Border>
 
@@ -152,6 +152,14 @@
                                     <TextBlock Theme="{StaticResource OptionHint}"
                                                Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
                                     <TextBlock x:Name="VersionText" Theme="{StaticResource OptionHint}" Margin="2,8,0,0" />
+                                    <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
+                                    <TextBlock x:Name="UpdateStatusText" Theme="{StaticResource OptionHint}" IsVisible="False" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                                        <Button x:Name="RestartToUpdateButton" Theme="{StaticResource PillButton}" Content="Restart and install" Margin="0,0,8,0"
+                                                Foreground="{DynamicResource AccentBrush}" IsVisible="False" Click="OnInstallUpdate" />
+                                        <Button x:Name="CheckUpdatesButton" Theme="{StaticResource PillButton}" Content="Check for updates"
+                                                ToolTip.Tip="Looks for a newer Lucent now instead of waiting for the hourly check" Click="OnCheckForUpdates" />
+                                    </StackPanel>
                                 </StackPanel>
 
                                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->

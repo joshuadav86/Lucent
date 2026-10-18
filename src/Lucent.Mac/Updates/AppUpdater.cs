@@ -9,7 +9,8 @@ namespace Lucent.Mac.Updates;
 /// "Lucent 1.0" and so on), or, for people who choose every build, the "Latest build" release that
 /// each change to main replaces. Until there's a stable release, everyone follows the latest build.
 /// It checks shortly after startup and then every hour while Lucent runs, downloads a newer build in
-/// the background, and installs it when Lucent closes, or straight away with a restart if asked. The Mac builds are
+/// the background, and installs it when Lucent closes, or straight away with a restart if asked. Options
+/// can also check on demand with <see cref="CheckNowAsync"/>. The Mac builds are
 /// their own Velopack channels (osx-arm64 and osx-x64, set when CI packs them), so each Mac gets the
 /// build for its own chip. Lucent.app from the plain zip isn't installed and never updates.
 /// </summary>
@@ -32,6 +33,9 @@ public sealed class AppUpdater
     private VelopackAsset? _downloaded;
     private bool _applying;
 
+    // The hourly check and one asked for in Options take turns, so they don't download the same build twice.
+    private readonly SemaphoreSlim _checking = new(1, 1);
+
     /// <summary>Follow every build on main rather than stable releases only.</summary>
     public bool EveryBuild { get; set; }
 
@@ -43,6 +47,18 @@ public sealed class AppUpdater
     /// raised again if an even newer build arrives before that one is installed.
     /// </summary>
     public event Action<string>? UpdateReady;
+
+    /// <summary>
+    /// Raised on a background thread when a check asked for with <see cref="CheckNowAsync"/> finds a newer
+    /// build and starts downloading it.
+    /// </summary>
+    public event Action<string>? Downloading;
+
+    /// <summary>False for Lucent run from the zip, which can't update itself.</summary>
+    public bool IsInstalled => _stable.IsInstalled;
+
+    /// <summary>The version that's downloaded and waiting to install, if there is one.</summary>
+    public string? ReadyVersion => _downloaded?.Version.ToString();
 
     /// <summary>Checks for updates until Lucent closes. Returns at once if Lucent isn't installed.</summary>
     public async Task RunAsync()
@@ -77,25 +93,71 @@ public sealed class AppUpdater
         _ = CheckOnceAsync();
     }
 
+    /// <summary>
+    /// Checks for a newer build now, as the hourly check does, and downloads it if there is one. A
+    /// download raises <see cref="UpdateReady"/> as usual, so the title bar's UPDATE button shows too.
+    /// </summary>
+    public async Task<UpdateCheckResult> CheckNowAsync()
+    {
+        if (!_stable.IsInstalled)
+        {
+            return new UpdateCheckResult(UpdateCheckOutcome.NotInstalled);
+        }
+
+        try
+        {
+            var ready = await CheckAndDownloadAsync(announceDownload: true).ConfigureAwait(false);
+            return ready is null
+                ? new UpdateCheckResult(UpdateCheckOutcome.UpToDate)
+                : new UpdateCheckResult(UpdateCheckOutcome.Ready, ready);
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Checking for updates", ex);
+            return new UpdateCheckResult(UpdateCheckOutcome.Failed);
+        }
+    }
+
     private async Task CheckOnceAsync()
     {
+        try
+        {
+            await CheckAndDownloadAsync(announceDownload: false).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Offline, GitHub unreachable or mid-publish: try again at the next check.
+        }
+    }
+
+    /// <summary>Returns the version that's downloaded and ready to install, or null if Lucent is up to date.</summary>
+    private async Task<string?> CheckAndDownloadAsync(bool announceDownload)
+    {
+        await _checking.WaitAsync().ConfigureAwait(false);
         try
         {
             var manager = EveryBuild || !await HasStableReleaseAsync().ConfigureAwait(false) ? _everyBuild : _stable;
             var update = await manager.CheckForUpdatesAsync().ConfigureAwait(false);
             if (update is null || _applying || update.TargetFullRelease.Version == _downloaded?.Version)
             {
-                return;
+                return ReadyVersion;
+            }
+
+            var version = update.TargetFullRelease.Version.ToString();
+            if (announceDownload)
+            {
+                Downloading?.Invoke(version);
             }
 
             await manager.DownloadUpdatesAsync(update).ConfigureAwait(false);
             _downloaded = update.TargetFullRelease;
             _downloadedWith = manager;
-            UpdateReady?.Invoke(_downloaded.Version.ToString());
+            UpdateReady?.Invoke(version);
+            return version;
         }
-        catch (Exception)
+        finally
         {
-            // Offline, GitHub unreachable or mid-publish: try again at the next check.
+            _checking.Release();
         }
     }
 
@@ -144,3 +206,22 @@ public sealed class AppUpdater
         return client;
     }
 }
+
+/// <summary>What a check for updates found.</summary>
+public enum UpdateCheckOutcome
+{
+    /// <summary>The build in use is the newest one to follow.</summary>
+    UpToDate,
+
+    /// <summary>A newer build has downloaded and is waiting to install.</summary>
+    Ready,
+
+    /// <summary>Lucent isn't installed (it was run from the zip), so it can't update itself.</summary>
+    NotInstalled,
+
+    /// <summary>GitHub couldn't be reached, or the download failed.</summary>
+    Failed,
+}
+
+/// <summary>The outcome of a check for updates, and the version waiting to install when there is one.</summary>
+public sealed record UpdateCheckResult(UpdateCheckOutcome Outcome, string? Version = null);

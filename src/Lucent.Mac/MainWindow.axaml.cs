@@ -311,7 +311,9 @@ public partial class MainWindow : Window
         {
             ToolTip.SetTip(UpdateButton, $"Lucent {version} is ready. Click to restart into it now, or it installs when you close Lucent.");
             UpdateButton.IsVisible = true;
+            ShowUpdateStatus(ReadyStatus(version), readyToInstall: true);
         });
+        _updater.Downloading += version => Dispatcher.UIThread.Post(() => ShowUpdateStatus($"Downloading Lucent {version}…", readyToInstall: false));
         _updater.EveryBuild = _settings.EveryBuild;
         _ = _updater.RunAsync();
         AddStarterMusic();
@@ -1195,6 +1197,14 @@ public partial class MainWindow : Window
         UpdatesTab.IsVisible = tab == "Updates";
     }
 
+    /// <summary>Opens Options on its Updates tab.</summary>
+    private void ShowUpdatesTab()
+    {
+        OpenOptions();
+        UpdatesTabButton.IsChecked = true;
+        OnOptionsTab(UpdatesTabButton, new RoutedEventArgs());
+    }
+
     /// <summary>A choice in one of the option rows (resolution, detail, glow, timing, skin, theme, updates).</summary>
     private void OnOptionChosen(object? sender, RoutedEventArgs e)
     {
@@ -1237,6 +1247,7 @@ public partial class MainWindow : Window
                 _updater.EveryBuild = _settings.EveryBuild;
                 _updater.ChannelChanged();
                 UpdateButton.IsVisible = false;
+                ShowUpdateStatus(null, readyToInstall: false);
                 return;
             default:
                 return;
