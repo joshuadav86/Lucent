@@ -86,6 +86,12 @@ public sealed class Equalizer : ISampleProvider
         }
     }
 
+    /// <summary>
+    /// How far the music is being turned down right now, in decibels, so the boosts don't push it
+    /// past full scale. It follows the music: boosting bass a track doesn't have costs nothing.
+    /// </summary>
+    public double HeadroomDb => _stream?.HeadroomDb ?? 0;
+
     public int Read(float[] buffer, int offset, int count)
     {
         // Read the stream once: a track change on the UI thread may swap it mid-call.
@@ -176,6 +182,15 @@ internal sealed class EqualizerStream
     private const double LimiterCeiling = 0.989;
     private const double LimiterReleaseSeconds = 0.15;
 
+    // Ahead of the limiter, the headroom turns the music down smoothly when the boosts make it
+    // reach full scale, and only then: it eases down over a few milliseconds, holds while the music
+    // stays within a decibel or so of the top (longer than a cycle of deep bass, so it doesn't
+    // wobble with the waveform), then slowly lets go.
+    private const double HeadroomAttackSeconds = 0.005;
+    private const double HeadroomHoldSeconds = 0.08;
+    private const double HeadroomReleaseSeconds = 0.8;
+    private const double HeadroomHoldLevel = 0.88;
+
     // Superseded filter chains (after a band count change) still fading out.
     private const int MaxChains = 4;
 
@@ -184,12 +199,18 @@ internal sealed class EqualizerStream
     private readonly double[] _planar;
     private readonly double _glideStep;
     private readonly double _limiterRelease;
+    private readonly double _headroomAttack;
+    private readonly double _headroomRelease;
+    private readonly int _headroomHoldFrames;
     private readonly List<EqualizerFilterChain> _chains = new();
     private volatile EqualizerDesign _pending;
     private EqualizerDesign _applied;
     private double _outputGain;
     private double _targetOutputGain;
     private double _limiterGain = 1;
+    private double _headroomGain = 1;
+    private int _headroomHoldLeft;
+    private double _reportedHeadroomDb;
     private bool _bypassed;
 
     public EqualizerStream(ISampleProvider source, EqualizerDesign design)
@@ -200,6 +221,9 @@ internal sealed class EqualizerStream
         var sampleRate = source.WaveFormat.SampleRate;
         _glideStep = 1 - Math.Exp(-GlideBlockFrames / (GlideSeconds * sampleRate));
         _limiterRelease = 1 - Math.Exp(-1 / (LimiterReleaseSeconds * sampleRate));
+        _headroomAttack = 1 - Math.Exp(-1 / (HeadroomAttackSeconds * sampleRate));
+        _headroomRelease = 1 - Math.Exp(-1 / (HeadroomReleaseSeconds * sampleRate));
+        _headroomHoldFrames = (int)(HeadroomHoldSeconds * sampleRate);
 
         // A new track starts at the current settings straight away: there's nothing to glide from.
         _pending = design;
@@ -210,6 +234,9 @@ internal sealed class EqualizerStream
     }
 
     public WaveFormat WaveFormat => _source.WaveFormat;
+
+    /// <summary>How far the headroom is turning the music down, in decibels. Safe to read from any thread.</summary>
+    public double HeadroomDb => Volatile.Read(ref _reportedHeadroomDb);
 
     /// <summary>Hands over new settings. Safe to call from any thread.</summary>
     public void Retarget(EqualizerDesign design) => _pending = design;
@@ -325,7 +352,7 @@ internal sealed class EqualizerStream
             }
         }
 
-        if (_applied.IsBypass && _outputGain == 1 && _chains.TrueForAll(chain => !chain.IsActive))
+        if (_applied.IsBypass && _outputGain == 1 && _headroomGain == 1 && _chains.TrueForAll(chain => !chain.IsActive))
         {
             if (_chains.Count > 1)
             {
@@ -335,13 +362,19 @@ internal sealed class EqualizerStream
             _bypassed = true;
             _limiterGain = 1;
         }
+
+        Volatile.Write(ref _reportedHeadroomDb, _bypassed ? 0 : -20 * Math.Log10(_headroomGain));
     }
 
-    // Applies the preamp (gliding across the block), then the safety limiter, and writes back.
+    // Applies the preamp (gliding across the block), then the headroom and the safety limiter, and
+    // writes back.
     private void WriteOutput(float[] buffer, int start, int length, double fromGain, double toGain)
     {
         var channels = _channels;
         var gainStep = (toGain - fromGain) / length;
+        // On the way to switching off, the headroom only lets go, and quickly: the music is about to
+        // play untouched, so there's nothing to make room for.
+        var settling = _applied.IsBypass;
         for (var frame = 0; frame < length; frame++)
         {
             var gain = fromGain + gainStep * (frame + 1);
@@ -350,6 +383,30 @@ internal sealed class EqualizerStream
             {
                 peak = Math.Max(peak, Math.Abs(_planar[channel * BlockFrames + frame] * gain));
             }
+
+            if (!settling && peak * _headroomGain > LimiterCeiling)
+            {
+                _headroomGain += (LimiterCeiling / peak - _headroomGain) * _headroomAttack;
+                _headroomHoldLeft = _headroomHoldFrames;
+            }
+            else if (!settling && peak * _headroomGain > LimiterCeiling * HeadroomHoldLevel)
+            {
+                _headroomHoldLeft = _headroomHoldFrames;
+            }
+            else if (_headroomHoldLeft > 0 && !settling)
+            {
+                _headroomHoldLeft--;
+            }
+            else if (_headroomGain != 1)
+            {
+                _headroomGain += (1 - _headroomGain) * (settling ? _limiterRelease : _headroomRelease);
+                if (1 - _headroomGain < 1e-4)
+                {
+                    _headroomGain = 1;
+                }
+            }
+
+            peak *= _headroomGain;
 
             // The limiter clamps down at once on a sample that would reach full scale, then lets go
             // over 150 ms or so, which is far gentler on the ear than hard clipping.
@@ -364,7 +421,7 @@ internal sealed class EqualizerStream
                 _limiterGain = LimiterCeiling / peak;
             }
 
-            var total = gain * _limiterGain;
+            var total = gain * _headroomGain * _limiterGain;
             for (var channel = 0; channel < channels; channel++)
             {
                 buffer[start + frame * channels + channel] = (float)(_planar[channel * BlockFrames + frame] * total);

@@ -106,22 +106,18 @@ public sealed class EqualizerDesign
     /// </summary>
     public const double MaxFilterGainDb = 36;
 
-    // Frequencies checked when looking for the curve's loudest point.
-    private const int ResponseGridPoints = 160;
-
     private readonly BiquadCoefficients[] _coefficients;
 
     private EqualizerDesign(EqualizerBands bands, int sampleRate, EqualizerFilterShape[] shapes, double[] filterGainsDb,
-                            double preampDb, double headroomDb, bool isBypass)
+                            double preampDb, bool isBypass)
     {
         Bands = bands;
         SampleRate = sampleRate;
         Shapes = shapes;
         FilterGainsDb = filterGainsDb;
         PreampDb = preampDb;
-        HeadroomDb = headroomDb;
         IsBypass = isBypass;
-        OutputGain = isBypass ? 1 : Math.Pow(10, (preampDb - headroomDb) / 20);
+        OutputGain = isBypass ? 1 : Math.Pow(10, preampDb / 20);
         _coefficients = new BiquadCoefficients[shapes.Length];
         for (var band = 0; band < shapes.Length; band++)
         {
@@ -143,10 +139,10 @@ public sealed class EqualizerDesign
 
     public double PreampDb { get; }
 
-    /// <summary>How far the volume is lowered automatically so boosted bands don't distort.</summary>
-    public double HeadroomDb { get; }
-
-    /// <summary>The level applied after the filters: the preamp less the automatic headroom.</summary>
+    /// <summary>
+    /// The level applied after the filters: the preamp. (Anything turned down so boosts don't
+    /// distort is worked out from the music itself as it plays, see <see cref="Equalizer.HeadroomDb"/>.)
+    /// </summary>
     public double OutputGain { get; }
 
     /// <summary>True when the equalizer is off or flat, so audio passes through untouched.</summary>
@@ -160,29 +156,11 @@ public sealed class EqualizerDesign
         var flat = sliderGainsDb.All(gain => gain == 0);
         if (!enabled || (flat && preampDb == 0))
         {
-            return new EqualizerDesign(bands, sampleRate, shapes, new double[shapes.Length], 0, 0, isBypass: true);
+            return new EqualizerDesign(bands, sampleRate, shapes, new double[shapes.Length], 0, isBypass: true);
         }
 
         var gains = flat ? new double[shapes.Length] : solver.Solve(sliderGainsDb);
-        var design = new EqualizerDesign(bands, sampleRate, shapes, gains, preampDb, 0, isBypass: false);
-
-        // Boosting a band can push loud music past full scale, which distorts. Lowering everything
-        // by the curve's highest boost keeps the loudest part of the curve at its original level.
-        var peak = 0.0;
-        if (!flat)
-        {
-            foreach (var hertz in ResponseGrid(sampleRate))
-            {
-                peak = Math.Max(peak, design.BandsResponseDb(hertz));
-            }
-
-            foreach (var hertz in bands.Centres.Where(hertz => hertz < sampleRate * 0.45))
-            {
-                peak = Math.Max(peak, design.BandsResponseDb(hertz));
-            }
-        }
-
-        return peak <= 0 ? design : new EqualizerDesign(bands, sampleRate, shapes, gains, preampDb, peak, isBypass: false);
+        return new EqualizerDesign(bands, sampleRate, shapes, gains, preampDb, isBypass: false);
     }
 
     /// <summary>
@@ -207,15 +185,6 @@ public sealed class EqualizerDesign
         }
 
         return total;
-    }
-
-    private static IEnumerable<double> ResponseGrid(int sampleRate)
-    {
-        var highest = Math.Min(20000, sampleRate * 0.45);
-        for (var i = 0; i < ResponseGridPoints; i++)
-        {
-            yield return 20 * Math.Pow(highest / 20, i / (double)(ResponseGridPoints - 1));
-        }
     }
 }
 
