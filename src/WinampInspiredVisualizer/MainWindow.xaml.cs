@@ -1191,6 +1191,11 @@ public partial class MainWindow : Window
         {
             _settings.MorphTransitionsOnly = on;
         }
+        else if (sender == MilkDropSwitch)
+        {
+            _settings.MilkDropVisuals = on;
+            _visuals.ShowMilkDrop(on);
+        }
 
         ApplyVisualizerSettings();
         UpdateHdrHint();
@@ -1224,6 +1229,7 @@ public partial class MainWindow : Window
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
+        MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
     }

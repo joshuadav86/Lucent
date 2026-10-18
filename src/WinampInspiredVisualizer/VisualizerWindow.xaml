@@ -250,6 +250,20 @@
                                                                           Collapsed="OnFamilyFolderCollapsed">
                                                                     <Expander.Header>
                                                                         <DockPanel>
+                                                                            <Button DockPanel.Dock="Right" Height="20" Padding="8,0" Margin="8,0,0,0" Content="IMPORT"
+                                                                                    ToolTip="Add MilkDrop presets of your own" Click="OnImportIntoMilkDropFolder">
+                                                                                <!-- Only the MilkDrop folder has it. -->
+                                                                                <Button.Style>
+                                                                                    <Style TargetType="Button" BasedOn="{StaticResource PillButton}">
+                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding Name}" Value="MilkDrop">
+                                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </Button.Style>
+                                                                            </Button>
                                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
                                                                                        Margin="8,0,2,0" VerticalAlignment="Center"
                                                                                        Foreground="{DynamicResource FaintTextBrush}" />
