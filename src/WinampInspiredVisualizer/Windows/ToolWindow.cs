@@ -7,7 +7,8 @@ namespace WinampInspiredVisualizer.Windows;
 /// <summary>
 /// One of the windows around the player (visuals, queue, library). It belongs to the player
 /// window: it stays out of the taskbar, minimizes with it, and closing it just hides it.
-/// Keys and dropped music go to the player, so they work whichever window has focus.
+/// Keys go to the player, so they work whichever window has focus. Music dropped on it plays straight
+/// away, like a drop on the player, unless the window does something else with it (the queue adds it).
 /// </summary>
 public class ToolWindow : Window
 {
@@ -45,22 +46,29 @@ public class ToolWindow : Window
         }
     }
 
-    protected override void OnDragOver(DragEventArgs e)
+    protected override void OnPreviewDragEnter(DragEventArgs e)
     {
-        base.OnDragOver(e);
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
-        e.Handled = true;
+        base.OnPreviewDragEnter(e);
+        DroppedMusic.Accept(e);
     }
 
-    protected override void OnDrop(DragEventArgs e)
+    protected override void OnPreviewDragOver(DragEventArgs e)
     {
-        base.OnDrop(e);
-        if (!e.Handled && Player is not null && e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+        base.OnPreviewDragOver(e);
+        DroppedMusic.Accept(e);
+    }
+
+    protected override void OnPreviewDrop(DragEventArgs e)
+    {
+        base.OnPreviewDrop(e);
+        if (Player is not null && DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
-            Player.AddDroppedPaths(paths);
-            e.Handled = true;
+            OnMusicDropped(paths);
         }
     }
+
+    /// <summary>Files or folders dropped on this window. They play now, replacing the queue.</summary>
+    protected virtual void OnMusicDropped(IReadOnlyList<string> paths) => Player?.PlayDroppedPaths(paths);
 
     /// <summary>For the close button in the window's title bar.</summary>
     protected void OnHideWindow(object sender, RoutedEventArgs e) => Hide();

@@ -8,7 +8,8 @@ namespace Lucent.Mac.Windows;
 /// <summary>
 /// One of the windows around the player (visuals, queue, library...). It belongs to the player
 /// window: it stays out of the Dock's window list and minimizes with it, and closing it just hides it.
-/// Keys and dropped music go to the player, so they work whichever window has focus.
+/// Keys go to the player, so they work whichever window has focus. Music dropped on it plays straight
+/// away, like a drop on the player, unless the window does something else with it (the queue adds it).
 /// </summary>
 public class ToolWindow : Window
 {
@@ -17,8 +18,9 @@ public class ToolWindow : Window
         ShowInTaskbar = false;
         ShowActivated = false;
         DragDrop.SetAllowDrop(this, true);
-        AddHandler(DragDrop.DragOverEvent, OnDragOverFiles);
-        AddHandler(DragDrop.DropEvent, OnDropFiles);
+        AddHandler(DragDrop.DragEnterEvent, OnDragOverFiles, handledEventsToo: true);
+        AddHandler(DragDrop.DragOverEvent, OnDragOverFiles, handledEventsToo: true);
+        AddHandler(DragDrop.DropEvent, OnDropFiles, handledEventsToo: true);
         AddHandler(KeyDownEvent, OnShortcutKey, RoutingStrategies.Tunnel);
     }
 
@@ -51,20 +53,18 @@ public class ToolWindow : Window
         }
     }
 
-    private static void OnDragOverFiles(object? sender, DragEventArgs e)
-    {
-        e.DragEffects = e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None;
-        e.Handled = true;
-    }
+    private static void OnDragOverFiles(object? sender, DragEventArgs e) => DroppedMusic.Accept(e);
 
     private void OnDropFiles(object? sender, DragEventArgs e)
     {
-        if (!e.Handled && Player is not null && e.DataTransfer.TryGetFiles() is { } files)
+        if (Player is not null && DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
-            Player.AddDroppedPaths(files.Select(file => file.TryGetLocalPath()).OfType<string>().ToArray());
-            e.Handled = true;
+            OnMusicDropped(paths);
         }
     }
+
+    /// <summary>Files or folders dropped on this window. They play now, replacing the queue.</summary>
+    protected virtual void OnMusicDropped(IReadOnlyList<string> paths) => Player?.PlayDroppedPaths(paths);
 
     /// <summary>For the close button in the window's title bar.</summary>
     protected void OnHideWindow(object? sender, RoutedEventArgs e) => Hide();

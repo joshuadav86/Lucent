@@ -124,7 +124,7 @@ public partial class MainWindow : Window
         BuildThemeSwatches();
 
         _libraryWindow.Attach(_library, _settings);
-        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders);
+        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
         _stores = new StoreService(_settings, LinkLibraryFolder);
         _stores.Start();
 
@@ -1339,7 +1339,16 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Music dropped on the queue: added to the end of it.</summary>
     public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(paths);
+
+    /// <summary>Music dropped on the player (or the visuals): it replaces the queue and plays now, as in Winamp.</summary>
+    public async void PlayDroppedPaths(IEnumerable<string> paths)
+    {
+        var input = paths.ToList();
+        var tracks = await Task.Run(() => ExpandPaths(input).Select(Track.FromFile).ToList());
+        ReplaceQueue(tracks, 0);
+    }
 
     public void ClearQueue()
     {
@@ -1351,17 +1360,13 @@ public partial class MainWindow : Window
         UpdatePlayPauseButton();
     }
 
-    private void OnDragOver(object sender, DragEventArgs e)
-    {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
-        e.Handled = true;
-    }
+    private void OnDragOver(object sender, DragEventArgs e) => DroppedMusic.Accept(e);
 
-    private async void OnDrop(object sender, DragEventArgs e)
+    private void OnDrop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+        if (DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
-            await AddPathsAsync(paths);
+            PlayDroppedPaths(paths);
         }
     }
 
@@ -1984,7 +1989,7 @@ public partial class MainWindow : Window
         if (_settings.LibraryFolders.Count != before || _settings.HiddenLibraryFolders.Count != hiddenBefore)
         {
             _settings.Save();
-            _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders);
+            _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
         }
     }
 

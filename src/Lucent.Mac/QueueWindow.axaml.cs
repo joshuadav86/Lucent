@@ -20,6 +20,9 @@ public partial class QueueWindow : ToolWindow
         PlaylistView.AddHandler(ContextRequestedEvent, OnQueueMenuOpening, RoutingStrategies.Tunnel);
     }
 
+    /// <summary>Music dropped on the queue goes on the end of it, as on Winamp's playlist.</summary>
+    protected override void OnMusicDropped(IReadOnlyList<string> paths) => Player?.AddDroppedPaths(paths);
+
     /// <summary>The selected rows, in queue order.</summary>
     public List<PlaylistEntry> SelectedEntries()
     {
