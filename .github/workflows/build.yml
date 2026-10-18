@@ -71,6 +71,23 @@ jobs:
               if (-not (Test-Shader $preset.BaseName ($source + $particleMain) "VSParticle" "vs_5_0")) { $failed = $true }
             }
           }
+          # MilkDrop presets: the engine's own passes, then the sample presets' shaders as the app
+          # translates them. MilkDropCheck also checks the expression language and runs each preset.
+          $milkDrop = (Get-Content "$root/Shaders/MilkDrop.hlsli" -Raw) + "`n" + (Get-Content "$root/Shaders/MilkDrop.hlsl" -Raw)
+          foreach ($entry in "VSWarp", "VSScreen", "VSDraw") {
+            if (-not (Test-Shader "MilkDrop" $milkDrop $entry "vs_5_0")) { $failed = $true }
+          }
+          foreach ($entry in "PSWarpClassic", "PSCompClassic", "PSDraw", "PSDrawTextured", "PSBlurAcross", "PSBlurDown") {
+            if (-not (Test-Shader "MilkDrop" $milkDrop $entry "ps_5_0")) { $failed = $true }
+          }
+          $milkShaders = Join-Path $env:RUNNER_TEMP "milkdrop"
+          dotnet run --project tools/MilkDropCheck -c Release -- --shaders $milkShaders | Out-Host
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::MilkDropCheck failed"; $failed = $true }
+          foreach ($shader in Get-ChildItem "$milkShaders/*Preset.hlsl") {
+            $entry = $shader.BaseName.Split('.')[-1]
+            & $fxc.FullName /nologo /T ps_5_0 /E $entry /Fo $out $shader.FullName | Out-Host
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::$($shader.Name) failed to compile"; $failed = $true }
+          }
           if ($failed) { exit 1 }
 
       - name: Build the plugin helper
