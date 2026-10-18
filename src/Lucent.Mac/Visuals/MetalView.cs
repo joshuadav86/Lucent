@@ -37,16 +37,19 @@ public sealed class MetalView : NativeControlHost
             return base.CreateNativeControlCore(parent);
         }
 
+        // The view makes its own Metal layer (makeBackingLayer:, below) and AppKit keeps that layer
+        // exactly the view's size, as it does for any layer-backed view. A layer set from outside
+        // is left for the app to size, and Core Animation's own resizing of it went wrong as the
+        // window changed size: the picture ended up squashed into a strip along the bottom.
         _view = ObjC.Send(ObjC.Send(ViewClass(), "alloc"), "initWithFrame:", new ObjC.CGRect { Width = 100, Height = 100 });
-        _layer = ObjC.Send(ObjC.Send(ObjC.Class("CAMetalLayer"), "layer"), "retain");
+        ObjC.SendVoid(_view, "setWantsLayer:", true);
+        // Fill whatever the view is put in; NSViewWidthSizable | NSViewHeightSizable.
+        ObjC.SendVoid(_view, "setAutoresizingMask:", 2UL | 16UL);
+        _layer = ObjC.Send(ObjC.Send(_view, "layer"), "retain");
         ObjC.SendVoid(_layer, "setDevice:", _engine.Device.NativePtr);
         ObjC.SendVoid(_layer, "setPixelFormat:", (ulong)MTLPixelFormat.BGRA8Unorm);
         ObjC.SendVoid(_layer, "setFramebufferOnly:", true);
         ObjC.SendVoid(_layer, "setOpaque:", true);
-        // Follow the view's size; kCALayerWidthSizable | kCALayerHeightSizable.
-        ObjC.SendVoid(_layer, "setAutoresizingMask:", 2UL | 16UL);
-        ObjC.SendVoid(_view, "setLayer:", _layer);
-        ObjC.SendVoid(_view, "setWantsLayer:", true);
 
         Renderer = new MetalRenderer(_layer, _engine);
         UpdateSize();
@@ -56,11 +59,17 @@ public sealed class MetalView : NativeControlHost
     }
 
     /// <summary>An NSView that's never the target of a click: hitTest: answers nil, so AppKit hands the click to the window's own view.</summary>
+    /// <remarks>Its layer is a CAMetalLayer, made by makeBackingLayer.</remarks>
     private static unsafe IntPtr ViewClass() =>
-        ObjC.Subclass("LucentVisualsView", "NSView", ("hitTest:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, ObjC.CGPoint, IntPtr>)&HitTest, "@@:{CGPoint=dd}"));
+        ObjC.Subclass("LucentVisualsView", "NSView",
+            ("hitTest:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, ObjC.CGPoint, IntPtr>)&HitTest, "@@:{CGPoint=dd}"),
+            ("makeBackingLayer", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr>)&MakeBackingLayer, "@@:"));
 
     [UnmanagedCallersOnly]
     private static IntPtr HitTest(IntPtr self, IntPtr selector, ObjC.CGPoint point) => IntPtr.Zero;
+
+    [UnmanagedCallersOnly]
+    private static IntPtr MakeBackingLayer(IntPtr self, IntPtr selector) => ObjC.Send(ObjC.Class("CAMetalLayer"), "layer");
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {

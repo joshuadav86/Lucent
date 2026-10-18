@@ -39,14 +39,16 @@ internal static class LayoutCheck
                 visuals.Show(main);
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(3));
-            lines.Add(Check(visuals, "as opened", ref failed));
+            var (matched, line) = await SettleAsync(visuals, "as opened");
+            failed |= !matched;
+            lines.Add(line);
             foreach (var (width, height) in Sizes)
             {
                 visuals.Width = width;
                 visuals.Height = height;
-                await Task.Delay(TimeSpan.FromSeconds(1.5));
-                lines.Add(Check(visuals, $"window {width} x {height}", ref failed));
+                (matched, line) = await SettleAsync(visuals, $"window {width} x {height}");
+                failed |= !matched;
+                lines.Add(line);
             }
         }
         catch (Exception ex)
@@ -60,17 +62,32 @@ internal static class LayoutCheck
         Dispatcher.UIThread.Post(main.Close);
     }
 
-    private static string Check(Window visuals, string label, ref bool failed)
+    /// <summary>Gives the layout and AppKit a few seconds to catch up, then reports how it ended up.</summary>
+    private static async Task<(bool Matched, string Line)> SettleAsync(Window visuals, string label)
+    {
+        var result = (Matched: false, Line: string.Empty);
+        for (var attempt = 0; attempt < 24; attempt++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(0.25));
+            result = Check(visuals, label);
+            if (result.Matched && attempt >= 3)
+            {
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    private static (bool Matched, string Line) Check(Window visuals, string label)
     {
         var view = visuals.GetVisualDescendants().OfType<MetalView>().FirstOrDefault();
         if (view is null)
         {
-            failed = true;
-            return $"MISMATCH {label}: no Metal view in the visuals window";
+            return (false, $"MISMATCH {label}: no Metal view in the visuals window");
         }
 
         var (matches, report) = view.CheckGeometry();
-        failed |= !matches;
-        return $"{(matches ? "ok" : "MISMATCH")} {label}: {report}";
+        return (matches, $"{(matches ? "ok" : "MISMATCH")} {label}: {report}");
     }
 }
