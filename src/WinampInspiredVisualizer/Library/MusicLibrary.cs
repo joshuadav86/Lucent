@@ -21,6 +21,7 @@ public sealed class MusicLibrary : IDisposable
     private IReadOnlyList<string> _folders = Array.Empty<string>();
     private IReadOnlyList<string> _hidden = Array.Empty<string>();
     private IReadOnlyList<string> _files = Array.Empty<string>();
+    private IReadOnlyList<string> _together = Array.Empty<string>();
 
     public MusicLibrary()
     {
@@ -50,10 +51,13 @@ public sealed class MusicLibrary : IDisposable
 
     /// <summary>
     /// Lists the music in these folders, leaving out what's in the hidden folders inside them, plus any
-    /// single files added on their own (dropped on the library).
+    /// single files added on their own (dropped on the library). The music in the <paramref name="together"/>
+    /// folders is all listed under the folder's own heading, instead of a heading per folder inside it.
     /// </summary>
-    public void SetFolders(IEnumerable<string> folders, IEnumerable<string> hidden, IEnumerable<string> files)
+    public void SetFolders(IEnumerable<string> folders, IEnumerable<string> hidden, IEnumerable<string> files,
+        IEnumerable<string> together)
     {
+        _together = together.ToList();
         _files = files
             .Where(file => !string.IsNullOrWhiteSpace(file))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -81,7 +85,8 @@ public sealed class MusicLibrary : IDisposable
             var folders = _folders;
             var hidden = _hidden;
             var files = _files;
-            var found = await Task.Run(() => FindFiles(folders, hidden, files, scan.Token), scan.Token);
+            var together = _together;
+            var found = await Task.Run(() => FindFiles(folders, hidden, files, together, scan.Token), scan.Token);
             if (scan.IsCancellationRequested)
             {
                 return;
@@ -194,7 +199,7 @@ public sealed class MusicLibrary : IDisposable
     }
 
     private static List<FoundFile> FindFiles(IReadOnlyList<string> folders, IReadOnlyList<string> hidden,
-        IReadOnlyList<string> files, CancellationToken token)
+        IReadOnlyList<string> files, IReadOnlyList<string> together, CancellationToken token)
     {
         var options = new EnumerationOptions
         {
@@ -212,6 +217,7 @@ public sealed class MusicLibrary : IDisposable
             }
 
             var hiddenHere = LibraryFolderList.HiddenIn(root, hidden);
+            var allTogether = LibraryFolderList.IsTogether(together, root);
             try
             {
                 foreach (var path in Directory.EnumerateFiles(root, "*", options))
@@ -223,7 +229,8 @@ public sealed class MusicLibrary : IDisposable
                         continue;
                     }
 
-                    var directory = System.IO.Path.GetDirectoryName(path) ?? root;
+                    // Listed together, the heading is the library folder itself, wherever inside it the file is.
+                    var directory = allTogether ? root : System.IO.Path.GetDirectoryName(path) ?? root;
                     results[path] = new FoundFile(path, FolderLabel(root, directory), directory, AddedTime(path));
                 }
             }

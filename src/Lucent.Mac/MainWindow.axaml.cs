@@ -149,7 +149,8 @@ public partial class MainWindow : Window
         BuildThemeSwatches();
 
         _libraryWindow.Attach(_library, _settings);
-        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
+        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles,
+            _settings.LibraryFoldersTogether);
         _stores = new StoreService(_settings, LinkLibraryFolder);
         _stores.Start();
 
@@ -2212,7 +2213,8 @@ public partial class MainWindow : Window
         if (_settings.LibraryFolders.Count != before || _settings.HiddenLibraryFolders.Count != hiddenBefore)
         {
             _settings.Save();
-            _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
+            _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles,
+                _settings.LibraryFoldersTogether);
         }
     }
 

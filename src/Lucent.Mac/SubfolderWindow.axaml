@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.SubfolderWindow"
+        Title="Library"
+        Width="420" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource SurfaceRaisedBrush}">
+
+    <!-- Asks how a new library folder with folders inside it is listed. -->
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1" w:Chrome.IsCaption="True"
+            Background="{DynamicResource PanelSheenBrush}" Padding="18,16,18,16">
+        <StackPanel>
+            <TextBlock x:Name="Heading" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextBrush}" />
+            <TextBlock FontSize="13" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}"
+                       Text="Give each folder inside its own heading in the library, or list all the music inside under the one folder." />
+            <CheckBox x:Name="RememberSwitch" Theme="{StaticResource SwitchToggle}" Content="Don't ask again" Margin="0,16,0,0" />
+            <TextBlock Theme="{StaticResource OptionHint}"
+                       Text="You can change it for a folder later by right-clicking its heading." />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,18,0,0">
+                <Button Theme="{StaticResource PickerButton}" Content="All in one folder" Height="32" Padding="16,0"
+                        Click="OnTogether" />
+                <Button Theme="{StaticResource PickerButton}" Content="Separate folders" Height="32" Padding="16,0"
+                        Foreground="{DynamicResource AccentBrush}" IsDefault="True" Click="OnSeparate" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
