@@ -642,9 +642,33 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
-        foreach (var folder in paths)
+        await AddLibraryFolders(paths);
+    }
+
+    /// <summary>
+    /// Puts folders into the library. A new one with folders inside it gets a heading per folder, or one
+    /// heading for all of it, as the user picks (asking unless they said not to).
+    /// </summary>
+    private async Task AddLibraryFolders(IEnumerable<string> folders)
+    {
+        var added = folders
+            .Where(folder => LibraryFolderList.Add(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder))
+            .ToList();
+        var nested = added.Where(LibraryFolderList.HasSubfolders).ToList();
+        var choice = _settings.LibrarySubfolders;
+        if (nested.Count > 0 && choice == LibrarySubfolders.Ask)
         {
-            LibraryFolderList.Add(_settings.LibraryFolders, _settings.HiddenLibraryFolders, folder);
+            (choice, var remember) = await SubfolderWindow.AskAsync(this, nested);
+            if (remember)
+            {
+                _settings.LibrarySubfolders = choice;
+            }
+        }
+
+        foreach (var folder in added)
+        {
+            LibraryFolderList.SetTogether(_settings.LibraryFoldersTogether, folder,
+                choice == LibrarySubfolders.Together && nested.Contains(folder));
         }
 
         ApplyLibraryFolders();
@@ -654,17 +678,18 @@ public partial class LibraryWindow : ToolWindow
     /// Music dropped on the library goes into it: folders become library folders, and single files are
     /// added on their own. Nothing is played or queued.
     /// </summary>
-    protected override void OnMusicDropped(IReadOnlyList<string> paths)
+    protected override async void OnMusicDropped(IReadOnlyList<string> paths)
     {
         var changed = false;
+        var folders = paths.Where(Directory.Exists).ToList();
         foreach (var path in paths)
         {
-            if (Directory.Exists(path))
+            if (folders.Contains(path))
             {
-                LibraryFolderList.Add(_settings.LibraryFolders, _settings.HiddenLibraryFolders, path);
-                changed = true;
+                continue;
             }
-            else if (File.Exists(path) && AudioReaderFactory.IsSupported(path)
+
+            if (File.Exists(path) && AudioReaderFactory.IsSupported(path)
                 && !_settings.LibraryFiles.Contains(path, StringComparer.OrdinalIgnoreCase))
             {
                 _settings.LibraryFiles.Add(path);
@@ -672,7 +697,11 @@ public partial class LibraryWindow : ToolWindow
             }
         }
 
-        if (changed)
+        if (folders.Count > 0)
+        {
+            await AddLibraryFolders(folders);
+        }
+        else if (changed)
         {
             ApplyLibraryFolders();
         }
@@ -687,6 +716,7 @@ public partial class LibraryWindow : ToolWindow
             LibraryFolderList.RemoveFilesIn(_settings.LibraryFiles, folder);
         }
 
+        LibraryFolderList.ForgetUnlinked(_settings.LibraryFoldersTogether, _settings.LibraryFolders);
         HighlightFolders(Array.Empty<string>());
         ApplyLibraryFolders();
     }
@@ -694,7 +724,8 @@ public partial class LibraryWindow : ToolWindow
     private void ApplyLibraryFolders()
     {
         _settings.Save();
-        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
+        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles,
+            _settings.LibraryFoldersTogether);
         UpdateLibraryStatus();
     }
 
@@ -730,6 +761,20 @@ public partial class LibraryWindow : ToolWindow
         var add = new MenuItem { Header = _settings.LibraryFolders.Count == 0 ? "Link a music folder…" : "Link another folder…" };
         add.Click += (_, _) => LinkLibraryFolder();
         menu.Items.Add(add);
+        if (_settings.LibrarySubfolders != LibrarySubfolders.Ask)
+        {
+            var ask = new MenuItem { Header = "Ask about folders inside new folders" };
+            ToolTip.SetTip(ask, _settings.LibrarySubfolders == LibrarySubfolders.Together
+                ? "New folders currently list everything inside them under one heading"
+                : "New folders currently give each folder inside them its own heading");
+            ask.Click += (_, _) =>
+            {
+                _settings.LibrarySubfolders = LibrarySubfolders.Ask;
+                _settings.Save();
+            };
+            menu.Items.Add(ask);
+        }
+
         var stores = new MenuItem { Header = "Bandcamp and Beatport…" };
         ToolTip.SetTip(stores, "Add the music you buy on Bandcamp and Beatport to the library");
         stores.Click += (_, _) => Player?.ShowStores();
@@ -776,8 +821,39 @@ public partial class LibraryWindow : ToolWindow
         _settings.LibraryFolders.Clear();
         _settings.HiddenLibraryFolders.Clear();
         _settings.LibraryFiles.Clear();
+        _settings.LibraryFoldersTogether.Clear();
         HighlightFolders(Array.Empty<string>());
         ApplyLibraryFolders();
+    }
+
+    /// <summary>
+    /// For the library folder a heading is in: list everything inside it under the one heading, or go back
+    /// to a heading per folder. Null when it has no folders inside it.
+    /// </summary>
+    private MenuItem? ListTogetherMenuItem(string directory)
+    {
+        if (LibraryFolderList.LinkedFolderOf(_settings.LibraryFolders, directory) is not { } root)
+        {
+            return null;
+        }
+
+        var together = LibraryFolderList.IsTogether(_settings.LibraryFoldersTogether, root);
+        if (!together && !LibraryFolderList.HasSubfolders(root))
+        {
+            return null;
+        }
+
+        var name = LibraryFolderList.Name(root);
+        var item = new MenuItem
+        {
+            Header = together ? $"Give each folder in “{name}” its own heading" : $"List everything in “{name}” as one folder",
+        };
+        item.Click += (_, _) =>
+        {
+            LibraryFolderList.SetTogether(_settings.LibraryFoldersTogether, root, !together);
+            ApplyLibraryFolders();
+        };
+        return item;
     }
 
     private MenuItem AddFolderMenuItem()
@@ -994,6 +1070,11 @@ public partial class LibraryWindow : ToolWindow
         {
             var directory = groups[0].Directory ?? songs[0].Directory;
             menu.Items.Add(new Separator());
+            if (ListTogetherMenuItem(directory) is { } together)
+            {
+                menu.Items.Add(together);
+            }
+
             var show = new MenuItem { Header = "Show in Finder" };
             show.Click += (_, _) => Player?.ShowInExplorer(directory);
             menu.Items.Add(show);

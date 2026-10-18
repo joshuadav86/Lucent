@@ -151,7 +151,8 @@ public partial class MainWindow : Window
         _libraryWindow.Attach(_library, _settings);
         _stores = new StoreService(_settings, LinkLibraryFolder);
         _library.SectionFolders = () => _stores.StoreFolders;
-        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
+        _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles,
+            _settings.LibraryFoldersTogether);
         _stores.Start();
 
         foreach (var window in ToolWindows)
@@ -2213,7 +2214,8 @@ public partial class MainWindow : Window
         if (_settings.LibraryFolders.Count != before || _settings.HiddenLibraryFolders.Count != hiddenBefore)
         {
             _settings.Save();
-            _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles);
+            _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles,
+                _settings.LibraryFoldersTogether);
         }
     }
 

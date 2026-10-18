@@ -39,7 +39,10 @@ public sealed class LibraryItem : INotifyPropertyChanged
     /// <summary>The folder heading this file is listed under, relative to its library folder.</summary>
     public string Folder { get; }
 
-    /// <summary>The full path of the folder the file is in.</summary>
+    /// <summary>
+    /// The full path of the folder its heading stands for: the folder the file is in, or its library folder
+    /// when everything in that is listed together.
+    /// </summary>
     public string Directory { get; }
 
     /// <summary>
