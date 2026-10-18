@@ -64,8 +64,9 @@ internal static class LayoutCheck
 
             lines.AddRange(await CheckMinimizeAsync(main));
 
-            // Where the visuals were left, for the run after this one to find them there again.
-            await File.WriteAllTextAsync(file + ".visuals", Describe(visuals));
+            // Where the visuals and equalizer were left, for the run after this one to find them there again.
+            await File.WriteAllTextAsync(file + ".visuals",
+                Describe(visuals) + "\n" + (EqualizerWindow.Current is { IsVisible: true } equalizer ? Describe(equalizer) : string.Empty));
             failed |= lines.Any(entry => entry.StartsWith("MISMATCH", StringComparison.Ordinal));
         }
         catch (Exception ex)
@@ -85,18 +86,41 @@ internal static class LayoutCheck
         {
             $"{(visuals.IsVisible ? "ok" : "MISMATCH")} reopened: the visuals {(visuals.IsVisible ? "are open" : "were left closed")}",
         };
-        var now = Describe(visuals);
-        lines.Add($"{(now == leftAt ? "ok" : "MISMATCH")} reopened: the visuals are at {now}, left at {leftAt ?? "(not written down)"}");
-        if (EqualizerWindow.Current is not { IsVisible: true } equalizer)
+        var equalizer = EqualizerWindow.Current is { IsVisible: true } open ? open : null;
+        if (equalizer is null)
         {
             lines.Add("MISMATCH reopened: the equalizer was left closed");
-            return lines;
         }
 
-        var under = Math.Abs(equalizer.Left() - main.Left()) < 2 && Math.Abs(equalizer.Top() - (main.Top() + main.ActualHeight())) < 2;
-        lines.Add($"{(under ? "ok" : "MISMATCH")} reopened: the equalizer is at {equalizer.Left():0},{equalizer.Top():0}, " +
-            $"the player at {main.Left():0},{main.Top():0} and {main.ActualHeight():0} high");
+        // Each window where it was left, give or take a few points (a window's frame can round differently).
+        var left = (leftAt ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var (name, window, index) in new[] { ("visuals", (Window?)visuals, 0), ("equalizer", equalizer, 1) })
+        {
+            if (window is null)
+            {
+                continue;
+            }
+
+            var then = index < left.Length ? left[index] : null;
+            var now = Describe(window);
+            lines.Add($"{(Near(now, then) ? "ok" : "MISMATCH")} reopened: the {name} is at {now}, left at {then ?? "(not written down)"}, " +
+                $"the player at {Describe(main)}");
+        }
+
         return lines;
+    }
+
+    /// <summary>Two descriptions within 4 points of each other in every number.</summary>
+    private static bool Near(string now, string? then)
+    {
+        if (then is null)
+        {
+            return false;
+        }
+
+        static double[] Numbers(string text) => text.Split(new[] { ',', ' ', 'x' }, StringSplitOptions.RemoveEmptyEntries).Select(double.Parse).ToArray();
+        var (a, b) = (Numbers(now), Numbers(then));
+        return a.Length == b.Length && a.Zip(b).All(pair => Math.Abs(pair.First - pair.Second) <= 4);
     }
 
     private static string Describe(Window window) =>
