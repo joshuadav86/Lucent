@@ -122,6 +122,104 @@ jobs:
             if (-not (Test-Path "publish/$dll")) { Write-Host "::error::$dll is missing from the published app"; exit 1 }
           }
 
+      - name: Make test music
+        shell: pwsh
+        run: |
+          # A few seconds of tones as WAV and AIFF, which NAudio reads itself, and as MP3, which goes through
+          # Media Foundation, encoded with the LAME that ships beside Lucent.exe.
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.IO;
+          using System.Runtime.InteropServices;
+          using System.Text;
+
+          public static class TestMusic
+          {
+              private const int Rate = 44100;
+              private const int Frames = Rate * 3;
+
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern IntPtr lame_init();
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_set_in_samplerate(IntPtr lame, int rate);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_set_num_channels(IntPtr lame, int channels);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_init_params(IntPtr lame);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_encode_buffer_interleaved(IntPtr lame, short[] pcm, int frames, byte[] mp3, int size);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_encode_flush(IntPtr lame, byte[] mp3, int size);
+              [DllImport("libmp3lame.64.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int lame_close(IntPtr lame);
+
+              public static void Write()
+              {
+                  // 220 Hz in stereo, a quarter of a second loud then a quarter quiet.
+                  var pcm = new short[Frames * 2];
+                  for (var i = 0; i < Frames; i++)
+                  {
+                      var v = (short)(12000 * Math.Sin(2 * Math.PI * 220 * i / Rate) * ((i / 11025) % 2 == 0 ? 1 : 0.3));
+                      pcm[i * 2] = v;
+                      pcm[i * 2 + 1] = v;
+                  }
+
+                  var data = pcm.Length * 2;
+                  using (var wav = new BinaryWriter(File.Create("test.wav")))
+                  {
+                      wav.Write(Encoding.ASCII.GetBytes("RIFF")); wav.Write(36 + data); wav.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
+                      wav.Write(16); wav.Write((short)1); wav.Write((short)2); wav.Write(Rate); wav.Write(Rate * 4); wav.Write((short)4); wav.Write((short)16);
+                      wav.Write(Encoding.ASCII.GetBytes("data")); wav.Write(data);
+                      foreach (var sample in pcm) { wav.Write(sample); }
+                  }
+
+                  // AIFF is big-endian, and gives its sample rate as an 80-bit float (44100 is 400E AC44 0000 0000 0000).
+                  using (var aiff = new BinaryWriter(File.Create("test.aiff")))
+                  {
+                      aiff.Write(Encoding.ASCII.GetBytes("FORM")); BigEndian(aiff, 4 + 26 + 16 + data, 4); aiff.Write(Encoding.ASCII.GetBytes("AIFFCOMM"));
+                      BigEndian(aiff, 18, 4); BigEndian(aiff, 2, 2); BigEndian(aiff, Frames, 4); BigEndian(aiff, 16, 2);
+                      aiff.Write(new byte[] { 0x40, 0x0E, 0xAC, 0x44, 0, 0, 0, 0, 0, 0 });
+                      aiff.Write(Encoding.ASCII.GetBytes("SSND")); BigEndian(aiff, 8 + data, 4); BigEndian(aiff, 0, 4); BigEndian(aiff, 0, 4);
+                      foreach (var sample in pcm) { BigEndian(aiff, sample, 2); }
+                  }
+
+                  var lame = lame_init();
+                  lame_set_in_samplerate(lame, Rate);
+                  lame_set_num_channels(lame, 2);
+                  if (lame_init_params(lame) < 0) { throw new InvalidOperationException("LAME wouldn't start."); }
+                  var mp3 = new byte[pcm.Length * 5 / 4 + 7200];
+                  var written = lame_encode_buffer_interleaved(lame, pcm, Frames, mp3, mp3.Length);
+                  var end = new byte[7200];
+                  var flushed = lame_encode_flush(lame, end, end.Length);
+                  lame_close(lame);
+                  if (written < 0 || flushed < 0) { throw new InvalidOperationException("LAME couldn't encode the test music."); }
+                  using (var file = File.Create("test.mp3"))
+                  {
+                      file.Write(mp3, 0, written);
+                      file.Write(end, 0, flushed);
+                  }
+              }
+
+              private static void BigEndian(BinaryWriter writer, int value, int bytes)
+              {
+                  for (var i = bytes - 1; i >= 0; i--) { writer.Write((byte)(value >> (8 * i))); }
+              }
+          }
+          '@
+          # The files go in the current folder, and LAME is found through PATH.
+          [System.IO.Directory]::SetCurrentDirectory($PWD.Path)
+          $env:PATH = "$((Resolve-Path publish).Path);$env:PATH"
+          [TestMusic]::Write()
+          Get-ChildItem test.* | Format-Table Name, Length -AutoSize | Out-String | Write-Host
+
+      - name: Self-test (decoding and every visual)
+        shell: pwsh
+        run: |
+          # Lucent.exe is a windowed program: piping its output makes PowerShell wait for it, shows what it
+          # writes and sets $LASTEXITCODE. The runner has no graphics card, so Direct3D draws in software.
+          publish/Lucent.exe --self-test --sheet windows-visuals.png test.wav test.aiff test.mp3 | Out-Host
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-visuals
+          path: windows-visuals.png
+          if-no-files-found: ignore
+
       - name: Zip app
         shell: pwsh
         run: Compress-Archive -Path publish/* -DestinationPath Lucent-win-x64.zip

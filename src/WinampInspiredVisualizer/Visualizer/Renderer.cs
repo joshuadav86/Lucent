@@ -524,9 +524,11 @@ public sealed partial class Renderer : IDisposable
     private bool TryClaim(int index) =>
         Interlocked.CompareExchange(ref _slots[index].State, PresetSlot.Compiling, PresetSlot.Pending) == PresetSlot.Pending;
 
-    private bool IsReady(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Ready;
+    /// <summary>Whether a visual has compiled and can be shown.</summary>
+    public bool IsReady(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Ready;
 
-    private bool HasFailed(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Failed;
+    /// <summary>Whether a visual didn't compile, or (a MilkDrop preset) went wrong while drawing, so it's skipped.</summary>
+    public bool HasFailed(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Failed;
 
     /// <summary>Stops the compile threads, once each has finished the visual it's compiling.</summary>
     private void StopCompiling()

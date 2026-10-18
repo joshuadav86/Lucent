@@ -43,7 +43,8 @@ public sealed partial class Renderer
     /// Sets up the graphics card to draw <paramref name="width"/> x <paramref name="height"/> frames,
     /// and compiles the visuals in <paramref name="presets"/> (from the shader cache, usually, since the
     /// visuals window has compiled them already). <paramref name="compiled"/> is told how many are done
-    /// out of how many. Visuals that don't compile are left out; if none of them does, this throws.
+    /// out of how many. Visuals that don't compile are left out (<see cref="PresetFailed"/> says which and why);
+    /// if none of them does, this throws.
     /// </summary>
     public void OpenOffscreen(int width, int height, IReadOnlyCollection<int> presets, Action<int, int>? compiled,
         CancellationToken cancellation)
@@ -82,6 +83,8 @@ public sealed partial class Renderer
                 {
                     errors.Add($"{slot.Source.Name}: {ex.Message}");
                 }
+
+                PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
             }
 
             compiled?.Invoke(Interlocked.Increment(ref done), wanted.Count);
