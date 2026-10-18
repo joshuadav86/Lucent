@@ -107,6 +107,12 @@ public partial class EditorWindow : Window
         UpdatePitchText();
         UpdateGainText();
         Waveform.View = _settings.View;
+        Waveform.AmplitudeZoom = _settings.WaveZoom;
+        Waveform.AmplitudeZoomChanged += (_, _) =>
+        {
+            _settings.WaveZoom = Waveform.AmplitudeZoom;
+            _settings.Save();
+        };
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
         LoopToggle.IsChecked = _settings.Loop;
@@ -1270,6 +1276,12 @@ public partial class EditorWindow : Window
             case Key.D0 or Key.NumPad0:
                 Waveform.ZoomToFit();
                 break;
+            case Key.Up when command:
+                Waveform.AmplitudeZoom *= 2;
+                break;
+            case Key.Down when command:
+                Waveform.AmplitudeZoom /= 2;
+                break;
             default:
                 return;
         }
@@ -1282,6 +1294,10 @@ public partial class EditorWindow : Window
     private void OnZoomOut(object? sender, RoutedEventArgs e) => Waveform.Zoom(2);
 
     private void OnZoomFit(object? sender, RoutedEventArgs e) => Waveform.ZoomToFit();
+
+    private void OnWaveTaller(object? sender, RoutedEventArgs e) => Waveform.AmplitudeZoom *= 2;
+
+    private void OnWaveShorter(object? sender, RoutedEventArgs e) => Waveform.AmplitudeZoom /= 2;
 
     // ---- Window ----
 

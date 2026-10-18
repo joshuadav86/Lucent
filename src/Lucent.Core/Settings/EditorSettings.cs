@@ -41,6 +41,9 @@ public sealed class EditorSettings
     /// <summary>Playing the selection starts again at its beginning when it reaches the end.</summary>
     public bool Loop { get; set; }
 
+    /// <summary>How much taller than full scale the waves are drawn (1 = full scale fills the lane).</summary>
+    public double WaveZoom { get; set; } = 1;
+
     /// <summary>The history list is open beside the waveform.</summary>
     public bool ShowHistory { get; set; }
 

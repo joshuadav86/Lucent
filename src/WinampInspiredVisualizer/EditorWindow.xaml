@@ -24,6 +24,9 @@
         <Geometry x:Key="ZoomInIcon">M6.5,1.5 A5,5 0 1 1 6.49,1.5 Z M10.2,10.2 L14.5,14.5 M4,6.5 H9 M6.5,4 V9</Geometry>
         <Geometry x:Key="ZoomOutIcon">M6.5,1.5 A5,5 0 1 1 6.49,1.5 Z M10.2,10.2 L14.5,14.5 M4,6.5 H9</Geometry>
         <Geometry x:Key="ZoomFitIcon">M1,8 H15 M4,5 L1,8 L4,11 M12,5 L15,8 L12,11</Geometry>
+        <!-- The waves taller (arrows out from the centre line) or shorter (arrows in). -->
+        <Geometry x:Key="WaveTallerIcon">M1,8 H15 M8,1.5 V6 M5.5,4 L8,1.5 L10.5,4 M8,10 V14.5 M5.5,12 L8,14.5 L10.5,12</Geometry>
+        <Geometry x:Key="WaveShorterIcon">M1,8 H15 M8,1.5 V6 M5.5,3.5 L8,6 L10.5,3.5 M8,10 V14.5 M5.5,12.5 L8,10 L10.5,12.5</Geometry>
         <Geometry x:Key="ChevronLeftIcon">M5,1 L1,5 L5,9</Geometry>
         <!-- A clock face, for the history panel. -->
         <Geometry x:Key="HistoryIcon">M8,1.5 A6.5,6.5 0 1 1 7.99,1.5 Z M8,4.5 V8 L10.5,9.5</Geometry>
@@ -208,14 +211,22 @@
                         </StackPanel>
                     </ToggleButton>
                     <Border Width="1" Height="20" Margin="8,0" Background="{DynamicResource HairlineBrush}" />
-                    <Button Style="{StaticResource IconButton}" Click="OnZoomOut" ToolTip="Zoom out (-, or the mouse wheel)">
+                    <Button Style="{StaticResource IconButton}" Click="OnZoomOut" ToolTip="Zoom out (-, the mouse wheel, or pinch)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ZoomOutIcon}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Click="OnZoomIn" ToolTip="Zoom in (+, or the mouse wheel)">
+                    <Button Style="{StaticResource IconButton}" Click="OnZoomIn" ToolTip="Zoom in (+, the mouse wheel, or pinch)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ZoomInIcon}" />
                     </Button>
                     <Button Style="{StaticResource IconButton}" Click="OnZoomFit" ToolTip="Show the whole sound (0)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ZoomFitIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Click="OnWaveShorter" Margin="6,0,0,0"
+                            ToolTip="Make the waves shorter (Ctrl+Down, or Alt+wheel).">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource WaveShorterIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Click="OnWaveTaller"
+                            ToolTip="Make the waves taller, to see quiet parts (Ctrl+Up, or Alt+wheel)">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource WaveTallerIcon}" />
                     </Button>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

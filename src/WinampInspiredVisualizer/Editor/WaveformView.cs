@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using WinampInspiredVisualizer.Settings;
@@ -9,8 +10,9 @@ namespace WinampInspiredVisualizer.Editor;
 
 /// <summary>
 /// The editor's main view: a time ruler, a bar with a tab for each clip, then one lane per channel with
-/// its waveform. Click to place the cursor, drag to select (Shift extends), the wheel zooms around the
-/// mouse (Shift+wheel or a middle-button drag pans). Drag a clip's tab to slide the clip along, leaving
+/// its waveform. Click to place the cursor, drag to select (Shift extends), the wheel (or Ctrl+wheel, or a
+/// pinch on a touchpad or touch screen) zooms around the mouse; Shift+wheel, a sideways swipe, two fingers
+/// dragged on a touch screen or a middle-button drag pans, and Alt+wheel makes the waves taller or shorter. Drag a clip's tab to slide the clip along, leaving
 /// silence behind it (its edges snap to the other clips' edges, the cursor and the playhead; Ctrl slides it
 /// freely); Alt+drag a tab to move the clip in among the others instead. Click a tab to select the clip.
 /// The playhead is a separate layer, so moving it never redraws the waveform.
@@ -43,6 +45,13 @@ public sealed class WaveformView : FrameworkElement
     private PeakCache? _peaks;
     private double _viewStart;
     private double _samplesPerPixel = 1;
+    private double _amplitudeZoom = 1;
+    private HwndSource? _hwndSource;
+
+    // Fingers on a touch screen, and what the selection was before the first one came down (two fingers pinch).
+    private readonly Dictionary<int, Point> _touches = new();
+    private (FrameRange Selection, int Cursor)? _beforeTouch;
+    private bool _pinching;
     private FrameRange _selection;
     private int _cursor;
     private int? _anchor;
@@ -91,6 +100,18 @@ public sealed class WaveformView : FrameworkElement
             RaiseViewChanged();
         };
 
+        // WPF has no event for a sideways wheel or two-finger swipe, so it's read from the window's messages.
+        Loaded += (_, _) =>
+        {
+            _hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+            _hwndSource?.AddHook(OnWindowMessage);
+        };
+        Unloaded += (_, _) =>
+        {
+            _hwndSource?.RemoveHook(OnWindowMessage);
+            _hwndSource = null;
+        };
+
         // The spectrogram is worked out once the view settles for a moment, not on every step of a scroll.
         _spectrogramDelay = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(40) };
         _spectrogramDelay.Tick += (_, _) =>
@@ -102,6 +123,9 @@ public sealed class WaveformView : FrameworkElement
 
     /// <summary>A marker's flag was clicked (without dragging).</summary>
     public event EventHandler<int>? MarkerClicked;
+
+    /// <summary>The waves were made taller or shorter.</summary>
+    public event EventHandler? AmplitudeZoomChanged;
 
     /// <summary>A marker's flag was dragged to a new frame.</summary>
     public event EventHandler<(int Marker, int Frame)>? MarkerMoved;
@@ -249,6 +273,27 @@ public sealed class WaveformView : FrameworkElement
 
     public double SamplesPerPixel => _samplesPerPixel;
 
+    /// <summary>The highest <see cref="AmplitudeZoom"/>: quiet sounds 36 dB down still fill the lane.</summary>
+    public const double MaxAmplitudeZoom = 64;
+
+    /// <summary>How much taller than full scale the waves are drawn (1 = a full-scale peak just fills its lane).</summary>
+    public double AmplitudeZoom
+    {
+        get => _amplitudeZoom;
+        set
+        {
+            var zoom = double.IsFinite(value) ? Math.Clamp(value, 1, MaxAmplitudeZoom) : 1;
+            if (Math.Abs(zoom - _amplitudeZoom) < 1e-9)
+            {
+                return;
+            }
+
+            _amplitudeZoom = zoom;
+            InvalidateVisual();
+            AmplitudeZoomChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
     /// <summary>The selected range; empty when nothing is selected.</summary>
     public FrameRange Selection
     {
@@ -326,6 +371,15 @@ public sealed class WaveformView : FrameworkElement
         var anchorFrame = XToFrame(anchorX);
         _samplesPerPixel = Math.Clamp(_samplesPerPixel * factor, MinSamplesPerPixel, MaxSamplesPerPixel);
         _viewStart = anchorFrame - anchorX * _samplesPerPixel;
+        ClampView();
+        InvalidateVisual();
+        RaiseViewChanged();
+    }
+
+    /// <summary>Scrolls along by a share of the visible width (positive is later in the sound).</summary>
+    public void ScrollBy(double widths)
+    {
+        _viewStart += widths * ViewLength;
         ClampView();
         InvalidateVisual();
         RaiseViewChanged();
@@ -469,6 +523,11 @@ public sealed class WaveformView : FrameworkElement
             }
 
             var label = channels == 1 ? "Mono" : c == 0 ? "L" : "R";
+            if (!spectrogram && _amplitudeZoom > 1.001)
+            {
+                label += "   " + AmplitudeZoomText(_amplitudeZoom);
+            }
+
             dc.DrawText(Text(label, 10, spectrogram ? SelectedWaveBrush : LabelBrush), new Point(8, top + 4));
         }
 
@@ -858,8 +917,8 @@ public sealed class WaveformView : FrameworkElement
                 for (var x = 0; x < lastColumn; x++)
                 {
                     var (min, max) = _peaks!.Range(channel, XToFrame(x), XToFrame(x + 1));
-                    var yHigh = middle - Math.Clamp(max, -1, 1) * half;
-                    var yLow = middle - Math.Clamp(min, -1, 1) * half;
+                    var yHigh = middle - Math.Clamp(max * _amplitudeZoom, -1, 1) * half;
+                    var yLow = middle - Math.Clamp(min * _amplitudeZoom, -1, 1) * half;
                     // At least a pixel tall, so quiet passages still show as a line.
                     if (yLow - yHigh < 1)
                     {
@@ -896,10 +955,10 @@ public sealed class WaveformView : FrameworkElement
                     return;
                 }
 
-                g.BeginFigure(new Point(FrameToX(first), middle - samples[first] * half), false, false);
+                g.BeginFigure(new Point(FrameToX(first), middle - SampleHeight(samples[first]) * half), false, false);
                 for (var i = first + 1; i <= last; i++)
                 {
-                    g.LineTo(new Point(FrameToX(i), middle - Math.Clamp(samples[i], -1.5f, 1.5f) * half), true, false);
+                    g.LineTo(new Point(FrameToX(i), middle - SampleHeight(samples[i]) * half), true, false);
                 }
             }
         }
@@ -920,11 +979,14 @@ public sealed class WaveformView : FrameworkElement
                 var last = Math.Min(samples.Length - 1, (int)Math.Ceiling(XToFrame(width)));
                 for (var i = first; i <= last; i++)
                 {
-                    dc.DrawEllipse(brush, null, new Point(FrameToX(i), middle - Math.Clamp(samples[i], -1.5f, 1.5f) * half), 2, 2);
+                    dc.DrawEllipse(brush, null, new Point(FrameToX(i), middle - SampleHeight(samples[i]) * half), 2, 2);
                 }
             }
         }
     }
+
+    /// <summary>A sample's height in the lane (1 is the lane's edge), a little past it for overs, the rest clipped off.</summary>
+    private double SampleHeight(float sample) => Math.Clamp(sample * _amplitudeZoom, -1.5, 1.5);
 
     private void DrawRuler(DrawingContext dc, double width, Pen linePen)
     {
@@ -1218,16 +1280,22 @@ public sealed class WaveformView : FrameworkElement
         }
     }
 
+    /// <summary>How much the waves are magnified, as a gain in decibels ("+12 dB").</summary>
+    public static string AmplitudeZoomText(double zoom) =>
+        "+" + (20 * Math.Log10(zoom)).ToString("0.#", CultureInfo.CurrentCulture) + " dB";
+
     protected override void OnMouseWheel(MouseWheelEventArgs e)
     {
         base.OnMouseWheel(e);
+        // A touchpad scrolls in small steps, a mouse wheel in notches of 120. A touchpad pinch comes as Ctrl+wheel.
         var notches = e.Delta / 120.0;
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
         {
-            _viewStart -= notches * ViewLength * 0.15;
-            ClampView();
-            InvalidateVisual();
-            RaiseViewChanged();
+            AmplitudeZoom *= Math.Pow(1.25, notches);
+        }
+        else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            ScrollBy(-notches * 0.15);
         }
         else
         {
@@ -1235,6 +1303,128 @@ public sealed class WaveformView : FrameworkElement
         }
 
         e.Handled = true;
+    }
+
+    private IntPtr OnWindowMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        const int WM_MOUSEHWHEEL = 0x020E;
+        if (msg == WM_MOUSEHWHEEL && IsMouseOver && _peaks is not null)
+        {
+            // Tilting the wheel or swiping right moves on through the sound.
+            var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
+            ScrollBy(delta / 120.0 * 0.15);
+            handled = true;
+        }
+
+        return IntPtr.Zero;
+    }
+
+    // ---- Touch: one finger acts as the mouse; a second one pinches to zoom and drags to scroll ----
+
+    protected override void OnTouchDown(TouchEventArgs e)
+    {
+        base.OnTouchDown(e);
+        if (_touches.Count == 0)
+        {
+            _beforeTouch = (_selection, _cursor);
+        }
+
+        _touches[e.TouchDevice.Id] = e.GetTouchPoint(this).Position;
+        if (_touches.Count < 2)
+        {
+            // Left unhandled, so the first finger clicks and drags like the mouse.
+            return;
+        }
+
+        CaptureTouch(e.TouchDevice);
+        if (!_pinching)
+        {
+            // The first finger had started a click or a drag; it's a pinch instead, so put things back.
+            _pinching = true;
+            if (IsMouseCaptured)
+            {
+                ReleaseMouseCapture();
+            }
+
+            _anchor = null;
+            _selecting = false;
+            if (_beforeTouch is { } before && (before.Selection != _selection || before.Cursor != _cursor))
+            {
+                _selection = before.Selection;
+                _cursor = before.Cursor;
+                InvalidateVisual();
+                SelectionChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        e.Handled = true;
+    }
+
+    protected override void OnTouchMove(TouchEventArgs e)
+    {
+        base.OnTouchMove(e);
+        if (!_touches.ContainsKey(e.TouchDevice.Id))
+        {
+            return;
+        }
+
+        if (!_pinching || _touches.Count < 2)
+        {
+            _touches[e.TouchDevice.Id] = e.GetTouchPoint(this).Position;
+            return;
+        }
+
+        var (oldA, oldB) = FirstTwoTouches();
+        _touches[e.TouchDevice.Id] = e.GetTouchPoint(this).Position;
+        var (newA, newB) = FirstTwoTouches();
+        var oldSpread = Math.Abs(oldA.X - oldB.X);
+        var newSpread = Math.Abs(newA.X - newB.X);
+        var oldMiddle = (oldA.X + oldB.X) / 2;
+        var newMiddle = (newA.X + newB.X) / 2;
+
+        // Keep the sound under the fingers: zoom by how far apart they moved, around their midpoint, then follow it.
+        if (oldSpread > 20 && newSpread > 20)
+        {
+            Zoom(oldSpread / newSpread, oldMiddle);
+        }
+
+        ScrollBy(-(newMiddle - oldMiddle) / Math.Max(1, ActualWidth));
+        e.Handled = true;
+    }
+
+    protected override void OnTouchUp(TouchEventArgs e)
+    {
+        base.OnTouchUp(e);
+        _touches.Remove(e.TouchDevice.Id);
+        if (_pinching)
+        {
+            ReleaseTouchCapture(e.TouchDevice);
+            e.Handled = true;
+        }
+
+        if (_touches.Count == 0)
+        {
+            _pinching = false;
+            _beforeTouch = null;
+        }
+    }
+
+    protected override void OnLostTouchCapture(TouchEventArgs e)
+    {
+        base.OnLostTouchCapture(e);
+        if (_pinching)
+        {
+            _touches.Remove(e.TouchDevice.Id);
+        }
+    }
+
+    private (Point A, Point B) FirstTwoTouches()
+    {
+        using var touches = _touches.Values.GetEnumerator();
+        touches.MoveNext();
+        var a = touches.Current;
+        touches.MoveNext();
+        return (a, touches.Current);
     }
 
     protected override void OnLostMouseCapture(MouseEventArgs e)

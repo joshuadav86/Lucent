@@ -12,8 +12,9 @@ namespace Lucent.Mac.Editor;
 
 /// <summary>
 /// The editor's main view: a time ruler, a bar with a tab for each clip, then one lane per channel with
-/// its waveform. Click to place the cursor, drag to select (Shift extends), the wheel zooms around the
-/// mouse (Shift+wheel, a sideways swipe or a middle-button drag pans). Drag a clip's tab to slide the clip
+/// its waveform. Click to place the cursor, drag to select (Shift extends), the wheel (or ⌘+scroll, or a
+/// trackpad pinch) zooms around the mouse; Shift+wheel, a sideways swipe or a middle-button drag pans, and
+/// Option+scroll makes the waves taller or shorter. Drag a clip's tab to slide the clip
 /// along, leaving silence behind it (its edges snap to the other clips' edges, the cursor and the playhead;
 /// ⌘ slides it freely); Option+drag a tab to move the clip in among the others instead. Click a tab to
 /// select the clip. The playhead is a separate layer, so moving it never redraws the waveform.
@@ -52,6 +53,7 @@ public sealed class WaveformView : Control
     private PeakCache? _peaks;
     private double _viewStart;
     private double _samplesPerPixel = 1;
+    private double _amplitudeZoom = 1;
     private FrameRange _selection;
     private int _cursor;
     private int? _anchor;
@@ -111,7 +113,12 @@ public sealed class WaveformView : Control
             _spectrogramDelay.Stop();
             StartSpectrogram();
         };
+
+        AddHandler(Gestures.PointerTouchPadGestureMagnifyEvent, OnPinch);
     }
+
+    /// <summary>The waves were made taller or shorter.</summary>
+    public event EventHandler? AmplitudeZoomChanged;
 
     /// <summary>A marker's flag was clicked (without dragging).</summary>
     public event EventHandler<int>? MarkerClicked;
@@ -265,6 +272,27 @@ public sealed class WaveformView : Control
 
     public double SamplesPerPixel => _samplesPerPixel;
 
+    /// <summary>The highest <see cref="AmplitudeZoom"/>: quiet sounds 36 dB down still fill the lane.</summary>
+    public const double MaxAmplitudeZoom = 64;
+
+    /// <summary>How much taller than full scale the waves are drawn (1 = a full-scale peak just fills its lane).</summary>
+    public double AmplitudeZoom
+    {
+        get => _amplitudeZoom;
+        set
+        {
+            var zoom = double.IsFinite(value) ? Math.Clamp(value, 1, MaxAmplitudeZoom) : 1;
+            if (Math.Abs(zoom - _amplitudeZoom) < 1e-9)
+            {
+                return;
+            }
+
+            _amplitudeZoom = zoom;
+            InvalidateVisual();
+            AmplitudeZoomChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
     /// <summary>The selected range; empty when nothing is selected.</summary>
     public FrameRange Selection
     {
@@ -342,6 +370,15 @@ public sealed class WaveformView : Control
         var anchorFrame = XToFrame(anchorX);
         _samplesPerPixel = Math.Clamp(_samplesPerPixel * factor, MinSamplesPerPixel, MaxSamplesPerPixel);
         _viewStart = anchorFrame - anchorX * _samplesPerPixel;
+        ClampView();
+        InvalidateVisual();
+        RaiseViewChanged();
+    }
+
+    /// <summary>Scrolls along by a share of the visible width (positive is later in the sound).</summary>
+    public void ScrollBy(double widths)
+    {
+        _viewStart += widths * ViewLength;
         ClampView();
         InvalidateVisual();
         RaiseViewChanged();
@@ -514,6 +551,11 @@ public sealed class WaveformView : Control
             }
 
             var label = channels == 1 ? "Mono" : c == 0 ? "L" : "R";
+            if (!spectrogram && _amplitudeZoom > 1.001)
+            {
+                label += "   " + AmplitudeZoomText(_amplitudeZoom);
+            }
+
             dc.DrawText(Text(label, 10, spectrogram ? SelectedWaveBrush : LabelBrush), new Point(8, top + 4));
         }
 
@@ -917,8 +959,8 @@ public sealed class WaveformView : Control
                 for (var x = 0; x < lastColumn; x++)
                 {
                     var (min, max) = _peaks!.Range(channel, XToFrame(x), XToFrame(x + 1));
-                    var yHigh = middle - Math.Clamp(max, -1, 1) * half;
-                    var yLow = middle - Math.Clamp(min, -1, 1) * half;
+                    var yHigh = middle - Math.Clamp(max * _amplitudeZoom, -1, 1) * half;
+                    var yLow = middle - Math.Clamp(min * _amplitudeZoom, -1, 1) * half;
                     // At least a pixel tall, so quiet passages still show as a line.
                     if (yLow - yHigh < 1)
                     {
@@ -957,10 +999,10 @@ public sealed class WaveformView : Control
                     return;
                 }
 
-                g.BeginFigure(new Point(FrameToX(first), middle - samples[first] * half), false);
+                g.BeginFigure(new Point(FrameToX(first), middle - SampleHeight(samples[first]) * half), false);
                 for (var i = first + 1; i <= last; i++)
                 {
-                    g.LineTo(new Point(FrameToX(i), middle - Math.Clamp(samples[i], -1.5f, 1.5f) * half));
+                    g.LineTo(new Point(FrameToX(i), middle - SampleHeight(samples[i]) * half));
                 }
 
                 g.EndFigure(false);
@@ -982,11 +1024,14 @@ public sealed class WaveformView : Control
                 var last = Math.Min(samples.Length - 1, (int)Math.Ceiling(XToFrame(width)));
                 for (var i = first; i <= last; i++)
                 {
-                    dc.DrawEllipse(brush, null, new Point(FrameToX(i), middle - Math.Clamp(samples[i], -1.5f, 1.5f) * half), 2, 2);
+                    dc.DrawEllipse(brush, null, new Point(FrameToX(i), middle - SampleHeight(samples[i]) * half), 2, 2);
                 }
             }
         }
     }
+
+    /// <summary>A sample's height in the lane (1 is the lane's edge), a little past it for overs, the rest clipped off.</summary>
+    private double SampleHeight(float sample) => Math.Clamp(sample * _amplitudeZoom, -1.5, 1.5);
 
     private void DrawRuler(DrawingContext dc, double width, IPen linePen)
     {
@@ -1319,16 +1364,34 @@ public sealed class WaveformView : Control
         base.OnPointerWheelChanged(e);
         // A sideways swipe on a trackpad (or Shift+wheel, which macOS turns sideways) scrolls; up and down zooms.
         var sideways = e.Delta.X != 0 ? e.Delta.X : e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? e.Delta.Y : 0;
-        if (sideways != 0)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
-            _viewStart -= sideways * ViewLength * 0.15;
-            ClampView();
-            InvalidateVisual();
-            RaiseViewChanged();
+            // Option+scroll makes the waves taller or shorter.
+            AmplitudeZoom *= Math.Pow(1.25, e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X);
+        }
+        else if (sideways != 0)
+        {
+            ScrollBy(-sideways * 0.15);
         }
         else
         {
             Zoom(Math.Pow(0.8, e.Delta.Y), e.GetPosition(this).X);
+        }
+
+        e.Handled = true;
+    }
+
+    /// <summary>How much the waves are magnified, as a gain in decibels ("+12 dB").</summary>
+    public static string AmplitudeZoomText(double zoom) =>
+        "+" + (20 * Math.Log10(zoom)).ToString("0.#", CultureInfo.CurrentCulture) + " dB";
+
+    private void OnPinch(object? sender, PointerDeltaEventArgs e)
+    {
+        // Spreading two fingers on the trackpad magnifies (a positive delta), so it zooms in around the pointer.
+        var magnify = Math.Max(-0.9, e.Delta.X);
+        if (_peaks is not null && magnify != 0)
+        {
+            Zoom(1 / (1 + magnify), e.GetPosition(this).X);
         }
 
         e.Handled = true;
