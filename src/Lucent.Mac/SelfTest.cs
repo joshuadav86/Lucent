@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Lucent.Mac.Export;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Visuals;
 using NAudio.Wave;
@@ -7,6 +8,7 @@ using SharpMetal.Foundation;
 using SharpMetal.Metal;
 using SkiaSharp;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Visualizer;
 
 namespace Lucent.Mac;
@@ -14,8 +16,9 @@ namespace Lucent.Mac;
 /// <summary>
 /// Checks the Mac app works without a window, for CI on a Mac: decodes the given music files with
 /// Core Audio, then compiles every visual's Metal shaders and draws a few frames of each to music
-/// made up on the spot, and can save a contact sheet of what they look like. It also translates
-/// visuals from HLSL as the app does for the user's own, and checks the result matches the build's.
+/// made up on the spot, and can save a contact sheet of what they look like. It records a short video
+/// as Record video does and checks the MP4 that comes out. It also translates visuals from HLSL as the
+/// app does for the user's own, and checks the result matches the build's.
 /// </summary>
 /// <remarks>Usage: Lucent --self-test [--sheet picture.png] [music files...]</remarks>
 public static class SelfTest
@@ -32,6 +35,13 @@ public static class SelfTest
     private const double DarkBrightness = 0.004;
     private const double FrameSeconds = 1.0 / 60.0;
     private const int SampleRate = 44100;
+
+    // The test recording: small, and a part from partway into the song, so the warm-up before it is drawn too.
+    private const int RecordingWidth = 320;
+    private const int RecordingHeight = 180;
+    private const int RecordingFrameRate = 30;
+    private static readonly TimeSpan RecordingFrom = TimeSpan.FromSeconds(0.5);
+    private static readonly TimeSpan RecordingTo = TimeSpan.FromSeconds(2.5);
 
     public static int Run(string[] args)
     {
@@ -56,6 +66,7 @@ public static class SelfTest
         }
 
         failures += TestVisuals(sheetPath);
+        failures += TestRecording();
         failures += TestRuntimeTranslation();
         failures += WinampInspiredVisualizer.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
@@ -296,6 +307,265 @@ public static class SelfTest
         }
 
         return failed.Count + drawingErrors;
+    }
+
+    /// <summary>
+    /// Records two seconds of made-up music drawn with one visual, small, as Record video does (off screen
+    /// with Metal, encoded by AVFoundation), starting partway into the song so the warm-up before it is
+    /// drawn too. Then it opens the MP4 with AVFoundation and checks it has one video track and one sound
+    /// track, the right size, frame rate and length, and a picture in it that isn't black.
+    /// </summary>
+    private static int TestRecording()
+    {
+        if (MetalSupport.TryCreateDevice() is null)
+        {
+            Console.WriteLine("::warning::This machine has no Metal device, so recording a video wasn't tried.");
+            return 0;
+        }
+
+        var folder = Directory.CreateTempSubdirectory("lucent-recording");
+        var problems = 0;
+        try
+        {
+            var song = Path.Combine(folder.FullName, "Made-up music.wav");
+            WriteMadeUpSong(song, seconds: 3);
+            var files = new MetalShaderFiles(cache: new ShaderCache(Path.Combine(Path.GetTempPath(), "lucent-self-test-cache")));
+            var presets = files.LoadPresets().ToList();
+            if (presets.Count == 0)
+            {
+                Console.WriteLine("::error::No visuals were found to record a video with.");
+                return 1;
+            }
+
+            // Bauhaus is quick to draw, on off-white paper, so a dark picture means the recording lost it.
+            var index = presets.FindIndex(preset => preset.Name == "Bauhaus");
+            var bright = index >= 0;
+            if (!bright)
+            {
+                index = Math.Max(0, presets.FindIndex(preset => !preset.IsParticles));
+            }
+
+            var output = Path.Combine(folder.FullName, "Self-test video.mp4");
+            var options = new VideoRecordingOptions
+            {
+                TrackPath = song,
+                OutputPath = output,
+                Width = RecordingWidth,
+                Height = RecordingHeight,
+                FrameRate = RecordingFrameRate,
+                Quality = VideoQuality.Good,
+                From = RecordingFrom,
+                To = RecordingTo,
+                Presets = presets,
+                PresetIndex = index,
+            };
+            var stages = new StageLog();
+            var stopwatch = Stopwatch.StartNew();
+            var result = VideoRecorder.RecordAsync(options, stages, CancellationToken.None, files).GetAwaiter().GetResult();
+            Console.WriteLine($"Recorded {presets[index].Name} at {RecordingWidth} x {RecordingHeight}, {RecordingFrameRate} fps: "
+                + $"{result.Length.TotalSeconds:0.00} s of video in {stopwatch.Elapsed.TotalSeconds:0.0} s. {result.Note}");
+            foreach (var stage in stages.Seen.Where(stage => stage.Contains("starting again", StringComparison.Ordinal)))
+            {
+                Console.WriteLine($"::warning::{stage}");
+            }
+
+            problems += CheckVideo(output, (RecordingTo - RecordingFrom).TotalSeconds, bright);
+
+            // Everything is written to a hidden temporary file first, which mustn't be left behind.
+            var leftovers = Directory.GetFiles(folder.FullName, ".*").Select(Path.GetFileName).ToList();
+            if (leftovers.Count > 0)
+            {
+                problems++;
+                Console.WriteLine($"::error::Recording left a temporary file behind: {string.Join(", ", leftovers)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            problems++;
+            Console.WriteLine($"::error::Recording a video failed: {ex.Message}");
+        }
+        finally
+        {
+            try
+            {
+                folder.Delete(recursive: true);
+            }
+            catch (IOException)
+            {
+                // Only the temporary folder.
+            }
+        }
+
+        if (problems == 0)
+        {
+            Console.WriteLine("Recording a video works.");
+        }
+
+        return problems;
+    }
+
+    /// <summary>Opens a recorded video with AVFoundation and checks what's in it, as a player would find it.</summary>
+    private static int CheckVideo(string path, double seconds, bool bright)
+    {
+        using var pool = AutoreleasePool.Begin();
+        var bytes = File.Exists(path) ? new FileInfo(path).Length : 0;
+        if (bytes < 1024)
+        {
+            Console.WriteLine($"::error::The recorded video is {(bytes == 0 ? "missing or empty" : $"only {bytes} bytes")}.");
+            return 1;
+        }
+
+        var problems = 0;
+        var asset = AVFoundation.OpenAsset(path);
+        var (videoTracks, video) = AVFoundation.Tracks(asset, "AVMediaTypeVideo");
+        var (soundTracks, sound) = AVFoundation.Tracks(asset, "AVMediaTypeAudio");
+        var duration = AVFoundation.AssetDuration(asset);
+        Console.WriteLine($"The video file: {bytes / 1024} KB, {duration:0.00} s long, with {videoTracks} video track(s) and {soundTracks} sound track(s).");
+        if (videoTracks != 1 || soundTracks != 1)
+        {
+            problems++;
+            Console.WriteLine("::error::The recorded video should have one video track and one sound track.");
+        }
+
+        if (!(Math.Abs(duration - seconds) < 0.1))
+        {
+            problems++;
+            Console.WriteLine($"::error::The recorded video is {duration:0.00} s long, not {seconds:0.00} s.");
+        }
+
+        if (sound != IntPtr.Zero && !(Math.Abs(AVFoundation.TrackDuration(sound) - seconds) < 0.15))
+        {
+            problems++;
+            Console.WriteLine($"::error::The recorded video's sound is {AVFoundation.TrackDuration(sound):0.00} s long, not {seconds:0.00} s.");
+        }
+
+        if (video == IntPtr.Zero)
+        {
+            return problems;
+        }
+
+        var size = ObjC.ReadValue<ObjC.CGSize>(video, "naturalSize");
+        var frameRate = AVFoundation.Number(video, "nominalFrameRate");
+        Console.WriteLine($"Its pictures: {size.Width:0} x {size.Height:0} at {frameRate:0.##} fps, {AVFoundation.TrackDuration(video):0.00} s.");
+        if (Math.Abs(size.Width - RecordingWidth) > 0.5 || Math.Abs(size.Height - RecordingHeight) > 0.5)
+        {
+            problems++;
+            Console.WriteLine($"::error::The recorded video is {size.Width:0} x {size.Height:0}, not {RecordingWidth} x {RecordingHeight}.");
+        }
+
+        if (!(Math.Abs(frameRate - RecordingFrameRate) < 1))
+        {
+            problems++;
+            Console.WriteLine($"::error::The recorded video plays at {frameRate:0.##} fps, not {RecordingFrameRate}.");
+        }
+
+        // A picture from the middle: the readback from the graphics card and the encoder's colours both show here.
+        var brightness = PictureBrightness(asset, CoreMedia.CMTime.Make((long)(seconds * 300), 600));
+        if (brightness is null)
+        {
+            problems++;
+        }
+        else if (brightness < (bright ? 0.1 : DarkBrightness))
+        {
+            if (bright)
+            {
+                problems++;
+                Console.WriteLine($"::error::The recorded video's picture is dark (brightness {brightness:0.000}), so the visual didn't reach it.");
+            }
+            else
+            {
+                Console.WriteLine($"::warning::The recorded video's picture is black (brightness {brightness:0.000}).");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"A picture from the middle of it has brightness {brightness:0.000}.");
+        }
+
+        return problems;
+    }
+
+    /// <summary>The average brightness (0 to 1) of a video's picture at <paramref name="time"/>, or null (saying why) if it can't be read.</summary>
+    private static unsafe double? PictureBrightness(IntPtr asset, CoreMedia.CMTime time)
+    {
+        var image = AVFoundation.CopyPicture(asset, time, out var problem);
+        if (image == IntPtr.Zero)
+        {
+            Console.WriteLine($"::error::A picture couldn't be read from the recorded video: {problem}");
+            return null;
+        }
+
+        try
+        {
+            var width = (int)CoreGraphics.CGImageGetWidth(image);
+            var height = (int)CoreGraphics.CGImageGetHeight(image);
+            var pixels = new byte[width * height * 4];
+            fixed (byte* data = pixels)
+            {
+                // Drawn into memory in a known layout (red, green, blue, unused), whatever the decoder made.
+                var context = CoreGraphics.CGBitmapContextCreate((IntPtr)data, (nuint)width, (nuint)height, 8, (nuint)(width * 4),
+                    CoreGraphics.Srgb, CoreGraphics.RgbxBitmap);
+                if (context == IntPtr.Zero)
+                {
+                    Console.WriteLine("::error::The recorded video's picture couldn't be looked at.");
+                    return null;
+                }
+
+                CoreGraphics.CGContextDrawImage(context, new ObjC.CGRect { Width = width, Height = height }, image);
+                CoreGraphics.CGContextRelease(context);
+            }
+
+            long sum = 0;
+            for (var i = 0; i < pixels.Length; i += 4)
+            {
+                sum += pixels[i] + pixels[i + 1] + pixels[i + 2];
+            }
+
+            return sum / (width * height * 3.0 * 255.0);
+        }
+        finally
+        {
+            CoreGraphics.CGImageRelease(image);
+        }
+    }
+
+    /// <summary>A WAV file of <see cref="MadeUpMusic"/>, 16-bit stereo, for recording a video of.</summary>
+    private static void WriteMadeUpSong(string path, int seconds)
+    {
+        using var writer = new WaveFileWriter(path, new WaveFormat(SampleRate, 16, 2));
+        foreach (var sample in new MadeUpMusic().Next(SampleRate * seconds))
+        {
+            writer.WriteSample(sample);
+            writer.WriteSample(sample);
+        }
+    }
+
+    /// <summary>Notes each stage a recording reports, as it happens (on the recording's own thread).</summary>
+    private sealed class StageLog : IProgress<VideoRecordingProgress>
+    {
+        private readonly List<string> _seen = new();
+
+        public IReadOnlyList<string> Seen
+        {
+            get
+            {
+                lock (_seen)
+                {
+                    return _seen.ToList();
+                }
+            }
+        }
+
+        public void Report(VideoRecordingProgress value)
+        {
+            lock (_seen)
+            {
+                if (!_seen.Contains(value.Stage))
+                {
+                    _seen.Add(value.Stage);
+                }
+            }
+        }
     }
 
     /// <summary>The output's average brightness, 0 to 1, leaving its BGRA pixels in <paramref name="pixels"/>.</summary>

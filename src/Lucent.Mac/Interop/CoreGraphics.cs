@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Lucent.Mac.Interop;
 
-/// <summary>The colour spaces the visuals' Metal layer draws in.</summary>
+/// <summary>The colour spaces the visuals' Metal layer draws in, and drawing a picture into memory to look at it.</summary>
 internal static partial class CoreGraphics
 {
     private const string Framework = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
@@ -28,4 +28,29 @@ internal static partial class CoreGraphics
 
     [LibraryImport(Framework)]
     private static partial IntPtr CGColorSpaceCreateWithName(IntPtr name);
+
+    // For reading back a picture (the self-test looks at a frame of a recorded video).
+
+    /// <summary>kCGImageAlphaNoneSkipLast: four bytes a pixel, red, green and blue then one unused.</summary>
+    public const uint RgbxBitmap = 5;
+
+    [LibraryImport(Framework)]
+    public static partial IntPtr CGBitmapContextCreate(IntPtr data, nuint width, nuint height, nuint bitsPerComponent, nuint bytesPerRow,
+        IntPtr colorSpace, uint bitmapInfo);
+
+    /// <summary>Draws an image filling <paramref name="rect"/> (a struct of four doubles, passed by value).</summary>
+    [LibraryImport(Framework)]
+    public static partial void CGContextDrawImage(IntPtr context, ObjC.CGRect rect, IntPtr image);
+
+    [LibraryImport(Framework)]
+    public static partial void CGContextRelease(IntPtr context);
+
+    [LibraryImport(Framework)]
+    public static partial nuint CGImageGetWidth(IntPtr image);
+
+    [LibraryImport(Framework)]
+    public static partial nuint CGImageGetHeight(IntPtr image);
+
+    [LibraryImport(Framework)]
+    public static partial void CGImageRelease(IntPtr image);
 }

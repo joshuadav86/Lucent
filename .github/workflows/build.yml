@@ -580,7 +580,7 @@ jobs:
           name: stem-model
           path: stem-model
 
-      - name: Self-test (decoding, every visual, and the stem splitter)
+      - name: Self-test (decoding, every visual, recording a video, and the stem splitter)
         env:
           LUCENT_STEM_MODEL: ${{ github.workspace }}/stem-model/htdemucs.onnx
         run: publish-mac/Lucent --self-test --sheet mac-visuals-${{ matrix.arch }}.png test.wav test.m4a test-alac.m4a test.flac test.aiff

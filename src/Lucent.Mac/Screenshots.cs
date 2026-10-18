@@ -65,6 +65,7 @@ public static class Screenshots
         ("Convert", () => ExportWindow.PrepareConverter(
             new[] { "Night Drive.flac", "Harbour Lights.wav", "Glass Garden.mp3", "Slow Orbit.m4a" }
                 .Select(name => Path.Combine(SampleFolder(), name)).ToList(), new AppSettings())),
+        ("RecordVideo", () => PreviewRecordVideo()),
     };
 
     public static int Run(string[] args)
@@ -356,6 +357,21 @@ public static class Screenshots
         }
 
         return window;
+    }
+
+    /// <summary>The Record video window for a song partway through, starting on Crystal Cavern.</summary>
+    private static Window PreviewRecordVideo()
+    {
+        var presets = new Lucent.Mac.Visuals.MetalShaderFiles().LoadPresets();
+        var start = presets.ToList().FindIndex(preset => preset.Name == "Crystal Cavern");
+        var template = new VideoRecordingOptions
+        {
+            TrackPath = Path.Combine(SampleFolder(), "Night Drive.flac"),
+            OutputPath = string.Empty,
+            Presets = presets,
+            PresetIndex = Math.Max(0, start),
+        };
+        return VideoExportWindow.Prepare(template, "Aurora Fields · Night Drive", TimeSpan.FromSeconds(245), TimeSpan.FromSeconds(72));
     }
 
     /// <summary>A folder for the sample files the editor and converter show.</summary>
