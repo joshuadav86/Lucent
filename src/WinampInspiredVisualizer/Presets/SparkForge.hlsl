@@ -2,6 +2,7 @@
 // In a dark forge a white-hot steel bar lies on a gleaming anvil; on every beat the hammer comes down and throws a shower of sparks that skitter and bounce across the polished floor, mirrored in it as they fade, while the metal's glow flares with the bass.
 // Family: Ray traced
 // Tags: Fire, Intense, Dark, 3D
+// Added: 2026-10-17 17:15
 // Particles: 262144
 
 // The anvil, hammer, bar and floor are ray traced; the sparks are particles laid over the top.

@@ -2,6 +2,7 @@
 // Gliding high above a city laid out like a glowing circuit board, light trails racing down its streets and rings of light sweeping out on every beat.
 // Family: Cyberpunk
 // Tags: Neon, Geometric, Dark, 3D
+// Added: 2026-10-17 01:16
 
 static const float MajorEvery = 5.0;    // a wide avenue every this many blocks
 static const float AvenueHalf = 0.32;   // half the width of an avenue

@@ -80,7 +80,7 @@
                     <Popup x:Name="PresetPopup" PlacementTarget="{Binding #PresetPickerButton}"
                            Placement="Top" VerticalOffset="-10" IsLightDismissEnabled="True"
                            Closed="OnPresetPopupClosed">
-                        <Border Margin="16" Width="500" Padding="6" CornerRadius="{DynamicResource CardCorner}"
+                        <Border Margin="16" Width="560" Padding="6" CornerRadius="{DynamicResource CardCorner}"
                                 Background="{DynamicResource SurfaceRaisedBrush}"
                                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                                 BoxShadow="0 0 24 0 #99000000">
@@ -218,42 +218,62 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- The visuals, in family folders that open or close (and stay that way next time). -->
-                                <ListBox x:Name="PresetList" Grid.Row="2" Grid.Column="1" Margin="0,4,0,0"
-                                         Background="Transparent" BorderThickness="0"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                         KeyDown="OnPresetListKeyDown">
-                                    <ListBox.DataTemplates>
-                                        <DataTemplate x:DataType="local:VisualFamilyFolder">
-                                            <Expander Theme="{StaticResource FolderExpander}" IsExpanded="{Binding IsExpanded}"
-                                                      HorizontalAlignment="Stretch">
-                                                <Expander.Header>
-                                                    <DockPanel>
-                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
-                                                                   Margin="8,0,2,0" VerticalAlignment="Center"
-                                                                   Foreground="{DynamicResource FaintTextBrush}" />
-                                                        <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
-                                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                                                                   Foreground="{DynamicResource MutedTextBrush}" />
-                                                    </DockPanel>
-                                                </Expander.Header>
-                                            </Expander>
-                                        </DataTemplate>
-                                        <DataTemplate x:DataType="vis:VisualChoice">
-                                            <DockPanel Background="Transparent" ToolTip.Tip="{Binding StyleText}">
-                                                <!-- Star: click to make it a favourite. -->
-                                                <Button DockPanel.Dock="Right" Theme="{StaticResource IconButton}" Width="24" Height="24"
-                                                        Margin="6,-4,-4,-4" Click="OnStarClick"
-                                                        ToolTip.Tip="{Binding IsFavorite, Converter={x:Static local:VisualizerWindow.StarTip}}">
-                                                    <Path Classes="star" Classes.favorite="{Binding IsFavorite}" Data="{StaticResource StarIcon}"
-                                                          StrokeThickness="1.2" StrokeJoin="Round" Width="12" Height="12" Stretch="Uniform" />
-                                                </Button>
-                                                <TextBlock Classes="label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
-                                            </DockPanel>
-                                        </DataTemplate>
-                                    </ListBox.DataTemplates>
-                                </ListBox>
+                                <!-- The order, and every family folder closed or opened at once, over the visuals. -->
+                                <DockPanel Grid.Row="2" Grid.Column="1" Margin="0,4,0,0">
+                                    <DockPanel DockPanel.Dock="Top" Margin="4,2,4,4" Height="24">
+                                        <Button x:Name="ExpandAllButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="22"
+                                                Padding="8,0" Content="EXPAND ALL" ToolTip.Tip="Open every folder" Click="OnExpandAllFamilies" />
+                                        <Button x:Name="CollapseAllButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="22"
+                                                Padding="8,0" Margin="0,0,6,0" Content="COLLAPSE ALL" ToolTip.Tip="Close every folder"
+                                                Click="OnCollapseAllFamilies" />
+                                        <Button x:Name="SortButton" Theme="{StaticResource PickerButton}" Height="24" Padding="8,0"
+                                                HorizontalAlignment="Left" ToolTip.Tip="Change the order" Click="OnSortMenu">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
+                                                      Stroke="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
+                                                <TextBlock x:Name="SortLabel" Text="A to Z" FontSize="12" VerticalAlignment="Center" />
+                                                <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                                      Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DockPanel>
+                                    <!-- The visuals, in family folders that open or close (and stay that way next time). -->
+                                    <ListBox x:Name="PresetList"
+                                             Background="Transparent" BorderThickness="0"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             KeyDown="OnPresetListKeyDown">
+                                        <ListBox.DataTemplates>
+                                            <DataTemplate x:DataType="local:VisualFamilyFolder">
+                                                <Expander Theme="{StaticResource FolderExpander}" IsExpanded="{Binding IsExpanded}"
+                                                          HorizontalAlignment="Stretch">
+                                                    <Expander.Header>
+                                                        <DockPanel>
+                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
+                                                                       Margin="8,0,2,0" VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource FaintTextBrush}" />
+                                                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                                        </DockPanel>
+                                                    </Expander.Header>
+                                                </Expander>
+                                            </DataTemplate>
+                                            <DataTemplate x:DataType="vis:VisualChoice">
+                                                <DockPanel Background="Transparent" ToolTip.Tip="{Binding StyleText}">
+                                                    <!-- Star: click to make it a favourite. -->
+                                                    <Button DockPanel.Dock="Right" Theme="{StaticResource IconButton}" Width="24" Height="24"
+                                                            Margin="6,-4,-4,-4" Click="OnStarClick"
+                                                            ToolTip.Tip="{Binding IsFavorite, Converter={x:Static local:VisualizerWindow.StarTip}}">
+                                                        <Path Classes="star" Classes.favorite="{Binding IsFavorite}" Data="{StaticResource StarIcon}"
+                                                              StrokeThickness="1.2" StrokeJoin="Round" Width="12" Height="12" Stretch="Uniform" />
+                                                    </Button>
+                                                    <TextBlock Classes="label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.DataTemplates>
+                                    </ListBox>
+                                </DockPanel>
                             </Grid>
                         </Border>
                     </Popup>

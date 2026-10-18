@@ -2,6 +2,7 @@
 // A chrome Newton's cradle clacks on every beat under studio lights, its mirror-polished balls reflecting each other, ray traced with soft shadows and coloured lights that follow the music.
 // Family: Ray traced
 // Tags: 3D, Calm, Geometric
+// Added: 2026-10-17 02:07
 
 static const int BallCount = 5;
 static const float BallRadius = 0.3;

@@ -2,6 +2,7 @@
 // The cloud of a single electron around a hydrogen atom, drawn as a swarm of points that settles into the true shapes of its orbitals, round, dumbbell, clover and flower, and melts from one to the next every few bars; the two halves of each wave glow in opposite colours.
 // Family: Particles
 // Tags: Geometric, Space, 3D
+// Added: 2026-10-17 17:02
 // Particles: 262144
 
 // Each particle takes a little random walk every frame, keeping a step more often when it leads

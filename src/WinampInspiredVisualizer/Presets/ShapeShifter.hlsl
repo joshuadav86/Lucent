@@ -2,6 +2,7 @@
 // A swarm of glowing nanobots pours itself from one form into the next every two bars, sphere, torus, cube, star, double helix, heart and knot, boiling into a storm while it changes and then settling into a shimmering skin that ripples with the spectrum.
 // Family: Particles
 // Tags: Geometric, Neon, 3D
+// Added: 2026-10-17 17:02
 // Particles: 262144
 
 static const int ShapeCount = 7;

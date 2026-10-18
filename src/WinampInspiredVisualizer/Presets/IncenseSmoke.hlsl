@@ -2,6 +2,7 @@
 // A single thread of smoke rises from a stick of incense, smooth and straight at first, then breaking into curling ribbons lit from behind by coloured light; the mids stir the air and every beat sends a soft breath through it.
 // Family: Particles
 // Tags: Calm, Dark
+// Added: 2026-10-17 17:06
 // Particles: 400000
 
 // y is up. The glowing tip of the incense is at the origin.

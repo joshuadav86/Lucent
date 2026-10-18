@@ -2,6 +2,7 @@
 // The last few seconds of the waveform pile up into a mirrored mountain of glowing ridges that roll away into the dark, each hiding those behind it.
 // Family: Music-shaped
 // Tags: Dark, Neon, Retro
+// Added: 2026-10-16 23:54
 
 // Memory: a 65 x 14 pixel block in the top-left corner of the feedback buffer, stored far too dim
 // to see. Columns 0-63 hold 42 lines of the waveform (three lines per pixel, in r, g and b);

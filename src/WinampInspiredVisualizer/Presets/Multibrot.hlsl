@@ -2,6 +2,7 @@
 // The Mandelbrot set's whole family at once: its power slowly climbs from two to seven and back, so the set grows extra lobes and blooms into ever more petals. It turns a step with every beat, edged in fine glowing filaments.
 // Family: Fractal
 // Tags: Colourful, Dark
+// Added: 2026-10-17 21:50
 
 float3 multibrotGradient(float t)
 {

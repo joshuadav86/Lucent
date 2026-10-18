@@ -3,6 +3,7 @@
 // lace that slowly zooms and spins. Beats ripple through the packing.
 // Family: Fractal
 // Tags: Calm, Geometric
+// Added: 2026-10-16 20:19
 
 float gasket(float2 p, out float trap)
 {

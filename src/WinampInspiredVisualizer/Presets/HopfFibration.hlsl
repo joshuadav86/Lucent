@@ -2,6 +2,7 @@
 // Rings of light that all pass through one another without ever touching, nested into glowing tori like the layers of an onion, with particles racing round every ring; the bass speeds the flow, each layer swells with its own part of the spectrum and beats send pulses chasing round the circles.
 // Family: Particles
 // Tags: Geometric, 3D
+// Added: 2026-10-17 22:17
 // Particles: 262144
 
 // The Hopf fibration fills space with circles. Every point on an ordinary sphere (the "base")

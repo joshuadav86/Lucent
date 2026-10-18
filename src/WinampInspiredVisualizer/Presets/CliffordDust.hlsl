@@ -2,6 +2,7 @@
 // A veil of fine luminous dust hangs in the dark, folding into silk-like ribbons and shells that slowly melt from one shape to the next. Slow dust glows deep blue, fast dust burns pale gold, and the whole veil swells softly with the music.
 // Family: Particles
 // Tags: Calm, Dark
+// Added: 2026-10-17 22:02
 // Particles: 458752
 
 // A Clifford attractor: each speck of dust jumps by a simple rule made of four sines and cosines.

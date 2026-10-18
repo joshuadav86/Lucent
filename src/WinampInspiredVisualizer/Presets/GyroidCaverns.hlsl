@@ -2,6 +2,7 @@
 // Gliding down a winding tunnel through endlessly curving neon walls.
 // Family: Fly-through
 // Tags: Colourful, 3D
+// Added: 2026-10-16 20:36
 
 float2 cavePath(float z)
 {

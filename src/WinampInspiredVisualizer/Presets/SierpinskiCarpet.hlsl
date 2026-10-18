@@ -2,6 +2,7 @@
 // An endless glide into a carpet of embossed stone tiles, each tile carved into smaller tiles around a glowing window, and those into smaller ones again. The windows shine with the music: big ones with the bass, tiny ones with the treble.
 // Family: Fractal
 // Tags: Geometric
+// Added: 2026-10-17 21:50
 
 static const float CarpetZoomLength = 24.0;               // seconds per ninefold zoom (two levels of the carpet)
 static const float2 CarpetAnchor = float2(0.125, 0.375);  // 0.0101.. and 0.1010.. in base 3: a tile corner that maps onto itself when zoomed ninefold

@@ -2,6 +2,7 @@
 // Kepler's dream of the heavens in streams of light: the five perfect solids nest one inside the next, each turning its own way and humming with its own part of the spectrum, then melting into glowing spheres and folding back into crystal.
 // Family: Particles
 // Tags: Geometric, 3D, Space, Colourful
+// Added: 2026-10-17 01:42
 // Particles: 262144
 
 // The five solids from the outside in, in the order Kepler nested them: cube, tetrahedron,

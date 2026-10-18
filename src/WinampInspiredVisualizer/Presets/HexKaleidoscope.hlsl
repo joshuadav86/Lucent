@@ -3,6 +3,7 @@
 // into an endless hexagonal jewel pattern that turns, jolts on the beat and sparkles with the treble.
 // Family: Kaleidoscope
 // Tags: Colourful, Geometric
+// Added: 2026-10-16 23:54
 
 // Per piece: orbit phase x, orbit speed y, size z, spectrum band w.
 static const float4 HK_PIECE[12] = {

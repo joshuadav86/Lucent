@@ -3,6 +3,7 @@
 // arrangements on every beat, the spectrum lights each tile direction and ripples of light run through it.
 // Family: Kaleidoscope
 // Tags: Colourful, Geometric
+// Added: 2026-10-16 23:54
 
 static const float2 PM_E[5] = {
     float2(1.0, 0.0),

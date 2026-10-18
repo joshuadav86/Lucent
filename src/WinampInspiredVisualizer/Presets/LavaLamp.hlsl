@@ -2,6 +2,7 @@
 // Glowing blobs of wax swell, stretch and drift up and down through warm liquid, melting into each other as the bass heats them, while bubbles fizz up with the treble.
 // Family: Particles
 // Tags: Calm, Colourful, Retro
+// Added: 2026-10-17 01:51
 // Particles: 131072
 
 // The wax is a cloud of particles drawn into a hidden density layer (the red channel); Render

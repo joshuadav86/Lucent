@@ -3,6 +3,7 @@
 // turn and rearrange themselves on the beat across warm off-white paper, with bars that measure the music.
 // Family: Geometric
 // Tags: Retro, Colourful, Geometric, Minimal
+// Added: 2026-10-17 21:37
 
 static const float3 BhPaper = float3(0.66, 0.6, 0.5);
 static const float3 BhRed = float3(0.62, 0.07, 0.04);

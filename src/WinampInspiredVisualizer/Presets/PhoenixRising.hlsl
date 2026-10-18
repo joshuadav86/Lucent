@@ -2,6 +2,7 @@
 // A firebird made of streaming flame rises out of the dark, beating its great wings down on every beat and shedding glowing embers, its long tail streamers rippling with the mids and its fire flaring with the bass.
 // Family: Particles
 // Tags: Fire, Intense, Colourful
+// Added: 2026-10-17 17:15
 // Particles: 262144
 
 // The bird is drawn by flames rather than built from them: every flame particle is lit at a

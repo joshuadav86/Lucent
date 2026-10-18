@@ -2,6 +2,7 @@
 // Hurtling down a winding wormhole whose walls are nested veils of streaming light, squeezing through glowing throats.
 // Family: Fly-through
 // Tags: Intense, Neon, Space
+// Added: 2026-10-16 23:54
 
 static const float ShellGrowth = 1.35;    // each veil is this much wider than the one inside it
 static const float ThroatSpacing = 14.0;  // distance between the narrow throats

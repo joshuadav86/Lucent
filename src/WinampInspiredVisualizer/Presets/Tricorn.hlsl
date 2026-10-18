@@ -2,6 +2,7 @@
 // The Mandelbrot set's three-horned cousin turns slowly in the dark, its edges fringed with feathered combs and glowing lace. The camera drifts down one of its long spines into a tiny three-cornered copy of the whole, then rises out again, colours flowing outward with the music.
 // Family: Fractal
 // Tags: Calm, Colourful
+// Added: 2026-10-17 22:02
 
 // The Tricorn (or Mandelbar) follows z -> conj(z)^2 + c: the same rule as the Mandelbrot set
 // but with z mirrored before squaring each time. The mirror turns its two-fold symmetry into a

@@ -2,6 +2,7 @@
 // A head of Romanesco turns slowly under a warm, low light: a cone of spiralling florets, each one a smaller cone of spiralling florets, glowing lime green and gold. The bass makes the florets swell gently and each beat brightens the light across them.
 // Family: Fractal
 // Tags: 3D, Calm
+// Added: 2026-10-17 22:02
 
 // Romanesco broccoli grows in Fibonacci spirals: its florets sit on the cone like the seeds of a
 // sunflower, each turned from the last by the golden angle, getting larger towards the base. Each

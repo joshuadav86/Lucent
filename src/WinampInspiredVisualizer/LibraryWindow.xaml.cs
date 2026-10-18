@@ -131,6 +131,7 @@ public partial class LibraryWindow : ToolWindow
         _libraryView = view;
         LibraryView.ItemsSource = view;
         UpdateLibraryStatus();
+        UpdateFoldAllButton();
     }
 
     /// <summary>Which songs the list shows: the favourites when FAVOURITES is on, and the ones matching the search. Null shows them all.</summary>
@@ -437,6 +438,7 @@ public partial class LibraryWindow : ToolWindow
             // Setting the filter re-sorts and regroups the list.
             _libraryView.Filter = LibraryFilter();
             UpdateLibraryStatus();
+            UpdateFoldAllButton();
         }
     }
 
@@ -980,6 +982,7 @@ public partial class LibraryWindow : ToolWindow
         if (!IsSearching && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
         {
             _collapsedFolders.Remove(group.Name?.ToString() ?? string.Empty);
+            UpdateFoldAllButton();
         }
     }
 
@@ -988,7 +991,45 @@ public partial class LibraryWindow : ToolWindow
         if (!IsSearching && sender is Expander { DataContext: CollectionViewGroup group, IsLoaded: true })
         {
             _collapsedFolders.Add(group.Name?.ToString() ?? string.Empty);
+            UpdateFoldAllButton();
         }
+    }
+
+    /// <summary>Closes every folder heading, or opens them all when every one is already closed.</summary>
+    private void OnFoldAllFolders(object sender, RoutedEventArgs e)
+    {
+        var names = GroupNames();
+        var open = !AnyFolderOpen(names);
+        if (open)
+        {
+            _collapsedFolders.ExceptWith(names);
+        }
+        else
+        {
+            _collapsedFolders.UnionWith(names);
+        }
+
+        // Headings scrolled out of sight pick up the state when they're next shown.
+        foreach (var expander in Descendants<Expander>(LibraryView))
+        {
+            expander.IsExpanded = open;
+        }
+
+        UpdateFoldAllButton();
+    }
+
+    private bool AnyFolderOpen(IEnumerable<string> names) => names.Any(name => !_collapsedFolders.Contains(name));
+
+    /// <summary>Shows the fold-all button only over folder headings, ready to close them all or, when they're all closed, open them.</summary>
+    private void UpdateFoldAllButton()
+    {
+        FoldAllButton.Visibility = ShowingPlaylists || _settings.GroupLibraryByFolder ? Visibility.Visible : Visibility.Collapsed;
+
+        // A search opens every heading, so no match is hidden; there's nothing to fold until it's cleared.
+        FoldAllButton.IsEnabled = !IsSearching;
+        var collapse = AnyFolderOpen(GroupNames());
+        FoldAllIcon.Data = (Geometry)FindResource(collapse ? "CollapseAllIcon" : "ExpandAllIcon");
+        FoldAllButton.ToolTip = collapse ? "Close every folder" : "Open every folder";
     }
 
     /// <summary>The library as it's listed on screen: folder by folder when grouped.</summary>

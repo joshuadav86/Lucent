@@ -2,6 +2,7 @@
 // Streams of glowing dust slingshot round four wandering stars, whipping into tight orbits and figure-eights before flinging off into the dark; each star weighs its own part of the music and every beat launches new streams.
 // Family: Particles
 // Tags: Space, Colourful, Intense
+// Added: 2026-10-17 17:12
 // Particles: 262144
 
 // Four heavy, glowing masses drift round each other. Dust pours in from three launchers circling

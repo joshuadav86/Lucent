@@ -2,6 +2,7 @@
 // Mirrored petals that fold the last frame back into itself and open wider with the bass.
 // Family: Kaleidoscope
 // Tags: Calm
+// Added: 2026-10-16 20:08
 
 float3 Render(float2 uv, float2 p)
 {

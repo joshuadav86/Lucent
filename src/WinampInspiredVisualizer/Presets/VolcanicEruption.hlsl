@@ -2,6 +2,7 @@
 // A volcano roars in the night, hurling fountains of glowing lava bombs that arc and crash down its slopes while a towering cloud of lit ash billows overhead and lightning crackles inside it; every beat sets off a fresh surge.
 // Family: Particles
 // Tags: Fire, Intense, Dark
+// Added: 2026-10-17 17:02
 // Particles: 262144
 
 // The world has y pointing up. The volcano is a cone round the y axis with its crater on top.

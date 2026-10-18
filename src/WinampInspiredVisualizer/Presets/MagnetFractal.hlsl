@@ -2,6 +2,7 @@
 // A fractal born from a physics model of magnetism: a fat, rounded island ringed with froth and chains of glowing bubbles. The view drifts slowly down into the froth and back out, its filaments glowing brighter with the music.
 // Family: Fractal
 // Tags: Colourful
+// Added: 2026-10-17 21:50
 
 float2 magnetMultiply(float2 a, float2 b)
 {

@@ -2,6 +2,7 @@
 // A living seed head grows in the dark: each new seed turns by the golden angle and pushes the older ones out over a slowly spinning dome, weaving the Fibonacci spirals, until the oldest drift away from the rim as glowing pollen on the music.
 // Family: Particles
 // Tags: Geometric, 3D, Calm, Colourful
+// Added: 2026-10-17 01:42
 // Particles: 262144
 
 // The head always has this many seeds, so its spirals look the same at every Detail setting.

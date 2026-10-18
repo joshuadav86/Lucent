@@ -3,6 +3,7 @@
 // octahedron) tumbling out in 3D and snapping back into place before a vast counter-turning echo of itself.
 // Family: Kaleidoscope
 // Tags: Neon, Geometric, 3D
+// Added: 2026-10-16 23:54
 
 float mcStroke(float d, float halfWidth, float px)
 {

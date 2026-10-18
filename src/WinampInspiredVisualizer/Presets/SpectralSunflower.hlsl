@@ -2,6 +2,7 @@
 // Thousands of glowing seeds packed in golden spirals that bend and re-form as the angle between them drifts; the spectrum swells them around the circle and every beat ripples out through the head.
 // Family: Music-shaped
 // Tags: Colourful, Geometric
+// Added: 2026-10-16 23:54
 
 static const float SeedCount = 2600.0;
 static const float SeedScale = 0.0245;          // seed n sits at radius SeedScale * sqrt(n + 0.5)

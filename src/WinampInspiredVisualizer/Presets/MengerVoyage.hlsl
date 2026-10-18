@@ -2,6 +2,7 @@
 // Flying through the endless corridors of a 3D fractal sponge, ray-marched on the GPU.
 // Family: Fly-through
 // Tags: Colourful, Geometric, 3D
+// Added: 2026-10-16 20:19
 
 float box(float3 p, float3 size)
 {

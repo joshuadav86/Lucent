@@ -2,6 +2,7 @@
 // A roaring bonfire throws thousands of sparks into the night, curling up on the hot air and cooling from white-gold to deep red as they rise; the bass stokes the blaze and every beat sends a fresh burst of sparks skywards.
 // Family: Particles
 // Tags: Fire, Intense, Dark
+// Added: 2026-10-17 17:06
 // Particles: 262144
 
 // y is up; the fire sits at the origin.

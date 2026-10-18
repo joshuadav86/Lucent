@@ -2,6 +2,7 @@
 // Half a million points of light trace the hidden shapes of chaos, flowing from one strange attractor to the next as the music breathes through them.
 // Family: Particles
 // Tags: Calm, Dark, Neon
+// Added: 2026-10-16 23:45
 // Particles: 393216
 
 // Four chaotic systems, each pulling its particles onto a shape it never quite repeats.

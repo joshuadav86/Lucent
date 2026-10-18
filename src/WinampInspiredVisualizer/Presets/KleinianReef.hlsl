@@ -2,6 +2,7 @@
 // Drifting through bioluminescent coral caves grown from a Kleinian fractal, with caustics, plankton and pulses of light.
 // Family: Fly-through
 // Tags: Colourful, Water, 3D
+// Added: 2026-10-16 23:54
 
 // The reef: sphere inversions folded into a repeating lattice (an Apollonian / Kleinian limit set).
 // shape is the inversion strength, which slowly breathes so the coral keeps growing and shrinking.

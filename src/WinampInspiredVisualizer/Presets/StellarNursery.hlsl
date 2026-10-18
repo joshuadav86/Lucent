@@ -2,6 +2,7 @@
 // Drift around a glowing cloud of gas where new stars are born: filaments of red, gold and teal billow in the stellar wind, and every beat sends a shockwave rippling out from the young stars at its heart.
 // Family: Particles
 // Tags: Space, Colourful, Calm, 3D
+// Added: 2026-10-17 01:51
 // Particles: 262144
 
 // How the particles are shared out: gas, then the young stars at the heart, then distant stars.

@@ -2,6 +2,7 @@
 // Drift through a glowing web of neurons as sparks of thought race along their branching fibres; every beat sets off a cascade of firing that ripples from cell to cell, and each cell's dendrites glow with its own part of the music.
 // Family: Particles
 // Tags: Neon, Dark, 3D
+// Added: 2026-10-17 17:12
 // Particles: 262144
 
 // The network: 32 neurons, each sending out 6 long fibres (to a neighbour, or out into the dark),

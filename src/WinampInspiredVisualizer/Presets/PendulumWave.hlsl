@@ -2,6 +2,7 @@
 // A row of chrome balls on fine strings swings in the famous pendulum wave, snaking, splitting into groups and falling back into line, over a glossy floor lit by a strip of coloured lights that follows the music.
 // Family: Ray traced
 // Tags: Calm, Geometric, 3D
+// Added: 2026-10-17 17:06
 
 static const int Balls = 16;
 static const float BallRadius = 0.21;

@@ -2,6 +2,7 @@
 // Gliding low down a rain-soaked megacity avenue at night, towers of glowing windows and neon signs pulsing to the music and mirrored in the wet street.
 // Family: Cyberpunk
 // Tags: Neon, Dark, Water, 3D
+// Added: 2026-10-17 01:16
 
 static const float StreetHalf = 3.6;    // from the middle of the avenue to the building fronts
 static const float BlockLength = 6.0;   // one building per block along each side

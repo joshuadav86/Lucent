@@ -3,6 +3,7 @@
 // their points sharpen and soften in a slow breath, they change shape every few bars, and their tips flare with the music.
 // Family: Geometric
 // Tags: Neon, Minimal, Geometric
+// Added: 2026-10-17 21:44
 
 // Point counts each ring cycles through.
 static const float SPG_POINTS[8] = { 7.0, 9.0, 5.0, 11.0, 8.0, 12.0, 6.0, 10.0 };

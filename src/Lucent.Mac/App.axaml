@@ -151,6 +151,8 @@
             <StreamGeometry x:Key="PlaySmallIcon">M0,0 L10,6 L0,12 Z</StreamGeometry>
             <StreamGeometry x:Key="RefreshIcon">M13.5,8 A5.5,5.5 0 1 1 11.89,4.11 M8.9,3.85 L11.89,4.11 L11.63,1.12</StreamGeometry>
             <StreamGeometry x:Key="SortIcon">M1,3 H15 M1,8 H11 M1,13 H7</StreamGeometry>
+            <StreamGeometry x:Key="CollapseAllIcon">M4,1 L8,5 L12,1 M4,15 L8,11 L12,15 M1,8 H15</StreamGeometry>
+            <StreamGeometry x:Key="ExpandAllIcon">M4,5 L8,1 L12,5 M4,11 L8,15 L12,11 M1,8 H15</StreamGeometry>
             <StreamGeometry x:Key="SearchIcon">M11.5,6.5 A5,5 0 1 1 1.5,6.5 A5,5 0 1 1 11.5,6.5 Z M10.1,10.1 L14.5,14.5</StreamGeometry>
             <StreamGeometry x:Key="PanelLeftIcon">M3,2 H13 Q15,2 15,4 V12 Q15,14 13,14 H3 Q1,14 1,12 V4 Q1,2 3,2 Z M6,2 V14 M2.5,5 H4.5 M2.5,8 H4.5</StreamGeometry>
             <StreamGeometry x:Key="PanelRightIcon">M3,2 H13 Q15,2 15,4 V12 Q15,14 13,14 H3 Q1,14 1,12 V4 Q1,2 3,2 Z M10,2 V14 M11.5,5 H13.5 M11.5,8 H13.5</StreamGeometry>

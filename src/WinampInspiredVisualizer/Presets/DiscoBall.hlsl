@@ -2,6 +2,7 @@
 // A mirrored disco ball turns slowly in a hazy room, scattering hundreds of coloured spots of light across the walls and floor, with beams cutting through the haze; the spots flash with the beat.
 // Family: Ray traced
 // Tags: Retro, Colourful, 3D
+// Added: 2026-10-17 17:06
 
 static const float3 BallCentre = float3(0.0, 3.3, 0.0);
 static const float BallRadius = 0.55;

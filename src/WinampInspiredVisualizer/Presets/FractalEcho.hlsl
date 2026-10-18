@@ -2,6 +2,7 @@
 // A hall of mirrors: each corner holds a smaller, spinning copy of the whole picture.
 // Family: Kaleidoscope
 // Tags: Dark, Neon, Retro
+// Added: 2026-10-16 20:08
 
 float3 Render(float2 uv, float2 p)
 {

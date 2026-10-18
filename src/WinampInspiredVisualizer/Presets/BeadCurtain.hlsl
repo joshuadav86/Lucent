@@ -2,6 +2,7 @@
 // Strands of coloured glass beads sway in a gentle breeze in front of a wall of glowing neon; every bead bends the lights into a tiny jewel, the strands ripple with the bass and the neon changes colour with the music.
 // Family: Ray traced
 // Tags: Neon, Calm, 3D
+// Added: 2026-10-17 17:12
 
 // The curtain hangs in a plane, one strand every Spacing along x. A ray only ever needs to test
 // the few beads near where it crosses that plane, so thousands of glass spheres cost no more than

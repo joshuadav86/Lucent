@@ -2,6 +2,7 @@
 // The limit set of a morphing Kleinian group: necklaces of jewelled pearls that coil into lace-fine spirals and slowly turn inside out.
 // Family: Fractal
 // Tags: Calm, Dark, Geometric
+// Added: 2026-10-16 23:54
 
 float3 kleinianJewel(float t)
 {

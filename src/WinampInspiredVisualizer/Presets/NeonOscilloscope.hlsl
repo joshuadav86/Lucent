@@ -2,6 +2,7 @@
 // The live waveform drawn as a glowing line, leaving drifting, colour-shifting echoes.
 // Family: Music-shaped
 // Tags: Dark, Retro
+// Added: 2026-10-16 19:56
 
 float3 Render(float2 uv, float2 p)
 {

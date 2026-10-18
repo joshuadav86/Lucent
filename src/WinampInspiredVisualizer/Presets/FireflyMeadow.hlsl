@@ -2,6 +2,7 @@
 // Thousands of fireflies drift over a dark summer meadow under the moon, each blinking on its own until a beat sends a wave of light rippling through them all, the nearest ones swimming in soft focus between the grass.
 // Family: Particles
 // Tags: Calm, Dark, 3D
+// Added: 2026-10-17 17:12
 // Particles: 131072
 
 // The fireflies live in a big box of air over the meadow (world y is up), wrapping round its sides.

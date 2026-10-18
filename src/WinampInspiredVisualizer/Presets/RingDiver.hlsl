@@ -2,6 +2,7 @@
 // Skim just above the rings of a giant striped planet as countless icy grains and boulders rush past, the nearest ones blurred and streaking by; the ring ripples with the bass, the rush quickens with the music and ice glints with the treble.
 // Family: Particles
 // Tags: Space, Calm, 3D
+// Added: 2026-10-17 17:15
 // Particles: 262144
 
 // The ring is a thin sheet on world y = 0, with y up. We fly along +z through a box of ring particles

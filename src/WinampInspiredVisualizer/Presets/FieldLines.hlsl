@@ -2,6 +2,7 @@
 // Glowing threads of light stream out of two warm charges and arc through space into two cool ones, tracing the electric field between them as the charges drift and circle; each charge swells with its own band of the music, bending every line towards it, and beats send bright pulses racing down the threads.
 // Family: Particles
 // Tags: Geometric, 3D
+// Added: 2026-10-17 22:17
 // Particles: 262144
 
 // Four charges float in space: two positive (amber) and two negative (blue). A particle leaves a

@@ -2,6 +2,7 @@
 // A crisp neon cage of looping curves, woven from a family of three-dimensional Lissajous knots running side by side; light races along every strand, and every couple of bars the knot unravels and re-ties itself into a new shape on the downbeat.
 // Family: Particles
 // Tags: Geometric, Neon
+// Added: 2026-10-17 22:17
 // Particles: 262144
 
 // A Lissajous knot is the path of a point swinging back and forth along three axes at once, at
