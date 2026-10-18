@@ -299,6 +299,108 @@ public sealed class EditSession
         return new FrameRange(destination, clip.Length);
     }
 
+    /// <summary>
+    /// Slides a clip along by <paramref name="offset"/> frames, leaving silence where it was. The silent clips
+    /// either side of it shrink or grow so the audio after it stays where it is; sliding right past the silence
+    /// after it pushes the rest along (adding silence to the song), and sliding left stops at the clip before it,
+    /// or the start. Returns where the clip now is.
+    /// </summary>
+    public FrameRange SlideClip(int clipIndex, int offset)
+    {
+        var clips = Clips;
+        var clip = clips[clipIndex];
+        var start = clip.Start - SilenceBefore(clipIndex);
+        var end = clip.End + SilenceAfter(clipIndex);
+        offset = Math.Max(offset, start - clip.Start);
+        if (offset == 0)
+        {
+            return clip;
+        }
+
+        // The clip with silence each side of it, in place of it and the silence around it now.
+        var before = clip.Start + offset - start;
+        var after = Math.Max(0, end - clip.End - offset);
+        var replacement = AudioBuffer.Silent(Audio.ChannelCount, before + clip.Length + after, Audio.SampleRate);
+        for (var c = 0; c < Audio.ChannelCount; c++)
+        {
+            Array.Copy(Audio.Channels[c], clip.Start, replacement.Channels[c], before, clip.Length);
+        }
+
+        var grown = replacement.Frames - (end - start);
+        var moved = new FrameRange(clip.Start + offset, clip.Length);
+        var splits = _splits.Where(s => s <= start || s >= end).Select(s => s >= end ? s + grown : s)
+            .Append(moved.Start).Append(moved.End);
+
+        // Markers in the clip go with it, ones after the silence move along with the audio there.
+        var markers = _markers.Select(m => m.Frame >= clip.Start && m.Frame < clip.End
+            ? m with { Frame = m.Frame + offset }
+            : m.Frame >= end ? m with { Frame = m.Frame + grown } : m).OrderBy(m => m.Frame).ToList();
+
+        Commit("Move clip", new[] { new Change(start, end - start, replacement) },
+            Normalized(splits, Audio.Frames + grown), markersAfter: markers);
+        return moved;
+    }
+
+    /// <summary>How much silence there is just before a clip (in silent clips), so how far left it can slide.</summary>
+    public int SilenceBefore(int clipIndex)
+    {
+        var clips = Clips;
+        var frames = 0;
+        for (var i = clipIndex - 1; i >= 0 && IsSilent(clips[i]); i--)
+        {
+            frames += clips[i].Length;
+        }
+
+        return frames;
+    }
+
+    /// <summary>How much silence there is just after a clip (in silent clips), which it can slide into without pushing.</summary>
+    public int SilenceAfter(int clipIndex)
+    {
+        var clips = Clips;
+        var frames = 0;
+        for (var i = clipIndex + 1; i < clips.Count && IsSilent(clips[i]); i++)
+        {
+            frames += clips[i].Length;
+        }
+
+        return frames;
+    }
+
+    private bool IsSilent(FrameRange range)
+    {
+        foreach (var channel in Audio.Channels)
+        {
+            for (var i = range.Start; i < range.End; i++)
+            {
+                if (channel[i] != 0)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Puts silence in place of a range, as a clip of its own, so the audio either side stays where it is
+    /// (cutting does this; slide the clip after it left to close the gap).
+    /// </summary>
+    public void SilenceRange(FrameRange range, string description)
+    {
+        var start = Math.Clamp(range.Start, 0, Audio.Frames);
+        var end = Math.Clamp(range.End, start, Audio.Frames);
+        if (end == start)
+        {
+            return;
+        }
+
+        var splits = _splits.Where(s => s <= start || s >= end).Append(start).Append(end);
+        Commit(description, new[] { new Change(start, end - start, AudioBuffer.Silent(Audio.ChannelCount, end - start, Audio.SampleRate)) },
+            Normalized(splits));
+    }
+
     /// <summary>Puts silence in at a frame, as a clip of its own. Returns where the silence is.</summary>
     public FrameRange InsertSilence(int at, int frames)
     {

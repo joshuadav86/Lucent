@@ -76,6 +76,8 @@ public partial class EditorWindow : Window
             }
         };
         Waveform.ClipMoveRequested += async (_, move) => await MoveClipAsync(move.Clip, move.ToIndex);
+        Waveform.ClipSlideRequested += async (_, slide) => await SlideClipAsync(slide.Clip, slide.Offset);
+        Waveform.SilenceBeforeClip = clip => _session is { } session && !IsBusy ? session.SilenceBefore(clip) : 0;
         Waveform.MarkerClicked += (_, index) => GoToMarker(index);
         Waveform.MarkerMoved += (_, move) => MoveMarker(move.Marker, move.Frame);
         Waveform.MouseRightButtonUp += OnWaveformRightClick;
@@ -479,13 +481,19 @@ public partial class EditorWindow : Window
 
         Waveform.Splits = session.Splits;
         UpdateHistory();
-        ShowStatus($"Split into {session.Clips.Count} clips. Drag a clip's tab to move it, or right-click it for more. Ctrl+Z undoes it.");
+        ShowStatus($"Split into {session.Clips.Count} clips. Drag a clip's tab to slide it along (Alt+drag to move it past the others), or right-click it for more. Ctrl+Z undoes it.");
     }
 
     private async Task MoveClipAsync(int clip, int toIndex)
     {
         var moved = default(FrameRange);
         await EditAsync("Move clip", session => moved = session.MoveClip(clip, toIndex), () => moved);
+    }
+
+    private async Task SlideClipAsync(int clip, int offset)
+    {
+        var moved = default(FrameRange);
+        await EditAsync("Move clip", session => moved = session.SlideClip(clip, offset), () => moved);
     }
 
     private async Task InsertSilenceAsync(int at, double seconds)
