@@ -1003,7 +1003,14 @@ public partial class MainWindow : Window
         var area = Placement.WorkArea(this);
         var playerBottom = Top + ActualHeight;
         var height = Placement.SizeOf(equalizer).Height;
-        equalizer.Closing += (_, _) => CloseEqualizerGap(equalizer);
+        equalizer.Closing += (_, e) =>
+        {
+            // Only when it's closed on its own: closing with the player leaves the queue where it was.
+            if (e.CloseReason == WindowCloseReason.WindowClosing)
+            {
+                CloseEqualizerGap(equalizer);
+            }
+        };
         var queueBelow = _queue.IsVisible && Math.Abs(_queue.Left() - Left) < 2 && Math.Abs(_queue.Top() - playerBottom) < 2;
         var needed = playerBottom + height + (queueBelow ? _queue.MinHeight : 0) - area.Bottom;
         if (needed > 0)
