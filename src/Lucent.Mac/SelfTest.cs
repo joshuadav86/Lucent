@@ -180,6 +180,9 @@ public static partial class SelfTest
             var name = engine.Presets[index].Name;
             engine.PresetIndex = index;
 
+            // Named before it's drawn, so a crash in the graphics driver says which visual it was on.
+            Console.WriteLine($"Drawing {name}");
+
             // Draw until this visual has compiled and been on screen for a while (or it failed). One
             // that's still black then keeps going a while longer, in case it's just a slow starter.
             var drawn = 0;

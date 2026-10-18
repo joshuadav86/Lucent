@@ -79,6 +79,18 @@ public partial class EditorWindow
             : "Snapping is off: selections and splits go exactly where you put them.");
     }
 
+    private void OnHandToggle(object sender, RoutedEventArgs e) => SetHandTool(HandToggle.IsChecked == true);
+
+    /// <summary>Turns the hand tool on (dragging a clip's waveform slides the clip) or off (dragging selects).</summary>
+    private void SetHandTool(bool on)
+    {
+        HandToggle.IsChecked = on;
+        Waveform.HandTool = on;
+        ShowStatus(on
+            ? "Hand tool on: drag a clip to slide it left or right. Press G or click Hand again to select instead."
+            : "Hand tool off: dragging selects again. Clips can still be moved by their tabs.");
+    }
+
     private void OnViewToggle(object sender, RoutedEventArgs e) =>
         SetView(SpectrogramToggle.IsChecked == true ? EditorView.Spectrogram : EditorView.Waveform);
 

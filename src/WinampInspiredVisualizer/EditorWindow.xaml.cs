@@ -103,6 +103,7 @@ public partial class EditorWindow : Window
         LoopToggle.IsChecked = _settings.Loop;
         HistoryToggle.IsChecked = _settings.ShowHistory;
         HistoryPanel.Visibility = _settings.ShowHistory ? Visibility.Visible : Visibility.Collapsed;
+        ShowInserts(_settings.ShowInserts);
         UpdateSnap();
         InitTools();
         SetEditingEnabled(false);
@@ -1100,8 +1101,14 @@ public partial class EditorWindow : Window
                 LoopToggle.IsChecked = LoopToggle.IsChecked != true;
                 SetLoop(LoopToggle.IsChecked == true);
                 break;
+            case Key.G when !ctrl:
+                SetHandTool(HandToggle.IsChecked != true);
+                break;
             case Key.H:
                 ShowHistoryPanel(HistoryPanel.Visibility != Visibility.Visible);
+                break;
+            case Key.I:
+                ShowInserts(PluginBar.Visibility != Visibility.Visible);
                 break;
             case Key.V:
                 SpectrogramToggle.IsChecked = SpectrogramToggle.IsChecked != true;

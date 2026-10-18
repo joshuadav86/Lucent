@@ -189,6 +189,12 @@ public sealed class WaveformView : Control
     /// <summary>How much silence is just before a clip, so how far left a dragged clip can slide.</summary>
     public Func<int, int>? SilenceBeforeClip { get; set; }
 
+    /// <summary>
+    /// The hand tool: when on, dragging anywhere on a clip's waveform slides the clip, as dragging its tab does,
+    /// instead of selecting.
+    /// </summary>
+    public bool HandTool { get; set; }
+
     /// <summary>The markers to show, in order.</summary>
     public IReadOnlyList<Marker> Markers
     {
@@ -1145,9 +1151,10 @@ public sealed class WaveformView : Control
             return;
         }
 
-        if (IsOnClipBar(position))
+        if (IsOnClipBar(position) || (HandTool && position.Y >= RulerHeight))
         {
-            // A clip's tab: dragging slides the clip (Option+dragging moves it in among the others), a click selects it.
+            // A clip's tab (or, with the hand tool, its waveform): dragging slides the clip (Option+dragging moves it in
+            // among the others), a click selects it.
             _draggedClip = ClipIndexAt(frame);
             _draggingClip = false;
             _dragX = position.X;
@@ -1192,7 +1199,7 @@ public sealed class WaveformView : Control
         if (!IsMouseCaptured && _panFrom is null)
         {
             Cursor = MarkerAt(position) is not null ? SideToSideCursor
-                : IsOnClipBar(position) && _peaks is not null ? HandCursor
+                : (IsOnClipBar(position) || (HandTool && position.Y >= RulerHeight)) && _peaks is not null ? HandCursor
                 : IBeamCursor;
         }
 

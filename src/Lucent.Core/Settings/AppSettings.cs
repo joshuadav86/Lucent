@@ -22,6 +22,12 @@ public sealed class AppSettings
     /// <summary>Folders inside the library folders that were taken out of the library.</summary>
     public List<string> HiddenLibraryFolders { get; set; } = new();
 
+    /// <summary>Library folders whose music is all listed under the folder's own heading, subfolders and all.</summary>
+    public List<string> LibraryFoldersTogether { get; set; } = new();
+
+    /// <summary>What to do with the folders inside a newly added library folder: ask, or the remembered answer.</summary>
+    public LibrarySubfolders LibrarySubfolders { get; set; } = LibrarySubfolders.Ask;
+
     /// <summary>Single music files added to the library on their own (dropped on it), outside its folders.</summary>
     public List<string> LibraryFiles { get; set; } = new();
 
@@ -264,6 +270,19 @@ public sealed class AppSettings
             // Not being able to save preferences shouldn't interrupt the music.
         }
     }
+}
+
+/// <summary>How the folders inside a newly added library folder are listed.</summary>
+public enum LibrarySubfolders
+{
+    /// <summary>Ask each time a folder with folders inside it is added.</summary>
+    Ask,
+
+    /// <summary>Each folder inside gets a heading of its own.</summary>
+    Separate,
+
+    /// <summary>All the music inside goes under the added folder's heading.</summary>
+    Together,
 }
 
 public enum RepeatMode

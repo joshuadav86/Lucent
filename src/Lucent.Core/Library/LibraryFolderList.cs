@@ -8,24 +8,73 @@ namespace WinampInspiredVisualizer.Library;
 /// </summary>
 public static class LibraryFolderList
 {
-    /// <summary>Puts a folder and everything in it into the library, bringing back any of it that was taken out.</summary>
-    public static void Add(List<string> linked, List<string> hidden, string folder)
+    /// <summary>
+    /// Puts a folder and everything in it into the library, bringing back any of it that was taken out.
+    /// Returns true when it became a library folder of its own (not one already linked, or inside one).
+    /// </summary>
+    public static bool Add(List<string> linked, List<string> hidden, string folder)
     {
         folder = Normalize(folder);
         hidden.RemoveAll(h => Same(h, folder) || IsInside(h, folder));
         if (linked.Any(root => Same(root, folder)))
         {
-            return;
+            return false;
         }
 
         // A folder inside a linked one is back in the library now, unless a folder around it is still taken out.
         var alreadyListed = linked.Any(root => IsInside(folder, root)
             && !hidden.Any(h => IsInside(h, root) && IsInside(folder, h)));
-        if (!alreadyListed)
+        if (alreadyListed)
         {
-            linked.Add(folder);
+            return false;
+        }
+
+        linked.Add(folder);
+        return true;
+    }
+
+    /// <summary>Whether a folder has folders inside it, leaving out hidden and system ones.</summary>
+    public static bool HasSubfolders(string folder)
+    {
+        try
+        {
+            return Directory.EnumerateDirectories(folder, "*", new EnumerationOptions
+            {
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
+            }).Any();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
         }
     }
+
+    /// <summary>
+    /// Lists everything in a library folder under its one heading, or (<paramref name="on"/> false)
+    /// each folder inside it under a heading of its own.
+    /// </summary>
+    public static void SetTogether(List<string> together, string folder, bool on)
+    {
+        folder = Normalize(folder);
+        together.RemoveAll(f => Same(f, folder));
+        if (on)
+        {
+            together.Add(folder);
+        }
+    }
+
+    /// <summary>Forgets how folders that are no longer library folders were listed.</summary>
+    public static void ForgetUnlinked(List<string> together, IReadOnlyList<string> linked) =>
+        together.RemoveAll(folder => !linked.Any(root => Same(root, folder)));
+
+    /// <summary>Whether everything in this library folder is listed under its one heading.</summary>
+    public static bool IsTogether(IEnumerable<string> together, string folder) =>
+        together.Any(f => Same(f, folder));
+
+    /// <summary>The library folder a folder is, or is inside, or null when it's in none of them.</summary>
+    public static string? LinkedFolderOf(IEnumerable<string> linked, string folder) =>
+        linked.FirstOrDefault(root => Same(root, folder) || IsInside(folder, root));
 
     /// <summary>Takes a folder and everything in it out of the library. The files stay where they are.</summary>
     public static void Remove(List<string> linked, List<string> hidden, string folder)

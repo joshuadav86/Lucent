@@ -47,6 +47,10 @@ public static class MilkShaderTranslator
         @"(?<![\.\w])(sample|point|line|triangle|lineadj|triangleadj|precise|unorm|snorm|groupshared|export|interface|class|namespace|globallycoherent|nointerpolation|noperspective)\b",
         RegexOptions.Compiled);
 
+    // MilkDrop's shaders were compiled for Shader Model 2 and 3, which have no doubles: a double there
+    // is a float. Shader Model 5 would make it a real double, and Metal (on the Mac) has none at all.
+    private static readonly Regex Double = new(@"\bdouble([1-4](?:x[1-4])?)?\b", RegexOptions.Compiled);
+
     private static readonly (Regex Pattern, string Replacement)[] Functions =
     {
         (new Regex(@"\btex2[dD]lod\s*\(", RegexOptions.Compiled), "md_tex2Dlod("),
@@ -129,6 +133,7 @@ public static class MilkShaderTranslator
     {
         code = SamplerDeclaration.Replace(code, string.Empty);
         code = TexsizeDeclaration.Replace(code, string.Empty);
+        code = Double.Replace(code, "float$1");
         foreach (var (pattern, replacement) in Functions)
         {
             code = pattern.Replace(code, replacement);
