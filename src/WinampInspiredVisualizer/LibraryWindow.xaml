@@ -48,8 +48,8 @@
 
             <!-- Search: narrows the list to the songs with every typed word in their title, artist, album or file name. -->
             <Grid Grid.Row="1" Margin="8,0,4,8">
-                <TextBox x:Name="SearchBox" Style="{StaticResource SearchInput}" Tag="Search sounds, artists and albums"
-                         ToolTip="Find sounds by title, artist, album or file name (Ctrl+F). Esc clears it."
+                <TextBox x:Name="SearchBox" Style="{StaticResource SearchInput}" Tag="Search sounds, artists, and albums"
+                         ToolTip="Find sounds by title, artist, album, or file name (Ctrl+F). Esc clears it."
                          TextChanged="OnSearchChanged" PreviewKeyDown="OnSearchKeyDown" />
                 <Button x:Name="ClearSearchButton" Style="{StaticResource IconButton}" Width="22" Height="22"
                         HorizontalAlignment="Right" Margin="0,0,3,0" Visibility="Collapsed"

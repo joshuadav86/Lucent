@@ -115,7 +115,7 @@
                                        LabelBrush="{DynamicResource MutedTextBrush}" />
                     <ToggleButton x:Name="SpectrogramToggle" Theme="{StaticResource ToolToggle}" Content="Spectrogram"
                                   Click="OnViewToggle"
-                                  ToolTip.Tip="Show the frequencies over time instead of the waveform (V). Hum, hiss, clipping and an MP3's cut-off show up clearly." />
+                                  ToolTip.Tip="Show the frequencies over time instead of the waveform (V). Hum, hiss, clipping, and an MP3's cut-off show up clearly." />
                     <ToggleButton x:Name="SnapToggle" Theme="{StaticResource ToolToggle}" Content="Snap" Click="OnSnapToggle"
                                   ToolTip.Tip="Snap the cursor and selection to the nearest zero crossing, so cuts don't click. Hold ⌘ to place them freely." />
                     <Border Width="1" Height="20" Margin="4,0,8,0" Background="{DynamicResource HairlineBrush}" />
@@ -236,21 +236,21 @@
                     <Button x:Name="DynamicsButton" Theme="{StaticResource ToolButton}" Content="Dynamics…" Click="OnDynamics"
                             ToolTip.Tip="A compressor to even out the level, or a true-peak limiter to make it louder without clipping" />
                     <Button x:Name="RepairButton" Theme="{StaticResource ToolButton}" Click="OnRepair"
-                            ToolTip.Tip="Take out hum, clicks, background noise or a DC offset">
+                            ToolTip.Tip="Take out hum, clicks, background noise, or a DC offset">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Repair" VerticalAlignment="Center" />
                             <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
                         </StackPanel>
                     </Button>
                     <Button x:Name="ChannelsButton" Theme="{StaticResource ToolButton}" Click="OnChannels"
-                            ToolTip.Tip="Swap, mix, invert or widen the channels, convert to mono, or edit one channel alone">
+                            ToolTip.Tip="Swap, mix, invert, or widen the channels, convert to mono, or edit one channel alone">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Channels" VerticalAlignment="Center" />
                             <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
                         </StackPanel>
                     </Button>
                     <Button x:Name="AnalyzeButton" Theme="{StaticResource ToolButton}" Content="Analyze…" Click="OnAnalyze"
-                            ToolTip.Tip="Peak, true peak, loudness, loudness range, DC offset, clipping and the spectrum of the selection (or the sound)" />
+                            ToolTip.Tip="Peak, true peak, loudness, loudness range, DC offset, clipping, and the spectrum of the selection (or the sound)" />
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
                     <Button Theme="{StaticResource ToolButton}" Content="Split" Click="OnSplit"
                             ToolTip.Tip="Split into clips at the cursor, or around the selection, to move them around (S)" />
@@ -263,7 +263,7 @@
                     <Button Theme="{StaticResource ToolButton}" Content="Reverse" Click="OnReverse"
                             ToolTip.Tip="Play the selection backwards" />
                     <Button x:Name="EditMenuButton" Theme="{StaticResource ToolButton}" Click="OnEditMenu"
-                            ToolTip.Tip="Cut, copy and paste (⌘X, C, V), and how joins are crossfaded">
+                            ToolTip.Tip="Cut, copy, and paste (⌘X, C, V), and how joins are crossfaded">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Edit" VerticalAlignment="Center" />
                             <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
@@ -278,14 +278,14 @@
                     </Button>
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
                     <Button x:Name="PluginsButton" Theme="{StaticResource ToolButton}" Click="OnPlugins"
-                            ToolTip.Tip="Use a VST3 effect installed on this Mac: reverb, EQ, compression and more">
+                            ToolTip.Tip="Use a VST3 effect installed on this Mac: reverb, EQ, compression, and more">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Plugins" VerticalAlignment="Center" />
                             <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
                         </StackPanel>
                     </Button>
                     <Button Theme="{StaticResource ToolButton}" Content="Batch…" Click="OnBatch"
-                            ToolTip.Tip="Process and convert many sounds at once: normalize, limit, trim silence, remove hum and more" />
+                            ToolTip.Tip="Process and convert many sounds at once: normalize, limit, trim silence, remove hum, and more" />
                 </WrapPanel>
                 <TextBlock x:Name="ScopeHint" Theme="{StaticResource OptionHint}" Margin="2,4,0,0" />
             </StackPanel>
