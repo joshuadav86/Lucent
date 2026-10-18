@@ -159,7 +159,7 @@
                                 <StackPanel x:Name="SoundTab" Visibility="Collapsed">
                                     <TextBlock Style="{StaticResource OptionLabel}" Text="Output" />
                                     <Button x:Name="OutputDeviceButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left"
-                                            ToolTip="The speakers, headphones or DAC the music plays through" Click="OnChooseOutputDevice">
+                                            ToolTip="The speakers, headphones, or DAC the music plays through" Click="OnChooseOutputDevice">
                                         <TextBlock x:Name="OutputDeviceName" MaxWidth="290" TextTrimming="CharacterEllipsis" />
                                     </Button>
 
@@ -173,7 +173,7 @@
                                     <CheckBox x:Name="GaplessSwitch" Style="{StaticResource SwitchToggle}" Content="Gapless playback"
                                               Margin="0,18,0,0" Click="OnSoundSwitched" />
                                     <TextBlock Style="{StaticResource OptionHint}"
-                                               Text="Each track runs straight into the next with no silence between, for live albums, DJ mixes and albums that flow." />
+                                               Text="Each track runs straight into the next with no silence between, for live albums, DJ mixes, and albums that flow." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="ThemeTab" Visibility="Collapsed">
