@@ -164,6 +164,10 @@ Double-click the visuals or press **F11**. Click once to pause or play, and righ
 
 ![The right-click menu over the Neon Downpour visual in fullscreen](assets/screenshots/fullscreen-menu.jpg)
 
+### Record a visual to video
+
+Right-click the visuals and choose **Record video…** to save the song that's playing, drawn with a visual (or with Auto, changing on the beat), as an MP4 to share: the whole song or just a part, in 1080p, 1440p or 4K at 30 or 60 fps. Every frame is drawn in turn and none are skipped, so a recording can take more or less time than the song lasts, and the visuals and music carry on as usual meanwhile. It's encoded as H.264 with AAC sound by Windows, on the graphics card when it can be.
+
 ## The player
 
 A small player in the spirit of Winamp's, with the equalizer, queue, library, analyzer, artwork and visuals each in their own window. Edges snap to each other and to the screen, docked windows travel together while you drag, and resizing one edge resizes its neighbours. Press **D** to tidy everything back into one neat rectangle, **G** to fill the screen, or **K** to shrink it all.

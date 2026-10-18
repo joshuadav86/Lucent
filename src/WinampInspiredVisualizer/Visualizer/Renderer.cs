@@ -16,8 +16,9 @@ namespace WinampInspiredVisualizer.Visualizer;
 /// window, in HDR on HDR screens. Visuals compile in the background (and are cached on disk),
 /// so the first one appears straight away. Particle visuals also move hundreds of thousands of
 /// particles with a compute shader each frame and draw them as glowing dots before their own pass.
+/// It can also draw without a window, one frame at a time, for recording a video (Renderer.Offscreen.cs).
 /// </summary>
-public sealed class Renderer : IDisposable
+public sealed partial class Renderer : IDisposable
 {
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
@@ -36,6 +37,8 @@ public sealed class Renderer : IDisposable
     private static readonly int[] MorphTransitionStyles = { 4, 5, 6, 7 };
 
     private readonly IntPtr _hwnd;
+    // No window: frames are drawn into a texture when asked for (see Renderer.Offscreen.cs).
+    private readonly bool _offscreen;
     private readonly AudioAnalyzer _analyzer;
     private readonly PresetSlot[] _slots;
     private readonly ShaderCache _shaderCache = new();
@@ -65,6 +68,8 @@ public sealed class Renderer : IDisposable
     private double? _landing;
     private BeatMap? _landingSong;
     private int _transitionStyle;
+    private int _currentFeedback;
+    private int _frameCount;
 
     private IDXGIFactory2? _factory;
     private ID3D11Device? _device;
@@ -96,10 +101,16 @@ public sealed class Renderer : IDisposable
     private Task<DisplayInfo?>? _displayCheck;
 
     public Renderer(IntPtr hwnd, AudioAnalyzer analyzer)
+        : this(hwnd, analyzer, PresetLibrary.LoadPresets())
+    {
+    }
+
+    private Renderer(IntPtr hwnd, AudioAnalyzer analyzer, IReadOnlyList<PresetSource> presets)
     {
         _hwnd = hwnd;
+        _offscreen = hwnd == IntPtr.Zero;
         _analyzer = analyzer;
-        _slots = PresetLibrary.LoadPresets().Select(source => new PresetSlot(source)).ToArray();
+        _slots = presets.Select(source => new PresetSlot(source)).ToArray();
         Presets = _slots.Select(slot => slot.Source).ToList();
         PresetNames = _slots.Select(slot => slot.Source.Name).ToList();
         _thread = new Thread(Run) { IsBackground = true, Name = "Visualizer renderer" };
@@ -221,6 +232,11 @@ public sealed class Renderer : IDisposable
         {
             _thread.Join(TimeSpan.FromSeconds(2));
         }
+        else if (_offscreen)
+        {
+            // Drawn on the caller's thread, so everything is let go here, on that same thread.
+            ReleaseAll();
+        }
     }
 
     private void Run()
@@ -304,12 +320,16 @@ public sealed class Renderer : IDisposable
 
         // The swap chain starts at the window's size in standard range; the first frame
         // creates the views and switches to HDR if it's wanted.
-        var (width, height) = GetClientSize();
-        var description = new SwapChainDescription1(
-            (uint)width, (uint)height, SdrBackBufferFormat, false, Usage.RenderTargetOutput, 2,
-            Scaling.Stretch, SwapEffect.FlipDiscard, AlphaMode.Ignore, SwapChainFlags.None);
-        _swapChain = _factory.CreateSwapChainForHwnd(_device!, _hwnd, description, null, null);
-        _factory.MakeWindowAssociation(_hwnd, WindowAssociationFlags.IgnoreAll);
+        if (!_offscreen)
+        {
+            var (width, height) = GetClientSize();
+            var description = new SwapChainDescription1(
+                (uint)width, (uint)height, SdrBackBufferFormat, false, Usage.RenderTargetOutput, 2,
+                Scaling.Stretch, SwapEffect.FlipDiscard, AlphaMode.Ignore, SwapChainFlags.None);
+            _swapChain = _factory.CreateSwapChainForHwnd(_device!, _hwnd, description, null, null);
+            _factory.MakeWindowAssociation(_hwnd, WindowAssociationFlags.IgnoreAll);
+        }
+
         _windowWidth = 0;
         _windowHeight = 0;
         _renderWidth = 0;
@@ -372,11 +392,7 @@ public sealed class Renderer : IDisposable
         _stopCompiling = false;
         _compileInterrupted = false;
         var device = _device!;
-        var shaders = new EngineSources(
-            PresetLibrary.ReadShader("Common.hlsli"),
-            PresetLibrary.ReadShader("PresetMain.hlsli"),
-            PresetLibrary.ReadShader("Particles.hlsli"),
-            PresetLibrary.ReadShader("ParticleMain.hlsli"));
+        var shaders = ReadEngineSources();
         var count = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
         _compilersRunning = count;
         for (var i = 0; i < count; i++)
@@ -405,18 +421,7 @@ public sealed class Renderer : IDisposable
             var slot = _slots[index];
             try
             {
-                // Same assembly as the build's shader check (.github/workflows/build.yml).
-                var fileName = Path.GetFileName(slot.Source.FilePath);
-                var api = slot.Source.IsParticles ? shaders.Common + "\n" + shaders.Particles : shaders.Common;
-                var code = api + "\n#line 1\n" + slot.Source.Code + "\n";
-                if (slot.Source.IsParticles)
-                {
-                    var particleCode = code + shaders.ParticleMain;
-                    slot.Simulation = device.CreateComputeShader(_shaderCache.GetOrCompile(particleCode, "CSMain", fileName, "cs_5_0"), null);
-                    slot.SpriteVertices = device.CreateVertexShader(_shaderCache.GetOrCompile(particleCode, "VSParticle", fileName, "vs_5_0"), null);
-                }
-
-                slot.Shader = CreatePixelShader(device, code + shaders.PresetMain, "PSMain", fileName);
+                BuildShaders(device, shaders, slot);
                 Volatile.Write(ref slot.State, PresetSlot.Ready);
             }
             catch (Exception ex) when (IsDeviceLost(ex))
@@ -438,6 +443,29 @@ public sealed class Renderer : IDisposable
         {
             _shaderCache.RemoveUnused();
         }
+    }
+
+    private static EngineSources ReadEngineSources() => new(
+        PresetLibrary.ReadShader("Common.hlsli"),
+        PresetLibrary.ReadShader("PresetMain.hlsli"),
+        PresetLibrary.ReadShader("Particles.hlsli"),
+        PresetLibrary.ReadShader("ParticleMain.hlsli"));
+
+    /// <summary>Compiles (or fetches from the cache) a visual's shaders. Throws with the compiler's message if it doesn't compile.</summary>
+    private void BuildShaders(ID3D11Device device, EngineSources shaders, PresetSlot slot)
+    {
+        // Same assembly as the build's shader check (.github/workflows/build.yml).
+        var fileName = Path.GetFileName(slot.Source.FilePath);
+        var api = slot.Source.IsParticles ? shaders.Common + "\n" + shaders.Particles : shaders.Common;
+        var code = api + "\n#line 1\n" + slot.Source.Code + "\n";
+        if (slot.Source.IsParticles)
+        {
+            var particleCode = code + shaders.ParticleMain;
+            slot.Simulation = device.CreateComputeShader(_shaderCache.GetOrCompile(particleCode, "CSMain", fileName, "cs_5_0"), null);
+            slot.SpriteVertices = device.CreateVertexShader(_shaderCache.GetOrCompile(particleCode, "VSParticle", fileName, "vs_5_0"), null);
+        }
+
+        slot.Shader = CreatePixelShader(device, code + shaders.PresetMain, "PSMain", fileName);
     }
 
     /// <summary>Picks the visual that's been asked for first, then its neighbours, then the rest in order.</summary>
@@ -491,9 +519,7 @@ public sealed class Renderer : IDisposable
         var context = _context!;
         var clock = Stopwatch.StartNew();
         var lastTime = 0.0;
-        var current = 0;
         var frames = 0;
-        var frameCount = 0;
         var frameRateStart = 0.0;
         var nextDisplayCheck = 1.0;
         UseDisplay(ReadDisplay(_hwnd));
@@ -548,66 +574,8 @@ public sealed class Renderer : IDisposable
                 continue;
             }
 
-            var supersampling = _renderWidth > _windowWidth;
-            _constants[0] = _renderWidth;
-            _constants[1] = _renderHeight;
-            _constants[2] = (float)now;
-            _constants[3] = deltaTime;
-            _constants[4] = _analyzer.Bass;
-            _constants[5] = _analyzer.Mid;
-            _constants[6] = _analyzer.Treble;
-            _constants[7] = _analyzer.Beat;
-            _constants[8] = _analyzer.Level;
-            _constants[9] = _analyzer.BeatCount;
-            _constants[10] = (float)_renderWidth / _renderHeight;
-            _constants[11] = _quality;
-            _constants[12] = progress;
-            _constants[13] = _transitionStyle;
-            _constants[14] = _bloomStrength;
-            _constants[15] = (float)_renderWidth / _windowWidth;
-            _constants[16] = _hdrActive ? 1f : 0f;
-            _constants[17] = _display.SdrWhiteNits / 80f;
-            _constants[18] = _display.PeakNits / 80f;
-            _constants[19] = frameCount++;
-            context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
-            context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
-
-            context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
-            context.VSSetShader(_vertexShader);
-            context.PSSetConstantBuffer(0, _constantBuffer);
-            context.PSSetSampler(0, _sampler);
-            context.PSSetShaderResource(1, _audioView!);
-            context.RSSetViewport(0, 0, _renderWidth, _renderHeight, 0, 1);
-
-            var target = _feedback[current]!;
-            var previous = _feedback[1 - current]!;
-
-            if (_fromPreset < 0)
-            {
-                // Pass 1: the preset draws into the feedback buffer, reading last frame's.
-                DrawPreset(target, previous, _activePreset);
-            }
-            else
-            {
-                // Mid-transition: run both presets from the same last frame, then blend them.
-                DrawPreset(_transitionTargets[0]!, previous, _fromPreset);
-                DrawPreset(_transitionTargets[1]!, previous, _activePreset);
-                DrawPass(target.RenderTargetView, _transitionTargets[0]!.ShaderResource, _blendShader!, _transitionTargets[1]!.ShaderResource);
-            }
-
-            // Pass 2 (only above window resolution): shrink the image to the window.
-            context.RSSetViewport(0, 0, _windowWidth, _windowHeight, 0, 1);
-            var shown = target;
-            if (supersampling)
-            {
-                DrawPass(_windowTarget!.RenderTargetView, target.ShaderResource, _downsampleShader!, null);
-                shown = _windowTarget;
-            }
-
-            // Pass 3: bloom and tone-map the result onto the window.
-            DrawPass(_backBufferView!, shown.ShaderResource, _presentShader!, null);
+            DrawFrame(now, deltaTime, progress, _backBufferView!);
             Present();
-            current = 1 - current;
 
             frames++;
             if (now - frameRateStart >= 1.0)
@@ -617,6 +585,74 @@ public sealed class Renderer : IDisposable
                 frameRateStart = now;
             }
         }
+    }
+
+    /// <summary>
+    /// Draws one frame of the visual (or of a transition, <paramref name="progress"/> of the way through)
+    /// into <paramref name="output"/>, which is window-sized: the window's back buffer, or a texture.
+    /// </summary>
+    private void DrawFrame(double now, float deltaTime, float progress, ID3D11RenderTargetView output)
+    {
+        var context = _context!;
+        var supersampling = _renderWidth > _windowWidth;
+        _constants[0] = _renderWidth;
+        _constants[1] = _renderHeight;
+        _constants[2] = (float)now;
+        _constants[3] = deltaTime;
+        _constants[4] = _analyzer.Bass;
+        _constants[5] = _analyzer.Mid;
+        _constants[6] = _analyzer.Treble;
+        _constants[7] = _analyzer.Beat;
+        _constants[8] = _analyzer.Level;
+        _constants[9] = _analyzer.BeatCount;
+        _constants[10] = (float)_renderWidth / _renderHeight;
+        _constants[11] = _quality;
+        _constants[12] = progress;
+        _constants[13] = _transitionStyle;
+        _constants[14] = _bloomStrength;
+        _constants[15] = (float)_renderWidth / _windowWidth;
+        _constants[16] = _hdrActive ? 1f : 0f;
+        _constants[17] = _display.SdrWhiteNits / 80f;
+        _constants[18] = _display.PeakNits / 80f;
+        _constants[19] = _frameCount++;
+        context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
+        context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
+
+        context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+        context.VSSetShader(_vertexShader);
+        context.PSSetConstantBuffer(0, _constantBuffer);
+        context.PSSetSampler(0, _sampler);
+        context.PSSetShaderResource(1, _audioView!);
+        context.RSSetViewport(0, 0, _renderWidth, _renderHeight, 0, 1);
+
+        var target = _feedback[_currentFeedback]!;
+        var previous = _feedback[1 - _currentFeedback]!;
+
+        if (_fromPreset < 0)
+        {
+            // Pass 1: the preset draws into the feedback buffer, reading last frame's.
+            DrawPreset(target, previous, _activePreset);
+        }
+        else
+        {
+            // Mid-transition: run both presets from the same last frame, then blend them.
+            DrawPreset(_transitionTargets[0]!, previous, _fromPreset);
+            DrawPreset(_transitionTargets[1]!, previous, _activePreset);
+            DrawPass(target.RenderTargetView, _transitionTargets[0]!.ShaderResource, _blendShader!, _transitionTargets[1]!.ShaderResource);
+        }
+
+        // Pass 2 (only above window resolution): shrink the image to the window.
+        context.RSSetViewport(0, 0, _windowWidth, _windowHeight, 0, 1);
+        var shown = target;
+        if (supersampling)
+        {
+            DrawPass(_windowTarget!.RenderTargetView, target.ShaderResource, _downsampleShader!, null);
+            shown = _windowTarget;
+        }
+
+        // Pass 3: bloom and tone-map the result onto the window.
+        DrawPass(output, shown.ShaderResource, _presentShader!, null);
+        _currentFeedback = 1 - _currentFeedback;
     }
 
     private void DrawPreset(RenderTarget destination, RenderTarget source, int presetIndex)
@@ -804,7 +840,7 @@ public sealed class Renderer : IDisposable
         {
             var waited = now - _lastSwitch;
             var interval = _autoCycleSeconds;
-            if (SongClock?.Read() is { } song)
+            if (ReadSong() is { } song)
             {
                 // The song's bars are known: start the change early enough that the new visual is
                 // fully in right on a downbeat, preferring the start of a phrase.
@@ -848,6 +884,12 @@ public sealed class Renderer : IDisposable
 
         return (float)(t * t * (3 - 2 * t));
     }
+
+    /// <summary>The song's bars and where it's got to: from the player, or from the video being recorded.</summary>
+    private (BeatMap Beats, double Position)? ReadSong() =>
+        _offscreen
+            ? _offscreenBeats is { } beats ? (beats, _offscreenPosition) : null
+            : SongClock?.Read();
 
     private void AutoSwitch(double now)
     {
@@ -1075,6 +1117,7 @@ public sealed class Renderer : IDisposable
         ReleaseRenderTargets();
         _backBufferView?.Dispose();
         _backBufferView = null;
+        ReleaseOffscreenOutput();
         foreach (var slot in _slots)
         {
             slot.Shader?.Dispose();
