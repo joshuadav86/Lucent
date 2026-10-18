@@ -707,7 +707,7 @@ jobs:
           kill "$app" 2> /dev/null || true
           cat "$LUCENT_LAYOUT_CHECK" 2> /dev/null || { echo "::error::The visuals layout check wrote nothing."; cat "$RUNNER_TEMP/layout.log"; exit 1; }
           if ! grep -qx PASSED "$LUCENT_LAYOUT_CHECK"; then
-            echo "::error::The visuals don't fill their window."
+            echo "::error::The visuals don't fill their window, or the windows didn't minimize with the player."
             exit 1
           fi
           unset LUCENT_LAYOUT_CHECK
