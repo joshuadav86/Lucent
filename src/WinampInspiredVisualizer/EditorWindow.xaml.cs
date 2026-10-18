@@ -100,6 +100,7 @@ public partial class EditorWindow : Window
         };
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
+        InitTransients();
         LoopToggle.IsChecked = _settings.Loop;
         HistoryToggle.IsChecked = _settings.ShowHistory;
         HistoryPanel.Visibility = _settings.ShowHistory ? Visibility.Visible : Visibility.Collapsed;
@@ -1139,6 +1140,10 @@ public partial class EditorWindow : Window
             case Key.F3:
                 GoToNextHighlight(forward: !shift);
                 break;
+            case Key.Tab when _settings.TabToTransient:
+                e.Handled = true;
+                await TabToTransientAsync(forward: !shift, extend: ctrl);
+                return;
             case Key.Delete or Key.Back:
                 e.Handled = true;
                 await DeleteSelectionAsync();
