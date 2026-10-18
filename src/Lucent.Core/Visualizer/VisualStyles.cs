@@ -13,7 +13,11 @@ public static class VisualStyles
     public static IReadOnlyList<string> Families { get; } = new[]
     {
         "Fly-through", "Kaleidoscope", "Geometric", "Minimal", "Fractal", "Music-shaped", "Cosmic", "Organic", "Particles", "Ray traced", "Cyberpunk",
+        MilkDropFamily,
     };
+
+    /// <summary>The folder every MilkDrop preset (.milk file) is listed in.</summary>
+    public const string MilkDropFamily = "MilkDrop";
 
     /// <summary>The tag every particle visual gets, whether or not its header lists it.</summary>
     public const string ParticlesTag = "Particles";

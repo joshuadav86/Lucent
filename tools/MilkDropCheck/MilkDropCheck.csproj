@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Checks Lucent's MilkDrop support without a graphics card: runs the expression language through
+    its paces, then reads and runs MilkDrop presets for a few seconds of made-up music, and can
+    write out their shaders as HLSL for a compiler to check. See Program.cs for how to run it.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Lucent.MilkDropCheck</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Lucent.Core\Lucent.Core.csproj" />
+  </ItemGroup>
+
+</Project>

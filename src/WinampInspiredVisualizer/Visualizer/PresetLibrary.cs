@@ -26,11 +26,15 @@ public static class PresetLibrary
             ?? throw new FileNotFoundException($"The {fileName} shader is missing.", path);
     }
 
+    /// <summary>
+    /// Where the user's MilkDrop presets go, %AppData%\Lucent\Presets\MilkDrop ("Import MilkDrop presets…" copies
+    /// them here). .milk files anywhere under either Presets folder load too, so a whole pack's folder can be dropped in.
+    /// </summary>
+    public static string MilkDropFolder => Path.Combine(UserPresetsFolder, "MilkDrop");
+
     public static IReadOnlyList<PresetSource> LoadPresets()
     {
-        var files = Directory.Exists(PresetsFolder)
-            ? Directory.EnumerateFiles(PresetsFolder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))).ToList()
-            : new List<(string Path, string Code)>();
+        var files = Read(PresetsFolder);
         if (files.Count == 0)
         {
             files = typeof(PresetLibrary).Assembly.GetManifestResourceNames()
@@ -39,9 +43,9 @@ public static class PresetLibrary
                 .ToList();
         }
 
-        if (Directory.Exists(UserPresetsFolder))
+        var own = Read(UserPresetsFolder);
+        if (own.Count > 0)
         {
-            var own = Directory.EnumerateFiles(UserPresetsFolder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))).ToList();
             var ownNames = own.Select(file => Path.GetFileName(file.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             files = files.Where(file => !ownNames.Contains(Path.GetFileName(file.Path))).Concat(own).ToList();
         }
@@ -50,6 +54,29 @@ public static class PresetLibrary
             .Select(file => PresetSource.Load(file.Path, file.Code))
             .OrderBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>The .hlsl visuals in a folder, and the MilkDrop presets in it and in the folders inside it.</summary>
+    private static List<(string Path, string Code)> Read(string folder)
+    {
+        if (!Directory.Exists(folder))
+        {
+            return new List<(string Path, string Code)>();
+        }
+
+        var files = Directory.EnumerateFiles(folder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))).ToList();
+        try
+        {
+            files.AddRange(Directory.EnumerateFiles(folder, "*.milk", SearchOption.AllDirectories)
+                .Select(path => (Path: path, Code: File.ReadAllText(path))));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A preset pack that can't be read: the visuals that could be still load.
+            ErrorLog.Write("MilkDrop presets", ex);
+        }
+
+        return files;
     }
 
     private static string? ReadBuiltIn(string name)
