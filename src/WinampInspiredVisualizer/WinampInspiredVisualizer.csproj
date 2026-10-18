@@ -53,7 +53,7 @@
   <ItemGroup>
     <!-- Shaders are compiled when the app starts, so they ship as plain files people can edit. -->
     <None Include="Presets\*.hlsl" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="Presets\MilkDrop\*.milk" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="Presets\MilkDrop\*.milk;Presets\MilkDrop\CREDITS.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="Shaders\*.hlsl*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Copies inside Lucent.exe too, for when it's run without its folder (say, straight from the zip). -->
     <EmbeddedResource Include="Presets\*.hlsl" LogicalName="Presets/%(Filename)%(Extension)" />

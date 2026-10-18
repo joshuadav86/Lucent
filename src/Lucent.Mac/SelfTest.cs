@@ -372,7 +372,7 @@ public static class SelfTest
 
             // Built-in visuals translated now must match what the build made, a particle visual among them.
             var samples = presets.Where(files.IsBuiltIn).Where(preset => preset.IsParticles).Take(1)
-                .Concat(presets.Where(files.IsBuiltIn).Where(preset => !preset.IsParticles).Take(2));
+                .Concat(presets.Where(files.IsBuiltIn).Where(preset => !preset.IsParticles && !preset.IsMilkDrop).Take(2));
             var common = File.ReadAllText(Path.Combine(files.ShadersFolder, "Common.hlsli"));
             var particles = File.ReadAllText(Path.Combine(files.ShadersFolder, "Particles.hlsli"));
             var presetMain = File.ReadAllText(Path.Combine(files.ShadersFolder, "PresetMain.hlsli"));

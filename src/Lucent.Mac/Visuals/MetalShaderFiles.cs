@@ -1,5 +1,6 @@
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Visualizer;
+using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
 namespace Lucent.Mac.Visuals;
 
@@ -41,6 +42,12 @@ public sealed class MetalShaderFiles
     /// </summary>
     public string UserPresetsFolder { get; }
 
+    /// <summary>
+    /// Where the user's MilkDrop presets go, ~/Library/Application Support/Lucent/Presets/MilkDrop ("Import MilkDrop
+    /// presets…" copies them here). .milk files anywhere under either Presets folder load too, as on Windows.
+    /// </summary>
+    public string MilkDropFolder => Path.Combine(UserPresetsFolder, "MilkDrop");
+
     /// <summary>Every visual, built-in and the user's own, by name, like the Windows app's list.</summary>
     public IReadOnlyList<PresetSource> LoadPresets()
     {
@@ -52,24 +59,33 @@ public sealed class MetalShaderFiles
             files = files.Where(file => !ownNames.Contains(Path.GetFileName(file.Path))).Concat(own).ToList();
         }
 
-        return files
+        return PresetSource.WithUniqueNames(files
             .Select(file => PresetSource.Load(file.Path, file.Code))
             .OrderBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .ThenBy(preset => preset.Author, StringComparer.OrdinalIgnoreCase)
+            .ToList());
     }
 
+    /// <summary>The .hlsl visuals in a folder, and the MilkDrop presets in it and in the folders inside it.</summary>
     private static List<(string Path, string Code)> Read(string folder)
     {
+        var files = new List<(string Path, string Code)>();
         try
         {
-            return Directory.Exists(folder)
-                ? Directory.EnumerateFiles(folder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))).ToList()
-                : new List<(string Path, string Code)>();
+            if (Directory.Exists(folder))
+            {
+                files.AddRange(Directory.EnumerateFiles(folder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))));
+                files.AddRange(Directory.EnumerateFiles(folder, "*.milk", SearchOption.AllDirectories)
+                    .Select(path => (Path: path, Code: File.ReadAllText(path))));
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new List<(string Path, string Code)>();
+            // A preset pack that can't be read: the visuals that could be still load.
+            ErrorLog.Write("Visuals", ex);
         }
+
+        return files;
     }
 
     /// <summary>True if the visual came with the app (rather than from the user's own folder).</summary>
@@ -102,6 +118,30 @@ public sealed class MetalShaderFiles
 
         // A visual of the user's own never uses a shipped translation, even one with the same file name.
         return Find(IsBuiltIn(preset) ? shipped : null, hlsl, entryPoint, fileName);
+    }
+
+    /// <summary>MilkDrop.hlsli: what MilkDrop presets' shaders are given, put in front of each of them.</summary>
+    public string MilkDropPrelude() =>
+        _sources.Value?.MilkDropPrelude ?? throw new FileNotFoundException("MilkDrop.hlsli is missing: the visuals' shaders weren't included with the app.");
+
+    /// <summary>The Metal source for one of the MilkDrop engine's entry points (VSWarp, PSBlurAcross, ...).</summary>
+    public string MilkDropEngine(string entryPoint)
+    {
+        var shipped = Path.Combine(MetalFolder, $"MilkDrop.{entryPoint}.metal");
+        var sources = _sources.Value;
+        var hlsl = sources is null ? null : MetalTranslation.MilkDropEngineSource(sources.MilkDropPrelude, sources.MilkDropEngine);
+        return Find(shipped, hlsl, entryPoint, "MilkDrop.hlsl");
+    }
+
+    /// <summary>
+    /// The Metal source for a MilkDrop preset's warp or composite shader, already made into HLSL by
+    /// MilkShaderTranslator: the build's translation for a preset that came with the app, otherwise one made now.
+    /// </summary>
+    public string MilkDropPreset(PresetSource preset, MilkTranslatedShader shader)
+    {
+        var fileName = Path.GetFileName(preset.FilePath);
+        var shipped = Path.Combine(MetalFolder, "Presets", "MilkDrop", $"{fileName}.{shader.EntryPoint}.metal");
+        return Find(IsBuiltIn(preset) ? shipped : null, MetalTranslation.MilkDropPresetSource(shader.Source), shader.EntryPoint, fileName);
     }
 
     /// <summary>Deletes translations nothing asked for this session (visuals that were edited or removed).</summary>
@@ -146,11 +186,15 @@ public sealed class MetalShaderFiles
         var particles = Read("Particles.hlsli");
         var presetMain = Read("PresetMain.hlsli");
         var particleMain = Read("ParticleMain.hlsli");
+        var milkDropPrelude = Read("MilkDrop.hlsli");
+        var milkDropEngine = Read("MilkDrop.hlsl");
         return common is null || engine is null || particles is null || presetMain is null || particleMain is null
+            || milkDropPrelude is null || milkDropEngine is null
             ? null
-            : new EngineSources(common, engine, particles, presetMain, particleMain);
+            : new EngineSources(common, engine, particles, presetMain, particleMain, milkDropPrelude, milkDropEngine);
     }
 
     /// <summary>The shared shader files a visual is assembled from.</summary>
-    private sealed record EngineSources(string Common, string Engine, string Particles, string PresetMain, string ParticleMain);
+    private sealed record EngineSources(
+        string Common, string Engine, string Particles, string PresetMain, string ParticleMain, string MilkDropPrelude, string MilkDropEngine);
 }
