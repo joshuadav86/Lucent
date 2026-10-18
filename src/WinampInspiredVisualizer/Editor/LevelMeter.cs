@@ -28,8 +28,8 @@ public sealed class LevelMeter : FrameworkElement
     public LevelMeter()
     {
         Height = 30;
-        ToolTip = "Levels of what's playing. TP is the true peak (between samples) so far; M, S and I are the momentary (0.4 s), " +
-                  "short-term (3 s) and integrated loudness in LUFS, measured as streaming services do.";
+        ToolTip = "Levels of what's playing. TP is the true peak (between samples) so far; M, S, and I are the momentary (0.4 s), " +
+                  "short-term (3 s), and integrated loudness in LUFS, measured as streaming services do.";
     }
 
     public Brush? BarBrush { get => (Brush?)GetValue(BarBrushProperty); set => SetValue(BarBrushProperty, value); }

@@ -47,13 +47,13 @@ public static class SkinManager
 {
     public static IReadOnlyList<Skin> Skins { get; } = new[]
     {
-        new Skin("Lucent", "Soft corners, hairlines and calm, modern type.", "Midnight",
+        new Skin("Lucent", "Soft corners, hairlines, and calm, modern type.", "Midnight",
             "Segoe UI Variable Text, Segoe UI", "Segoe UI Variable Text, Segoe UI", FontWeights.SemiBold,
             Rounding: 1, RoundShapes: true, SkinFinish.Flat),
-        new Skin("Classic", "Square corners, raised buttons and a black LCD, like the players of 1999.", "Emerald",
+        new Skin("Classic", "Square corners, raised buttons, and a black LCD, like the players of 1999.", "Emerald",
             "Tahoma, Segoe UI", "Lucida Console, Consolas", FontWeights.Normal,
             Rounding: 0, RoundShapes: false, SkinFinish.Bevel),
-        new Skin("Glass", "Frosted panes, soft light and big round buttons.", "Deep Ocean",
+        new Skin("Glass", "Frosted panes, soft light, and big round buttons.", "Deep Ocean",
             "Segoe UI Variable Display, Segoe UI", "Segoe UI Variable Display, Segoe UI", FontWeights.Light,
             Rounding: 1.6, RoundShapes: true, SkinFinish.Glass),
         new Skin("Neon", "Hard edges that glow in the accent colour, over scan lines.", "Ultraviolet",

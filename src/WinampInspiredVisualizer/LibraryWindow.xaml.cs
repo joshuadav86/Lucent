@@ -159,7 +159,7 @@ public partial class LibraryWindow : ToolWindow
         EmptyLibraryText.Text = noMatches
             ? favoritesOnly
                 ? "Only your favorites are searched while FAVORITES is on. Try other words, or press Esc to clear the search."
-                : "Search looks in titles, artists, albums and file names. Try other words, or press Esc to clear the search."
+                : "Search looks in titles, artists, albums, and file names. Try other words, or press Esc to clear the search."
             : favoritesOnly
                 ? "Click the heart in the player, or right-click sounds here or in the queue, to make them favorites."
                 : linked
@@ -299,7 +299,7 @@ public partial class LibraryWindow : ToolWindow
         EmptyLibraryText.Text = lists == 0
             ? "Right-click here and choose New playlist, or right-click sounds and choose Add to playlist."
             : IsSearching
-                ? "Search looks in titles, artists, albums and file names. Try other words, or press Esc to clear the search."
+                ? "Search looks in titles, artists, albums, and file names. Try other words, or press Esc to clear the search."
                 : "Turn FAVORITES off to see every sound in your playlists.";
         LinkFolderButton.Visibility = Visibility.Collapsed;
     }

@@ -156,7 +156,7 @@
                                 <!-- Search, then which visuals to show (and for Auto to play from): all, the favourites, or one of your lists. -->
                                 <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="4,4,4,2">
                                     <Button x:Name="ListPickerButton" DockPanel.Dock="Right" Theme="{StaticResource PickerButton}"
-                                            Height="28" Padding="10,0" ToolTip.Tip="Show all visuals, your favorites or one of your lists"
+                                            Height="28" Padding="10,0" ToolTip.Tip="Show all visuals, your favorites, or one of your lists"
                                             Click="OnListMenu">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock x:Name="ListPickerLabel" Text="All visuals" FontSize="12" MaxWidth="130"
@@ -171,8 +171,8 @@
                                     <!-- Search: shows only the visuals with every typed word in their name, family or tags.
                                          (No right-click menu: opening one would close the picker. ⌘V still pastes.) -->
                                     <Grid Margin="0,0,8,0">
-                                        <TextBox x:Name="SearchBox" Theme="{StaticResource SearchInput}" Watermark="Search by name, family or tag"
-                                                 ToolTip.Tip="Type to find visuals by name, family or tag. Return shows the first one, Esc clears the search."
+                                        <TextBox x:Name="SearchBox" Theme="{StaticResource SearchInput}" Watermark="Search by name, family, or tag"
+                                                 ToolTip.Tip="Type to find visuals by name, family, or tag. Return shows the first one, Esc clears the search."
                                                  ContextFlyout="{x:Null}" ContextMenu="{x:Null}"
                                                  TextChanged="OnSearchChanged" />
                                         <Button x:Name="ClearSearchButton" Theme="{StaticResource IconButton}" Width="22" Height="22"
