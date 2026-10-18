@@ -874,6 +874,11 @@ public partial class MainWindow : Window
     private void SavePlacements()
     {
         Remember("Player", this);
+        if (OpenEqualizerWindow is { } equalizer)
+        {
+            Remember("Equalizer", equalizer);
+        }
+
         foreach (var window in ToolWindows)
         {
             // While fullscreen, keep the size the visuals will go back to.
@@ -1002,9 +1007,6 @@ public partial class MainWindow : Window
     /// </summary>
     public void DockEqualizer(Window equalizer)
     {
-        var area = Placement.WorkArea(this);
-        var playerBottom = Top + ActualHeight;
-        var height = Placement.SizeOf(equalizer).Height;
         equalizer.Closing += (_, e) =>
         {
             // Only when it's closed on its own: closing with the player leaves the queue where it was.
@@ -1013,6 +1015,20 @@ public partial class MainWindow : Window
                 CloseEqualizerGap(equalizer);
             }
         };
+
+        // Opening with the player, it goes back where it was when Lucent last closed.
+        if (_openingWindows && Saved("Equalizer") is { } placement)
+        {
+            _snapper.Add(equalizer);
+            Place(equalizer, placement.Left, placement.Top, placement.Width, placement.Height);
+            // macOS can move a window as it first appears; put it back where it belongs.
+            equalizer.Opened += (_, _) => equalizer.MoveTo(placement.Left, placement.Top);
+            return;
+        }
+
+        var area = Placement.WorkArea(this);
+        var playerBottom = Top + ActualHeight;
+        var height = Placement.SizeOf(equalizer).Height;
         var queueBelow = _queue.IsVisible && Math.Abs(_queue.Left() - Left) < 2 && Math.Abs(_queue.Top() - playerBottom) < 2;
         var needed = playerBottom + height + (queueBelow ? _queue.MinHeight : 0) - area.Bottom;
         if (needed > 0)
