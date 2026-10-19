@@ -15,6 +15,7 @@ namespace WinampInspiredVisualizer.Editor;
 /// dragged on a touch screen or a middle-button drag pans, and Alt+wheel makes the waves taller or shorter. Drag a clip's tab to slide the clip along, leaving
 /// silence behind it (its edges snap to the other clips' edges, the cursor and the playhead; Ctrl slides it
 /// freely); Alt+drag a tab to move the clip in among the others instead. Click a tab to select the clip.
+/// A clip's edges and the handles at its top corners trim it and fade it (see WaveformView.Edges.cs).
 /// The playhead is a separate layer, so moving it never redraws the waveform.
 /// </summary>
 /// <remarks>
@@ -22,7 +23,7 @@ namespace WinampInspiredVisualizer.Editor;
 /// (clipping), and, instead of the waveform, a spectrogram. Alt+drag selects within one channel only.
 /// With <see cref="Snap"/> set, the cursor and selection edges snap to it; holding Ctrl places them freely.
 /// </remarks>
-public sealed class WaveformView : FrameworkElement
+public sealed partial class WaveformView : FrameworkElement
 {
     public const double RulerHeight = 22;
     private const double ClipBarHeight = 20;
@@ -544,6 +545,11 @@ public sealed class WaveformView : FrameworkElement
             {
                 dc.DrawRectangle(SelectionBrush, null, rect);
             }
+        }
+
+        if (!spectrogram)
+        {
+            DrawEdges(dc, width, height, channels, laneHeight);
         }
 
         DrawHighlights(dc, width, lanesTop, height);
@@ -1072,6 +1078,14 @@ public sealed class WaveformView : FrameworkElement
             return;
         }
 
+        if (PressEdge(position))
+        {
+            // A clip's edge or fade handle: dragging trims or fades the clip, a click places the cursor.
+            _anchor = Snapped(frame);
+            e.Handled = true;
+            return;
+        }
+
         if (IsOnClipBar(position) || (HandTool && position.Y >= RulerHeight))
         {
             // A clip's tab (or, with the hand tool, its waveform): dragging slides the clip (Alt+dragging moves it in
@@ -1118,7 +1132,9 @@ public sealed class WaveformView : FrameworkElement
         var position = e.GetPosition(this);
         if (!IsMouseCaptured && _panFrom is null)
         {
+            HoverClip(position);
             Cursor = MarkerAt(position) is not null ? Cursors.SizeWE
+                : EdgeAt(position, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) is { } edge ? EdgeCursor(edge)
                 : (IsOnClipBar(position) || (HandTool && position.Y >= RulerHeight)) && _peaks is not null ? Cursors.Hand
                 : Cursors.IBeam;
         }
@@ -1133,6 +1149,12 @@ public sealed class WaveformView : FrameworkElement
             _draggingMarker = true;
             _markerX = Math.Clamp(position.X, FrameToX(0), FrameToX(Frames));
             InvalidateVisual();
+            return;
+        }
+
+        if (_grab is not null && IsMouseCaptured)
+        {
+            DragEdge(position);
             return;
         }
 
@@ -1208,7 +1230,15 @@ public sealed class WaveformView : FrameworkElement
         var dragged = _draggingClip;
         var pressedMarker = _pressedMarker;
         var draggedMarker = _draggingMarker;
+        var grab = _grab;
+        var grabbed = _grabbing;
         ReleaseMouseCapture();
+        if (grab is not null && ReleaseEdge(grab, grabbed, e.GetPosition(this).X))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (pressedMarker is { } marker)
         {
             if (draggedMarker)
@@ -1437,9 +1467,11 @@ public sealed class WaveformView : FrameworkElement
     protected override void OnLostMouseCapture(MouseEventArgs e)
     {
         base.OnLostMouseCapture(e);
-        // Esc, or another window taking the mouse, drops a clip or marker back where it was.
-        if (_draggedClip is not null || _pressedMarker is not null)
+        // Esc, or another window taking the mouse, drops a clip, clip edge or marker back where it was.
+        if (_draggedClip is not null || _pressedMarker is not null || _grab is not null)
         {
+            _grab = null;
+            _grabbing = false;
             _draggedClip = null;
             _draggingClip = false;
             _pressedMarker = null;
@@ -1448,13 +1480,13 @@ public sealed class WaveformView : FrameworkElement
         }
     }
 
-    /// <summary>True while a clip's tab or a marker is being dragged.</summary>
-    public bool IsDraggingClip => _draggingClip || _draggingMarker;
+    /// <summary>True while a clip's tab, a clip edge or a marker is being dragged.</summary>
+    public bool IsDraggingClip => _draggingClip || _draggingMarker || _grabbing;
 
     /// <summary>Stops dragging a clip or marker, leaving it where it was.</summary>
     public void CancelClipDrag()
     {
-        if ((_draggedClip is not null || _pressedMarker is not null) && IsMouseCaptured)
+        if ((_draggedClip is not null || _pressedMarker is not null || _grab is not null) && IsMouseCaptured)
         {
             ReleaseMouseCapture();
         }
