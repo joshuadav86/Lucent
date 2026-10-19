@@ -7,7 +7,7 @@ using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
 // Usage: AvsCheck [preset files or folders...] [--images <output folder>] [--size <width>x<height>] [--strict]
 // With no presets given it checks the ones that ship with Lucent. Each preset runs for 5 seconds of
-// made-up music. Exits with 1 if a preset doesn't load or throws, or (with --strict) leaves anything out.
+// made-up music. Exits with 1 if a preset doesn't load or an effect throws, or (with --strict) leaves anything out.
 // With --images it saves frames 60, 180 and 300 of each preset as PNGs, for checking by eye.
 var repository = FindRepository();
 var inputs = new List<string>();
@@ -95,7 +95,9 @@ static int CheckPreset(string file, int width, int height, string? imageFolder, 
         var lit = runner.Picture.Count(pixel => (pixel & 0xffffff) != 0) * 100.0 / runner.Picture.Length;
         Console.WriteLine($"{name}: {clock.Elapsed.TotalMilliseconds / 300:F2} ms a frame at {width}x{height}, {lit:F0}% of the picture lit"
             + (warnings.Count == 0 ? "" : $"\n  - {string.Join("\n  - ", warnings)}"));
-        return strict && warnings.Count > 0 ? 1 : 0;
+        // An effect that threw while drawing is a bug in Lucent's port, not something the preset asked for.
+        var broken = warnings.Any(warning => warning.Contains("went wrong while drawing", StringComparison.Ordinal));
+        return broken || (strict && warnings.Count > 0) ? 1 : 0;
     }
     catch (Exception ex)
     {

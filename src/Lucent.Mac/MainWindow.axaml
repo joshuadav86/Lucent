@@ -143,6 +143,16 @@
                                               Content="MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
                                                Text="List the MilkDrop presets in the visual picker and play them in Auto." />
+
+                                    <CheckBox x:Name="AvsSwitch" Theme="{StaticResource SwitchToggle}"
+                                              Content="Winamp AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="List the Winamp AVS presets in the visual picker and play them in Auto." />
+
+                                    <CheckBox x:Name="ModernAvsSwitch" Theme="{StaticResource SwitchToggle}"
+                                              Content="Modern look for AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Draw AVS presets sharper, with Lucent's glow. Off shows them as Winamp drew them." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="SoundTab" IsVisible="False">

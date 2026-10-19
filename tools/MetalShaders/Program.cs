@@ -4,7 +4,7 @@ using WinampInspiredVisualizer.Visualizer;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
 // Usage: MetalShaders <app folder with Shaders/ and Presets/> <output folder>
-// Writes <output>/Engine.<entry>.metal, <output>/Particles.PSSprite.metal and
+// Writes <output>/Engine.<entry>.metal, <output>/Particles.PSSprite.metal, <output>/AvsDisplay.PSMain.metal and
 // <output>/Presets/<preset file name>.<entry>.metal, and fails if any shader doesn't translate.
 if (args.Length != 2)
 {
@@ -42,6 +42,11 @@ foreach (var path in Directory.EnumerateFiles(Path.Combine(appFolder, "Presets")
         jobs.Add((fileName, code, entry, $"Presets/{fileName}.{entry}.metal"));
     }
 }
+
+// AVS presets draw on the CPU; one shader shows all of their pictures.
+var avsDisplay = Read("AvsDisplay.hlsl");
+jobs.Add(("AvsDisplay.hlsl", MetalTranslation.PresetSource(common, particles, presetMain, particleMain, avsDisplay, false, "PSMain"),
+    "PSMain", "AvsDisplay.PSMain.metal"));
 
 // MilkDrop presets: the engine's own passes, then the warp and composite shaders of the presets that
 // come with the app, made into HLSL as the app does (MilkShaderTranslator). Presets of the user's own are

@@ -132,6 +132,12 @@ jobs:
               if (-not (Test-Shader $preset.BaseName ($source + $particleMain) "VSParticle" "vs_5_0")) { $failed = $true }
             }
           }
+          # AVS presets draw on the CPU and are shown by one shader, assembled like a visual's.
+          # AvsCheck reads and runs every bundled preset, and fails if one won't load or an effect breaks.
+          $avsDisplay = $common + "`n#line 1`n" + (Get-Content "$root/Shaders/AvsDisplay.hlsl" -Raw) + "`n" + $main
+          if (-not (Test-Shader "AvsDisplay" $avsDisplay "PSMain" "ps_5_0")) { $failed = $true }
+          dotnet run --project tools/AvsCheck -c Release | Out-Host
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::AvsCheck failed"; $failed = $true }
           # MilkDrop presets: the engine's own passes, then the sample presets' shaders as the app
           # translates them. MilkDropCheck also checks the expression language and runs each preset.
           $milkDrop = (Get-Content "$root/Shaders/MilkDrop.hlsli" -Raw) + "`n" + (Get-Content "$root/Shaders/MilkDrop.hlsl" -Raw)

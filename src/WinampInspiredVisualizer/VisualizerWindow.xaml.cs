@@ -268,9 +268,9 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         var names = NamesInList(list);
-        // With MilkDrop presets switched off, they're left out of every list, and so out of Auto.
-        var choices = _settings.MilkDropVisuals ? _choices : _choices.Where(choice => !choice.IsMilkDrop).ToList();
-        var milkDropHidden = choices.Count < _choices.Count;
+        // With MilkDrop or AVS presets switched off, they're left out of every list, and so out of Auto.
+        var choices = _choices.Where(IsSwitchedOn).ToList();
+        var presetsHidden = choices.Count < _choices.Count;
         List<VisualChoice> inList;
         if (names is null)
         {
@@ -301,7 +301,7 @@ public partial class VisualizerWindow : ToolWindow
         VisualCount.Text = VisualChoice.CountText(_shown.Count, inList.Count);
 
         // Narrowed by a list, tags or a search, Auto plays from what's shown. If nothing is shown it plays from everything.
-        var narrowed = names is not null || milkDropHidden || _tickedTags.Count > 0 || _searchWords.Length > 0;
+        var narrowed = names is not null || presetsHidden || _tickedTags.Count > 0 || _searchWords.Length > 0;
         if (_host is not null)
         {
             _host.AutoCycleNames = !narrowed || _shown.Count == 0 ? null : _shown.Select(choice => choice.Name).ToList();
@@ -434,7 +434,7 @@ public partial class VisualizerWindow : ToolWindow
             if (PresetPopup.IsOpen && !favorite)
             {
                 ListPickerLabel.Text = $"{AppSettings.FavoritesListName} ({_settings.FavoriteVisuals.Count})";
-                var playable = _choices.Where(other => other.IsFavorite && (_settings.MilkDropVisuals || !other.IsMilkDrop)
+                var playable = _choices.Where(other => other.IsFavorite && IsSwitchedOn(other)
                     && MatchesTags(other) && MatchesSearch(other))
                     .Select(other => other.Name).ToList();
                 _host!.AutoCycleNames = playable.Count == 0 ? null : playable;

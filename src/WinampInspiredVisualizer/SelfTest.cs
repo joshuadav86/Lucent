@@ -14,7 +14,7 @@ namespace WinampInspiredVisualizer;
 
 /// <summary>
 /// Checks the Windows app works without a window, for CI: decodes the given music files with the
-/// readers the player uses, then compiles every visual (the built-in ones and the MilkDrop presets)
+/// readers the player uses, then compiles every visual (the built-in ones and the MilkDrop and AVS presets)
 /// and draws a few frames of each to music made up on the spot, off screen as recording a video does,
 /// and can save a contact sheet of what they look like. On a machine with no graphics card, as CI's
 /// Windows machines are, Direct3D draws in software: slowly, but the same pictures.
@@ -308,7 +308,7 @@ public static class SelfTest
 
             if (renderer.HasFailed(index) || drawn == 0)
             {
-                // A MilkDrop preset that went wrong while drawing: PresetFailed has said why.
+                // A MilkDrop or AVS preset that went wrong while drawing: PresetFailed has said why.
                 continue;
             }
 

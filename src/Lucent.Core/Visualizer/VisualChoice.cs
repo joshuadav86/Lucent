@@ -34,7 +34,10 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>A MilkDrop preset, listed in the MilkDrop folder.</summary>
     public bool IsMilkDrop => Family == VisualStyles.MilkDropFamily;
 
-    /// <summary>Who made it (MilkDrop presets), or null.</summary>
+    /// <summary>A Winamp AVS preset, listed in the Winamp AVS folder.</summary>
+    public bool IsAvs => Family == VisualStyles.AvsFamily;
+
+    /// <summary>Who made it (MilkDrop and AVS presets), or null.</summary>
     public string? Author { get; }
 
     /// <summary>When it joined the visuals, for the picker's "Newest first" order, or null if that isn't known.</summary>
