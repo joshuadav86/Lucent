@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Net.Http;
 using Velopack;
 using Velopack.Sources;
@@ -22,6 +23,12 @@ public sealed class AppUpdater
     // GitHub answers this with the newest release that isn't a pre-release, or "not found" if there's none.
     private const string StableReleaseUrl = "https://api.github.com/repos/joshuadav86/Lucid/releases/latest";
 
+    // The "Latest build" release, which names the commit it was built from.
+    private const string EveryBuildReleaseUrl = "https://api.github.com/repos/joshuadav86/Lucid/releases/tags/latest";
+
+    // The changes between two commits.
+    private const string CompareUrl = "https://api.github.com/repos/joshuadav86/Lucid/compare/";
+
     // Stable releases only, and every release: the "Latest build" release is a pre-release, so
     // following it means including pre-releases. Velopack never moves to an older version, so someone
     // who goes back to stable from a newer build stays on it until a stable release passes it.
@@ -30,6 +37,10 @@ public sealed class AppUpdater
     private static readonly HttpClient Http = CreateHttpClient();
     private UpdateManager? _downloadedWith;
     private VelopackAsset? _downloaded;
+
+    // Where the downloaded build was made from (a commit or a release's tag), for what's new in it.
+    private string? _downloadedFrom;
+    private (string From, IReadOnlyList<string> Changes)? _whatsNew;
     private bool _applying;
 
     // The hourly check and one asked for in Options take turns, so they don't download the same build twice.
@@ -89,6 +100,7 @@ public sealed class AppUpdater
 
         _downloaded = null;
         _downloadedWith = null;
+        _downloadedFrom = null;
         _ = CheckOnceAsync();
     }
 
@@ -151,6 +163,7 @@ public sealed class AppUpdater
             await manager.DownloadUpdatesAsync(update).ConfigureAwait(false);
             _downloaded = update.TargetFullRelease;
             _downloadedWith = manager;
+            _downloadedFrom = await ReleaseSourceAsync(manager == _everyBuild).ConfigureAwait(false);
             UpdateReady?.Invoke(version);
             return version;
         }
@@ -179,6 +192,78 @@ public sealed class AppUpdater
         catch (Exception)
         {
             // The update stays downloaded; Velopack installs it the next time Lucent starts.
+        }
+    }
+
+    /// <summary>
+    /// What's new in the downloaded build since this one: the title of each change merged in between,
+    /// newest first. Empty when there's nothing downloaded, or GitHub can't say.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> WhatsNewAsync()
+    {
+        if (_downloadedFrom is not { } from || AppInfo.Commit is not { } commit)
+        {
+            return [];
+        }
+
+        if (_whatsNew is { } known && known.From == from)
+        {
+            return known.Changes;
+        }
+
+        try
+        {
+            using var response = await Http.GetAsync(CompareUrl + commit + "..." + from).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            var changes = json.RootElement.GetProperty("commits").EnumerateArray()
+                .Select(entry => entry.GetProperty("commit").GetProperty("message").GetString() ?? "")
+                .Select(ChangeTitle)
+                .OfType<string>()
+                .Reverse()
+                .Distinct()
+                .ToList();
+            _whatsNew = (from, changes);
+            return changes;
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Finding what's new in an update", ex);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// The title of a change merged into main ("Merge pull request #12 from …", a blank line, then the
+    /// title), or null for any other commit: the commits inside a change say how, not what.
+    /// </summary>
+    private static string? ChangeTitle(string message)
+    {
+        if (!message.StartsWith("Merge pull request #", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var lines = message.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length > 1 ? lines[1] : null;
+    }
+
+    /// <summary>
+    /// The commit the "Latest build" release was made from, or the newest stable release's tag. Null if
+    /// GitHub can't say; what's new is left out then.
+    /// </summary>
+    private static async Task<string?> ReleaseSourceAsync(bool everyBuild)
+    {
+        try
+        {
+            using var response = await Http.GetAsync(everyBuild ? EveryBuildReleaseUrl : StableReleaseUrl).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            return json.RootElement.GetProperty(everyBuild ? "target_commitish" : "tag_name").GetString();
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 

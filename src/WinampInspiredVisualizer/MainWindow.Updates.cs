@@ -10,6 +10,22 @@ public partial class MainWindow
 
     private void OnCheckForUpdates(object sender, RoutedEventArgs e) => CheckForUpdates();
 
+    /// <summary>The title bar's UPDATE button: what's new in the update, and the button that restarts into it.</summary>
+    private void OnShowUpdate(object sender, RoutedEventArgs e) => ShowUpdatesTab();
+
+    /// <summary>Opens Options on its Updates tab.</summary>
+    private void ShowUpdatesTab()
+    {
+        Activate();
+        if (!OptionsPopup.IsOpen && !_visuals.IsFullscreen)
+        {
+            ShowOptions();
+        }
+
+        UpdatesTabButton.IsChecked = true;
+        OnOptionsTab(UpdatesTabButton, new RoutedEventArgs());
+    }
+
     private async void CheckForUpdates()
     {
         if (_checkingForUpdates)
@@ -43,5 +59,26 @@ public partial class MainWindow
         UpdateStatusText.Text = status;
         UpdateStatusText.Visibility = status is null ? Visibility.Collapsed : Visibility.Visible;
         RestartToUpdateButton.Visibility = readyToInstall ? Visibility.Visible : Visibility.Collapsed;
+        if (readyToInstall)
+        {
+            ShowWhatsNew();
+        }
+        else
+        {
+            WhatsNewPanel.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>Lists what's changed since this build in the update that's ready, when GitHub can say.</summary>
+    private async void ShowWhatsNew()
+    {
+        var changes = await _updater.WhatsNewAsync();
+        if (RestartToUpdateButton.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        WhatsNewText.Text = string.Join("\n", changes.Select(change => "• " + change));
+        WhatsNewPanel.Visibility = changes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 }

@@ -11,6 +11,9 @@ public partial class MainWindow
 
     private void OnCheckForUpdates(object? sender, RoutedEventArgs e) => CheckForUpdates();
 
+    /// <summary>The title bar's UPDATE button: what's new in the update, and the button that restarts into it.</summary>
+    private void OnShowUpdate(object? sender, RoutedEventArgs e) => ShowUpdatesTab();
+
     /// <summary>Check for Updates in the Lucent and Help menus: shows the Updates tab and checks there.</summary>
     private void CheckForUpdatesFromMenu()
     {
@@ -51,5 +54,26 @@ public partial class MainWindow
         UpdateStatusText.Text = status;
         UpdateStatusText.IsVisible = status is not null;
         RestartToUpdateButton.IsVisible = readyToInstall;
+        if (readyToInstall)
+        {
+            ShowWhatsNew();
+        }
+        else
+        {
+            WhatsNewPanel.IsVisible = false;
+        }
+    }
+
+    /// <summary>Lists what's changed since this build in the update that's ready, when GitHub can say.</summary>
+    private async void ShowWhatsNew()
+    {
+        var changes = await _updater.WhatsNewAsync();
+        if (!RestartToUpdateButton.IsVisible)
+        {
+            return;
+        }
+
+        WhatsNewText.Text = string.Join("\n", changes.Select(change => "• " + change));
+        WhatsNewPanel.IsVisible = changes.Count > 0;
     }
 }

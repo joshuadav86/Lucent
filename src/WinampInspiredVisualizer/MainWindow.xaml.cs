@@ -245,7 +245,7 @@ public partial class MainWindow : Window
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
         {
-            UpdateButton.ToolTip = $"Lucent {version} is ready. Click to restart into it now, or it installs when you close Lucent.";
+            UpdateButton.ToolTip = $"Lucent {version} is ready. Click to see what's new and restart into it, or it installs when you close Lucent.";
             UpdateButton.Visibility = Visibility.Visible;
             ShowUpdateStatus(ReadyStatus(version), readyToInstall: true);
         });
@@ -1113,6 +1113,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        ShowOptions();
+    }
+
+    private void ShowOptions()
+    {
         ShowOptionValues();
         UpdateHdrHint();
 
