@@ -597,6 +597,8 @@ jobs:
           path: stem-model
 
       - name: Self-test (decoding, every visual, recording a video, and the stem splitter)
+        # A hang fails the build instead of holding the runner for GitHub's six-hour limit.
+        timeout-minutes: 40
         env:
           LUCENT_STEM_MODEL: ${{ github.workspace }}/stem-model/htdemucs.onnx
         run: publish-mac/Lucent --self-test --sheet mac-visuals-${{ matrix.arch }}.png test.wav test.m4a test-alac.m4a test.flac test.aiff
