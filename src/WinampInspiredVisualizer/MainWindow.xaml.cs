@@ -1054,14 +1054,11 @@ public partial class MainWindow : Window
 
     private void OnInstallUpdate(object sender, RoutedEventArgs e)
     {
-        // The update is handed over once the player has closed, so if something stops it closing,
-        // such as unsaved edits, nothing has changed.
+        // The update is handed over once the player has closed, with a restart. CloseWindow only posts
+        // the close, so the window is still open when it returns: the choice stays made until it closes,
+        // including after something such as unsaved edits holds the close up.
         _restartIntoUpdate = true;
         SystemCommands.CloseWindow(this);
-        if (IsLoaded)
-        {
-            _restartIntoUpdate = false;
-        }
     }
 
     private void OnBuyMeACoffee(object sender, RoutedEventArgs e)
