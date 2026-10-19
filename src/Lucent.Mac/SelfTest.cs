@@ -72,9 +72,11 @@ public static partial class SelfTest
 
         failures += TestOutputDevices();
         failures += TestGapless();
-        failures += TestVisuals(sheetPath);
         failures += TestOtherApps();
+        // Before the visuals: their timing pass keeps CI's virtual GPU busy for minutes, and a
+        // recording straight after it has stalled.
         failures += TestRecording();
+        failures += TestVisuals(sheetPath);
         failures += TestRuntimeTranslation();
         failures += TestMediaControls();
         failures += WinampInspiredVisualizer.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
