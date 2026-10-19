@@ -212,6 +212,17 @@
             <Setter Property="Padding" Value="10,0" />
         </Style>
 
+        <!-- A switch in the toolbar drawn as an icon (Hand, Snap, Tab), with a tint behind it while it's on. -->
+        <Style x:Key="IconToggle" TargetType="ToggleButton" BasedOn="{StaticResource ToolToggle}">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- A small label and value above a slider in the tool cards. -->
         <Style x:Key="CardValue" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12" />
@@ -303,13 +314,19 @@
                     <ToggleButton x:Name="SpectrogramToggle" Style="{StaticResource ToolToggle}" Content="Spectrogram"
                                   Click="OnViewToggle"
                                   ToolTip="Show the frequencies over time instead of the waveform (V). Hum, hiss, clipping, and an MP3's cut-off show up clearly." />
-                    <ToggleButton x:Name="HandToggle" Style="{StaticResource ToolToggle}" Content="Hand" Click="OnHandToggle"
-                                  ToolTip="The hand tool (G): drag a clip's waveform to slide it left or right, leaving silence behind it. Turn it off to select again." />
-                    <ToggleButton x:Name="SnapToggle" Style="{StaticResource ToolToggle}" Content="Snap" Click="OnSnapToggle"
-                                  ToolTip="Snap the cursor and selection to the nearest zero crossing, so cuts don't click. Hold Ctrl to place them freely." />
-                    <ToggleButton x:Name="TransientToggle" Style="{StaticResource ToolToggle}" Content="Tab" Click="OnTransientToggle"
+                    <ToggleButton x:Name="HandToggle" Style="{StaticResource IconToggle}" Click="OnHandToggle"
+                                  ToolTip="Move clips (G): once the sound is split, drag a clip to move it, or onto the next one to crossfade them. Shift+drag or drag in the ruler to select. Turn it off to select by dragging.">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource HandIcon}" StrokeThickness="1.3" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="SnapToggle" Style="{StaticResource IconToggle}" Click="OnSnapToggle"
+                                  ToolTip="Snap: the cursor and selection go to the nearest zero crossing, so cuts don't click. Hold Ctrl to place them freely.">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource MagnetIcon}" StrokeThickness="1.3" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="TransientToggle" Style="{StaticResource IconToggle}" Click="OnTransientToggle"
                                   MouseRightButtonUp="OnTransientMenu"
-                                  ToolTip="Tab to Transient: Tab jumps the cursor to the next drum hit or note, Shift+Tab to the one before, and adding Ctrl selects up to it. Right-click to set how sensitive it is." />
+                                  ToolTip="Tab to Transient: Tab jumps the cursor to the next drum hit or note, Shift+Tab to the one before, and adding Ctrl selects up to it. Right-click to set how sensitive it is.">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource TabIcon}" StrokeThickness="1.3" />
+                    </ToggleButton>
                     <Border Width="1" Height="20" Margin="4,0,8,0" Background="{DynamicResource HairlineBrush}" />
                     <Button x:Name="UndoButton" Style="{StaticResource DimmingIconButton}" Click="OnUndo" ToolTip="Undo (Ctrl+Z)">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource UndoIcon}" />
@@ -457,46 +474,20 @@
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,8">
             <StackPanel>
                 <WrapPanel>
-                    <Button x:Name="NormalizeButton" Style="{StaticResource ToolButton}" Click="OnNormalize"
-                            ToolTip="Make it as loud as it can be without distorting, or match a loudness level">
+                    <Button x:Name="EffectsButton" Style="{StaticResource ToolButton}" Click="OnEffects"
+                            ToolTip="Every effect and tool, by category: normalize, volume, pitch, EQ, repair, channels, stems, and more. Type to find one (E)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Normalize" VerticalAlignment="Center" />
+                            <TextBlock Text="Effects" VerticalAlignment="Center" />
                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
                         </StackPanel>
                     </Button>
-                    <Button x:Name="GainButton" Style="{StaticResource ToolButton}" Content="Volume…" Click="OnGain"
-                            ToolTip="Make it louder or quieter" />
-                    <Button x:Name="PitchButton" Style="{StaticResource ToolButton}" Content="Pitch…" Click="OnPitch"
-                            ToolTip="Move the pitch up or down by up to an octave" />
-                    <Button x:Name="TempoButton" Style="{StaticResource ToolButton}" Content="Tempo…" Click="OnTempo"
-                            ToolTip="Make it faster or slower, keeping the pitch (or not)" />
-                    <Button Style="{StaticResource ToolButton}" Content="Fade in" Click="OnFadeIn"
-                            ToolTip="Fade up from silence over the selection (or the first 3 seconds)" />
-                    <Button Style="{StaticResource ToolButton}" Content="Fade out" Click="OnFadeOut"
-                            ToolTip="Fade down to silence over the selection (or the last 3 seconds)" />
-                    <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
-                    <Button x:Name="EqButton" Style="{StaticResource ToolButton}" Content="EQ…" Click="OnEq"
-                            ToolTip="A parametric equalizer drawn over the selection's spectrum and heard live while you shape it" />
-                    <Button x:Name="DynamicsButton" Style="{StaticResource ToolButton}" Content="Dynamics…" Click="OnDynamics"
-                            ToolTip="A compressor to even out the level, or a true-peak limiter to make it louder without clipping" />
-                    <Button x:Name="RepairButton" Style="{StaticResource ToolButton}" Click="OnRepair"
-                            ToolTip="Take out hum, clicks, background noise, or a DC offset">
+                    <Button x:Name="PluginsButton" Style="{StaticResource ToolButton}" Click="OnPlugins"
+                            ToolTip="Use a VST3 effect installed on this computer: reverb, EQ, compression, and more">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Repair" VerticalAlignment="Center" />
+                            <TextBlock Text="Plugins" VerticalAlignment="Center" />
                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
                         </StackPanel>
                     </Button>
-                    <Button x:Name="ChannelsButton" Style="{StaticResource ToolButton}" Click="OnChannels"
-                            ToolTip="Swap, mix, invert, or widen the channels, convert to mono, or edit one channel alone">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Channels" VerticalAlignment="Center" />
-                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="StemsButton" Style="{StaticResource ToolButton}" Content="Stems…" Click="OnStems"
-                            ToolTip="Split the music into vocals, drums, bass and the other instruments: remove the vocals, keep only them, or save each as a file" />
-                    <Button x:Name="AnalyzeButton" Style="{StaticResource ToolButton}" Content="Analyze…" Click="OnAnalyze"
-                            ToolTip="Peak, true peak, loudness, loudness range, DC offset, clipping, and the spectrum of the selection (or the sound)" />
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
                     <Button Style="{StaticResource ToolButton}" Content="Split" Click="OnSplit"
                             ToolTip="Split into clips at the cursor, or around the selection, to move them around (S)" />
@@ -504,10 +495,6 @@
                             ToolTip="Keep only the selected part" />
                     <Button x:Name="DeleteButton" Style="{StaticResource ToolButton}" Content="Delete" Click="OnDelete"
                             ToolTip="Cut out the selected part (Delete)" />
-                    <Button Style="{StaticResource ToolButton}" Content="Silence" Click="OnSilence"
-                            ToolTip="Replace the selection with silence" />
-                    <Button Style="{StaticResource ToolButton}" Content="Reverse" Click="OnReverse"
-                            ToolTip="Play the selection backwards" />
                     <Button x:Name="EditMenuButton" Style="{StaticResource ToolButton}" Click="OnEditMenu"
                             ToolTip="Cut, copy, and paste (Ctrl+X, C, V), and how joins are crossfaded">
                         <StackPanel Orientation="Horizontal">
@@ -523,13 +510,6 @@
                         </StackPanel>
                     </Button>
                     <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
-                    <Button x:Name="PluginsButton" Style="{StaticResource ToolButton}" Click="OnPlugins"
-                            ToolTip="Use a VST3 effect installed on this computer: reverb, EQ, compression, and more">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Plugins" VerticalAlignment="Center" />
-                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
-                        </StackPanel>
-                    </Button>
                     <Button Style="{StaticResource ToolButton}" Content="Batch…" Click="OnBatch"
                             ToolTip="Process and convert many sounds at once: normalize, limit, trim silence, remove hum, and more" />
                 </WrapPanel>
@@ -564,7 +544,7 @@
         </Border>
 
         <!-- Volume -->
-        <Popup x:Name="GainPopup" PlacementTarget="{Binding ElementName=GainButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="GainPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}">
                 <StackPanel>
@@ -599,7 +579,7 @@
         </Popup>
 
         <!-- Pitch -->
-        <Popup x:Name="PitchPopup" PlacementTarget="{Binding ElementName=PitchButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="PitchPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}">
                 <StackPanel>
@@ -631,7 +611,7 @@
         </Popup>
 
         <!-- Tempo -->
-        <Popup x:Name="TempoPopup" PlacementTarget="{Binding ElementName=TempoButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="TempoPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}">
                 <StackPanel>
@@ -657,7 +637,7 @@
         </Popup>
 
         <!-- Equalizer -->
-        <Popup x:Name="EqPopup" PlacementTarget="{Binding ElementName=EqButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="EqPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnToolPopupClosed">
             <Border Style="{StaticResource PopupCard}" Width="620">
                 <StackPanel>
@@ -724,7 +704,7 @@
         </Popup>
 
         <!-- Compressor and limiter -->
-        <Popup x:Name="DynamicsPopup" PlacementTarget="{Binding ElementName=DynamicsButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="DynamicsPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnToolPopupClosed">
             <Border Style="{StaticResource PopupCard}" Width="420">
                 <StackPanel>
@@ -754,7 +734,7 @@
         </Popup>
 
         <!-- Stereo width -->
-        <Popup x:Name="WidthPopup" PlacementTarget="{Binding ElementName=ChannelsButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="WidthPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}">
                 <StackPanel>
@@ -773,7 +753,7 @@
         </Popup>
 
         <!-- Stems -->
-        <Popup x:Name="StemsPopup" PlacementTarget="{Binding ElementName=StemsButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="StemsPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}" Width="420">
                 <StackPanel>
@@ -799,7 +779,7 @@
         </Popup>
 
         <!-- Noise reduction -->
-        <Popup x:Name="NoisePopup" PlacementTarget="{Binding ElementName=RepairButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="NoisePopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}" Width="360">
                 <StackPanel>
@@ -831,7 +811,7 @@
         </Popup>
 
         <!-- Click removal -->
-        <Popup x:Name="ClickPopup" PlacementTarget="{Binding ElementName=RepairButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="ClickPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}">
                 <StackPanel>
@@ -850,7 +830,7 @@
         </Popup>
 
         <!-- Analysis -->
-        <Popup x:Name="AnalysisPopup" PlacementTarget="{Binding ElementName=AnalyzeButton}" Placement="Top" VerticalOffset="4"
+        <Popup x:Name="AnalysisPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="4"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
             <Border Style="{StaticResource PopupCard}" Width="560">
                 <StackPanel>
@@ -869,6 +849,57 @@
                         <Button Style="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnCloseAnalysis" />
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- The effects menu: search across the top, every effect or the recent ones or one category on the left, and
+             the effects under their categories on the right. Choosing one runs it, or opens its card above the button. -->
+        <Popup x:Name="EffectsPopup" PlacementTarget="{Binding ElementName=EffectsButton}" Placement="Top" VerticalOffset="-6"
+               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnEffectsPopupClosed">
+            <Border Style="{StaticResource PopupCard}" Width="600" Padding="8" PreviewKeyDown="OnEffectsKeyDown">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="400" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="160" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Row="0" Grid.ColumnSpan="2" Margin="4,4,4,8">
+                        <TextBox x:Name="EffectSearchBox" Style="{StaticResource SearchInput}" Tag="Search effects"
+                                 ToolTip="Type to find an effect. Enter runs the first one, Down goes to the list, Esc clears the search."
+                                 ContextMenuService.IsEnabled="False"
+                                 TextChanged="OnEffectSearchChanged" PreviewKeyDown="OnEffectSearchKeyDown" />
+                        <Button x:Name="ClearEffectSearchButton" Style="{StaticResource IconButton}" Width="22" Height="22"
+                                HorizontalAlignment="Right" Margin="0,0,3,0" Visibility="Collapsed"
+                                ToolTip="Clear the search (Esc)" Click="OnClearEffectSearch">
+                            <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Every effect, the recent ones, or one category. -->
+                    <Border Grid.Row="1" Grid.Column="0" Margin="0,0,6,0" Padding="0,0,6,0"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="EffectSections" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <ScrollViewer x:Name="EffectScroller" Grid.Row="1" Grid.Column="1"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="EffectRows" Margin="0,0,4,0" />
+                    </ScrollViewer>
+
+                    <DockPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="4,8,4,0">
+                        <TextBlock x:Name="EffectCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock x:Name="EffectScope" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </DockPanel>
+                </Grid>
             </Border>
         </Popup>
 

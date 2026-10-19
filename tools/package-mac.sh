@@ -94,7 +94,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
       </dict>
     </dict>
   </array>
-  <key>NSAppleEventsUsageDescription</key><string>Lucent shows what the Music app is playing and controls play, pause, skip and seek from its player.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Lucent shows what the Music app, or YouTube in your web browser, is playing and controls play, pause, skip and seek from its player.</string>
 </dict>
 </plist>
 PLIST

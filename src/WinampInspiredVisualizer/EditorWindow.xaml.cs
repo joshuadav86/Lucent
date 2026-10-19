@@ -84,7 +84,7 @@ public partial class EditorWindow : Window
         Waveform.ClipEdgeRequested += async (_, edge) => await MoveClipEdgeAsync(edge.Clip, edge.Start, edge.Frame);
         Waveform.ClipFadeRequested += async (_, fade) => await SetClipFadeAsync(fade.Clip, fade.FadeIn, fade.Frames);
         Waveform.SplitMoveRequested += (_, move) => MoveSplit(move.Split, move.Frame);
-        Waveform.SilenceBeforeClip = clip => _session is { } session && !IsBusy ? session.SilenceBefore(clip) : 0;
+        Waveform.PlanSlide = (clip, offset) => _session is { } session && !IsBusy && clip < session.Clips.Count ? session.PlanSlide(clip, offset) : null;
         Waveform.MarkerClicked += (_, index) => GoToMarker(index);
         Waveform.MarkerMoved += (_, move) => MoveMarker(move.Marker, move.Frame);
         Waveform.MouseRightButtonUp += OnWaveformRightClick;
@@ -103,6 +103,8 @@ public partial class EditorWindow : Window
         };
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
+        HandToggle.IsChecked = _settings.DragMovesClips;
+        Waveform.HandTool = _settings.DragMovesClips;
         InitTransients();
         LoopToggle.IsChecked = _settings.Loop;
         HistoryToggle.IsChecked = _settings.ShowHistory;
@@ -337,29 +339,6 @@ public partial class EditorWindow : Window
         UpdateSelectionInfo();
     }
 
-    private void OnNormalize(object sender, RoutedEventArgs e)
-    {
-        var menu = new ContextMenu { PlacementTarget = NormalizeButton, Placement = PlacementMode.Top, VerticalOffset = -6 };
-        void Add(string header, NormalizeTarget target, double level, string? tip = null)
-        {
-            var item = new MenuItem { Header = header, ToolTip = tip };
-            item.Click += async (_, _) => await ApplyAsync(new NormalizeEffect(target, level));
-            menu.Items.Add(item);
-        }
-
-        menu.Items.Add(new MenuItem { Header = "Make the loudest peak reach", IsEnabled = false });
-        Add("−0.1 dB  (as loud as it can be)", NormalizeTarget.Peak, -0.1);
-        Add("−1 dB  (recommended)", NormalizeTarget.Peak, -1, "A little headroom, so it stays clean after converting to MP3");
-        Add("−3 dB", NormalizeTarget.Peak, -3);
-        menu.Items.Add(new Separator());
-        menu.Items.Add(new MenuItem { Header = "Make the overall loudness reach", IsEnabled = false });
-        const string loudnessTip = "Measured the way streaming services do (ITU BS.1770). Peaks are kept below −1 dB.";
-        Add("−14 LUFS  (Spotify, YouTube)", NormalizeTarget.Loudness, -14, loudnessTip);
-        Add("−16 LUFS  (Apple Music, podcasts)", NormalizeTarget.Loudness, -16, loudnessTip);
-        Add("−23 LUFS  (TV and radio)", NormalizeTarget.Loudness, -23, loudnessTip);
-        menu.IsOpen = true;
-    }
-
     private void OnGain(object sender, RoutedEventArgs e) => GainPopup.IsOpen = true;
 
     private void OnGainChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => UpdateGainText();
@@ -505,7 +484,9 @@ public partial class EditorWindow : Window
 
         Waveform.ClipEdgeDetails = session.ClipEdgeDetails;
         UpdateHistory();
-        ShowStatus($"Split into {session.Clips.Count} clips. Drag a clip's tab to slide it along (Alt+drag to move it past the others), or right-click it for more. Ctrl+Z undoes it.");
+        ShowStatus(Waveform.HandTool
+            ? $"Split into {session.Clips.Count} clips. Drag a clip to move it, or onto the next one to crossfade them; Shift+drag or drag in the ruler to select. Ctrl+Z undoes it."
+            : $"Split into {session.Clips.Count} clips. Drag a clip's tab to slide it along (Alt+drag to move it past the others), or right-click it for more. Ctrl+Z undoes it.");
     }
 
     private async Task MoveClipAsync(int clip, int toIndex)
@@ -516,8 +497,94 @@ public partial class EditorWindow : Window
 
     private async Task SlideClipAsync(int clip, int offset)
     {
+        var plan = _session is { } current && clip < current.Clips.Count ? current.PlanSlide(clip, offset) : null;
         var moved = default(FrameRange);
         await EditAsync("Move clip", session => moved = session.SlideClip(clip, offset), () => moved);
+        if (plan is { OverlapBefore: > 0 } or { OverlapAfter: > 0 })
+        {
+            ShowStatus("The clips overlap, with a crossfade. Right-click it to change its shape, or slide the clip away to take it out.");
+        }
+    }
+
+    /// <summary>The fade shapes, with a little drawing of each, for a fade or crossfade that was right-clicked.</summary>
+    private void ShowFadeShapeMenu(FadeSpot spot)
+    {
+        var menu = new ContextMenu { PlacementTarget = Waveform, Placement = PlacementMode.MousePoint };
+        menu.Items.Add(new MenuItem
+        {
+            Header = spot.Crossfade ? "Crossfade shape" : spot.FadeIn ? "Fade in shape" : "Fade out shape",
+            IsEnabled = false,
+        });
+        foreach (var shape in FadeShapes.All)
+        {
+            var item = new MenuItem
+            {
+                Header = FadeShapes.Title(shape),
+                IsCheckable = true,
+                IsChecked = shape == spot.Shape,
+                Icon = FadeShapeIcon(shape, spot.FadeIn, spot.Crossfade),
+            };
+            item.Click += async (_, _) => await SetFadeShapeAsync(spot, shape);
+            menu.Items.Add(item);
+        }
+
+        if (!spot.Crossfade)
+        {
+            menu.Items.Add(new Separator());
+            var remove = new MenuItem { Header = spot.FadeIn ? "Remove fade in" : "Remove fade out" };
+            remove.Click += async (_, _) => await SetClipFadeAsync(spot.Clip, spot.FadeIn, 0);
+            menu.Items.Add(remove);
+        }
+
+        menu.IsOpen = true;
+    }
+
+    /// <summary>A small drawing of a fade's curve (both curves, for a crossfade).</summary>
+    private System.Windows.Shapes.Path FadeShapeIcon(FadeShape shape, bool rising, bool crossfade)
+    {
+        var geometry = new StreamGeometry();
+        using (var g = geometry.Open())
+        {
+            foreach (var up in crossfade ? new[] { false, true } : new[] { rising })
+            {
+                const int steps = 12;
+                for (var i = 0; i <= steps; i++)
+                {
+                    var point = new Point(1 + 14.0 * i / steps, 13 - 12 * FadeShapes.Gain(i / (double)steps, up, shape));
+                    if (i == 0)
+                    {
+                        g.BeginFigure(point, false, false);
+                    }
+                    else
+                    {
+                        g.LineTo(point, true, true);
+                    }
+                }
+            }
+        }
+
+        geometry.Freeze();
+        return new System.Windows.Shapes.Path
+        {
+            Data = geometry,
+            Width = 16,
+            Height = 14,
+            Stroke = (Brush)FindResource("TextBrush"),
+            StrokeThickness = 1.3,
+            StrokeLineJoin = PenLineJoin.Round,
+        };
+    }
+
+    private async Task SetFadeShapeAsync(FadeSpot spot, FadeShape shape)
+    {
+        if (_session is not { } session || spot.Clip >= session.Clips.Count)
+        {
+            return;
+        }
+
+        var selection = Selection;
+        var what = spot.Crossfade ? "Crossfade shape" : "Fade shape";
+        await EditAsync(what, s => s.SetFadeShape(spot.Clip, spot.FadeIn, shape), () => selection);
     }
 
     /// <summary>Trims a clip by one of its edges, or brings back what was trimmed or cut, then selects the clip.</summary>
@@ -587,6 +654,13 @@ public partial class EditorWindow : Window
         if (Waveform.MarkerAt(e.GetPosition(Waveform)) is { } marker)
         {
             ShowMarkerMenu(marker);
+            return;
+        }
+
+        // On a fade or crossfade: its shapes, as in REAPER.
+        if (Waveform.FadeUnder(e.GetPosition(Waveform)) is { } fade)
+        {
+            ShowFadeShapeMenu(fade);
             return;
         }
 
@@ -1173,6 +1247,9 @@ public partial class EditorWindow : Window
                     SetChainBypassed(!_chainBypassed);
                 }
 
+                break;
+            case Key.E when !ctrl:
+                ShowEffects();
                 break;
             case Key.H:
                 ShowHistoryPanel(HistoryPanel.Visibility != Visibility.Visible);

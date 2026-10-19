@@ -115,6 +115,7 @@ public sealed class MilkDropRenderer : IDisposable
         var fit = Math.Min(1.0, MaxImageSize / (double)Math.Max(width, height));
         var imageWidth = Math.Max(16, (int)Math.Round(width * fit));
         var imageHeight = Math.Max(16, (int)Math.Round(height * fit));
+        var shown = visual.Images;
         var images = visual.ImagesFor(commands, imageWidth, imageHeight, time);
         var (meshWidth, meshHeight) = quality switch
         {
@@ -125,71 +126,81 @@ public sealed class MilkDropRenderer : IDisposable
         };
 
         // Everything that can go wrong (the preset's equations) happens before anything is encoded.
+        // The preset moves on at most 60 times a second; on the frames between, its last image is shown again.
         var runner = visual.Runner;
-        var progress = secondsPerVisual > 0 ? (time - visual.StartTime) / secondsPerVisual : 0;
-        runner.Render(new MilkFrameInput(time, deltaTime, progress, imageWidth, imageHeight, meshWidth, meshHeight), Audio);
-        var meshPoints = (runner.MeshWidth + 1) * (runner.MeshHeight + 1);
-        var (meshBuffer, meshOffset) = uploads.Put(runner.Mesh, meshPoints * MilkPresetRunner.MeshFloatsPerVertex);
-        var geometry = runner.Geometry;
-        var (shapeBuffer, shapeOffset) = geometry.VertexCount > 0
-            ? uploads.Put(geometry.Data, geometry.VertexCount * MilkGeometry.FloatsPerVertex)
-            : (meshBuffer, 0UL);
+        var step = runner.StepDue(time, force: images != shown);
+        if (step)
+        {
+            var progress = secondsPerVisual > 0 ? (time - visual.StartTime) / secondsPerVisual : 0;
+            runner.Render(new MilkFrameInput(time, runner.StepDelta, progress, imageWidth, imageHeight, meshWidth, meshHeight), Audio);
+        }
+
         var constants = runner.Constants;
-
-        // 1. Warp last frame's image into this frame's, through the mesh, then 2. the shapes, waves,
-        // borders and motion vectors on top.
-        var target = images.Current;
-        var encoder = BeginPass(commands, target.Texture);
-        encoder.SetViewport(Viewport(target.Width, target.Height));
-        encoder.SetCullMode(MTLCullMode.None);
-        SetConstants(encoder, constants);
-        BindTextures(encoder, images.Previous.Texture, images);
-        encoder.SetRenderPipelineState(visual.Warp ?? _classicWarp);
-        encoder.SetVertexBuffer(meshBuffer, meshOffset, 2);
-        encoder.DrawPrimitives(MTLPrimitiveType.Triangle, 0, (ulong)(runner.MeshWidth * runner.MeshHeight * 6));
-        if (geometry.VertexCount > 0)
+        if (step)
         {
-            encoder.SetVertexBuffer(shapeBuffer, shapeOffset, 3);
-            foreach (var batch in geometry.Batches)
+            var meshPoints = (runner.MeshWidth + 1) * (runner.MeshHeight + 1);
+            var (meshBuffer, meshOffset) = uploads.Put(runner.Mesh, meshPoints * MilkPresetRunner.MeshFloatsPerVertex);
+            var geometry = runner.Geometry;
+            var (shapeBuffer, shapeOffset) = geometry.VertexCount > 0
+                ? uploads.Put(geometry.Data, geometry.VertexCount * MilkGeometry.FloatsPerVertex)
+                : (meshBuffer, 0UL);
+
+            // 1. Warp last frame's image into this frame's, through the mesh, then 2. the shapes, waves,
+            // borders and motion vectors on top.
+            var target = images.Current;
+            var encoder = BeginPass(commands, target.Texture);
+            encoder.SetViewport(Viewport(target.Width, target.Height));
+            encoder.SetCullMode(MTLCullMode.None);
+            SetConstants(encoder, constants);
+            BindTextures(encoder, images.Previous.Texture, images);
+            encoder.SetRenderPipelineState(visual.Warp ?? _classicWarp);
+            encoder.SetVertexBuffer(meshBuffer, meshOffset, 2);
+            encoder.DrawPrimitives(MTLPrimitiveType.Triangle, 0, (ulong)(runner.MeshWidth * runner.MeshHeight * 6));
+            if (geometry.VertexCount > 0)
             {
-                encoder.SetRenderPipelineState(_draw[(batch.Textured ? 2 : 0) + (batch.Additive ? 1 : 0)]);
-                encoder.DrawPrimitives(MTLPrimitiveType.Triangle, (ulong)batch.FirstVertex, (ulong)batch.VertexCount);
+                encoder.SetVertexBuffer(shapeBuffer, shapeOffset, 3);
+                foreach (var batch in geometry.Batches)
+                {
+                    encoder.SetRenderPipelineState(_draw[(batch.Textured ? 2 : 0) + (batch.Additive ? 1 : 0)]);
+                    encoder.DrawPrimitives(MTLPrimitiveType.Triangle, (ulong)batch.FirstVertex, (ulong)batch.VertexCount);
+                }
             }
+
+            encoder.EndEncoding();
+
+            // 3. Blurred copies for the shaders, each from the one before.
+            for (var level = 0; level < images.Blurs.Length; level++)
+            {
+                var source = level == 0 ? target : images.Blurs[level - 1];
+                var blur = images.Blurs[level];
+                var work = images.BlurWork[level];
+                var (min, max) = BlurRange(constants, level);
+                var (sourceMin, sourceMax) = level == 0 ? (0f, 1f) : BlurRange(constants, level - 1);
+                _blurValues[0] = 1f / blur.Width;
+                _blurValues[1] = 1f / blur.Height;
+                _blurValues[2] = sourceMax - sourceMin;
+                _blurValues[3] = sourceMin;
+                _blurValues[4] = 1f / (max - min);
+                _blurValues[5] = -min / (max - min);
+                BlurPass(commands, work, source.Texture, _blurAcross);
+
+                // The second pass reads the first's result as it is.
+                _blurValues[2] = 1f;
+                _blurValues[3] = 0f;
+                BlurPass(commands, blur, work.Texture, _blurDown);
+            }
+
+            images.Swap();
         }
 
-        encoder.EndEncoding();
-
-        // 3. Blurred copies for the shaders, each from the one before.
-        for (var level = 0; level < images.Blurs.Length; level++)
-        {
-            var source = level == 0 ? target : images.Blurs[level - 1];
-            var blur = images.Blurs[level];
-            var work = images.BlurWork[level];
-            var (min, max) = BlurRange(constants, level);
-            var (sourceMin, sourceMax) = level == 0 ? (0f, 1f) : BlurRange(constants, level - 1);
-            _blurValues[0] = 1f / blur.Width;
-            _blurValues[1] = 1f / blur.Height;
-            _blurValues[2] = sourceMax - sourceMin;
-            _blurValues[3] = sourceMin;
-            _blurValues[4] = 1f / (max - min);
-            _blurValues[5] = -min / (max - min);
-            BlurPass(commands, work, source.Texture, _blurAcross);
-
-            // The second pass reads the first's result as it is.
-            _blurValues[2] = 1f;
-            _blurValues[3] = 0f;
-            BlurPass(commands, blur, work.Texture, _blurDown);
-        }
-
-        // 4. The composite, into Lucent's picture.
-        encoder = BeginPass(commands, destination);
-        encoder.SetViewport(Viewport(width, height));
-        SetConstants(encoder, constants);
-        BindTextures(encoder, target.Texture, images);
-        encoder.SetRenderPipelineState(visual.Composite ?? _classicComposite);
-        encoder.DrawPrimitives(MTLPrimitiveType.Triangle, 0, 3);
-        encoder.EndEncoding();
-        images.Swap();
+        // 4. The composite of the newest image (the one just made, if it moved on), into Lucent's picture.
+        var composite = BeginPass(commands, destination);
+        composite.SetViewport(Viewport(width, height));
+        SetConstants(composite, constants);
+        BindTextures(composite, images.Previous.Texture, images);
+        composite.SetRenderPipelineState(visual.Composite ?? _classicComposite);
+        composite.DrawPrimitives(MTLPrimitiveType.Triangle, 0, 3);
+        composite.EndEncoding();
     }
 
     /// <summary>A blur's range (blur1_min and blur1_max...), from the constants: they start at register 19.</summary>

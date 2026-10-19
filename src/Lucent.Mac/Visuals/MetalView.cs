@@ -97,11 +97,50 @@ public sealed class MetalView : NativeControlHost
             UpdateSize();
             // Avalonia hands the new place to AppKit, sometimes later (when AppKit is busy), and a
             // late one can land after a newer one, leaving the view where the layout used to put it
-            // (seen when the windows are first laid out). Handing it over again once things have
-            // settled puts it right.
+            // (seen when the windows are first laid out, and after the first resize). Handing it
+            // over again once things have settled puts it right, and a second look catches a late one.
             _resync?.Dispose();
-            _resync = DispatcherTimer.RunOnce(() => TryUpdateNativeControlPosition(), TimeSpan.FromMilliseconds(300));
+            _resync = DispatcherTimer.RunOnce(() =>
+            {
+                Resync();
+                _resync = DispatcherTimer.RunOnce(Resync, TimeSpan.FromMilliseconds(1200));
+            }, TimeSpan.FromMilliseconds(300));
         }
+    }
+
+    /// <summary>
+    /// Hands the view's place to AppKit again, and if the view still isn't the layout's size (CI has
+    /// seen the hand-over not take, leaving the visuals squashed into the old size), puts the view
+    /// and its holder there directly, as Avalonia would have.
+    /// </summary>
+    private void Resync()
+    {
+        TryUpdateNativeControlPosition();
+        if (_view == IntPtr.Zero || !IsEffectivelyVisible || ViewMatchesLayout())
+        {
+            return;
+        }
+
+        var holder = ObjC.Send(_view, "superview");
+        var top = TopLevel.GetTopLevel(this);
+        if (holder == IntPtr.Zero || top is null || this.TranslatePoint(default, top) is not { } origin)
+        {
+            return;
+        }
+
+        ObjC.Send(_view, "setFrame:", new ObjC.CGRect { Width = Bounds.Width, Height = Bounds.Height });
+        ObjC.Send(holder, "setFrame:", new ObjC.CGRect { X = origin.X, Y = origin.Y, Width = Bounds.Width, Height = Bounds.Height });
+        ObjC.SendVoid(holder, "setHidden:", false);
+    }
+
+    private bool ViewMatchesLayout()
+    {
+        var view = ObjC.ReadValue<ObjC.CGRect>(_view, "frame");
+        var superview = ObjC.Send(_view, "superview");
+        var holder = superview == IntPtr.Zero ? view : ObjC.ReadValue<ObjC.CGRect>(superview, "bounds");
+        static bool Near(double a, double b) => Math.Abs(a - b) < 1.5;
+        return Near(view.Width, Bounds.Width) && Near(view.Height, Bounds.Height)
+            && Near(holder.Width, Bounds.Width) && Near(holder.Height, Bounds.Height);
     }
 
     /// <summary>

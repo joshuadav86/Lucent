@@ -13,6 +13,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Diagnostics;
 using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
@@ -1220,6 +1221,13 @@ public partial class MainWindow : Window
             _settings.AvsVisuals = on;
             _visuals.ShowAvs(on);
         }
+        else if (sender == CrashReportsSwitch)
+        {
+            _settings.SendCrashReports = on;
+            CrashReporter.Enabled = on;
+            _settings.Save();
+            return;
+        }
         else if (sender == ModernAvsSwitch)
         {
             _visuals.UseModernAvs(on);
@@ -1260,6 +1268,7 @@ public partial class MainWindow : Window
         MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;
         AvsSwitch.IsChecked = _settings.AvsVisuals;
         ModernAvsSwitch.IsChecked = _settings.ModernAvs;
+        CrashReportsSwitch.IsChecked = _settings.SendCrashReports;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
     }

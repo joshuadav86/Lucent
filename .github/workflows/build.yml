@@ -171,6 +171,7 @@ jobs:
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
           -p:Version=${{ env.LUCENT_VERSION }}
           -p:SpotifyClientId=${{ secrets.SPOTIFY_CLIENT_ID }}
+          -p:CrashReportDsn=${{ secrets.LUCENT_CRASH_DSN }}
           -o publish
 
       - name: Check the MP3 encoder, plugin helper, WebView2 loader and ONNX Runtime are next to Lucent.exe
@@ -436,7 +437,10 @@ jobs:
   # visuals (and built-in ones they've edited) to Metal. So its library is built here as one universal
   # file for both kinds of Mac, once per DXC version (the result is cached), and ships inside Lucent.app.
   dxc-mac:
-    runs-on: macos-latest
+    # On an Intel Mac: GitHub's Apple silicon Macs are often all busy, and a job waiting for one is
+    # cancelled after about 15 minutes, which held up both Mac builds. This only restores (or, once,
+    # builds) a universal library, so either kind of Mac will do, and the Intel ones have been free.
+    runs-on: macos-15-intel
     env:
       DXC_VERSION: v1.8.2407
     steps:
@@ -577,6 +581,7 @@ jobs:
           -c Release -r ${{ env.RID }} --self-contained true
           -p:Version=${{ env.LUCENT_VERSION }}
           -p:SpotifyClientId=${{ secrets.SPOTIFY_CLIENT_ID }}
+          -p:CrashReportDsn=${{ secrets.LUCENT_CRASH_DSN }}
           -o publish-mac
 
       - name: Make test music

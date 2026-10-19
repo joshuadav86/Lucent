@@ -25,6 +25,14 @@ public sealed class MilkPresetRunner
     /// <summary>Float4 registers in the shader constants; matches the cbuffer in Shaders/MilkDrop.hlsli.</summary>
     public const int ConstantRegisters = 124;
 
+    /// <summary>
+    /// How often a preset moves on a frame. MilkDrop's equations count frames, not seconds (a counter
+    /// that changes colour every frame, a stretch applied every frame), so on a 144 Hz screen they ran
+    /// more than twice as fast as written and some turned into strobes; between steps the last image
+    /// is shown again.
+    /// </summary>
+    public const double FramesPerSecond = 60.0;
+
     public const int ConstantFloats = ConstantRegisters * 4;
 
     /// <summary>Each mesh point: screen x, y (-1..1, y up), where it reads from (u, v), where it is (u, v), rad and ang.</summary>
@@ -141,6 +149,8 @@ public sealed class MilkPresetRunner
     private bool _started;
     private int _frameNumber;
     private double _fps = 60;
+    private double _nextStep = double.NegativeInfinity;
+    private double _lastStep = double.NaN;
     private double _aspectX = 1;
     private double _aspectY = 1;
 
@@ -224,6 +234,8 @@ public sealed class MilkPresetRunner
     {
         _started = false;
         _frameNumber = 0;
+        _nextStep = double.NegativeInfinity;
+        _lastStep = double.NaN;
         Array.Clear(_frame.Values);
         Array.Clear(_pixel.Values);
         foreach (var wave in _waves)
@@ -235,6 +247,35 @@ public sealed class MilkPresetRunner
         {
             shape.Clear();
         }
+    }
+
+    /// <summary>Seconds since the preset last moved on (what to pass as <see cref="MilkFrameInput.DeltaTime"/>).</summary>
+    public double StepDelta { get; private set; } = 1.0 / FramesPerSecond;
+
+    /// <summary>
+    /// Whether it's time (<paramref name="time"/> in seconds) for the preset to move on a frame, at most
+    /// <see cref="FramesPerSecond"/> times a second; <paramref name="force"/> when there's no image to show
+    /// again (it was just made, or remade at a new size). When it is, call <see cref="Render"/>.
+    /// </summary>
+    public bool StepDue(double time, bool force = false)
+    {
+        if (time < _lastStep)
+        {
+            // The clock started again.
+            _nextStep = double.NegativeInfinity;
+            _lastStep = double.NaN;
+        }
+
+        if (!force && time < _nextStep)
+        {
+            return false;
+        }
+
+        // Steady steps, but never a run of catch-up frames after a pause.
+        _nextStep = Math.Max(_nextStep + 1.0 / FramesPerSecond, time - 0.5 / FramesPerSecond);
+        StepDelta = double.IsNaN(_lastStep) ? 1.0 / FramesPerSecond : Math.Clamp(time - _lastStep, 0.0, 0.1);
+        _lastStep = time;
+        return true;
     }
 
     /// <summary>Runs the preset for one frame.</summary>
@@ -679,6 +720,9 @@ public sealed class MilkPresetRunner
             {
                 // 6: a straight wave across the screen at an angle set by the mystery value.
                 // 7: two of them, one per channel, apart by wave_y.
+                // As in MilkDrop, the line sits wave_x away from the centre, measured across it (not
+                // along x): a level line (mystery 0) is moved up and down by wave_x, and a standing one
+                // (mystery 1) sits on the left for wave_x above 0.5.
                 points = 256;
                 var angle = mystery * Math.PI * 0.5;
                 var dirX = Math.Cos(angle);
@@ -688,8 +732,8 @@ public sealed class MilkPresetRunner
                 {
                     var source = line == 0 ? _waveL : _waveR;
                     var apart = mode == 7 ? (line == 0 ? 1 : -1) * (this[V.WaveY] * 0.5) : 0.0;
-                    var originX = (mode == 7 ? 0 : cx) - dirY * apart;
-                    var originY = (mode == 7 ? 0 : cy) + dirX * apart;
+                    var originX = -dirY * (cx + apart);
+                    var originY = dirX * (cx + apart);
                     for (var i = 0; i < points; i++)
                     {
                         var along = (i / (double)(points - 1) * 2 - 1) * 1.5;
