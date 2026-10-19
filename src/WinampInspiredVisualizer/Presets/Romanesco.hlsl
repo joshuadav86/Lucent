@@ -110,15 +110,25 @@ float headTurn()
     return Time * 0.07;
 }
 
-// Distance to the whole head, and how deep in the floret levels the nearest surface is.
-float head(float3 p, out float depthShade)
+// Florets stand no further than this off the cone they grow on, smoothing included.
+static const float FloretReach = 0.52;
+
+// Distance to the whole head, and how deep in the floret levels the nearest surface is, following
+// the florets this many levels down.
+float head(float3 p, out float depthShade, int levels)
 {
     float3 q = p - float3(0.0, 0.55, 0.0);
     q.xz = rotate(q.xz, headTurn());
-    float d = coneDistance(q, 1.0) + 0.05;
-    float scale = 1.0;
+    float cone = coneDistance(q, 1.0);
     depthShade = 0.0;
-    int levels = fractalDepth(3);
+    // Well clear of the cone the florets can't be nearer than this, so they needn't be found.
+    if (cone > FloretReach + 0.1)
+    {
+        return cone - FloretReach;
+    }
+
+    float d = cone + 0.05;
+    float scale = 1.0;
     [loop]
     for (int level = 0; level < levels; level++)
     {
@@ -163,7 +173,14 @@ float head(float3 p, out float depthShade)
 float scene(float3 p)
 {
     float depthShade;
-    return head(p, depthShade);
+    return head(p, depthShade, fractalDepth(3));
+}
+
+// The head with its finest florets left off: shadows are soft enough that they don't show.
+float shadowScene(float3 p)
+{
+    float depthShade;
+    return head(p, depthShade, max(fractalDepth(3) - 1, 1));
 }
 
 float3 sceneNormal(float3 p, float e)
@@ -181,7 +198,7 @@ float softShadow(float3 origin, float3 direction)
     [loop]
     for (int i = 0; i < steps; i++)
     {
-        float d = scene(origin + direction * t);
+        float d = shadowScene(origin + direction * t);
         light = min(light, 9.0 * d / t);
         t += clamp(d, 0.02, 0.25);
         if (light < 0.01 || t > 3.0)
@@ -241,7 +258,7 @@ float3 Render(float2 uv, float2 p)
         {
             float3 at = eye + direction * t;
             float depthShade;
-            head(at, depthShade);
+            head(at, depthShade, fractalDepth(3));
             float3 n = sceneNormal(at, 0.0015);
 
             // Low warm key light, cool sky fill, and a soft rim from behind.

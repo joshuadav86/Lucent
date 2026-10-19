@@ -30,6 +30,48 @@ float3 lightColour(int i)
     return hsv2rgb(hue, 0.75, 1.0) * flash;
 }
 
+// Each band of tiles: the cos and sin of its middle latitude, and how many tiles go round it.
+// Worked out ahead of time, since the haze looks up a tile over a hundred times a pixel.
+static const float3 Bands[Rows] =
+{
+    float3(0.04361939, -0.99904822, 3.0),
+    float3(0.13052619, -0.99144486, 9.0),
+    float3(0.21643961, -0.97629601, 16.0),
+    float3(0.30070580, -0.95371695, 22.0),
+    float3(0.38268343, -0.92387953, 28.0),
+    float3(0.46174861, -0.88701083, 33.0),
+    float3(0.53729961, -0.84339145, 39.0),
+    float3(0.60876143, -0.79335334, 44.0),
+    float3(0.67559021, -0.73727734, 49.0),
+    float3(0.73727734, -0.67559021, 53.0),
+    float3(0.79335334, -0.60876143, 57.0),
+    float3(0.84339145, -0.53729961, 61.0),
+    float3(0.88701083, -0.46174861, 64.0),
+    float3(0.92387953, -0.38268343, 67.0),
+    float3(0.95371695, -0.30070580, 69.0),
+    float3(0.97629601, -0.21643961, 70.0),
+    float3(0.99144486, -0.13052619, 71.0),
+    float3(0.99904822, -0.04361939, 72.0),
+    float3(0.99904822, 0.04361939, 72.0),
+    float3(0.99144486, 0.13052619, 71.0),
+    float3(0.97629601, 0.21643961, 70.0),
+    float3(0.95371695, 0.30070580, 69.0),
+    float3(0.92387953, 0.38268343, 67.0),
+    float3(0.88701083, 0.46174861, 64.0),
+    float3(0.84339145, 0.53729961, 61.0),
+    float3(0.79335334, 0.60876143, 57.0),
+    float3(0.73727734, 0.67559021, 53.0),
+    float3(0.67559021, 0.73727734, 49.0),
+    float3(0.60876143, 0.79335334, 44.0),
+    float3(0.53729961, 0.84339145, 39.0),
+    float3(0.46174861, 0.88701083, 33.0),
+    float3(0.38268343, 0.92387953, 28.0),
+    float3(0.30070580, 0.95371695, 22.0),
+    float3(0.21643961, 0.97629601, 16.0),
+    float3(0.13052619, 0.99144486, 9.0),
+    float3(0.04361939, 0.99904822, 3.0)
+};
+
 // The mirror tile that a direction (in the ball's own turning frame) falls on, as that tile's normal,
 // plus a random number for the tile.
 float3 tileNormal(float3 local, out float tileRandom)
@@ -37,13 +79,15 @@ float3 tileNormal(float3 local, out float tileRandom)
     float bandSize = PI / Rows;
     float latitude = asin(clamp(local.y, -1.0, 1.0));
     float row = clamp(floor((latitude + PI * 0.5) / bandSize), 0.0, Rows - 1.0);
-    float centreLatitude = (row + 0.5) * bandSize - PI * 0.5;
-    float count = max(floor(2.0 * Rows * cos(centreLatitude) + 0.5), 3.0);
+    float3 band = Bands[(int)row];
+    float count = band.z;
     float longitude = atan2(local.z, local.x);
     float column = floor((longitude / (2.0 * PI) + 0.5) * count);
     float centreLongitude = ((column + 0.5) / count - 0.5) * 2.0 * PI;
     tileRandom = hash(float2(row, column));
-    return float3(cos(centreLatitude) * cos(centreLongitude), sin(centreLatitude), cos(centreLatitude) * sin(centreLongitude));
+    float sinLongitude, cosLongitude;
+    sincos(centreLongitude, sinLongitude, cosLongitude);
+    return float3(band.x * cosLongitude, band.y, band.x * sinLongitude);
 }
 
 // What stays the same for every pixel in a frame, worked out once at the start of Render: how far
