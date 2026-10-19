@@ -41,6 +41,7 @@ public static class Program
 
         // Settings, playlists and visuals from before Lucent was renamed come across on the first run.
         AppDataFolder.CopyFromOldName();
+        CrashReports.Start();
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         return 0;

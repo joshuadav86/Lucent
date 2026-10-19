@@ -32,6 +32,7 @@ public static class Program
 
         var app = new App();
         ErrorLog.Watch(app);
+        CrashReports.Start();
         app.InitializeComponent();
         app.Run();
         return 0;

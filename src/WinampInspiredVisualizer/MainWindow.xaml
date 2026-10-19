@@ -221,6 +221,11 @@
                                         <Button x:Name="CheckUpdatesButton" Style="{StaticResource PillButton}" Content="Check for updates"
                                                 ToolTip="Looks for a newer Lucent now instead of waiting for the hourly check" Click="OnCheckForUpdates" />
                                     </StackPanel>
+
+                                    <CheckBox x:Name="CrashReportsSwitch" Style="{StaticResource SwitchToggle}"
+                                              Content="Send crash reports" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                                    <TextBlock Style="{StaticResource OptionHint}"
+                                               Text="If Lucent crashes, it sends what went wrong to its developer the next time it starts, so it can be fixed. Reports say where in Lucent it crashed, its version, your system, and your graphics card. Never your name, your files, or your music." />
                                 </StackPanel>
 
                                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->

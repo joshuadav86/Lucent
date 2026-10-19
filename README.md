@@ -384,6 +384,10 @@ Every push to main replaces the **Latest build** release, and copies of Lucent s
 
 Found something broken? Click **🐞 Report a bug** at the bottom of Lucent's options panel. It opens a [bug report](https://github.com/joshuadav86/Lucid/issues/new?template=bug_report.yml) on GitHub with your Lucent version, Windows version, graphics card, and the last few errors from `%AppData%\Lucent\errors.log` already filled in. Nothing is sent until you check it and click **Create**. You'll need a free GitHub account.
 
+### Crash reports
+
+When Lucent crashes, it sends a crash report to its developer the next time it starts, without asking, so crashes get fixed even when nobody files a bug. A report has where in Lucent it crashed (the exception and its stack, or for a crash inside a graphics driver, what Windows or macOS recorded about it), Lucent's version, the operating system, the graphics card, and the last few entries of `errors.log`. File paths, web addresses, email addresses, and your user and computer names are taken out before anything is kept, so a report never says whose computer it was or what was playing. Reports go to [Sentry](https://sentry.io) and nowhere else. Switch **Send crash reports** off in **Options → Updates** to stop them; any waiting to be sent are deleted. The code is in [`Lucent.Core/Diagnostics`](src/Lucent.Core/Diagnostics). Builds get Sentry's address from the `LUCENT_CRASH_DSN` repository secret; a build without it never keeps or sends a report.
+
 ## Support Lucent
 
 Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86). The coffee cup in Lucent's title bar and the **☕ Buy me a coffee** button at the bottom of its options panel go to the same page.

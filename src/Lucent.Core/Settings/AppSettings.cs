@@ -96,6 +96,9 @@ public sealed class AppSettings
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
 
+    /// <summary>Send a report to Lucent's developer when Lucent crashes, with nothing personal in it.</summary>
+    public bool SendCrashReports { get; set; } = true;
+
     /// <summary>Where each window was last left, by name ("Player", "Visuals", "Queue", "Library").</summary>
     public Dictionary<string, WindowBounds> Windows { get; set; } = new();
 
