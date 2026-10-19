@@ -47,6 +47,53 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
   <key>NSAudioCaptureUsageDescription</key><string>Lucent listens to what other apps are playing so its visuals and analyzer can react to it. Nothing is recorded or sent anywhere.</string>
+  <!-- The music Lucent opens from the Finder (Open With, or as the default player). The same list is in
+       src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg or Opus, so they're declared below. -->
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key><string>Music file</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>LSHandlerRank</key><string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>public.mp3</string>
+        <string>com.microsoft.waveform-audio</string>
+        <string>org.xiph.flac</string>
+        <string>public.mpeg-4-audio</string>
+        <string>com.apple.m4a-audio</string>
+        <string>public.aac-audio</string>
+        <string>com.microsoft.windows-media-wma</string>
+        <string>public.aiff-audio</string>
+        <string>public.aifc-audio</string>
+        <string>org.xiph.ogg-audio</string>
+        <string>org.xiph.opus</string>
+      </array>
+    </dict>
+  </array>
+  <key>UTImportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key><string>org.xiph.ogg-audio</string>
+      <key>UTTypeDescription</key><string>Ogg Vorbis audio</string>
+      <key>UTTypeConformsTo</key><array><string>public.audio</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>ogg</string><string>oga</string></array>
+        <key>public.mime-type</key><array><string>audio/ogg</string></array>
+      </dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key><string>org.xiph.opus</string>
+      <key>UTTypeDescription</key><string>Opus audio</string>
+      <key>UTTypeConformsTo</key><array><string>public.audio</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>opus</string></array>
+        <key>public.mime-type</key><array><string>audio/opus</string></array>
+      </dict>
+    </dict>
+  </array>
   <key>NSAppleEventsUsageDescription</key><string>Lucent shows what the Music app is playing and controls play, pause, skip and seek from its player.</string>
 </dict>
 </plist>
