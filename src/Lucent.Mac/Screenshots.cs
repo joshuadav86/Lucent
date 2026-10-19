@@ -40,6 +40,7 @@ public static class Screenshots
         ("Player-Options-Visuals", () => PreviewOptions("Visuals")),
         ("Player-Options-Sound", () => PreviewOptions("Sound")),
         ("Player-Options-Look", () => PreviewOptions("Theme")),
+        ("Player-Options-Updates", () => PreviewOptions("Updates")),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
