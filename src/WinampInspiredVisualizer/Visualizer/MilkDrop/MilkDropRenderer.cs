@@ -116,6 +116,7 @@ internal sealed class MilkDropRenderer : IDisposable
         var fit = Math.Min(1.0, MaxImageSize / (double)Math.Max(width, height));
         var imageWidth = Math.Max(16, (int)Math.Round(width * fit));
         var imageHeight = Math.Max(16, (int)Math.Round(height * fit));
+        var shown = visual.Images;
         var images = visual.ImagesFor(_device, context, imageWidth, imageHeight, time);
         var (meshWidth, meshHeight) = quality switch
         {
@@ -125,19 +126,16 @@ internal sealed class MilkDropRenderer : IDisposable
             _ => (96, 72),
         };
 
+        // The preset moves on at most 60 times a second; on the frames between, its last image is shown again.
         var runner = visual.Runner;
-        var progress = secondsPerVisual > 0 ? (time - visual.StartTime) / secondsPerVisual : 0;
-        runner.Render(new MilkFrameInput(time, deltaTime, progress, imageWidth, imageHeight, meshWidth, meshHeight), Audio);
-
-        context.UpdateSubresource(runner.Constants, _constants, 0, 0, 0, null);
-        var meshPoints = (runner.MeshWidth + 1) * (runner.MeshHeight + 1);
-        _mesh = Upload(_mesh, runner.Mesh, meshPoints, MeshStride);
-        var geometry = runner.Geometry;
-        if (geometry.VertexCount > 0)
+        var step = runner.StepDue(time, force: images != shown);
+        if (step)
         {
-            _shapes = Upload(_shapes, geometry.Data, geometry.VertexCount, DrawStride);
+            var progress = secondsPerVisual > 0 ? (time - visual.StartTime) / secondsPerVisual : 0;
+            runner.Render(new MilkFrameInput(time, runner.StepDelta, progress, imageWidth, imageHeight, meshWidth, meshHeight), Audio);
         }
 
+        context.UpdateSubresource(runner.Constants, _constants, 0, 0, 0, null);
         UnbindTextures();
         context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         context.RSSetState(_noCulling);
@@ -148,65 +146,81 @@ internal sealed class MilkDropRenderer : IDisposable
         context.PSSetSamplers(0, _samplers);
         context.PSSetShaderResources(4, _noiseViews);
 
-        // 1. Warp last frame's image into this frame's, through the mesh.
-        var target = images.Current;
-        context.OMSetRenderTargets(target.Target, null);
-        context.RSSetViewport(0, 0, target.Width, target.Height, 0, 1);
-        context.PSSetShaderResource(0, images.Previous.Resource);
-        BindBlurs(images);
-        context.VSSetShader(_warpVertices);
-        context.VSSetShaderResource(12, _mesh.View);
-        context.PSSetShader(visual.Warp ?? _classicWarp);
-        context.Draw((uint)(runner.MeshWidth * runner.MeshHeight * 6), 0);
-
-        // 2. The shapes, waves, borders and motion vectors on top.
-        if (geometry.VertexCount > 0)
+        if (step)
         {
-            context.VSSetShader(_drawVertices);
-            context.VSSetShaderResource(13, _shapes!.View);
-            foreach (var batch in geometry.Batches)
+            var meshPoints = (runner.MeshWidth + 1) * (runner.MeshHeight + 1);
+            _mesh = Upload(_mesh, runner.Mesh, meshPoints, MeshStride);
+            var geometry = runner.Geometry;
+            if (geometry.VertexCount > 0)
             {
-                context.OMSetBlendState(batch.Additive ? _additiveBlend : _alphaBlend);
-                context.PSSetShader(batch.Textured ? _drawTextured : _draw);
-                context.Draw((uint)batch.VertexCount, (uint)batch.FirstVertex);
+                _shapes = Upload(_shapes, geometry.Data, geometry.VertexCount, DrawStride);
             }
 
-            context.OMSetBlendState(null);
+            // 1. Warp last frame's image into this frame's, through the mesh.
+            var target = images.Current;
+            context.OMSetRenderTargets(target.Target, null);
+            context.RSSetViewport(0, 0, target.Width, target.Height, 0, 1);
+            context.PSSetShaderResource(0, images.Previous.Resource);
+            BindBlurs(images);
+            context.VSSetShader(_warpVertices);
+            context.VSSetShaderResource(12, _mesh.View);
+            context.PSSetShader(visual.Warp ?? _classicWarp);
+            context.Draw((uint)(runner.MeshWidth * runner.MeshHeight * 6), 0);
+
+            // 2. The shapes, waves, borders and motion vectors on top.
+            if (geometry.VertexCount > 0)
+            {
+                context.VSSetShader(_drawVertices);
+                context.VSSetShaderResource(13, _shapes!.View);
+                foreach (var batch in geometry.Batches)
+                {
+                    context.OMSetBlendState(batch.Additive ? _additiveBlend : _alphaBlend);
+                    context.PSSetShader(batch.Textured ? _drawTextured : _draw);
+                    context.Draw((uint)batch.VertexCount, (uint)batch.FirstVertex);
+                }
+
+                context.OMSetBlendState(null);
+            }
+
+            // 3. Blurred copies for the shaders, each from the one before.
+            context.VSSetShader(_screenVertices);
+            UnbindTextures();
+            context.PSSetShaderResources(4, _noiseViews);
+            var constants = runner.Constants;
+            for (var level = 0; level < images.Blurs.Length; level++)
+            {
+                var source = level == 0 ? target : images.Blurs[level - 1];
+                var blur = images.Blurs[level];
+                var work = images.BlurWork[level];
+                var (min, max) = BlurRange(constants, level);
+                var (sourceMin, sourceMax) = level == 0 ? (0f, 1f) : BlurRange(constants, level - 1);
+                _blurValues[0] = 1f / blur.Width;
+                _blurValues[1] = 1f / blur.Height;
+                _blurValues[2] = sourceMax - sourceMin;
+                _blurValues[3] = sourceMin;
+                _blurValues[4] = 1f / (max - min);
+                _blurValues[5] = -min / (max - min);
+                context.UpdateSubresource(_blurValues, _blurConstants, 0, 0, 0, null);
+                context.RSSetViewport(0, 0, blur.Width, blur.Height, 0, 1);
+                Pass(work.Target, source.Resource, _blurAcross);
+
+                // The second pass reads the first's result as it is.
+                _blurValues[2] = 1f;
+                _blurValues[3] = 0f;
+                context.UpdateSubresource(_blurValues, _blurConstants, 0, 0, 0, null);
+                Pass(blur.Target, work.Resource, _blurDown);
+            }
+
+            images.Swap();
         }
 
-        // 3. Blurred copies for the shaders, each from the one before.
+        // 4. The composite of the newest image (the one just made, if it moved on), into Lucent's picture.
         context.VSSetShader(_screenVertices);
         UnbindTextures();
         context.PSSetShaderResources(4, _noiseViews);
-        var constants = runner.Constants;
-        for (var level = 0; level < images.Blurs.Length; level++)
-        {
-            var source = level == 0 ? target : images.Blurs[level - 1];
-            var blur = images.Blurs[level];
-            var work = images.BlurWork[level];
-            var (min, max) = BlurRange(constants, level);
-            var (sourceMin, sourceMax) = level == 0 ? (0f, 1f) : BlurRange(constants, level - 1);
-            _blurValues[0] = 1f / blur.Width;
-            _blurValues[1] = 1f / blur.Height;
-            _blurValues[2] = sourceMax - sourceMin;
-            _blurValues[3] = sourceMin;
-            _blurValues[4] = 1f / (max - min);
-            _blurValues[5] = -min / (max - min);
-            context.UpdateSubresource(_blurValues, _blurConstants, 0, 0, 0, null);
-            context.RSSetViewport(0, 0, blur.Width, blur.Height, 0, 1);
-            Pass(work.Target, source.Resource, _blurAcross);
-
-            // The second pass reads the first's result as it is.
-            _blurValues[2] = 1f;
-            _blurValues[3] = 0f;
-            context.UpdateSubresource(_blurValues, _blurConstants, 0, 0, 0, null);
-            Pass(blur.Target, work.Resource, _blurDown);
-        }
-
-        // 4. The composite, into Lucent's picture.
         context.OMSetRenderTargets(destination, null);
         context.RSSetViewport(0, 0, width, height, 0, 1);
-        context.PSSetShaderResource(0, target.Resource);
+        context.PSSetShaderResource(0, images.Previous.Resource);
         BindBlurs(images);
         context.PSSetShader(visual.Composite ?? _classicComposite);
         context.Draw(3, 0);
@@ -215,7 +229,6 @@ internal sealed class MilkDropRenderer : IDisposable
         context.VSSetShaderResource(12, null!);
         context.VSSetShaderResource(13, null!);
         context.RSSetState(null);
-        images.Swap();
     }
 
     /// <summary>A blur's range (blur1_min and blur1_max...), from the constants: they start at register 19.</summary>
