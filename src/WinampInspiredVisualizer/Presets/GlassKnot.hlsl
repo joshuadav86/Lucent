@@ -11,6 +11,9 @@ static const float KnotLoop = 0.46;     // how far it swings out from that ring
 static const float FloorHeight = -1.35;
 static const int Strips = 8;
 static const float StripDistance = 6.0;
+// The tube's middle never strays further than KnotRadius + KnotLoop from the centre, so the whole
+// knot, tube and all (it swells a little with the bass), fits in a sphere this big.
+static const float KnotReach = KnotRadius + KnotLoop + 0.3;
 
 float tubeRadius()
 {
@@ -109,6 +112,12 @@ float3 studio(float3 origin, float3 direction)
 // shape of the knot's shadow.
 float3 caustics(float3 position)
 {
+    // Out beyond the knot's shadow there are none, and the knot needn't be looked for.
+    if (dot(position.xz, position.xz) > KnotReach * KnotReach)
+    {
+        return 0.0;
+    }
+
     // The knot's shadow shape: the nearest of three slices through it.
     float d = min(knot(float3(position.x, -0.45, position.z)), min(knot(float3(position.x, 0.0, position.z)), knot(float3(position.x, 0.45, position.z)))) / 0.8 + tubeRadius();
     float edge = exp(-abs(d - tubeRadius() * 0.55) * 18.0);
@@ -141,7 +150,16 @@ float3 surroundings(float3 origin, float3 direction)
 // March a ray from outside towards the knot. Returns the distance, or -1 for a miss.
 float marchOutside(float3 origin, float3 direction, float limit, int steps)
 {
-    float t = 0.0;
+    // Start where the ray enters the knot's bounding sphere, and skip rays that miss it, which is
+    // most of the picture, rather than creeping past the knot's edge step by step.
+    float b = dot(origin, direction);
+    float h = b * b - dot(origin, origin) + KnotReach * KnotReach;
+    if (h < 0.0)
+    {
+        return -1.0;
+    }
+    float t = max(-b - sqrt(h), 0.0);
+    limit = min(limit, -b + sqrt(h));
     [loop]
     for (int i = 0; i < steps; i++)
     {

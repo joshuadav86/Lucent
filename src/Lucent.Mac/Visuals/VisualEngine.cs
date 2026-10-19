@@ -1160,8 +1160,9 @@ public sealed partial class VisualEngine : IDisposable
             var description = MTLTextureDescriptor.Texture2DDescriptor(MTLPixelFormat.BGRA8Unorm, (ulong)width, (ulong)height, false);
             description.Usage = MTLTextureUsage.ShaderRead;
             description.StorageMode = MTLStorageMode.Shared;
+            // The descriptor is autoreleased, so it isn't disposed here: releasing it as well crashed the app
+            // when the autorelease pool emptied, as soon as the first AVS preset came on screen.
             var made = device.NewTexture(description);
-            description.Dispose();
             _avsPictures[frameSlot] = made;
             return made;
         }
