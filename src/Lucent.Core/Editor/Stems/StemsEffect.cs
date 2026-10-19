@@ -58,7 +58,7 @@ public sealed class StemsEffect : IAudioEffect
     {
         var stems = StemCache.Split(input, context.Report, context.Cancellation);
         var splitter = StemModel.Splitter;
-        context.Note = $"{Description}: done, split on the {splitter.Device}. {(OperatingSystem.IsMacOS() ? "⌘Z" : "Ctrl+Z")} undoes it.";
+        context.Note = $"{Description}: done. {splitter.DeviceNote} {(OperatingSystem.IsMacOS() ? "⌘Z" : "Ctrl+Z")} undoes it.";
         return stems.Mix(Keep);
     }
 }

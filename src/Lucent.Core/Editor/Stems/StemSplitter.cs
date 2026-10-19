@@ -58,6 +58,13 @@ public sealed class StemSplitter : IDisposable
 
     public bool OnGraphicsCard => Device != ProcessorName;
 
+    /// <summary>What did the splitting, and why not the graphics card if it wasn't, for people to read.</summary>
+    public string DeviceNote => OnGraphicsCard
+        ? "Split on the graphics card."
+        : GraphicsCardProblem is { } problem
+            ? $"Split on the processor, because the graphics card couldn't be used: {problem}."
+            : "Split on the processor.";
+
     private const string ProcessorName = "processor";
 
     /// <summary>Why the graphics card wasn't used, when it was tried and couldn't run the model.</summary>
@@ -103,7 +110,7 @@ public sealed class StemSplitter : IDisposable
                             return graphics;
                         }
 
-                        problem ??= graphics.GraphicsCardProblem ?? $"its stems came out {difference:0} dB off the processor's";
+                        problem ??= graphics.GraphicsCardProblem ?? $"its stems came out wrong, {difference:+0;-0} dB off the processor's";
                     }
                     catch (Exception ex) when (ex is OnnxRuntimeException or EntryPointNotFoundException or DllNotFoundException or NotSupportedException)
                     {

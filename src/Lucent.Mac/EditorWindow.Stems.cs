@@ -122,9 +122,15 @@ public partial class EditorWindow
             return;
         }
 
+        ShowStemsWindow(stems);
+    }
+
+    /// <summary>Opens the stems in their own window, replacing any stems window already open.</summary>
+    private void ShowStemsWindow(StemSet stems)
+    {
         _stemsWindow?.Close();
         var song = Path.GetFileNameWithoutExtension(_path) + (Selection.IsEmpty ? string.Empty : " (selection)");
-        var window = new StemsWindow(stems, song, KeepStemsAsync, SaveStemsAsync);
+        var window = new StemsWindow(stems, song, StemModel.Splitter.DeviceNote, KeepStemsAsync, SaveStemsAsync);
         _stemsWindow = window;
         window.Closed += (_, _) =>
         {
@@ -134,7 +140,7 @@ public partial class EditorWindow
             }
         };
         window.Show(this);
-        ShowStatus($"Split into stems on the {StemModel.Splitter.Device}. Mute or solo them to hear each one.");
+        ShowStatus($"{StemModel.Splitter.DeviceNote} Mute or solo the stems to hear each one.");
     }
 
     /// <summary>From the stems window: keeps the stems being heard, as Apply in the popup does.</summary>
@@ -167,11 +173,12 @@ public partial class EditorWindow
         var folder = StemFiles.NewFolderFor(_path);
         var source = _path;
         IReadOnlyList<string> files = Array.Empty<string>();
+        StemSet? stems = null;
         var ok = await RunBusyAsync("Splitting into stems…", async (progress, token) =>
         {
             await Task.Run(() =>
             {
-                var stems = StemCache.Split(audio, fraction => progress.Report(0.85 * fraction), token);
+                stems = StemCache.Split(audio, fraction => progress.Report(0.85 * fraction), token);
                 files = StemFiles.Save(stems, source, folder, options, fraction => progress.Report(0.85 + 0.15 * fraction), token);
             }, token);
         });
@@ -181,8 +188,14 @@ public partial class EditorWindow
             _lastSavedPath = files[0];
             ShowFileButton.IsVisible = true;
             var part = Selection.IsEmpty ? string.Empty : "the selection's ";
-            ShowStatus($"Saved {part}vocals, drums, bass and other instruments as {options.Summary} in \"{Path.GetFileName(folder)}\", " +
-                       $"split on the {StemModel.Splitter.Device}.");
+            // Saved from the popup: open the stems to listen to as well (from the stems window, it's already open).
+            if (_stemsWindow is null && stems is not null)
+            {
+                ShowStemsWindow(stems);
+            }
+
+            ShowStatus($"Saved {part}vocals, drums, bass and other instruments as {options.Summary} in \"{Path.GetFileName(folder)}\". " +
+                       StemModel.Splitter.DeviceNote);
         }
     }
 

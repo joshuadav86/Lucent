@@ -28,13 +28,14 @@ public partial class StemsWindow : Window
     private readonly List<StemRow> _rows = new();
     private int _position;
 
-    public StemsWindow(StemSet stems, string song, Func<IReadOnlyList<string>, Task> keep, Func<Task> save)
+    public StemsWindow(StemSet stems, string song, string note, Func<IReadOnlyList<string>, Task> keep, Func<Task> save)
     {
         InitializeComponent();
         _mixer = new StemMixer(stems);
         _keep = keep;
         _save = save;
         SongText.Text = song;
+        NoteText.Text = note;
         Title = $"Stems of {song} - Lucent";
 
         for (var s = 0; s < _mixer.Sources.Count; s++)
