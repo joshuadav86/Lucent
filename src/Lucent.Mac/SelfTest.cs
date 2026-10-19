@@ -46,6 +46,7 @@ public static partial class SelfTest
     private const int RecordingFrameRate = 30;
     private static readonly TimeSpan RecordingFrom = TimeSpan.FromSeconds(0.5);
     private static readonly TimeSpan RecordingTo = TimeSpan.FromSeconds(2.5);
+    private static readonly TimeSpan RecordingTimeLimit = TimeSpan.FromMinutes(3);
 
     public static int Run(string[] args)
     {
@@ -437,7 +438,19 @@ public static partial class SelfTest
             };
             var stages = new StageLog();
             var stopwatch = Stopwatch.StartNew();
-            var result = VideoRecorder.RecordAsync(options, stages, CancellationToken.None, files).GetAwaiter().GetResult();
+            // GitHub's virtual Macs have been seen to stall while encoding, so a stuck recording is
+            // cancelled, and then given up on, rather than holding the runner for hours.
+            using var cancel = new CancellationTokenSource(RecordingTimeLimit);
+            var recording = Task.Run(() => VideoRecorder.RecordAsync(options, stages, cancel.Token, files));
+            if (!recording.Wait(RecordingTimeLimit + TimeSpan.FromSeconds(30)))
+            {
+                var last = stages.Seen.LastOrDefault() ?? "before it reported anything";
+                Console.WriteLine($"::error::Recording a video didn't finish in {RecordingTimeLimit.TotalMinutes:0} minutes. "
+                    + $"The last stage it reached was: {last}");
+                return 1;
+            }
+
+            var result = recording.GetAwaiter().GetResult();
             Console.WriteLine($"Recorded {presets[index].Name} at {RecordingWidth} x {RecordingHeight}, {RecordingFrameRate} fps: "
                 + $"{result.Length.TotalSeconds:0.00} s of video in {stopwatch.Elapsed.TotalSeconds:0.0} s. {result.Note}");
             foreach (var stage in stages.Seen.Where(stage => stage.Contains("starting again", StringComparison.Ordinal)))
