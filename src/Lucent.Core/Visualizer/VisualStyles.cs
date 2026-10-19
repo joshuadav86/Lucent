@@ -29,6 +29,7 @@ public static class VisualStyles
     public static IReadOnlyList<string> Tags { get; } = new[]
     {
         "Calm", "Intense", "Colourful", "Dark", "Neon", "Space", "Water", "Fire", "Geometric", "Minimal", "Retro", "3D", ParticlesTag,
+        MilkDropFamily, AvsFamily,
     };
 
     // Other spellings that mean the same thing, so "Colorful" or "Raytraced" still land in the right place.
