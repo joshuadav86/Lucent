@@ -21,8 +21,8 @@ internal static class LayoutCheck
 {
     private static readonly (double Width, double Height)[] Sizes =
     {
-        // The last one fits on the runners' small screens: a window taller than the screen is shrunk
-        // to fit when Lucent reopens, which the reopened run would count as moved.
+        // The last one fits on the runners' small screens, where the reopened run checks it came back
+        // the same size.
         (820, 560), (700, 900), (1000, 420), (500, 1000), (860, 480),
     };
 
@@ -65,6 +65,12 @@ internal static class LayoutCheck
                 failed |= !matched;
                 lines.Add(line);
             }
+
+            // Off the player's top edge, so it isn't docked beside it: docked there, the visuals are
+            // stretched to the bottom of the column under the player when Lucent reopens, which the
+            // reopened run would count as moved.
+            visuals.SetTop(visuals.Top() + 40);
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
 
             lines.AddRange(CheckAppMenu());
             lines.AddRange(await CheckMinimizeAsync(main));

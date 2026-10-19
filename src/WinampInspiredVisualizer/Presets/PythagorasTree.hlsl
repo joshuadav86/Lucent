@@ -14,14 +14,13 @@ float treeAngle(int depth)
     return baseAngle + 0.07 * sin(Time * 0.7 - d * 0.55) + 0.03 * sin(Time * 1.3 - d * 1.1);
 }
 
-float3 treeBranchColour(float depth01, float hue)
+float3 treeBranchColour(float depth01, float3 shifted)
 {
     // Deep teal trunk, through jade and sea green, to warm gold near the tips.
     float3 trunk = float3(0.05, 0.32, 0.42);
     float3 middle = float3(0.18, 0.65, 0.55);
     float3 tips = float3(1.0, 0.72, 0.38);
     float3 c = depth01 < 0.6 ? lerp(trunk, middle, depth01 / 0.6) : lerp(middle, tips, (depth01 - 0.6) / 0.4);
-    float3 shifted = hsv2rgb(frac(0.47 + hue), 0.6, 0.6);
     return lerp(c, shifted, 0.15);
 }
 
@@ -42,6 +41,8 @@ float3 drawTree(float2 q, float px, float hue, float pulseDepth, int maxDepth)
         leafId[slot] = 0.0;
         stage[slot] = 0;
     }
+    // The slowly turning tint every branch takes a little of: the same for the whole tree.
+    float3 shifted = hsv2rgb(frac(0.47 + hue), 0.6, 0.6);
     float baseSide = 0.36;
     corner[0] = float2(-baseSide * 0.5, -0.74);
     edge[0] = float2(baseSide, 0.0);
@@ -65,24 +66,30 @@ float3 drawTree(float2 q, float px, float hue, float pulseDepth, int maxDepth)
             float2 box = abs(local) - 0.5;
             float dist = (length(max(box, 0.0)) + min(max(box.x, box.y), 0.0)) * side;   // signed, world units
             float depth01 = (float)depth / (float)maxDepth;
-            float3 tint = treeBranchColour(depth01, hue);
-            float pulse = exp(-abs((float)depth - pulseDepth) * 0.9) * Beat;
-            float inside = saturate(0.5 - dist / px);
-            float rimLine = saturate(1.0 - abs(dist) / px * 0.9);
-            float halo = exp(-max(dist, 0.0) / (side * 0.08 + px));
-            // Glass fill: darker in the middle, lighter towards the rim, lit from the top left.
-            float shade = 0.35 + 0.65 * saturate(max(abs(local.x), abs(local.y)) * 2.0);
-            shade *= 0.8 + 0.4 * saturate(0.5 - local.x * 0.6 + local.y * 0.6);
-            float3 fill = tint * shade * (0.16 + 0.1 * Bass);
-            colour = lerp(colour, fill, inside * 0.8);
-            colour += tint * rimLine * (0.45 + 0.35 * Bass + 1.2 * pulse) * lerp(1.0, 0.65, depth01);
-            colour += tint * halo * 0.03 * (1.0 + 3.0 * pulse);
+            // Most squares a pixel visits are far from it, and past twelve of a square's glow widths
+            // its fill, rim and glow come to nothing, so those skip the painting.
+            if (dist < (side * 0.08 + px) * 12.0)
+            {
+                float3 tint = treeBranchColour(depth01, shifted);
+                float pulse = exp(-abs((float)depth - pulseDepth) * 0.9) * Beat;
+                float inside = saturate(0.5 - dist / px);
+                float rimLine = saturate(1.0 - abs(dist) / px * 0.9);
+                float halo = exp(-max(dist, 0.0) / (side * 0.08 + px));
+                // Glass fill: darker in the middle, lighter towards the rim, lit from the top left.
+                float shade = 0.35 + 0.65 * saturate(max(abs(local.x), abs(local.y)) * 2.0);
+                shade *= 0.8 + 0.4 * saturate(0.5 - local.x * 0.6 + local.y * 0.6);
+                float3 fill = tint * shade * (0.16 + 0.1 * Bass);
+                colour = lerp(colour, fill, inside * 0.8);
+                colour += tint * rimLine * (0.45 + 0.35 * Bass + 1.2 * pulse) * lerp(1.0, 0.65, depth01);
+                colour += tint * halo * 0.03 * (1.0 + 3.0 * pulse);
+            }
 
             // Blossoms of light on the finest twigs.
-            if (depth >= maxDepth - 1)
+            float2 centre = o + (u + v) * 0.5;
+            float r = length(q - centre);
+            // A blossom is at most 1.8 sides across; four of those out it has faded to nothing.
+            if (depth >= maxDepth - 1 && r < side * 7.2)
             {
-                float2 centre = o + (u + v) * 0.5;
-                float r = length(q - centre);
                 float note = frac(leafId[depth] * 0.618034);
                 float loud = spectrum(0.05 + note * 0.8);
                 float twinkle = 0.6 + 0.4 * sin(Time * (2.0 + note * 3.0) + note * 40.0);

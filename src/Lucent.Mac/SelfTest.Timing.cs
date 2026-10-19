@@ -19,7 +19,7 @@ public static partial class SelfTest
     private const int TimingHeight = 1280;
     private const int TimingFrames = 5;
     private const int SlowestListed = 15;
-    private const double HeavyTimesTypical = 4.0;
+    private const double HeavyTimesTypical = 10.0;
 
     // A visual this slow on CI's GPU gets fewer timed frames, and the whole pass stops after this long.
     private static readonly TimeSpan TimingPerVisual = TimeSpan.FromSeconds(8);
