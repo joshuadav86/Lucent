@@ -8,12 +8,19 @@ namespace WinampInspiredVisualizer.Editor;
 /// <param name="HiddenAfter">How much audio is hidden after its end.</param>
 /// <param name="FadeIn">How long its fade in is, in frames (0 for none).</param>
 /// <param name="FadeOut">How long its fade out is.</param>
-public sealed record ClipEdges(FrameRange Range, bool Silent, int HiddenBefore, int HiddenAfter, int FadeIn, int FadeOut);
+/// <param name="CrossfadeBefore">
+/// How far the clip before it overlaps its start (0 for none): the clip's own start is hidden under the end of
+/// that one, and the two crossfade over that stretch, just before <see cref="ClipEdges.Range"/> starts.
+/// </param>
+/// <param name="CrossfadeAfter">How far it overlaps the clip after it, crossfading into it over its own last frames.</param>
+public sealed record ClipEdges(FrameRange Range, bool Silent, int HiddenBefore, int HiddenAfter, int FadeIn, int FadeOut,
+    FadeShape FadeInShape = FadeShape.SCurve, FadeShape FadeOutShape = FadeShape.SCurve, int CrossfadeBefore = 0, int CrossfadeAfter = 0);
 
 /// <summary>
 /// Editing clips by their edges, the way a DAW does: dragging an edge in trims the clip, leaving silence, and
 /// dragging it back out brings the trimmed audio back. Each clip also has a fade in and a fade out that can be
-/// changed as often as wanted, since the audio from before the fade is kept.
+/// changed as often as wanted, since the audio from before the fade is kept, and given another shape. Where a
+/// clip is slid over the one next to it, the two crossfade (see EditSession.Slide.cs).
 /// </summary>
 public sealed partial class EditSession
 {
@@ -26,11 +33,19 @@ public sealed partial class EditSession
             var details = new List<ClipEdges>(clips.Count);
             foreach (var clip in clips)
             {
+                var fadeIn = FadeAt(clip.Start, fadeIn: true);
+                var fadeOut = FadeAt(clip.End, fadeIn: false);
+                var crossfadeIn = CrossfadeInto(clip.Start);
+                var crossfadeOut = fadeOut is { Crossfade: true } ? fadeOut : null;
                 details.Add(new ClipEdges(clip, IsSilent(clip),
                     HiddenAt(clip.Start, before: true)?.Frames ?? 0,
                     HiddenAt(clip.End, before: false)?.Frames ?? 0,
-                    FadeAt(clip.Start, fadeIn: true)?.Length ?? 0,
-                    FadeAt(clip.End, fadeIn: false)?.Length ?? 0));
+                    fadeIn?.Length ?? 0,
+                    crossfadeOut is null ? fadeOut?.Length ?? 0 : 0,
+                    crossfadeIn?.Shape ?? fadeIn?.Shape ?? FadeShape.SCurve,
+                    fadeOut?.Shape ?? FadeShape.SCurve,
+                    crossfadeIn?.Length ?? 0,
+                    crossfadeOut?.Length ?? 0));
             }
 
             return details;
@@ -52,13 +67,21 @@ public sealed partial class EditSession
             : RenderClip(frame > clip.End ? "Extend clip" : "Trim clip", clipIndex, clip.Start, frame, fadeIn, fadeOut, keepEnd: false);
     }
 
-    /// <summary>Sets how long a clip's fade in (or out) is, in frames; 0 takes it away. Returns how long it came out.</summary>
+    /// <summary>
+    /// Sets how long a clip's fade in (or out) is, in frames; 0 takes it away. Returns how long it came out. A
+    /// crossfade stays as long as the clips overlap (sliding a clip changes it).
+    /// </summary>
     public int SetClipFade(int clipIndex, bool fadeIn, int frames)
     {
         var clip = Clips[clipIndex];
-        if (IsSilent(clip))
+        if (IsSilent(clip) || (fadeIn && CrossfadeInto(clip.Start) is not null))
         {
             return 0;
+        }
+
+        if (!fadeIn && FadeAt(clip.End, fadeIn: false) is { Crossfade: true } crossfade)
+        {
+            return crossfade.Length;
         }
 
         var currentIn = FadeAt(clip.Start, fadeIn: true)?.Length ?? 0;
@@ -75,13 +98,43 @@ public sealed partial class EditSession
     }
 
     /// <summary>
+    /// Gives a clip's fade in (or out) another shape. A clip that starts with a crossfade gives the crossfade the
+    /// shape (it belongs to the clip before). Returns false when there's no fade there.
+    /// </summary>
+    public bool SetFadeShape(int clipIndex, bool fadeIn, FadeShape shape)
+    {
+        var clips = Clips;
+        var clip = clips[clipIndex];
+        if (fadeIn && CrossfadeInto(clip.Start) is not null && clipIndex > 0)
+        {
+            return SetFadeShape(clipIndex - 1, fadeIn: false, shape);
+        }
+
+        if (FadeAt(fadeIn ? clip.Start : clip.End, fadeIn) is not { } fade)
+        {
+            return false;
+        }
+
+        if (fade.Shape != shape)
+        {
+            var inFade = FadeAt(clip.Start, fadeIn: true);
+            var outFade = FadeAt(clip.End, fadeIn: false);
+            RenderClip(fade.Crossfade ? "Crossfade shape" : "Fade shape", clipIndex, clip.Start, clip.End,
+                inFade?.Length ?? 0, outFade?.Length ?? 0, keepEnd: !fadeIn,
+                fadeIn ? shape : inFade?.Shape, fadeIn ? outFade?.Shape : shape);
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Moves the split between two clips that touch, so one gets longer as the other gets shorter and no audio is
     /// lost. Fades at the split stay in the audio where they are.
     /// </summary>
     public void MoveSplit(int split, int frame)
     {
         var index = _splits.IndexOf(split);
-        if (index < 0)
+        if (index < 0 || CrossfadeInto(split) is not null)
         {
             return;
         }
@@ -103,8 +156,13 @@ public sealed partial class EditSession
     /// lays it out again between new edges with new fades. Whatever it leaves becomes silence, and whatever falls
     /// outside the new edges is hidden behind them. The edges can't go past the silence either side.
     /// </summary>
+    /// <remarks>
+    /// An edge with a crossfade stays where it is (the clips overlap there): sliding the clip changes it. The
+    /// crossfade at its end is mixed in again with the start of the next clip, hidden under it.
+    /// </remarks>
     /// <param name="keepEnd">When the fades don't both fit, the one at this end keeps its length (true for the end).</param>
-    private FrameRange RenderClip(string description, int clipIndex, int newStart, int newEnd, int fadeIn, int fadeOut, bool keepEnd)
+    private FrameRange RenderClip(string description, int clipIndex, int newStart, int newEnd, int fadeIn, int fadeOut, bool keepEnd,
+        FadeShape? inShape = null, FadeShape? outShape = null)
     {
         var clips = Clips;
         var clip = clips[clipIndex];
@@ -112,12 +170,32 @@ public sealed partial class EditSession
         var tail = HiddenAt(clip.End, before: false);
         var inFade = FadeAt(clip.Start, fadeIn: true);
         var outFade = FadeAt(clip.End, fadeIn: false);
+        var crossfadeOut = outFade is { Crossfade: true } ? outFade : null;
+        var under = crossfadeOut is null ? null : HiddenAt(clip.End, before: true);
         var headLength = head?.Frames ?? 0;
         var tailLength = tail?.Frames ?? 0;
-        newStart = Math.Clamp(newStart, clip.Start - Math.Min(headLength, SilenceBefore(clipIndex)), clip.End - 1);
+        var shapeIn = inShape ?? inFade?.Shape ?? FadeShape.SCurve;
+        var shapeOut = outShape ?? outFade?.Shape ?? FadeShape.SCurve;
+        if (CrossfadeInto(clip.Start) is not null)
+        {
+            newStart = clip.Start;
+            fadeIn = 0;
+        }
+
+        if (crossfadeOut is not null)
+        {
+            newEnd = clip.End;
+            fadeOut = crossfadeOut.Length;
+        }
+
+        newStart = Math.Clamp(newStart, clip.Start - Math.Min(headLength, SilenceBefore(clipIndex)), clip.End - (crossfadeOut is null ? 1 : fadeOut));
         newEnd = Math.Clamp(newEnd, newStart + 1, clip.End + Math.Min(tailLength, SilenceAfter(clipIndex)));
         var length = newEnd - newStart;
-        if (keepEnd)
+        if (crossfadeOut is not null)
+        {
+            fadeIn = Math.Clamp(fadeIn, 0, length - fadeOut);
+        }
+        else if (keepEnd)
         {
             fadeOut = Math.Clamp(fadeOut, 0, length);
             fadeIn = Math.Clamp(fadeIn, 0, length - fadeOut);
@@ -128,7 +206,8 @@ public sealed partial class EditSession
             fadeOut = Math.Clamp(fadeOut, 0, length - fadeIn);
         }
 
-        if (newStart == clip.Start && newEnd == clip.End && fadeIn == (inFade?.Length ?? 0) && fadeOut == (outFade?.Length ?? 0))
+        if (newStart == clip.Start && newEnd == clip.End && fadeIn == (inFade?.Length ?? 0) && fadeOut == (outFade?.Length ?? 0)
+            && (fadeIn == 0 || shapeIn == inFade?.Shape) && (fadeOut == 0 || shapeOut == outFade?.Shape))
         {
             return clip;
         }
@@ -173,12 +252,22 @@ public sealed partial class EditSession
             originalOut[c] = result.AsSpan(newEnd - from - fadeOut, fadeOut).ToArray();
             for (var i = 0; i < fadeIn; i++)
             {
-                result[newStart - from + i] *= FadeGain(i, fadeIn, rising: true);
+                result[newStart - from + i] *= FadeGain(i, fadeIn, rising: true, shapeIn);
             }
 
             for (var i = 0; i < fadeOut; i++)
             {
-                result[newEnd - from - fadeOut + i] *= FadeGain(i, fadeOut, rising: false);
+                result[newEnd - from - fadeOut + i] *= FadeGain(i, fadeOut, rising: false, shapeOut);
+            }
+
+            if (under is not null)
+            {
+                // The next clip's start, hidden under this one's end, fades in as this fades out.
+                var hiddenUnder = under.Channels[c];
+                for (var i = 0; i < fadeOut; i++)
+                {
+                    result[newEnd - from - fadeOut + i] += hiddenUnder[hiddenUnder.Length - fadeOut + i] * FadeGain(i, fadeOut, rising: true, shapeOut);
+                }
             }
 
             output[c] = result;
@@ -201,12 +290,12 @@ public sealed partial class EditSession
         var fades = _fades.Where(f => !(f.Frame == clip.Start && f.In) && !(f.Frame == clip.End && !f.In)).ToList();
         if (fadeIn > 0)
         {
-            fades.Add(new ClipFade(newStart, true, new AudioBuffer(originalIn, rate)));
+            fades.Add(new ClipFade(newStart, true, new AudioBuffer(originalIn, rate), shapeIn));
         }
 
         if (fadeOut > 0)
         {
-            fades.Add(new ClipFade(newEnd, false, new AudioBuffer(originalOut, rate)));
+            fades.Add(new ClipFade(newEnd, false, new AudioBuffer(originalOut, rate), shapeOut, crossfadeOut is not null));
         }
 
         // The splits inside the clip's new extent go (the silence it grew over), and new ones go at its edges.
@@ -269,6 +358,10 @@ public sealed partial class EditSession
     private ClipFade? FadeAt(int frame, bool fadeIn) =>
         _fades.FirstOrDefault(f => f.Frame == frame && f.In == fadeIn);
 
+    /// <summary>The crossfade into a clip that starts at a frame, from the clip before it, if there is one.</summary>
+    private ClipFade? CrossfadeInto(int frame) =>
+        _fades.FirstOrDefault(f => f.Frame == frame && f is { In: false, Crossfade: true });
+
     /// <summary>
     /// Keeps only what's hidden and the fades that still fit the clips: each at the edge of a clip with sound in
     /// it, and each fade inside its clip without crossing the other.
@@ -301,6 +394,10 @@ public sealed partial class EditSession
         // A fade out that would cross the fade in goes.
         keptFades.RemoveAll(f => !f.In && Ending(f.Frame) is { } clip
             && keptFades.Any(g => g.In && g.Frame == clip.Start && g.Length + f.Length > clip.Length));
+        // A crossfade needs the next clip's start hidden under it, and that clip can't have a fade in of its own.
+        keptFades.RemoveAll(f => f.Crossfade && !(Starting(f.Frame) is { } next && Audible(next)
+            && keptHidden.Any(h => h.Before && h.Frame == f.Frame && h.Audio.Frames >= f.Length)));
+        keptFades.RemoveAll(f => f.In && keptFades.Any(g => g.Crossfade && g.Frame == f.Frame));
         return (keptHidden, keptFades);
     }
 
@@ -315,12 +412,11 @@ public sealed partial class EditSession
         return new AudioBuffer(channels, first.SampleRate);
     }
 
-    /// <summary>A fade's gain at frame <paramref name="i"/> of <paramref name="length"/>: the same S-shaped curve as the Fade buttons.</summary>
-    public static float FadeGain(int i, int length, bool rising)
+    /// <summary>A fade's gain at frame <paramref name="i"/> of <paramref name="length"/>: by default the same S-shaped curve as the Fade buttons.</summary>
+    public static float FadeGain(int i, int length, bool rising, FadeShape shape = FadeShape.SCurve)
     {
         var t = length < 2 ? 1 : (double)i / (length - 1);
-        var gain = 0.5 - 0.5 * Math.Cos(Math.PI * t);
-        return (float)(rising ? gain : 1 - gain);
+        return (float)FadeShapes.Gain(t, rising, shape);
     }
 
     /// <summary>Audio hidden behind a clip edge: trimmed off the clip, or covered by a cut.</summary>
@@ -336,7 +432,11 @@ public sealed partial class EditSession
 
     /// <summary>A fade made with a clip's fade handle, with the audio it faded so it can be changed.</summary>
     /// <param name="Frame">The clip edge it's at: the start for a fade in, the end for a fade out.</param>
-    private sealed record ClipFade(int Frame, bool In, AudioBuffer Original)
+    /// <param name="Crossfade">
+    /// For a fade out: the clip overlaps the next one, whose start is hidden behind its own (the last
+    /// <see cref="Length"/> frames of that hidden audio) and fades in under this fade, with the same shape.
+    /// </param>
+    private sealed record ClipFade(int Frame, bool In, AudioBuffer Original, FadeShape Shape = FadeShape.SCurve, bool Crossfade = false)
     {
         public int Length => Original.Frames;
 

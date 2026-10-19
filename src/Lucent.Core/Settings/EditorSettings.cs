@@ -68,6 +68,12 @@ public sealed class EditorSettings
     /// <summary>Types the user gave plugins in the browser, by class ID, in place of the ones Lucent works out.</summary>
     public Dictionary<string, string> PluginTypes { get; set; } = new();
 
+    /// <summary>The effects last used from the effects menu, by id, most recent first.</summary>
+    public List<string> RecentEffects { get; set; } = new();
+
+    /// <summary>Once the sound is split into clips, dragging a clip's waveform moves it (the hand tool); off, dragging selects.</summary>
+    public bool DragMovesClips { get; set; } = true;
+
     public List<EqBand> EqBands { get; set; } = EqBand.Defaults();
 
     public CompressorSettings Compressor { get; set; } = new();
