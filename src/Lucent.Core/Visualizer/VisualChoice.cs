@@ -49,8 +49,15 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>Its name, family and tags, ready for the picker's search box to look in.</summary>
     public string SearchKey { get; }
 
-    /// <summary>"Fractal · Calm, Geometric", shown when the mouse rests on the visual in the picker.</summary>
-    public string StyleText => (Author is null ? Family : $"{Family} · by {Author}") + (Tags.Count == 0 ? "" : $" · {string.Join(", ", Tags)}");
+    /// <summary>"Fractal · Calm, Geometric", shown when the mouse rests on the visual in the picker (without a tag that just repeats the family).</summary>
+    public string StyleText
+    {
+        get
+        {
+            var tags = Tags.Where(tag => !string.Equals(tag, Family, StringComparison.OrdinalIgnoreCase)).ToList();
+            return (Author is null ? Family : $"{Family} · by {Author}") + (tags.Count == 0 ? "" : $" · {string.Join(", ", tags)}");
+        }
+    }
 
     public bool IsFavorite
     {

@@ -45,10 +45,11 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
 
     /// <summary>
     /// The picker's tick boxes it answers to, from a "// Tags: Calm, Space" line (none without one).
-    /// Particle visuals are always tagged Particles too, and MilkDrop and AVS presets Retro.
+    /// Particle visuals are always tagged Particles too, and MilkDrop and AVS presets Retro and MilkDrop or Winamp AVS,
+    /// so they can be picked out with a tick box.
     /// </summary>
-    public IReadOnlyList<string> Tags { get; } = IsMilkDropFile(FilePath) || IsAvsFile(FilePath)
-        ? VisualStyles.TagNames("Retro")
+    public IReadOnlyList<string> Tags { get; } = IsMilkDropFile(FilePath) ? VisualStyles.TagNames($"Retro, {VisualStyles.MilkDropFamily}")
+        : IsAvsFile(FilePath) ? VisualStyles.TagNames($"Retro, {VisualStyles.AvsFamily}")
         : VisualStyles.TagNames(ReadHeader(TagsPattern, Code) + (SimulatePattern.IsMatch(Code) ? $", {VisualStyles.ParticlesTag}" : string.Empty));
 
     /// <summary>
