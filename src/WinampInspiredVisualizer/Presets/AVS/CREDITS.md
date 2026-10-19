@@ -1,9 +1,11 @@
 # Winamp AVS preset credits
 
-These 35 presets are the ones that came with Winamp's Advanced Visualization Studio (AVS), from Nullsoft's
+These 34 presets are the ones that came with Winamp's Advanced Visualization Studio (AVS), from Nullsoft's
 open-source release of AVS 2.81d: https://github.com/visbot/vis_avs (commit ba9312c), `avs/vis_avs/presets`.
 They were made by Justin Frankel ("Justin"), Tag, and Lone, and are kept with Winamp's own names, given title case
-("justin - pretty dots.avs" became "Justin - Pretty Dots.avs").
+("justin - pretty dots.avs" became "Justin - Pretty Dots.avs"). One stock preset, "justin - fireworks
+kaliadascope mk 2", is left out: it's drawn almost entirely by FunkyFX FyrewurX, a plug-in whose code was never
+released, so in Lucent it would be a black screen.
 
 Lucent's AVS engine (`src/Lucent.Core/Visualizer/Avs`) is a C# port of the same release's effects, and of the
 plug-in effects (APEs) ported in grandchild's fork, https://github.com/grandchild/vis_avs (commit 1cee1f3), whose
@@ -50,7 +52,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 | Tag - Trance Travel.avs | Tag - Trance Travel.avs |
 | Justin - Bouncing Colorfade.avs | justin - bouncing colorfade.avs |
 | Justin - Bumpaphobia Mk2.avs | justin - bumpaphobia mk2.avs |
-| Justin - Fireworks Kaliadascope Mk 2.avs | justin - fireworks kaliadascope mk 2.avs |
 | Justin - Joy.avs | justin - joy.avs |
 | Justin - Mirrored Neatness.avs | justin - mirrored neatness.avs |
 | Justin - New Interferences Rule.avs | justin - new interferences rule.avs |
