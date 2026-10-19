@@ -37,7 +37,7 @@ sy=1.000000
 wave_r=1.000000
 wave_g=0.800000
 wave_b=0.400000
-wave_x=0.500000
+wave_x=0.200000
 wave_y=0.200000
 ob_size=0.000000
 ob_a=0.000000
@@ -126,7 +126,7 @@ shape_1_per_frame4=y = 0.5 + sin(orbit) * 0.33;
 shape_1_per_frame5=ang = -orbit;
 shape_1_per_frame6=tex_ang = time * 0.2;
 shape_1_per_frame7=rad = 0.07 + 0.03 * treb_att;
-per_frame_1=wave_x = 0.5 + 0.1 * sin(time * 0.4);
+per_frame_1=wave_x = 0.2 + 0.02 * sin(time * 0.4);
 per_frame_2=wave_mystery = sin(time * 0.13);
 per_frame_3=decay = 0.92 + 0.05 * below(vol, 0.8);
 per_frame_4=rot = 0.003 * sin(time * 0.2);
