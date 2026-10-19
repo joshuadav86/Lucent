@@ -12,6 +12,8 @@ namespace Lucent.Mac;
 /// </summary>
 public partial class EditorWindow
 {
+    private StemsWindow? _stemsWindow;
+
     private void OnStems(object? sender, RoutedEventArgs e)
     {
         if (StemChoices.Children.Count == 0)
@@ -96,13 +98,71 @@ public partial class EditorWindow
     {
         StemsPopup.IsOpen = false;
         _settings.Save();
+        await SaveStemsAsync();
+    }
+
+    /// <summary>Splits the selection (or everything) and opens its stems in their own window to listen to.</summary>
+    private async void OnListenToStems(object? sender, RoutedEventArgs e)
+    {
+        StemsPopup.IsOpen = false;
+        _settings.Save();
+        if (_session is not { } session || !await EnsureStemModelAsync())
+        {
+            return;
+        }
+
+        var audio = StemsAudio(session);
+        StemSet? stems = null;
+        var ok = await RunBusyAsync("Splitting into stems…", async (progress, token) =>
+        {
+            await Task.Run(() => stems = StemCache.Split(audio, progress.Report, token), token);
+        });
+        if (!ok || stems is null)
+        {
+            return;
+        }
+
+        _stemsWindow?.Close();
+        var song = Path.GetFileNameWithoutExtension(_path) + (Selection.IsEmpty ? string.Empty : " (selection)");
+        var window = new StemsWindow(stems, song, KeepStemsAsync, SaveStemsAsync);
+        _stemsWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_stemsWindow, window))
+            {
+                _stemsWindow = null;
+            }
+        };
+        window.Show(this);
+        ShowStatus($"Split into stems on the {StemModel.Splitter.Device}. Mute or solo them to hear each one.");
+    }
+
+    /// <summary>From the stems window: keeps the stems being heard, as Apply in the popup does.</summary>
+    private async Task KeepStemsAsync(IReadOnlyList<string> kept)
+    {
+        _stemsWindow?.Close();
+        _settings.StemsKept = kept.ToList();
+        _settings.Save();
+        Activate();
+        // Splitting needs both channels, even when the selection is in one.
+        await ApplyAsync(new StemsEffect(kept), bothChannels: true);
+    }
+
+    /// <summary>What the stems are split from: the selection, or everything if nothing is selected.</summary>
+    private AudioBuffer StemsAudio(EditSession session)
+    {
+        var range = Selection.IsEmpty ? new FrameRange(0, session.Audio.Frames) : Selection;
+        return session.Audio.Slice(range.Start, range.Length);
+    }
+
+    private async Task SaveStemsAsync()
+    {
         if (_session is not { } session || _info is not { } info || !await EnsureStemModelAsync())
         {
             return;
         }
 
-        var range = Selection.IsEmpty ? new FrameRange(0, session.Audio.Frames) : Selection;
-        var audio = session.Audio.Slice(range.Start, range.Length);
+        var audio = StemsAudio(session);
         var options = OptionsLike(info, ExportOptions.WritableFormat(_path) ?? ExportFormat.Flac);
         var folder = StemFiles.NewFolderFor(_path);
         var source = _path;
