@@ -25,6 +25,10 @@ public static class StemSelfTest
             var stopwatch = Stopwatch.StartNew();
             using var splitter = StemSplitter.Open(StemModel.FilePath);
             log($"Stem splitter: loaded on the {splitter.Device} in {stopwatch.Elapsed.TotalSeconds:0.0} s.");
+            if (splitter.GraphicsCardDifference is { } difference)
+            {
+                log($"Stem splitter: the graphics card's test segment came out {difference:0.0} dB off the processor's (of the music's level).");
+            }
             stopwatch.Restart();
             var stems = splitter.Split(music);
             // Checked after splitting too, since the graphics card can load the model and then fail to run it.
