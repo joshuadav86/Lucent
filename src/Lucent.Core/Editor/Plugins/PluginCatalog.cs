@@ -5,11 +5,8 @@ using WinampInspiredVisualizer.Settings;
 namespace WinampInspiredVisualizer.Editor.Plugins;
 
 /// <summary>An effect the editor can use: which .vst3 file it's in, and which effect in that file.</summary>
-public sealed record PluginInfo(string Path, string ClassId, string Name, string Vendor, string Version, string Categories)
-{
-    /// <summary>What sort of effect it is, from its categories ("Reverb", "Delay"), or null if it doesn't say.</summary>
-    public string? Kind => Categories.Split('|').FirstOrDefault(c => c is not ("Fx" or "" or "Mono" or "Stereo" or "Surround"));
-}
+/// <remarks><see cref="Categories"/> is the plugin's own VST3 subcategories, such as "Fx|Dynamics"; <see cref="PluginBrowser"/> turns them into a type.</remarks>
+public sealed record PluginInfo(string Path, string ClassId, string Name, string Vendor, string Version, string Categories);
 
 /// <summary>
 /// The VST3 effects installed on this computer. Plugin files are looked inside once and remembered in

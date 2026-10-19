@@ -22,9 +22,6 @@ namespace Lucent.Mac;
 /// </summary>
 public partial class EditorWindow
 {
-    /// <summary>Above this many effects, the menu groups them by maker.</summary>
-    private const int FlatMenuLimit = 20;
-
     /// <summary>The strip always shows at least this many slots, so it reads as a channel strip with room to add.</summary>
     private const int MinimumSlots = 6;
 
@@ -41,13 +38,13 @@ public partial class EditorWindow
 
     // ---- Choosing a plugin ----
 
-    private async void OnPlugins(object? sender, RoutedEventArgs e) => await ShowPluginMenuAsync(PluginsButton);
+    private async void OnPlugins(object? sender, RoutedEventArgs e) => await ShowPluginBrowserAsync(PluginsButton);
 
-    private async Task ShowPluginMenuAsync(Control under)
+    private async Task ShowPluginBrowserAsync(Control under)
     {
         if (await EnsureCatalogAsync() is not null)
         {
-            ShowPluginMenu(under);
+            ShowPluginBrowser(under);
         }
     }
 
@@ -89,83 +86,6 @@ public partial class EditorWindow
         return done;
     }
 
-    private void ShowPluginMenu(Control under)
-    {
-        if (_catalog is not { } catalog)
-        {
-            return;
-        }
-
-        // From the Plugins button the menu opens above it; from a slot in the strip, below the slot.
-        var menu = under == PluginsButton ? MenuAbove() : new ContextMenu { Placement = PlacementMode.BottomEdgeAlignedLeft, VerticalOffset = 2 };
-        var plugins = catalog.Plugins;
-        if (plugins.Count == 0)
-        {
-            menu.Items.Add(MenuEntry("No VST3 effects found", enabled: false));
-            menu.Items.Add(MenuEntry($"Lucent looks in {string.Join(" and ", PluginCatalog.StandardFolders)}", enabled: false));
-        }
-        else if (plugins.Count <= FlatMenuLimit)
-        {
-            foreach (var plugin in plugins)
-            {
-                menu.Items.Add(PluginItem(plugin, $"{plugin.Name}  ·  {plugin.Vendor}"));
-            }
-        }
-        else
-        {
-            foreach (var maker in plugins.GroupBy(p => string.IsNullOrWhiteSpace(p.Vendor) ? "Other" : p.Vendor)
-                         .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase))
-            {
-                var group = MenuEntry(maker.Key);
-                foreach (var plugin in maker)
-                {
-                    group.Items.Add(PluginItem(plugin, plugin.Name));
-                }
-
-                menu.Items.Add(group);
-            }
-        }
-
-        menu.Items.Add(new Separator());
-        if (under == PluginsButton)
-        {
-            var chains = MenuEntry("Chains");
-            AddChainItems(chains.Items, saveable: _chain.Count > 0);
-            menu.Items.Add(chains);
-        }
-
-        var rescan = MenuEntry("Look for plugins again", tip: "After installing or updating plugins");
-        rescan.Click += async (_, _) =>
-        {
-            if (await ScanPluginsAsync(everything: true))
-            {
-                ShowPluginMenu(under);
-            }
-        };
-        menu.Items.Add(rescan);
-
-        var addFolder = MenuEntry("Add a plugin folder…", tip: "If your plugins are somewhere other than the usual VST3 folders");
-        addFolder.Click += async (_, _) => await AddPluginFolderAsync(under);
-        menu.Items.Add(addFolder);
-
-        var failures = catalog.Failures;
-        if (failures.Count > 0)
-        {
-            var problems = MenuEntry($"Plugins that couldn't be loaded ({failures.Count})…");
-            problems.Click += async (_, _) => await ShowPluginFailuresAsync(failures);
-            menu.Items.Add(problems);
-        }
-
-        menu.Open(under);
-    }
-
-    private MenuItem PluginItem(PluginInfo plugin, string header)
-    {
-        var item = MenuEntry(header, tip: plugin.Kind is { } kind ? $"{kind}, version {plugin.Version}" : $"Version {plugin.Version}");
-        item.Click += async (_, _) => await AddPluginAsync(plugin);
-        return item;
-    }
-
     private async Task AddPluginFolderAsync(Control under)
     {
         if (_catalog is not { } catalog)
@@ -186,7 +106,7 @@ public partial class EditorWindow
         catalog.Save();
         if (await ScanPluginsAsync(everything: false))
         {
-            ShowPluginMenu(under);
+            ShowPluginBrowser(under);
         }
     }
 
@@ -381,7 +301,7 @@ public partial class EditorWindow
         });
         var button = new Button { Theme = FindTheme("EmptySlot"), Content = content };
         ToolTip.SetTip(button, "Add a VST3 plugin at the end of the chain");
-        button.Click += async (_, _) => await ShowPluginMenuAsync(button);
+        button.Click += async (_, _) => await ShowPluginBrowserAsync(button);
         return button;
     }
 

@@ -63,6 +63,31 @@
             </Setter>
         </Style>
 
+        <!-- A plugin, or a section of the left column, in the plugin browser: the whole row is the button. -->
+        <Style x:Key="PluginRow" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" CornerRadius="{DynamicResource TinyCorner}" Padding="8,5" Margin="0,0,0,1"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- An insert's power button in the channel strip: a dot, lit while the plugin is on. -->
         <Style x:Key="SlotPower" TargetType="ToggleButton">
             <Setter Property="Width" Value="22" />
@@ -842,6 +867,60 @@
                         <Button Style="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnCloseAnalysis" />
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- The plugin browser: search across the top, every plugin or the favorites or one type on the left, and the
+             plugins under their types or makers on the right. It opens from the Plugins button or an empty insert slot. -->
+        <Popup x:Name="PluginPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnPluginPopupClosed">
+            <Border Style="{StaticResource PopupCard}" Width="660" Padding="8" PreviewKeyDown="OnPluginBrowserKeyDown">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="440" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="170" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="4,4,4,8">
+                        <Button x:Name="PluginGroupingButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}"
+                                Click="OnPluginGrouping" />
+                        <!-- No right-click menu: opening one would close the browser. Ctrl+V still pastes. -->
+                        <Grid Margin="0,0,8,0">
+                            <TextBox x:Name="PluginSearchBox" Style="{StaticResource SearchInput}" Tag="Search plugins by name, maker, or type"
+                                     ToolTip="Type to find plugins by name, maker, or type. Enter adds the first one, Down goes to the list, Esc clears the search."
+                                     ContextMenuService.IsEnabled="False"
+                                     TextChanged="OnPluginSearchChanged" PreviewKeyDown="OnPluginSearchKeyDown" />
+                            <Button x:Name="ClearPluginSearchButton" Style="{StaticResource IconButton}" Width="22" Height="22"
+                                    HorizontalAlignment="Right" Margin="0,0,3,0" Visibility="Collapsed"
+                                    ToolTip="Clear the search (Esc)" Click="OnClearPluginSearch">
+                                <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                            </Button>
+                        </Grid>
+                    </DockPanel>
+
+                    <!-- Every plugin, the favorites, or one type. -->
+                    <Border Grid.Row="1" Grid.Column="0" Margin="0,0,6,0" Padding="0,0,6,0"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="PluginSections" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <ScrollViewer x:Name="PluginScroller" Grid.Row="1" Grid.Column="1"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="PluginRows" Margin="0,0,4,0" />
+                    </ScrollViewer>
+
+                    <DockPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="4,8,4,0">
+                        <TextBlock x:Name="PluginCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <WrapPanel x:Name="PluginActions" />
+                    </DockPanel>
+                </Grid>
             </Border>
         </Popup>
     </Grid>

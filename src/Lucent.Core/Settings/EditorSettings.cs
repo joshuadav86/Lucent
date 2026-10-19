@@ -59,6 +59,15 @@ public sealed class EditorSettings
     /// <summary>The channel strip of plugin slots is open beside the waveform.</summary>
     public bool ShowInserts { get; set; } = true;
 
+    /// <summary>The plugin browser lists plugins under their makers rather than their types.</summary>
+    public bool PluginsByMaker { get; set; }
+
+    /// <summary>The plugins starred in the plugin browser, by their class IDs (which stay the same across versions).</summary>
+    public List<string> FavoritePlugins { get; set; } = new();
+
+    /// <summary>Types the user gave plugins in the browser, by class ID, in place of the ones Lucent works out.</summary>
+    public Dictionary<string, string> PluginTypes { get; set; } = new();
+
     public List<EqBand> EqBands { get; set; } = EqBand.Defaults();
 
     public CompressorSettings Compressor { get; set; } = new();

@@ -102,6 +102,8 @@ public partial class EditorWindow : Window
 
         // Like WPF's PreviewKeyDown: the editor's keys work wherever the focus is, unless typing.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        PluginCard.AddHandler(KeyDownEvent, OnPluginBrowserKeyDown, RoutingStrategies.Tunnel);
+        PluginSearchBox.AddHandler(KeyDownEvent, OnPluginSearchKeyDown, RoutingStrategies.Tunnel);
 
         PitchSlider.Value = 0;
         UpdatePitchText();
@@ -1157,8 +1159,8 @@ public partial class EditorWindow : Window
 
     private async void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        // Typing in a box, or using the sliders in the tool cards, keeps its keys.
-        if (e.Source is TextBox || ToolPopups.Any(popup => popup.IsOpen))
+        // Typing in a box, using the sliders in the tool cards, or choosing a plugin keeps its keys.
+        if (e.Source is TextBox || ToolPopups.Any(popup => popup.IsOpen) || PluginPopup.IsOpen)
         {
             return;
         }
