@@ -324,7 +324,7 @@ public static class Screenshots
             Stem(t => 0.3 * Math.Sin(2 * Math.PI * 330 * t) * (0.5 + 0.5 * Math.Sin(2 * Math.PI * 0.1 * t))),
             Stem(t => t % 4 < 3 ? 0.6 * Math.Sin(2 * Math.PI * 440 * t) * Math.Sin(Math.PI * (t % 4) / 3) : 0),
         });
-        var window = new StemsWindow(stems, "Night Drive", _ => Task.CompletedTask, () => Task.CompletedTask);
+        var window = new StemsWindow(stems, "Night Drive", "Split on the graphics card.", _ => Task.CompletedTask, () => Task.CompletedTask);
         window.PreviewMuted(0);
         return window;
     }

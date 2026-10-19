@@ -11,7 +11,7 @@
 
     <!-- Same custom title bar as the main window, with native resizing. -->
     <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1">
-        <Grid Background="{DynamicResource PanelSheenBrush}" RowDefinitions="36,*,Auto">
+        <Grid Background="{DynamicResource PanelSheenBrush}" RowDefinitions="36,Auto,*,Auto">
 
             <DockPanel Grid.Row="0" Background="{DynamicResource TitleBarBrush}" w:Chrome.IsCaption="True">
                 <Button DockPanel.Dock="Right" Theme="{StaticResource CloseCaptionButton}" Height="36" ToolTip.Tip="Close"
@@ -28,10 +28,14 @@
                 </StackPanel>
             </DockPanel>
 
-            <!-- One row per stem: its name, mute and solo, and its waveform with the playhead. Click a waveform to play from there. -->
-            <Grid x:Name="Rows" Grid.Row="1" Margin="10,4,10,0" />
+            <!-- What did the splitting: the graphics card, or the processor and why. -->
+            <TextBlock x:Name="NoteText" Grid.Row="1" Margin="12,6,12,4" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource FaintTextBrush}" />
 
-            <DockPanel Grid.Row="2" Margin="10" LastChildFill="False">
+            <!-- One row per stem: its name, mute and solo, and its waveform with the playhead. Click a waveform to play from there. -->
+            <Grid x:Name="Rows" Grid.Row="2" Margin="10,4,10,0" />
+
+            <DockPanel Grid.Row="3" Margin="10" LastChildFill="False">
                 <Button x:Name="PlayButton" DockPanel.Dock="Left" Theme="{StaticResource PillButton}" Height="30" MinWidth="76"
                         Padding="12,0" Content="PLAY" ToolTip.Tip="Play or pause (Space)" Click="OnPlayPause" />
                 <Button DockPanel.Dock="Left" Theme="{StaticResource PillButton}" Height="30" Padding="12,0" Margin="6,0,0,0"
