@@ -7,6 +7,7 @@ public enum RemoteApp
     None,
     Spotify,
     AppleMusic,
+    YouTube,
 }
 
 /// <summary>A song playing in another app, as that app describes it.</summary>
@@ -38,7 +39,7 @@ public sealed class RemoteProblem : Exception
 }
 
 /// <summary>
-/// Another app's player (Spotify, Apple Music) that Lucent shows and controls. The sound stays in that
+/// Another app's player (Spotify, Apple Music, YouTube in a browser) that Lucent shows and controls. The sound stays in that
 /// app: Lucent only says what's playing and presses its buttons. The visuals hear it through
 /// <c>Audio/SystemAudio</c>, like any other app's sound.
 /// </summary>

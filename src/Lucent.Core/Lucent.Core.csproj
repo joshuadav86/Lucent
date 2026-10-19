@@ -33,6 +33,11 @@
       SPOTIFY_CLIENT_ID repository secret as -p:SpotifyClientId; a build without it just can't sign in.
     -->
     <AssemblyMetadata Include="SpotifyClientId" Value="$(SpotifyClientId)" />
+    <!--
+      Where crash reports go (see Diagnostics/CrashReporter.cs): the LUCENT_CRASH_DSN repository secret, a
+      Sentry project's DSN, passed by CI as -p:CrashReportDsn. A build without it sends no crash reports.
+    -->
+    <AssemblyMetadata Include="CrashReportDsn" Value="$(CrashReportDsn)" />
   </ItemGroup>
 
 </Project>

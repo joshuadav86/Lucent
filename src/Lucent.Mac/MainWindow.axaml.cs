@@ -21,6 +21,7 @@ using Lucent.Mac.Updates;
 using Lucent.Mac.Visualizer;
 using Lucent.Mac.Windows;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Diagnostics;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
@@ -335,6 +336,7 @@ public partial class MainWindow : Window
         _updater.EveryBuild = _settings.EveryBuild;
         _ = _updater.RunAsync();
         AddStarterMusic();
+        StartOpeningFiles();
         StartStreaming();
     }
 
@@ -1388,6 +1390,13 @@ public partial class MainWindow : Window
             _settings.AvsVisuals = on;
             _visuals.ShowAvs(on);
         }
+        else if (sender == CrashReportsSwitch)
+        {
+            _settings.SendCrashReports = on;
+            CrashReporter.Enabled = on;
+            _settings.Save();
+            return;
+        }
         else if (sender == ModernAvsSwitch)
         {
             _visuals.UseModernAvs(on);
@@ -1428,6 +1437,7 @@ public partial class MainWindow : Window
         MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;
         AvsSwitch.IsChecked = _settings.AvsVisuals;
         ModernAvsSwitch.IsChecked = _settings.ModernAvs;
+        CrashReportsSwitch.IsChecked = _settings.SendCrashReports;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
     }
