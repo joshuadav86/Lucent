@@ -8,7 +8,7 @@ namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
 /// filled triangles, each in one colour, optionally hiding ones behind others by a depth value.
 /// </summary>
 [AvsEffect("Render: Triangle")]
-public sealed class Triangle : AvsEffect
+public sealed class TriangleRender : AvsEffect
 {
     private const double MaxZ = 40000;
     private const double ZResolution = 100000;
@@ -20,7 +20,7 @@ public sealed class Triangle : AvsEffect
     private readonly Vertex[] _vertices = new Vertex[3];
     private Compiled? _compiled;
 
-    public Triangle(AvsShared shared)
+    public TriangleRender(AvsShared shared)
         : base(shared)
     {
     }
@@ -225,7 +225,7 @@ public sealed class Triangle : AvsEffect
     {
         private readonly EelContext _context;
 
-        public Compiled(Triangle triangle)
+        public Compiled(TriangleRender triangle)
         {
             _context = triangle.NewContext();
             W = _context.Index("w");
