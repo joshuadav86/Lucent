@@ -280,7 +280,7 @@ public sealed partial class WaveformView
             }
         }
 
-        return (Math.Clamp(snap ?? (int)Math.Round(frame), grab.Min, grab.Max), snap);
+        return (Math.Clamp(snap ?? (int)Math.Round(frame), grab.Min, Math.Max(grab.Min, grab.Max)), snap);
     }
 
     /// <summary>Finishes dragging an edge or fade handle, asking for the change. Returns false for a click that didn't drag.</summary>
@@ -422,7 +422,8 @@ public sealed partial class WaveformView
 
                 foreach (var x in handles)
                 {
-                    var handle = new Rect(Math.Clamp(x, x0, x1 - 1) - 4, handleTop, 8, 8);
+                    // A clip under a pixel wide (zoomed out, or a sliver left by a slide) keeps its handle at its start.
+                    var handle = new Rect(Math.Clamp(x, x0, Math.Max(x0, x1 - 1)) - 4, handleTop, 8, 8);
                     dc.DrawRoundedRectangle(SelectedWaveBrush ?? Brushes.White, new Pen(LaneBrush ?? Brushes.Black, 1), handle, 2, 2);
                 }
             }
