@@ -80,6 +80,7 @@ public static partial class SelfTest
         failures += TestRuntimeTranslation();
         failures += TestMediaControls();
         failures += WinampInspiredVisualizer.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
+        failures += WinampInspiredVisualizer.Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }

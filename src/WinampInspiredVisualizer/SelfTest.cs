@@ -76,6 +76,7 @@ public static class SelfTest
         failures += TestVisuals(sheetPath);
         failures += TestOtherApps();
         failures += Editor.Stems.StemSelfTest.Run(Console.WriteLine);
+        failures += Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }

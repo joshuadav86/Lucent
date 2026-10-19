@@ -323,10 +323,20 @@
                                     <TextBox x:Name="DiscCountBox" Style="{StaticResource FieldBox}" Width="54" MaxLength="4" />
                                 </StackPanel>
                             </StackPanel>
-                            <StackPanel Margin="0,0,0,6">
+                            <StackPanel Margin="0,0,20,6">
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="BPM" />
                                 <TextBox x:Name="BpmBox" Style="{StaticResource FieldBox}" Width="64" MaxLength="3"
                                          ToolTip="Beats per minute: how fast the sound is" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Key" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox x:Name="KeyBox" Style="{StaticResource FieldBox}" Width="64" MaxLength="12"
+                                             ToolTip="The musical key, like Am or F#, as DJ apps read it" />
+                                    <Button x:Name="DetectButton" Style="{StaticResource PillButton}" Margin="8,0,0,0" Content="Detect"
+                                            IsEnabled="False" Click="OnDetectTempoAndKey"
+                                            ToolTip="Listen to the song and fill in its BPM and key (one track at a time)" />
+                                </StackPanel>
                             </StackPanel>
                         </WrapPanel>
 

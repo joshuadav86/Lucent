@@ -71,7 +71,7 @@ public partial class EditorWindow
     private int SnapFrame(int frame) =>
         _settings.SnapToZeroCrossings && _session is { } session ? ZeroCrossing.Nearest(session.Audio, frame) : frame;
 
-    private void UpdateSnap() => Waveform.Snap = _settings.SnapToZeroCrossings ? SnapFrame : null;
+    private void UpdateSnap() => Waveform.Snap = _settings.SnapToBeats ? SnapToBeat : _settings.SnapToZeroCrossings ? SnapFrame : null;
 
     private void OnSnapToggle(object? sender, RoutedEventArgs e)
     {

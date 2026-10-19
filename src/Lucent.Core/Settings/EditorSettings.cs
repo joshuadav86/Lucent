@@ -47,6 +47,12 @@ public sealed class EditorSettings
     /// <summary>Playing the selection starts again at its beginning when it reaches the end.</summary>
     public bool Loop { get; set; }
 
+    /// <summary>The beats and bars are drawn over the waveform, and the cursor and selection snap to the beats.</summary>
+    public bool SnapToBeats { get; set; }
+
+    /// <summary>How many bars long the loop maker makes a loop.</summary>
+    public int LoopBars { get; set; } = 4;
+
     /// <summary>How much taller than full scale the waves are drawn (1 = full scale fills the lane).</summary>
     public double WaveZoom { get; set; } = 1;
 

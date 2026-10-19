@@ -19,6 +19,7 @@ public enum TagField
     Genre,
     Composer,
     Bpm,
+    Key,
     Comment,
     Lyrics,
 }
@@ -163,6 +164,7 @@ public sealed class TrackTags
             [TagField.Genre] = TagFields.JoinList(tag.Genres),
             [TagField.Composer] = TagFields.JoinList(tag.Composers),
             [TagField.Bpm] = TagFields.NumberText(tag.BeatsPerMinute),
+            [TagField.Key] = tag.InitialKey ?? string.Empty,
             [TagField.Comment] = (tag.Comment ?? string.Empty).ReplaceLineEndings("\n"),
             [TagField.Lyrics] = (tag.Lyrics ?? string.Empty).ReplaceLineEndings("\n"),
         };
