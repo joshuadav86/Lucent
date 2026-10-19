@@ -23,6 +23,12 @@ public sealed class EelContext
 
     public int Count => _indices.Count;
 
+    /// <summary>
+    /// Functions the host adds to the language for this context's code, by lower-case name, each a
+    /// Func taking and giving doubles (AVS adds getosc, getspec and gettime). Add them before compiling.
+    /// </summary>
+    public Dictionary<string, Delegate> Functions { get; } = new(StringComparer.Ordinal);
+
     /// <summary>This context's megabuf, made the first time some code uses it.</summary>
     public EelMemory Megabuf => _megabuf ??= new EelMemory();
 
