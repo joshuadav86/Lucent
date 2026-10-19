@@ -8,7 +8,7 @@ using WinampInspiredVisualizer.Streaming;
 namespace WinampInspiredVisualizer;
 
 // Other apps: the visuals listening to every app's sound (see Audio/SystemAudio.cs), and the player
-// showing and controlling Spotify or Apple Music (see RemoteControl) while their sound stays in their app.
+// showing and controlling Spotify, Apple Music or YouTube (see RemoteControl) while their sound stays in their app.
 public partial class MainWindow
 {
     private static readonly HttpClient StreamingHttp = new() { Timeout = TimeSpan.FromSeconds(15) };
@@ -88,6 +88,17 @@ public partial class MainWindow
         appleMusic.Click += (_, _) => ToggleRemote(RemoteApp.AppleMusic);
         menu.Items.Add(appleMusic);
 
+        var youTube = new MenuItem
+        {
+            Header = "Control YouTube",
+            IsCheckable = true,
+            IsChecked = _settings.RemoteApp == RemoteApp.YouTube,
+            IsEnabled = YouTubeRemote.IsSupported,
+            ToolTip = "Show the YouTube video playing in your web browser and use the player's buttons for it. The sound stays in the browser.",
+        };
+        youTube.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
+        menu.Items.Add(youTube);
+
         if (spotifySaved)
         {
             var signOut = new MenuItem { Header = "Sign out of Spotify" };
@@ -152,6 +163,9 @@ public partial class MainWindow
                     break;
                 case RemoteApp.AppleMusic when AppleMusicRemote.IsSupported:
                     player = new AppleMusicRemote();
+                    break;
+                case RemoteApp.YouTube when YouTubeRemote.IsSupported:
+                    player = new YouTubeRemote();
                     break;
                 default:
                     return;

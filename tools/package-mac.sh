@@ -47,7 +47,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
   <key>NSAudioCaptureUsageDescription</key><string>Lucent listens to what other apps are playing so its visuals and analyzer can react to it. Nothing is recorded or sent anywhere.</string>
-  <key>NSAppleEventsUsageDescription</key><string>Lucent shows what the Music app is playing and controls play, pause, skip and seek from its player.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Lucent shows what the Music app, or YouTube in your web browser, is playing and controls play, pause, skip and seek from its player.</string>
 </dict>
 </plist>
 PLIST
