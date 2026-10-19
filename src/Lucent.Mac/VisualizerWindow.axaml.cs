@@ -376,6 +376,7 @@ public partial class VisualizerWindow : ToolWindow
         _shown = InPickerOrder(searched.Where(MatchesTags));
         FillRows();
         ListPickerLabel.Text = list is null ? "All visuals" : $"{list} ({inList.Count})";
+        VisualCount.Text = VisualChoice.CountText(_shown.Count, inList.Count);
 
         // Narrowed by a list, tags or a search, Auto plays from what's shown. If nothing is shown it plays from everything.
         var narrowed = names is not null || milkDropHidden || _tickedTags.Count > 0 || _searchWords.Length > 0;
