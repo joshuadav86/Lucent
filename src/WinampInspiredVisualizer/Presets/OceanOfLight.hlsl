@@ -124,8 +124,9 @@ float3 Render(float2 uv, float2 p)
         }
         float3 hit = eye + direction * travelled;
 
-        // Surface normal from the detailed waves.
-        int detail = qualitySteps(4);
+        // Surface normal from the detailed waves. Far off, the finest ripples are smaller than a
+        // pixel and only shimmer, so the distant sea leaves them out.
+        int detail = max(qualitySteps(4) - (travelled > 30.0 ? 1 : 0) - (travelled > 80.0 ? 1 : 0), 2);
         float e = 0.002 * travelled + 0.01;
         float level = seaHeight(hit.xz, detail);
         float3 normal = normalize(float3(level - seaHeight(hit.xz + float2(e, 0.0), detail), e,
