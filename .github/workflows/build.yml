@@ -436,9 +436,10 @@ jobs:
   # visuals (and built-in ones they've edited) to Metal. So its library is built here as one universal
   # file for both kinds of Mac, once per DXC version (the result is cached), and ships inside Lucent.app.
   dxc-mac:
-    # macOS 15 rather than macos-latest: since macos-latest moved to macOS 26, its jobs often waited
-    # for a machine until GitHub cancelled them (about 15 minutes), and no Mac build ran.
-    runs-on: macos-15
+    # On an Intel Mac: GitHub's Apple silicon Macs are often all busy, and a job waiting for one is
+    # cancelled after about 15 minutes, which held up both Mac builds. This only restores (or, once,
+    # builds) a universal library, so either kind of Mac will do, and the Intel ones have been free.
+    runs-on: macos-15-intel
     env:
       DXC_VERSION: v1.8.2407
     steps:
@@ -509,7 +510,7 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-15
+            runner: macos-latest
             cpu: arm64
           - arch: x64
             runner: macos-15-intel
