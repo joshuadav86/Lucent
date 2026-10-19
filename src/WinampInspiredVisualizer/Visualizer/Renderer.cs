@@ -6,6 +6,7 @@ using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
 namespace WinampInspiredVisualizer.Visualizer;
@@ -19,6 +20,8 @@ namespace WinampInspiredVisualizer.Visualizer;
 /// particles with a compute shader each frame and draw them as glowing dots before their own pass.
 /// It can also draw without a window, one frame at a time, for recording a video (Renderer.Offscreen.cs).
 /// MilkDrop presets (.milk files) are drawn by <see cref="MilkDropRenderer"/> into the same picture.
+/// Winamp AVS presets (.avs files) draw on the CPU (<see cref="AvsVisual"/>); their picture is uploaded each
+/// frame and drawn by Shaders/AvsDisplay.hlsl as if it were a visual of Lucent's own.
 /// </summary>
 public sealed partial class Renderer : IDisposable
 {
@@ -448,10 +451,10 @@ public sealed partial class Renderer : IDisposable
             catch (Exception ex)
             {
                 Volatile.Write(ref slot.State, PresetSlot.Failed);
-                if (slot.Source.IsMilkDrop)
+                if (slot.Source.IsCommunityPreset)
                 {
-                    // A broken .milk file is skipped; the log says which and why.
-                    ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
+                    // A broken .milk or .avs file is skipped; the log says which and why.
+                    ErrorLog.Write($"{KindOf(slot.Source)} {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
                 }
 
                 PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
@@ -470,7 +473,10 @@ public sealed partial class Renderer : IDisposable
         PresetLibrary.ReadShader("PresetMain.hlsli"),
         PresetLibrary.ReadShader("Particles.hlsli"),
         PresetLibrary.ReadShader("ParticleMain.hlsli"),
-        _milkDrop is null ? string.Empty : PresetLibrary.ReadShader("MilkDrop.hlsli"));
+        _milkDrop is null ? string.Empty : PresetLibrary.ReadShader("MilkDrop.hlsli"),
+        _slots.Any(slot => slot.Source.IsAvs) ? PresetLibrary.ReadShader("AvsDisplay.hlsl") : string.Empty);
+
+    private static string KindOf(PresetSource source) => source.IsAvs ? "AVS preset" : "MilkDrop preset";
 
     /// <summary>Compiles (or fetches from the cache) a visual's shaders. Throws with the compiler's message if it doesn't compile.</summary>
     private void BuildShaders(ID3D11Device device, EngineSources shaders, PresetSlot slot)
@@ -479,6 +485,15 @@ public sealed partial class Renderer : IDisposable
         {
             // MilkDrop presets compile their equations, and their shaders if they have them.
             slot.MilkDrop = MilkDropVisual.Compile(device, _shaderCache, slot.Source, shaders.MilkDrop);
+            return;
+        }
+
+        if (slot.Source.IsAvs)
+        {
+            // AVS presets compile their code; every one is shown by the same display shader.
+            slot.Avs = AvsVisual.Load(slot.Source);
+            var display = shaders.Common + "\n#line 1\n" + shaders.AvsDisplay + "\n" + shaders.PresetMain;
+            slot.Shader = CreatePixelShader(device, display, "PSMain", "AvsDisplay.hlsl");
             return;
         }
 
@@ -684,16 +699,16 @@ public sealed partial class Renderer : IDisposable
     }
 
     /// <summary>
-    /// A MilkDrop preset that went wrong while drawing (rather than while compiling) is dropped for
+    /// A MilkDrop or AVS preset that went wrong while drawing (rather than while compiling) is dropped for
     /// the rest of the session and the visuals move on, instead of the whole visualizer stopping.
     /// </summary>
-    private void StopMilkDrop(int presetIndex, Exception ex)
+    private void StopCommunityPreset(int presetIndex, Exception ex)
     {
         var slot = _slots[presetIndex];
         Volatile.Write(ref slot.State, PresetSlot.Failed);
         _context!.OMSetBlendState(null);
         _context.RSSetState(null);
-        ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} stopped", ex);
+        ErrorLog.Write($"{KindOf(slot.Source)} {Path.GetFileName(slot.Source.FilePath)} stopped", ex);
         PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
         var next = NextUsable(presetIndex);
         if (_requestedPreset == presetIndex && next >= 0)
@@ -704,18 +719,19 @@ public sealed partial class Renderer : IDisposable
     }
 
     /// <summary>
-    /// How much of the picture is a MilkDrop preset's (1 when one is showing, part-way during a
-    /// transition to or from one), which the screen pass shows without Lucent's glow and tone-mapping.
+    /// How much of the picture is a MilkDrop preset's, or an AVS preset's shown as Winamp drew it (1 when one is
+    /// showing, part-way during a transition to or from one), which the screen pass shows without Lucent's glow
+    /// and tone-mapping.
     /// </summary>
     private float PlainOutputAmount(float progress)
     {
-        var to = _slots[_activePreset].Source.IsMilkDrop ? 1f : 0f;
+        var to = AvsVisual.ShownPlain(_slots[_activePreset].Source) ? 1f : 0f;
         if (_fromPreset < 0)
         {
             return to;
         }
 
-        var from = _slots[_fromPreset].Source.IsMilkDrop ? 1f : 0f;
+        var from = AvsVisual.ShownPlain(_slots[_fromPreset].Source) ? 1f : 0f;
         return from + (to - from) * progress;
     }
 
@@ -756,11 +772,45 @@ public sealed partial class Renderer : IDisposable
                 }
                 catch (Exception ex) when (!IsDeviceLost(ex))
                 {
-                    StopMilkDrop(presetIndex, ex);
+                    StopCommunityPreset(presetIndex, ex);
                 }
             }
 
             UseFrameState();
+            return;
+        }
+
+        if (slot.Avs is { } avs)
+        {
+            if (!avs.NotesLogged)
+            {
+                avs.NotesLogged = true;
+                if (avs.Notes.Count > 0)
+                {
+                    ErrorLog.Write($"AVS preset {Path.GetFileName(slot.Source.FilePath)}", string.Join(Environment.NewLine, avs.Notes));
+                }
+            }
+
+            ID3D11ShaderResourceView? picture = null;
+            if (!HasFailed(presetIndex))
+            {
+                try
+                {
+                    picture = UploadAvsPicture(slot, avs);
+                }
+                catch (Exception ex) when (!IsDeviceLost(ex))
+                {
+                    StopCommunityPreset(presetIndex, ex);
+                }
+            }
+
+            if (picture is null)
+            {
+                _context!.ClearRenderTargetView(destination.RenderTargetView, new Color4(0f, 0f, 0f, 1f));
+                return;
+            }
+
+            DrawPass(destination.RenderTargetView, source.ShaderResource, slot.Shader!, null, picture);
             return;
         }
 
@@ -772,6 +822,26 @@ public sealed partial class Renderer : IDisposable
         }
 
         DrawPass(destination.RenderTargetView, source.ShaderResource, slot.Shader!, null, particleLayer);
+    }
+
+    /// <summary>Moves an AVS preset on by a frame and puts its picture in the slot's texture, made to fit.</summary>
+    private ID3D11ShaderResourceView UploadAvsPicture(PresetSlot slot, AvsVisual avs)
+    {
+        var pixels = avs.Draw(_analyzer, _frameNumber, _renderWidth, _renderHeight, _frameTime, _quality, AvsVisual.ModernLook);
+        var width = avs.Runner.Width;
+        var height = avs.Runner.Height;
+        if (slot.AvsTexture is null || slot.AvsTexture.Description.Width != width || slot.AvsTexture.Description.Height != height)
+        {
+            slot.AvsView?.Dispose();
+            slot.AvsTexture?.Dispose();
+            slot.AvsTexture = _device!.CreateTexture2D(
+                Format.B8G8R8A8_UNorm, (uint)width, (uint)height, 1, 1, null,
+                BindFlags.ShaderResource, ResourceOptionFlags.None, ResourceUsage.Default, CpuAccessFlags.None);
+            slot.AvsView = _device.CreateShaderResourceView(slot.AvsTexture, null);
+        }
+
+        _context!.UpdateSubresource(pixels, slot.AvsTexture, 0, (uint)width * sizeof(uint), 0, null);
+        return slot.AvsView!;
     }
 
     /// <summary>
@@ -851,7 +921,18 @@ public sealed partial class Renderer : IDisposable
             _slots[presetIndex].Particles?.Dispose();
             _slots[presetIndex].Particles = null;
             _slots[presetIndex].MilkDrop?.ReleaseImages();
+            ReleaseAvsPicture(_slots[presetIndex]);
         }
+    }
+
+    /// <summary>Frees an AVS preset's picture; it starts over when it's next shown.</summary>
+    private static void ReleaseAvsPicture(PresetSlot slot)
+    {
+        slot.Avs?.Hide();
+        slot.AvsView?.Dispose();
+        slot.AvsView = null;
+        slot.AvsTexture?.Dispose();
+        slot.AvsTexture = null;
     }
 
     /// <remarks>
@@ -1237,6 +1318,8 @@ public sealed partial class Renderer : IDisposable
             slot.Particles = null;
             slot.MilkDrop?.Dispose();
             slot.MilkDrop = null;
+            ReleaseAvsPicture(slot);
+            slot.Avs = null;
             if (Volatile.Read(ref slot.State) != PresetSlot.Failed)
             {
                 Volatile.Write(ref slot.State, PresetSlot.Pending);
@@ -1323,13 +1406,18 @@ public sealed partial class Renderer : IDisposable
         // MilkDrop presets only: the running preset and its shaders, drawn instead of Shader.
         public MilkDropVisual? MilkDrop;
 
+        // AVS presets only: the running preset, and the texture its picture goes into for Shader to show.
+        public AvsVisual? Avs;
+        public ID3D11Texture2D? AvsTexture;
+        public ID3D11ShaderResourceView? AvsView;
+
         public PresetSlot(PresetSource source) => Source = source;
 
         public PresetSource Source { get; }
     }
 
     /// <summary>The shared shader files a visual is assembled from.</summary>
-    private sealed record EngineSources(string Common, string PresetMain, string Particles, string ParticleMain, string MilkDrop);
+    private sealed record EngineSources(string Common, string PresetMain, string Particles, string ParticleMain, string MilkDrop, string AvsDisplay);
 
     /// <summary>A particle visual's particles, on the graphics card: written by its compute shader, read to draw them.</summary>
     private sealed class ParticleBuffer : IDisposable

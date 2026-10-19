@@ -286,6 +286,20 @@
                                                                                         </Style>
                                                                                     </Button.Style>
                                                                                 </Button>
+                                                                                <Button DockPanel.Dock="Right" Height="20" Padding="8,0" Margin="8,0,0,0" Content="IMPORT"
+                                                                                        ToolTip="Add Winamp AVS presets of your own" Click="OnImportIntoAvsFolder">
+                                                                                    <!-- Only the Winamp AVS folder has it. -->
+                                                                                    <Button.Style>
+                                                                                        <Style TargetType="Button" BasedOn="{StaticResource PillButton}">
+                                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                                            <Style.Triggers>
+                                                                                                <DataTrigger Binding="{Binding Name}" Value="Winamp AVS">
+                                                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                                                </DataTrigger>
+                                                                                            </Style.Triggers>
+                                                                                        </Style>
+                                                                                    </Button.Style>
+                                                                                </Button>
                                                                                 <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
                                                                                            Margin="8,0,2,0" VerticalAlignment="Center"
                                                                                            Foreground="{DynamicResource FaintTextBrush}" />
@@ -313,11 +327,16 @@
                                                               StrokeThickness="1.2" StrokeLineJoin="Round" Fill="Transparent"
                                                               Width="12" Height="12" Stretch="Uniform" />
                                                     </Button>
-                                                    <!-- MilkDrop presets carry a small tag, so they stand out in the A to Z list. -->
+                                                    <!-- MilkDrop and AVS presets carry a small tag, so they stand out in the A to Z list. -->
                                                     <Border x:Name="MilkDropTag" DockPanel.Dock="Right" Visibility="Collapsed" Margin="8,0,0,0" Padding="5,1"
                                                             CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
                                                             VerticalAlignment="Center" ToolTip="A MilkDrop preset">
                                                         <TextBlock Text="MILKDROP" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
+                                                    </Border>
+                                                    <Border x:Name="AvsTag" DockPanel.Dock="Right" Visibility="Collapsed" Margin="8,0,0,0" Padding="5,1"
+                                                            CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
+                                                            VerticalAlignment="Center" ToolTip="A Winamp AVS preset">
+                                                        <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </Border>
                                                     <TextBlock x:Name="Label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
@@ -329,6 +348,9 @@
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsMilkDrop}" Value="True">
                                                         <Setter TargetName="MilkDropTag" Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsAvs}" Value="True">
+                                                        <Setter TargetName="AvsTag" Property="Visibility" Value="Visible" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsFavorite}" Value="True">
                                                         <Setter TargetName="StarShape" Property="Fill" Value="{DynamicResource AccentBrush}" />
