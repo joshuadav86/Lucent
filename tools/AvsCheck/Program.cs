@@ -5,7 +5,7 @@ using System.Text;
 using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
-// Usage: AvsCheck [preset files or folders...] [--images <output folder>] [--size <width>x<height>] [--strict]
+// Usage: AvsCheck [preset files or folders...] [--images <output folder>] [--size <width>x<height>] [--dot-scale <n>] [--strict]
 // With no presets given it checks the ones that ship with Lucent. Each preset runs for 5 seconds of
 // made-up music. Exits with 1 if a preset doesn't load or an effect throws, or (with --strict) leaves anything out.
 // With --images it saves frames 60, 180 and 300 of each preset as PNGs, for checking by eye.
@@ -14,6 +14,7 @@ var inputs = new List<string>();
 string? imageFolder = null;
 var width = 640;
 var height = 360;
+var dotScale = 1f;
 var strict = false;
 for (var i = 0; i < args.Length; i++)
 {
@@ -26,6 +27,10 @@ for (var i = 0; i < args.Length; i++)
             var parts = args[++i].Split('x');
             width = int.Parse(parts[0]);
             height = int.Parse(parts[1]);
+            break;
+        case "--dot-scale" when i + 1 < args.Length:
+            // As the modern look thickens lines and dots (AvsVisual.PictureSize): 1.5 at 720 lines, 2.25 at 1080.
+            dotScale = float.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture);
             break;
         case "--strict":
             strict = true;
@@ -52,13 +57,13 @@ if (imageFolder is not null)
 var failures = 0;
 foreach (var file in files)
 {
-    failures += CheckPreset(file, width, height, imageFolder, strict);
+    failures += CheckPreset(file, width, height, dotScale, imageFolder, strict);
 }
 
 Console.WriteLine(failures == 0 ? $"All good: {files.Count} preset(s)." : $"{failures} problem(s).");
 return failures == 0 ? 0 : 1;
 
-static int CheckPreset(string file, int width, int height, string? imageFolder, bool strict)
+static int CheckPreset(string file, int width, int height, float dotScale, string? imageFolder, bool strict)
 {
     var name = Path.GetFileNameWithoutExtension(file);
     try
@@ -83,7 +88,7 @@ static int CheckPreset(string file, int width, int height, string? imageFolder, 
 
             runner.Audio.Update(left, right, frequency => (float)(Math.Max(0, 1 - frequency / 9000) * (0.4 + 0.6 * kick)), time % 0.5 < dt);
             clock.Start();
-            runner.Render(width, height, time);
+            runner.Render(width, height, time, dotScale);
             clock.Stop();
             if (imageFolder is not null && frame % 120 == 60)
             {
