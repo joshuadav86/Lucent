@@ -35,7 +35,7 @@ public partial class EditorWindow
     private Popup[] ToolPopups => new[]
     {
         GainPopup, PitchPopup, TempoPopup, EqPopup, DynamicsPopup, WidthPopup, NoisePopup, ClickPopup, AnalysisPopup, StemsPopup,
-        TransientPopup,
+        TransientPopup, EffectsPopup,
     };
 
     private void InitTools()
@@ -85,14 +85,19 @@ public partial class EditorWindow
 
     private void OnHandToggle(object? sender, RoutedEventArgs e) => SetHandTool(HandToggle.IsChecked == true);
 
-    /// <summary>Turns the hand tool on (dragging a clip's waveform slides the clip) or off (dragging selects).</summary>
+    /// <summary>
+    /// Turns the hand tool on (once the sound is split, dragging a clip's waveform moves the clip) or off (dragging
+    /// selects). It stays as it was left, next time.
+    /// </summary>
     private void SetHandTool(bool on)
     {
         HandToggle.IsChecked = on;
         Waveform.HandTool = on;
+        _settings.DragMovesClips = on;
+        _settings.Save();
         ShowStatus(on
-            ? "Hand tool on: drag a clip to slide it left or right. Press G or click Hand again to select instead."
-            : "Hand tool off: dragging selects again. Clips can still be moved by their tabs.");
+            ? "Move clips on: once the sound is split, drag a clip to move it, or onto the next one to crossfade them. ⇧drag, or drag in the ruler, to select. Press G to turn it off."
+            : "Move clips off: dragging selects again. Clips can still be moved by their tabs.");
     }
 
     private void OnViewToggle(object? sender, RoutedEventArgs e) =>
@@ -502,33 +507,6 @@ public partial class EditorWindow
 
     // ---- Repair ----
 
-    private void OnRepair(object? sender, RoutedEventArgs e)
-    {
-        var menu = MenuAbove();
-        void Add(string header, Func<Task> action, string? tip = null)
-        {
-            var item = MenuEntry(header, tip: tip);
-            item.Click += async (_, _) => await action();
-            menu.Items.Add(item);
-        }
-
-        Task Open(Popup popup)
-        {
-            popup.IsOpen = true;
-            return Task.CompletedTask;
-        }
-
-        const string humTip = "Notches out the mains frequency and its overtones, leaving the music around them";
-        Add("Remove hum (finds 50 or 60 Hz)", () => ApplyAsync(new HumRemovalEffect(null)), humTip);
-        Add("Remove 50 Hz hum  (Europe, Asia, Africa)", () => ApplyAsync(new HumRemovalEffect(50)), humTip);
-        Add("Remove 60 Hz hum  (the Americas)", () => ApplyAsync(new HumRemovalEffect(60)), humTip);
-        menu.Items.Add(new Separator());
-        Add("Remove clicks and crackle…", () => Open(ClickPopup), "Finds short clicks, like vinyl crackle, and fills them in from the music around them");
-        Add("Reduce background noise…", () => Open(NoisePopup), "Learns the hiss or hum from a quiet part, then takes it out everywhere");
-        Add("Remove DC offset", () => ApplyAsync(new DcOffsetEffect()), "Centres a waveform that sits above or below the middle line, which wastes headroom and can click");
-        menu.Open(RepairButton);
-    }
-
     private void OnClickSlider(object? sender, RangeBaseValueChangedEventArgs e) => UpdateClickText();
 
     private void UpdateClickText()
@@ -606,70 +584,6 @@ public partial class EditorWindow
     }
 
     // ---- Channels ----
-
-    private void OnChannels(object? sender, RoutedEventArgs e)
-    {
-        if (_session is not { } session)
-        {
-            return;
-        }
-
-        var stereo = session.Audio.ChannelCount > 1;
-        var menu = MenuAbove();
-        MenuItem Add(ItemsControl parent, string header, Func<Task> action, bool enabled = true, string? tip = null)
-        {
-            var item = MenuEntry(header, enabled: enabled, tip: tip);
-            item.Click += async (_, _) => await action();
-            parent.Items.Add(item);
-            return item;
-        }
-
-        Add(menu, "Swap left and right", () => ApplyAsync(new SwapChannelsEffect(), bothChannels: true), stereo);
-        Add(menu, "Mix to mono (still a stereo file)", () => ApplyAsync(new MonoMixEffect(), bothChannels: true), stereo,
-            "Both sides play the same mix. Good for one part; to make the whole file mono, convert it instead");
-        Add(menu, "Stereo width…", () =>
-        {
-            WidthPopup.IsOpen = true;
-            return Task.CompletedTask;
-        }, stereo);
-        Add(menu, "Invert polarity", () => ApplyAsync(new InvertEffect()), tip:
-            "Flips the waveform upside down. Sounds the same alone, but fixes a channel that cancels out the other");
-
-        menu.Items.Add(new Separator());
-        Add(menu, "Convert to a mono file", () => ConvertChannelsAsync(1), stereo,
-            "Mixes the channels into one; saving writes a one-channel file, half the size");
-        Add(menu, "Convert to a stereo file", () => ConvertChannelsAsync(2), !stereo,
-            "Copies the one channel to both sides");
-
-        if (stereo)
-        {
-            menu.Items.Add(new Separator());
-            menu.Items.Add(MenuEntry("Edits and effects change", enabled: false));
-            void Scope(string header, int? channel)
-            {
-                var item = new MenuItem
-                {
-                    Header = header,
-                    ToggleType = MenuItemToggleType.CheckBox,
-                    IsChecked = Waveform.SelectedChannel == channel,
-                };
-                item.Click += (_, _) =>
-                {
-                    Waveform.SelectedChannel = channel;
-                    ShowStatus(channel is null
-                        ? "Edits and effects now change both channels."
-                        : $"Select part of the sound, and effects will change only the {(channel == 0 ? "left" : "right")} channel. ⌥-drag does this too.");
-                };
-                menu.Items.Add(item);
-            }
-
-            Scope("Both channels", null);
-            Scope("Only the left channel", 0);
-            Scope("Only the right channel", 1);
-        }
-
-        menu.Open(ChannelsButton);
-    }
 
     private async Task ConvertChannelsAsync(int channels)
     {

@@ -62,6 +62,7 @@ public static class Screenshots
         ("VisualsPicker", () => PreviewVisualsPicker()),
         ("Editor", () => PreviewEditor(EditorView.Waveform)),
         ("EditorSpectrogram", () => PreviewEditor(EditorView.Spectrogram)),
+        ("EditorEffects", () => PreviewEditorEffects()),
         ("SaveAs", () => ExportWindow.PrepareSaveDialog(Path.Combine(SampleFolder(), "Night Drive.flac"),
             new ExportOptions { Format = ExportFormat.Flac }, null)),
         ("Convert", () => ExportWindow.PrepareConverter(
@@ -434,6 +435,21 @@ public static class Screenshots
         editor.ShowPreviewEdits(view);
         Dispatcher.UIThread.RunJobs();
         return editor;
+    }
+
+    /// <summary>The editor's effects menu, which opens above its Effects button, in a window of its own so it can be drawn.</summary>
+    private static Window PreviewEditorEffects()
+    {
+        var editor = (EditorWindow)PreviewEditor(EditorView.Waveform);
+        var card = editor.PreviewEffects(string.Empty);
+        editor.Close();
+        return new Window
+        {
+            Width = 632,
+            SizeToContent = SizeToContent.Height,
+            Background = Avalonia.Media.Brushes.Transparent,
+            Content = card,
+        };
     }
 
     /// <summary>

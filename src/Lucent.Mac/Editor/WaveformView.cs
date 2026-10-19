@@ -18,6 +18,8 @@ namespace Lucent.Mac.Editor;
 /// along, leaving silence behind it (its edges snap to the other clips' edges, the cursor and the playhead;
 /// ⌘ slides it freely); Option+drag a tab to move the clip in among the others instead. Click a tab to
 /// select the clip. A clip's edges and the handles at its top corners trim it and fade it (see WaveformView.Edges.cs).
+/// Once the sound is split, the hand tool (on unless turned off) lets a clip be dragged by its waveform too,
+/// and sliding a clip over the next one overlaps them with a crossfade, as in REAPER.
 /// The playhead is a separate layer, so moving it never redraws the waveform.
 /// </summary>
 /// <remarks>
@@ -72,7 +74,7 @@ public sealed partial class WaveformView : Control
     private double _pressedFrame;
     private bool _reordering;
     private int _slideOffset;
-    private int _slideEarliest;
+    private SlidePlan? _slidePlan;
     private int? _slideSnap;
     private int? _playheadFrame;
     private IReadOnlyList<Marker> _markers = Array.Empty<Marker>();
@@ -187,14 +189,15 @@ public sealed partial class WaveformView : Control
     /// <summary>Moves a frame the user picked to a better one nearby (a zero crossing), or null to leave frames as picked.</summary>
     public Func<int, int>? Snap { get; set; }
 
-    /// <summary>How much silence is just before a clip, so how far left a dragged clip can slide.</summary>
-    public Func<int, int>? SilenceBeforeClip { get; set; }
+    /// <summary>Where a clip would land if slid by an offset (see <see cref="EditSession.PlanSlide"/>), or null if it can't slide.</summary>
+    public Func<int, int, SlidePlan?>? PlanSlide { get; set; }
 
     /// <summary>
-    /// The hand tool: when on, dragging anywhere on a clip's waveform slides the clip, as dragging its tab does,
-    /// instead of selecting.
+    /// The hand tool (on unless turned off): once the sound is split, dragging a clip's waveform slides the clip, as
+    /// dragging its tab does, instead of selecting; dragging in a gap of silence, in the ruler, or with Shift still
+    /// selects. A click still puts the cursor there, and a double-click selects the clip.
     /// </summary>
-    public bool HandTool { get; set; }
+    public bool HandTool { get; set; } = true;
 
     /// <summary>The markers to show, in order.</summary>
     public IReadOnlyList<Marker> Markers
@@ -853,11 +856,27 @@ public sealed partial class WaveformView : Control
         var ghostWidth = Math.Max(4, clip.Length / _samplesPerPixel);
         if (!_reordering)
         {
-            // The clip where it will land, and a bright line on the edge it snapped to.
+            // The clip where it will land, an X where it will crossfade with a clip it overlaps, and a bright line on
+            // the edge it snapped to.
+            var placed = _slidePlan?.Placed ?? new FrameRange(clip.Start + _slideOffset, clip.Length);
+            var ghost = new Rect(FrameToX(placed.Start), tabTop, Math.Max(4, placed.Length / _samplesPerPixel), height - tabTop);
             using (dc.PushOpacity(0.8))
             {
-                dc.DrawRectangle(SelectionBrush, new Pen(SelectedWaveBrush ?? Brushes.White, 1),
-                    new Rect(FrameToX(clip.Start + _slideOffset), tabTop, ghostWidth, height - tabTop), 4, 4);
+                dc.DrawRectangle(SelectionBrush, new Pen(SelectedWaveBrush ?? Brushes.White, 1), ghost, 4, 4);
+            }
+
+            if (_slidePlan is { } plan)
+            {
+                var crossPen = new Pen(CursorBrush ?? Brushes.White, 1.5);
+                foreach (var (from, to) in new[] { (placed.Start, placed.Start + plan.OverlapBefore), (placed.End - plan.OverlapAfter, placed.End) })
+                {
+                    if (to > from)
+                    {
+                        var (x0, x1) = (FrameToX(from), FrameToX(to));
+                        dc.DrawLine(crossPen, new Point(x0, tabTop), new Point(x1, height));
+                        dc.DrawLine(crossPen, new Point(x0, height), new Point(x1, tabTop));
+                    }
+                }
             }
 
             if (_slideSnap is { } snapped)
@@ -889,9 +908,9 @@ public sealed partial class WaveformView : Control
     }
 
     /// <summary>
-    /// How far a clip slides when its tab is dragged to an x position: as far as the mouse moved, snapped (unless
-    /// ⌘ is held) so one of its edges lines up with another clip's edge, the cursor or the playhead when it's
-    /// close, and no further left than the silence before it. Also says which edge it snapped to.
+    /// How far a clip slides when it's dragged to an x position: as far as the mouse moved, snapped (unless ⌘ is
+    /// held) so one of its edges lines up with another clip's edge, the cursor or the playhead when it's close, and
+    /// no further than it can go (see <see cref="EditSession.PlanSlide"/>). Also says which edge it snapped to.
     /// </summary>
     private (int Offset, int? Snap) SlideOffset(int dragged, double x)
     {
@@ -925,9 +944,10 @@ public sealed partial class WaveformView : Control
         }
 
         var frames = (int)Math.Round(offset);
-        if (frames < _slideEarliest)
+        _slidePlan = PlanSlide?.Invoke(dragged, frames);
+        if (_slidePlan is { } plan && plan.Offset != frames)
         {
-            return (_slideEarliest, null);
+            return (plan.Offset, null);
         }
 
         return (frames, snap);
@@ -1165,19 +1185,30 @@ public sealed partial class WaveformView : Control
             return;
         }
 
-        if (IsOnClipBar(position) || (HandTool && position.Y >= RulerHeight))
+        if (e.ClickCount == 2 && position.Y >= RulerHeight && Clips.Count > 1)
         {
-            // A clip's tab (or, with the hand tool, its waveform): dragging slides the clip (Option+dragging moves it in
-            // among the others), a click selects it.
+            // A double-click selects the clip.
+            ReleaseMouseCapture();
+            _leftDown = false;
+            Selection = Clips[ClipIndexAt(frame)];
+            _anchor = null;
+            e.Handled = true;
+            return;
+        }
+
+        if (IsOnClipBar(position) || MovesClipAt(position))
+        {
+            // A clip's tab (or, with the hand tool, its waveform): dragging slides the clip (Option+dragging its tab
+            // moves it in among the others). A click on the tab selects the clip; on the waveform, it places the cursor.
             _draggedClip = ClipIndexAt(frame);
             _draggingClip = false;
             _dragX = position.X;
             _pressedFrame = XToFrame(position.X);
-            _reordering = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+            _reordering = IsOnClipBar(position) && e.KeyModifiers.HasFlag(KeyModifiers.Alt);
             _slideOffset = 0;
+            _slidePlan = null;
             _slideSnap = null;
-            _slideEarliest = -(SilenceBeforeClip?.Invoke(_draggedClip.Value) ?? 0);
-            _anchor = null;
+            _anchor = IsOnClipBar(position) ? null : Snapped(frame);
             e.Handled = true;
             return;
         }
@@ -1215,7 +1246,7 @@ public sealed partial class WaveformView : Control
             HoverClip(position);
             Cursor = MarkerAt(position) is not null ? SideToSideCursor
                 : EdgeAt(position, _modifiers.HasFlag(KeyModifiers.Shift)) is { } edge ? EdgeCursor(edge)
-                : (IsOnClipBar(position) || (HandTool && position.Y >= RulerHeight)) && _peaks is not null ? HandCursor
+                : (IsOnClipBar(position) || MovesClipAt(position)) && _peaks is not null ? HandCursor
                 : IBeamCursor;
         }
 
@@ -1361,7 +1392,16 @@ public sealed partial class WaveformView : Control
         if (pressedClip is { } clip)
         {
             var clips = Clips;
-            if (!dragged && clip < clips.Count)
+            if (!dragged && _anchor is { } placed)
+            {
+                // A click on a clip's waveform with the hand tool: the cursor goes there, as without it.
+                _selection = new FrameRange(placed, 0);
+                _cursor = placed;
+                InvalidateVisual();
+                SelectionChanged?.Invoke(this, EventArgs.Empty);
+                CursorPlaced?.Invoke(this, EventArgs.Empty);
+            }
+            else if (!dragged && clip < clips.Count)
             {
                 Selection = clips[clip];
             }
@@ -1376,6 +1416,11 @@ public sealed partial class WaveformView : Control
             else if (dragged && DropIndex(clip, XToFrame(position.X)) is var toIndex && toIndex != clip)
             {
                 ClipMoveRequested?.Invoke(this, (clip, toIndex));
+            }
+
+            if (dragged)
+            {
+                _anchor = null;
             }
 
             e.Handled = true;
@@ -1478,6 +1523,22 @@ public sealed partial class WaveformView : Control
 
     private static bool IsOnClipBar(Point position) =>
         position.Y >= RulerHeight && position.Y < RulerHeight + ClipBarHeight;
+
+    /// <summary>
+    /// Whether pressing here grabs a clip to move it: with the hand tool on, in the lanes of a split sound, over a
+    /// clip with sound in it (gaps of silence select), unless Shift (to select) or Option (to select in one channel) is held.
+    /// </summary>
+    private bool MovesClipAt(Point position)
+    {
+        if (!HandTool || _peaks is null || position.Y < RulerHeight + ClipBarHeight || Clips.Count < 2
+            || _modifiers.HasFlag(KeyModifiers.Shift) || _modifiers.HasFlag(KeyModifiers.Alt))
+        {
+            return false;
+        }
+
+        var index = ClipIndexAt(FrameAt(position.X));
+        return _clipEdges.Count != Clips.Count || index >= _clipEdges.Count || !_clipEdges[index].Silent;
+    }
 
     private void SetSelectionTo(int frame)
     {

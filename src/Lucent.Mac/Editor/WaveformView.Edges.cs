@@ -11,7 +11,9 @@ namespace Lucent.Mac.Editor;
 /// a trimmer: dragging the edge in trims the clip (leaving silence, and keeping what was trimmed), and dragging it
 /// out over silence brings back what was trimmed or cut. Where two clips touch, dragging moves the split between
 /// them (Shift+drag trims just the clip the pointer is on). The handles at a clip's top corners drag out a fade in
-/// or out. Edges snap to the other clips' edges, the cursor and the playhead; ⌘ drags freely.
+/// or out. Edges snap to the other clips' edges, the cursor and the playhead; ⌘ drags freely. Where a clip
+/// overlaps the next one, the crossfade is drawn as an X, and its edges stay put (sliding the clip changes it).
+/// Right-clicking a fade or crossfade offers its shapes (see <see cref="FadeUnder"/>).
 /// </summary>
 public sealed partial class WaveformView
 {
@@ -21,6 +23,7 @@ public sealed partial class WaveformView
     private static readonly Cursor FadeInCursor = new(StandardCursorType.TopLeftCorner);
     private static readonly Cursor FadeOutCursor = new(StandardCursorType.TopRightCorner);
     private static readonly IBrush FadeShade = new ImmutableSolidColorBrush(Color.FromArgb(0x55, 0, 0, 0));
+    private static readonly IBrush CrossTint = new ImmutableSolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF));
 
     private IReadOnlyList<ClipEdges> _clipEdges = Array.Empty<ClipEdges>();
     private EdgeGrab? _grab;
@@ -87,13 +90,19 @@ public sealed partial class WaveformView
                 }
 
                 var fadeIn = clip.Range.Start + clip.FadeIn;
-                var fadeOut = clip.Range.End - clip.FadeOut;
+                var fadeOut = clip.Range.End - clip.FadeOut - clip.CrossfadeAfter;
                 foreach (var (kind, frame, min, max) in new[]
                 {
                     (GrabKind.FadeIn, fadeIn, clip.Range.Start, fadeOut),
                     (GrabKind.FadeOut, fadeOut, fadeIn, clip.Range.End),
                 })
                 {
+                    // A crossfade has no handle: it's as long as the clips overlap.
+                    if (kind == GrabKind.FadeIn ? clip.CrossfadeBefore > 0 : clip.CrossfadeAfter > 0)
+                    {
+                        continue;
+                    }
+
                     var distance = Math.Abs(FrameToX(frame) - position.X);
                     // A handle at the edge is only reached from inside the clip.
                     var inside = kind == GrabKind.FadeIn ? position.X >= FrameToX(clip.Range.Start) - 1 : position.X <= FrameToX(clip.Range.End) + 1;
@@ -128,6 +137,12 @@ public sealed partial class WaveformView
 
             var left = i > 0 && !edges[i - 1].Silent ? edges[i - 1] : null;
             var right = i < edges.Count && !edges[i].Silent ? edges[i] : null;
+            if (left is { CrossfadeAfter: > 0 })
+            {
+                // Overlapping clips: their edges there stay put while they overlap.
+                continue;
+            }
+
             if (left is not null && right is not null && !shift)
             {
                 return new EdgeGrab(GrabKind.Split, i, frame, left.Range.Start + 1, right.Range.End - 1);
@@ -160,6 +175,45 @@ public sealed partial class WaveformView
         }
 
         return frames;
+    }
+
+    /// <summary>The fade or crossfade at a point in the lanes, if there is one (with a few pixels' grace for short ones).</summary>
+    public FadeSpot? FadeUnder(Point position)
+    {
+        var edges = _clipEdges;
+        if (_peaks is null || position.Y < RulerHeight + ClipBarHeight || edges.Count != Clips.Count)
+        {
+            return null;
+        }
+
+        var x = position.X;
+        for (var i = 0; i < edges.Count; i++)
+        {
+            var clip = edges[i];
+            if (clip.Silent)
+            {
+                continue;
+            }
+
+            var x0 = FrameToX(clip.Range.Start);
+            var x1 = FrameToX(clip.Range.End);
+            if (clip.CrossfadeAfter > 0 && x >= FrameToX(clip.Range.End - clip.CrossfadeAfter) - FadeHandleReach / 2 && x <= x1 + FadeHandleReach / 2)
+            {
+                return new FadeSpot(i, false, true, clip.FadeOutShape);
+            }
+
+            if (clip.FadeIn > 0 && x >= x0 && x <= Math.Max(FrameToX(clip.Range.Start + clip.FadeIn), x0 + FadeHandleReach))
+            {
+                return new FadeSpot(i, true, false, clip.FadeInShape);
+            }
+
+            if (clip.FadeOut > 0 && x <= x1 && x >= Math.Min(FrameToX(clip.Range.End - clip.FadeOut), x1 - FadeHandleReach))
+            {
+                return new FadeSpot(i, false, false, clip.FadeOutShape);
+            }
+        }
+
+        return null;
     }
 
     private static Cursor EdgeCursor(EdgeGrab grab) => grab.Kind switch
@@ -319,6 +373,7 @@ public sealed partial class WaveformView
 
             var fadeIn = clip.FadeIn;
             var fadeOut = clip.FadeOut;
+            var crossfade = clip.CrossfadeAfter;
             if (grab is { } g && g.Clip == i)
             {
                 fadeIn = g.Kind == GrabKind.FadeIn ? _grabFrame - clip.Range.Start : fadeIn;
@@ -337,19 +392,39 @@ public sealed partial class WaveformView
                 var top = LaneTop(c, laneHeight);
                 if (fadeIn > 0)
                 {
-                    DrawFade(dc, x0, FrameToX(clip.Range.Start + fadeIn), top, laneHeight, rising: true, curvePen);
+                    DrawFade(dc, x0, FrameToX(clip.Range.Start + fadeIn), top, laneHeight, rising: true, clip.FadeInShape, curvePen, FadeShade);
                 }
 
                 if (fadeOut > 0)
                 {
-                    DrawFade(dc, FrameToX(clip.Range.End - fadeOut), x1, top, laneHeight, rising: false, curvePen);
+                    DrawFade(dc, FrameToX(clip.Range.End - fadeOut), x1, top, laneHeight, rising: false, clip.FadeOutShape, curvePen, FadeShade);
+                }
+
+                if (crossfade > 0)
+                {
+                    // An X: this clip fading out as the next fades in.
+                    var cross0 = FrameToX(clip.Range.End - crossfade);
+                    dc.DrawRectangle(CrossTint, null, new Rect(cross0, top, Math.Max(1, x1 - cross0), laneHeight));
+                    DrawFade(dc, cross0, x1, top, laneHeight, rising: false, clip.FadeOutShape, curvePen, null);
+                    DrawFade(dc, cross0, x1, top, laneHeight, rising: true, clip.FadeOutShape, curvePen, null);
                 }
             }
 
             if (_hoverClip == i || grab?.Clip == i && grab.Kind is GrabKind.FadeIn or GrabKind.FadeOut)
             {
                 var handleTop = LaneTop(0, laneHeight) + 2;
-                foreach (var x in new[] { FrameToX(clip.Range.Start + fadeIn), FrameToX(clip.Range.End - fadeOut) })
+                var handles = new List<double>();
+                if (clip.CrossfadeBefore == 0)
+                {
+                    handles.Add(FrameToX(clip.Range.Start + fadeIn));
+                }
+
+                if (crossfade == 0)
+                {
+                    handles.Add(FrameToX(clip.Range.End - fadeOut));
+                }
+
+                foreach (var x in handles)
                 {
                     var handle = new Rect(Math.Clamp(x, x0, x1 - 1) - 4, handleTop, 8, 8);
                     dc.DrawRectangle(SelectedWaveBrush ?? Brushes.White, new Pen(LaneBrush ?? Brushes.Black, 1), handle, 2, 2);
@@ -381,8 +456,8 @@ public sealed partial class WaveformView
             new Point(edgeX, RulerHeight), new Point(edgeX, height));
     }
 
-    /// <summary>A fade's curve across one lane, with the part above it shaded (what the fade takes away).</summary>
-    private static void DrawFade(DrawingContext dc, double x0, double x1, double top, double laneHeight, bool rising, IPen pen)
+    /// <summary>A fade's curve across one lane, with the part above it shaded (what the fade takes away), if there's a shade.</summary>
+    private static void DrawFade(DrawingContext dc, double x0, double x1, double top, double laneHeight, bool rising, FadeShape shape, IPen pen, IBrush? shade)
     {
         if (x1 - x0 < 1)
         {
@@ -398,7 +473,7 @@ public sealed partial class WaveformView
         {
             for (var i = 0; i <= steps; i++)
             {
-                var gain = EditSession.FadeGain(i, steps + 1, rising);
+                var gain = EditSession.FadeGain(i, steps + 1, rising, shape);
                 var point = new Point(x0 + (x1 - x0) * i / steps, bottom - gain * laneHeight);
                 if (i == 0)
                 {
@@ -418,7 +493,11 @@ public sealed partial class WaveformView
             a.EndFigure(true);
         }
 
-        dc.DrawGeometry(FadeShade, null, area);
+        if (shade is not null)
+        {
+            dc.DrawGeometry(shade, null, area);
+        }
+
         dc.DrawGeometry(null, pen, curve);
     }
 }
