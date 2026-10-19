@@ -9,6 +9,16 @@ public static class AppInfo
     /// <summary>Lucent's version, as CI stamps it (1.0.build).</summary>
     public static string Version { get; } = ReadVersion();
 
+    /// <summary>The commit this copy was built from, or null if the build didn't record it.</summary>
+    public static string? Commit { get; } = ReadCommit();
+
+    private static string? ReadCommit()
+    {
+        var version = typeof(AppInfo).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var plus = version?.IndexOf('+') ?? -1;
+        return plus >= 0 ? version![(plus + 1)..] : null;
+    }
+
     private static string ReadVersion()
     {
         var assembly = typeof(AppInfo).Assembly;

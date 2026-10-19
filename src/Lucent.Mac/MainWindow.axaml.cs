@@ -328,7 +328,7 @@ public partial class MainWindow : Window
 
         _updater.UpdateReady += version => Dispatcher.UIThread.Post(() =>
         {
-            ToolTip.SetTip(UpdateButton, $"Lucent {version} is ready. Click to restart into it now, or it installs when you close Lucent.");
+            ToolTip.SetTip(UpdateButton, $"Lucent {version} is ready. Click to see what's new and restart into it, or it installs when you close Lucent.");
             UpdateButton.IsVisible = true;
             ShowUpdateStatus(ReadyStatus(version), readyToInstall: true);
         });
@@ -1274,6 +1274,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        ShowOptions();
+    }
+
+    private void ShowOptions()
+    {
         ShowOptionValues();
         UpdateHdrHint();
 
@@ -1303,7 +1308,12 @@ public partial class MainWindow : Window
     /// <summary>Opens Options on its Updates tab.</summary>
     private void ShowUpdatesTab()
     {
-        OpenOptions();
+        Activate();
+        if (!OptionsPopup.IsOpen && !_visuals.IsFullscreen)
+        {
+            ShowOptions();
+        }
+
         UpdatesTabButton.IsChecked = true;
         OnOptionsTab(UpdatesTabButton, new RoutedEventArgs());
     }

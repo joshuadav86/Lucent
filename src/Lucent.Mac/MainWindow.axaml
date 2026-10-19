@@ -26,7 +26,7 @@
                     <!-- Shows once a newer build has downloaded. It installs when Lucent closes anyway; this restarts now. -->
                     <Button x:Name="UpdateButton" Theme="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
                             Content="UPDATE" Foreground="{DynamicResource AccentBrush}" IsVisible="False"
-                            Click="OnInstallUpdate" />
+                            Click="OnShowUpdate" />
                     <Button Theme="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
                             ToolTip.Tip="Buy me a coffee: support Lucent" Click="OnBuyMeACoffee">
                         <Path Theme="{StaticResource LineIcon}"
@@ -198,6 +198,12 @@
                                     <TextBlock x:Name="VersionText" Theme="{StaticResource OptionHint}" Margin="2,8,0,0" />
                                     <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
                                     <TextBlock x:Name="UpdateStatusText" Theme="{StaticResource OptionHint}" IsVisible="False" />
+                                    <StackPanel x:Name="WhatsNewPanel" IsVisible="False">
+                                        <TextBlock Theme="{StaticResource OptionLabel}" Text="What's new" />
+                                        <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
+                                            <TextBlock x:Name="WhatsNewText" Theme="{StaticResource OptionHint}" Margin="2,0,0,0" />
+                                        </ScrollViewer>
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                                         <Button x:Name="RestartToUpdateButton" Theme="{StaticResource PillButton}" Content="Restart and install" Margin="0,0,8,0"
                                                 Foreground="{DynamicResource AccentBrush}" IsVisible="False" Click="OnInstallUpdate" />

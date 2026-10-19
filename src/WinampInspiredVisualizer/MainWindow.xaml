@@ -44,7 +44,7 @@
                     <!-- Shows once a newer build has downloaded. It installs when Lucent closes anyway; this restarts now. -->
                     <Button x:Name="UpdateButton" Style="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
                             Content="UPDATE" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"
-                            Click="OnInstallUpdate" WindowChrome.IsHitTestVisibleInChrome="True" />
+                            Click="OnShowUpdate" WindowChrome.IsHitTestVisibleInChrome="True" />
                     <Button Style="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
                             ToolTip="Buy me a coffee: support Lucent" Click="OnBuyMeACoffee"
                             WindowChrome.IsHitTestVisibleInChrome="True">
@@ -79,7 +79,7 @@
                                                      ToolTip="When and how visuals change" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
                                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
-                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
+                                        <RadioButton x:Name="UpdatesTabButton" Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                                     </UniformGrid>
                                 </Border>
 
@@ -215,6 +215,12 @@
                                     <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" Margin="2,8,0,0" />
                                     <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
                                     <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionHint}" Visibility="Collapsed" />
+                                    <StackPanel x:Name="WhatsNewPanel" Visibility="Collapsed">
+                                        <TextBlock Style="{StaticResource OptionLabel}" Text="What's new" />
+                                        <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
+                                            <TextBlock x:Name="WhatsNewText" Style="{StaticResource OptionHint}" Margin="2,0,0,0" />
+                                        </ScrollViewer>
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                                         <Button x:Name="RestartToUpdateButton" Style="{StaticResource PillButton}" Content="Restart and install" Margin="0,0,8,0"
                                                 Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Click="OnInstallUpdate" />
