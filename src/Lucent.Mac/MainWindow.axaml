@@ -70,6 +70,7 @@
                                     <TextBlock Theme="{StaticResource OptionLabel}" Text="Resolution" />
                                     <Border Theme="{StaticResource SegmentBar}">
                                         <UniformGrid Rows="1">
+                                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Auto" Content="Auto" Click="OnOptionChosen" />
                                             <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Window" Content="Window" Click="OnOptionChosen" />
                                             <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Resolution" Tag="FullHd" Content="1080p" Click="OnOptionChosen" />
                                             <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Resolution" Tag="QuadHd" Content="1440p" Click="OnOptionChosen" />
@@ -77,7 +78,7 @@
                                         </UniformGrid>
                                     </Border>
                                     <TextBlock Theme="{StaticResource OptionHint}"
-                                               Text="Above your window's own size, visuals are drawn bigger and shrunk to fit: smoother and more detailed, but more work for the graphics chip." />
+                                               Text="Auto draws at your window's size, and at fewer pixels while a visual can't keep up, so it stays smooth. Above your window's own size, visuals are drawn bigger and shrunk to fit: smoother and more detailed, but more work for the graphics chip." />
 
                                     <TextBlock Theme="{StaticResource OptionLabel}" Text="Detail" />
                                     <Border Theme="{StaticResource SegmentBar}">

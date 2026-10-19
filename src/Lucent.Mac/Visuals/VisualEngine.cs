@@ -91,6 +91,8 @@ public sealed partial class VisualEngine : IDisposable
     private int _current;
     private int _frameCount;
     private int _activePreset = -1;
+    private readonly AutoResolution _autoResolution = new();
+    private volatile bool _autoResolutionOn;
     private int _fromPreset = -1;
     private double _transitionStart;
     private double _lastSwitch;
@@ -175,6 +177,16 @@ public sealed partial class VisualEngine : IDisposable
     {
         get => _targetPixels;
         set => _targetPixels = Math.Max(0, value);
+    }
+
+    /// <summary>
+    /// With <see cref="TargetPixels"/> at 0, draw a visual that can't keep up with the screen at fewer
+    /// pixels until it can (the Automatic resolution).
+    /// </summary>
+    public bool AutoResolution
+    {
+        get => _autoResolutionOn;
+        set => _autoResolutionOn = value;
     }
 
     /// <summary>Detail level for visuals: 0 low, 1 normal, 2 high, 3 ultra.</summary>
@@ -1006,13 +1018,27 @@ public sealed partial class VisualEngine : IDisposable
 
     // ---- Sizes ----
 
+    /// <summary>Call on the render thread once each frame is shown, so the Automatic resolution can watch the frame rate.</summary>
+    public void FramePresented(double now)
+    {
+        if (_autoResolutionOn && _targetPixels <= 0 && _activePreset >= 0)
+        {
+            _autoResolution.Frame(now, Display.RefreshRate, _activePreset);
+        }
+    }
+
     /// <summary>The size to draw at: the output's own, or about <see cref="TargetPixels"/> pixels in its shape.</summary>
     private (int Width, int Height) RenderSizeFor(int windowWidth, int windowHeight)
     {
         var target = _targetPixels;
         if (target <= 0)
         {
-            return (windowWidth, windowHeight);
+            if (!_autoResolutionOn || _autoResolution.PixelShare >= 1.0)
+            {
+                return (windowWidth, windowHeight);
+            }
+
+            target = (int)(_autoResolution.PixelShare * windowWidth * windowHeight);
         }
 
         var scale = Math.Clamp(Math.Sqrt(target / ((double)windowWidth * windowHeight)), MinRenderScale, MaxRenderScale);

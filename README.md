@@ -144,7 +144,7 @@ The MilkDrop spirit, rebuilt: fly through infinite fractals, stare into kaleidos
 <details>
 <summary><b>Graphics options</b></summary>
 
-- **Resolution:** the window's size, or 1080p, 1440p, or 4K supersampled down for finer detail
+- **Resolution:** Automatic (the window's size, drawing fewer pixels while a heavy visual can't keep up), the window's size, or 1080p, 1440p, or 4K supersampled down for finer detail
 - **Detail:** Low to Ultra, for more ray-marching steps, deeper fractals, and up to four times the particles
 - **Glow:** how strongly bright parts bloom, from off to strong
 - **HDR:** highlights shine brighter than white on HDR screens

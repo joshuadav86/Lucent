@@ -1080,6 +1080,7 @@ public partial class MainWindow : Window
     public void ApplyVisualizerSettings()
     {
         _visualizer.TargetPixels = GraphicsOptions.Pixels(_settings.Resolution);
+        _visualizer.AutoResolution = _settings.Resolution == RenderResolution.Auto;
         _visualizer.Quality = GraphicsOptions.Quality(_settings.Detail);
         _visualizer.BloomStrength = GraphicsOptions.BloomStrength(_settings.Glow);
         AvsVisual.ModernLook = _settings.ModernAvs;

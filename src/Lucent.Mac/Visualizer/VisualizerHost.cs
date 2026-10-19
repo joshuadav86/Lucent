@@ -28,6 +28,7 @@ public sealed class VisualizerHost : Border, IDisposable
     private int _presetIndex;
     private bool _autoCycle = true;
     private int _targetPixels;
+    private bool _autoResolution;
     private float _quality = 1f;
     private float _bloomStrength = 1f;
     private float _transitionSeconds = 3f;
@@ -115,6 +116,20 @@ public sealed class VisualizerHost : Border, IDisposable
             if (_engine is not null)
             {
                 _engine.TargetPixels = value;
+            }
+        }
+    }
+
+    /// <summary>With <see cref="TargetPixels"/> at 0, draw visuals that can't keep up at fewer pixels until they can.</summary>
+    public bool AutoResolution
+    {
+        get => _autoResolution;
+        set
+        {
+            _autoResolution = value;
+            if (_engine is not null)
+            {
+                _engine.AutoResolution = value;
             }
         }
     }
@@ -303,6 +318,7 @@ public sealed class VisualizerHost : Border, IDisposable
         engine.PresetIndex = _presetIndex;
         engine.AutoCycle = _autoCycle;
         engine.TargetPixels = _targetPixels;
+        engine.AutoResolution = _autoResolution;
         engine.Quality = _quality;
         engine.BloomStrength = _bloomStrength;
         engine.TransitionSeconds = _transitionSeconds;

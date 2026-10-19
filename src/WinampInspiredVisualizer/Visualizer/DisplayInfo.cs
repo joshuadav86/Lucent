@@ -5,9 +5,10 @@ namespace WinampInspiredVisualizer.Visualizer;
 
 /// <summary>
 /// What the screen showing the visualizer can do: whether Windows has HDR turned on for it,
-/// the brightness Windows uses for normal (SDR) white there, and its peak brightness, in nits.
+/// the brightness Windows uses for normal (SDR) white there, its peak brightness, in nits, and how
+/// many times a second it refreshes.
 /// </summary>
-public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float PeakNits)
+public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float PeakNits, int RefreshRate = 60)
 {
     private const uint QdcOnlyActivePaths = 0x2;
     private const int DeviceInfoGetSourceName = 1;
@@ -59,29 +60,33 @@ public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float 
         {
             var description = best.Description1;
             var hdrOn = description.ColorSpace == ColorSpaceType.RgbFullG2084NoneP2020;
-            var white = ReadSdrWhiteNits(description.DeviceName) ?? 200f;
+            var (sdrWhite, refreshRate) = ReadTarget(description.DeviceName);
+            var white = sdrWhite ?? 200f;
 
             // Some screens report nonsense here; fall back to a typical HDR monitor.
             var peak = description.MaxLuminance is >= 200f and <= 10000f ? description.MaxLuminance : 1000f;
-            return new DisplayInfo(hdrOn, white, Math.Max(peak, white * 1.25f));
+            return new DisplayInfo(hdrOn, white, Math.Max(peak, white * 1.25f), refreshRate);
         }
     }
 
-    /// <summary>The "SDR content brightness" Windows uses on an HDR screen, so normal white matches the desktop.</summary>
-    private static float? ReadSdrWhiteNits(string deviceName)
+    /// <summary>
+    /// The "SDR content brightness" Windows uses on an HDR screen, so normal white matches the desktop,
+    /// and the screen's refresh rate.
+    /// </summary>
+    private static (float? SdrWhiteNits, int RefreshRate) ReadTarget(string deviceName)
     {
         try
         {
             if (GetDisplayConfigBufferSizes(QdcOnlyActivePaths, out var pathCount, out var modeCount) != 0)
             {
-                return null;
+                return (null, 60);
             }
 
             var paths = new DisplayConfigPathInfo[pathCount];
             var modes = new DisplayConfigModeInfo[modeCount];
             if (QueryDisplayConfig(QdcOnlyActivePaths, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero) != 0)
             {
-                return null;
+                return (null, 60);
             }
 
             for (var i = 0; i < pathCount; i++)
@@ -103,6 +108,9 @@ public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float 
                     continue;
                 }
 
+                var refreshRate = paths[i].RefreshRateDenominator > 0
+                    ? (int)Math.Round((double)paths[i].RefreshRateNumerator / paths[i].RefreshRateDenominator)
+                    : 60;
                 var white = new DisplayConfigSdrWhiteLevel
                 {
                     Header = new DisplayConfigDeviceInfoHeader
@@ -113,11 +121,11 @@ public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float 
                         Id = paths[i].TargetId,
                     },
                 };
-                if (DisplayConfigGetDeviceInfo(ref white) == 0 && white.SdrWhiteLevel > 0)
-                {
-                    // Reported in thousandths of 80 nits.
-                    return white.SdrWhiteLevel / 1000f * 80f;
-                }
+                // Reported in thousandths of 80 nits.
+                var whiteNits = DisplayConfigGetDeviceInfo(ref white) == 0 && white.SdrWhiteLevel > 0
+                    ? white.SdrWhiteLevel / 1000f * 80f
+                    : (float?)null;
+                return (whiteNits, refreshRate > 0 ? refreshRate : 60);
             }
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
@@ -125,7 +133,7 @@ public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float 
             // Older Windows: assume the usual brightness.
         }
 
-        return null;
+        return (null, 60);
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -144,7 +152,7 @@ public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float 
         public int HighPart;
     }
 
-    // DISPLAYCONFIG_PATH_INFO (72 bytes): only the ids are read, the rest keeps the layout.
+    // DISPLAYCONFIG_PATH_INFO (72 bytes): only the ids and refresh rate are read, the rest keeps the layout.
     [StructLayout(LayoutKind.Sequential)]
     private struct DisplayConfigPathInfo
     {
