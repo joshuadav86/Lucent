@@ -14,6 +14,9 @@ public enum RenderResolution
 
     /// <summary>About 3840 x 2160 pixels' worth.</summary>
     UltraHd,
+
+    /// <summary>The visual area's own size, or fewer pixels while a visual can't keep up with the screen.</summary>
+    Auto,
 }
 
 /// <summary>How much work each visual puts into fine detail (ray-march steps, fractal depth).</summary>
@@ -43,7 +46,7 @@ public enum TransitionSpeed
 /// <summary>What each option means to the renderer.</summary>
 public static class GraphicsOptions
 {
-    /// <summary>Pixels to draw, or 0 to match the window.</summary>
+    /// <summary>Pixels to draw, or 0 to match the window (Automatic draws fewer while a visual can't keep up).</summary>
     public static int Pixels(RenderResolution resolution) => resolution switch
     {
         RenderResolution.FullHd => 1920 * 1080,

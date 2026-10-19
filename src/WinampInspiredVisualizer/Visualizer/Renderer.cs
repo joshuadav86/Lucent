@@ -66,6 +66,8 @@ public sealed partial class Renderer : IDisposable
     private volatile bool _hdrRequested;
     private int _compilersRunning;
     private int _activePreset = -1;
+    private readonly AutoResolution _autoResolution = new();
+    private volatile bool _autoResolutionOn;
     private int _fromPreset = -1;
     private double _transitionStart;
     private double _lastSwitch;
@@ -173,6 +175,16 @@ public sealed partial class Renderer : IDisposable
     {
         get => _targetPixels;
         set => _targetPixels = Math.Max(0, value);
+    }
+
+    /// <summary>
+    /// With <see cref="TargetPixels"/> at 0, draw a visual that can't keep up with the screen at fewer
+    /// pixels until it can (the Automatic resolution).
+    /// </summary>
+    public bool AutoResolution
+    {
+        get => _autoResolutionOn;
+        set => _autoResolutionOn = value;
     }
 
     /// <summary>Detail level for visuals: 0 low, 1 normal, 2 high, 3 ultra.</summary>
@@ -621,6 +633,10 @@ public sealed partial class Renderer : IDisposable
 
             DrawFrame(now, deltaTime, progress, _backBufferView!);
             Present();
+            if (_autoResolutionOn && _targetPixels <= 0)
+            {
+                _autoResolution.Frame(now, _display.RefreshRate, _activePreset);
+            }
 
             frames++;
             if (now - frameRateStart >= 1.0)
@@ -1147,7 +1163,12 @@ public sealed partial class Renderer : IDisposable
         var target = _targetPixels;
         if (target <= 0)
         {
-            return (windowWidth, windowHeight);
+            if (!_autoResolutionOn || _autoResolution.PixelShare >= 1.0)
+            {
+                return (windowWidth, windowHeight);
+            }
+
+            target = (int)(_autoResolution.PixelShare * windowWidth * windowHeight);
         }
 
         var scale = Math.Clamp(Math.Sqrt(target / ((double)windowWidth * windowHeight)), MinRenderScale, MaxRenderScale);

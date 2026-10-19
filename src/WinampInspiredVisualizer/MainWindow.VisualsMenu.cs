@@ -12,6 +12,7 @@ public partial class MainWindow
     {
         menu.Items.Add(Choices("Resolution", new[]
         {
+            (RenderResolution.Auto, "Automatic"),
             (RenderResolution.Window, "Window size"),
             (RenderResolution.FullHd, "1080p"),
             (RenderResolution.QuadHd, "1440p"),

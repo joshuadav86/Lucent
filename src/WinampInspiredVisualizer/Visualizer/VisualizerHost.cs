@@ -29,6 +29,7 @@ public sealed class VisualizerHost : HwndHost
     private int _presetIndex;
     private bool _autoCycle = true;
     private int _targetPixels;
+    private bool _autoResolution;
     private float _quality = 1f;
     private float _bloomStrength = 1f;
     private float _transitionSeconds = 3f;
@@ -109,6 +110,20 @@ public sealed class VisualizerHost : HwndHost
             if (_renderer is not null)
             {
                 _renderer.TargetPixels = value;
+            }
+        }
+    }
+
+    /// <summary>With <see cref="TargetPixels"/> at 0, draw visuals that can't keep up at fewer pixels until they can.</summary>
+    public bool AutoResolution
+    {
+        get => _autoResolution;
+        set
+        {
+            _autoResolution = value;
+            if (_renderer is not null)
+            {
+                _renderer.AutoResolution = value;
             }
         }
     }
@@ -276,6 +291,7 @@ public sealed class VisualizerHost : HwndHost
         _renderer.PresetIndex = _presetIndex;
         _renderer.AutoCycle = _autoCycle;
         _renderer.TargetPixels = _targetPixels;
+        _renderer.AutoResolution = _autoResolution;
         _renderer.Quality = _quality;
         _renderer.BloomStrength = _bloomStrength;
         _renderer.TransitionSeconds = _transitionSeconds;
