@@ -29,13 +29,15 @@ public sealed class StemSplitter : IDisposable
 
     private static readonly double[] Window = Enumerable.Range(0, Nfft).Select(n => 0.5 - 0.5 * Math.Cos(2 * Math.PI * n / Nfft)).ToArray();
 
-    private readonly InferenceSession _session;
+    private readonly string _modelPath;
+    private InferenceSession _session;
     private readonly int _segment;
     private readonly int _frames;
     private readonly Fft _fft = new(Nfft);
 
-    private StemSplitter(InferenceSession session, string device)
+    private StemSplitter(string modelPath, InferenceSession session, string device)
     {
+        _modelPath = modelPath;
         _session = session;
         Device = device;
         var meta = session.ModelMetadata.CustomMetadataMap;
@@ -52,14 +54,14 @@ public sealed class StemSplitter : IDisposable
     public int SampleRate { get; }
 
     /// <summary>What it runs on, for the status line: "graphics card" or "processor".</summary>
-    public string Device { get; }
+    public string Device { get; private set; }
 
     public bool OnGraphicsCard => Device != ProcessorName;
 
     private const string ProcessorName = "processor";
 
     /// <summary>Why the graphics card wasn't used, when it was tried and couldn't run the model.</summary>
-    public string? GraphicsCardProblem { get; private init; }
+    public string? GraphicsCardProblem { get; private set; }
 
     /// <summary>
     /// Loads the model, on the graphics card if one can run it (DirectML on Windows, Core ML on a Mac),
@@ -77,7 +79,7 @@ public sealed class StemSplitter : IDisposable
                 {
                     options = BaseOptions();
                     add(options);
-                    return new StemSplitter(new InferenceSession(modelPath, options), name);
+                    return new StemSplitter(modelPath, new InferenceSession(modelPath, options), name);
                 }
                 catch (Exception ex) when (ex is OnnxRuntimeException or EntryPointNotFoundException or DllNotFoundException or NotSupportedException)
                 {
@@ -92,7 +94,7 @@ public sealed class StemSplitter : IDisposable
         }
 
         using var cpu = BaseOptions();
-        return new StemSplitter(new InferenceSession(modelPath, cpu), ProcessorName) { GraphicsCardProblem = problem };
+        return new StemSplitter(modelPath, new InferenceSession(modelPath, cpu), ProcessorName) { GraphicsCardProblem = problem };
     }
 
     private static SessionOptions BaseOptions() => new()
@@ -271,6 +273,30 @@ public sealed class StemSplitter : IDisposable
         }).ToArray()).ToArray();
     }
 
+    /// <summary>
+    /// Runs the model. Core ML can load the model and still fail when it runs (seen on Intel Macs), so if
+    /// the graphics card fails, the splitter moves to the processor for good and runs it again there.
+    /// </summary>
+    private IDisposableReadOnlyCollection<OrtValue> Run(RunOptions options, OrtValue mix, OrtValue spec, CancellationToken cancellation)
+    {
+        string[] inputs = { "mix", "spec" };
+        string[] outputs = { "spec_out", "wave_out" };
+        try
+        {
+            return _session.Run(options, inputs, new[] { mix, spec }, outputs);
+        }
+        catch (OnnxRuntimeException ex) when (OnGraphicsCard && !cancellation.IsCancellationRequested)
+        {
+            GraphicsCardProblem = $"{ex.GetType().Name}: {ex.Message}";
+            using var cpu = BaseOptions();
+            var processor = new InferenceSession(_modelPath, cpu);
+            _session.Dispose();
+            _session = processor;
+            Device = ProcessorName;
+            return _session.Run(options, inputs, new[] { mix, spec }, outputs);
+        }
+    }
+
     /// <summary>Runs the model on one segment of normalized stereo ([channel][sample], flattened): [stem][channel][sample] out.</summary>
     private float[][][] RunSegment(float[] mix, CancellationToken cancellation)
     {
@@ -282,7 +308,7 @@ public sealed class StemSplitter : IDisposable
         using var specValue = OrtValue.CreateTensorValueFromMemory(spec, new long[] { 1, 4, Bins, _frames });
         using var options = new RunOptions();
         using var registration = cancellation.Register(() => options.Terminate = true);
-        using var outputs = _session.Run(options, new[] { "mix", "spec" }, new[] { mixValue, specValue }, new[] { "spec_out", "wave_out" });
+        using var outputs = Run(options, mixValue, specValue, cancellation);
         cancellation.ThrowIfCancellationRequested();
 
         var specOut = outputs[0].GetTensorDataAsSpan<float>().ToArray();
