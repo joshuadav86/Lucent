@@ -253,6 +253,7 @@ public partial class MainWindow : Window
         _updater.EveryBuild = _settings.EveryBuild;
         _ = _updater.RunAsync();
         AddStarterMusic();
+        StartOpeningFiles();
         StartStreaming();
     }
 
