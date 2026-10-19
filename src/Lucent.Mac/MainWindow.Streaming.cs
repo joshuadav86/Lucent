@@ -8,7 +8,7 @@ using WinampInspiredVisualizer.Streaming;
 namespace Lucent.Mac;
 
 // Other apps: the visuals listening to every app's sound (see Audio/SystemAudio.cs), and the player
-// showing and controlling Spotify or Apple Music (see RemoteControl) while their sound stays in their app.
+// showing and controlling Spotify, Apple Music or YouTube (see RemoteControl) while their sound stays in their app.
 public partial class MainWindow
 {
     private static readonly HttpClient StreamingHttp = new() { Timeout = TimeSpan.FromSeconds(15) };
@@ -87,6 +87,17 @@ public partial class MainWindow
         appleMusic.Click += (_, _) => ToggleRemote(RemoteApp.AppleMusic);
         menu.Items.Add(appleMusic);
 
+        var youTube = new MenuItem
+        {
+            Header = "Control YouTube",
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = _settings.RemoteApp == RemoteApp.YouTube,
+        };
+        ToolTip.SetTip(youTube, "Show the YouTube video playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. The sound stays in the browser. "
+            + "The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
+        youTube.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
+        menu.Items.Add(youTube);
+
         if (spotifySaved)
         {
             var signOut = new MenuItem { Header = "Sign out of Spotify" };
@@ -151,6 +162,9 @@ public partial class MainWindow
                     break;
                 case RemoteApp.AppleMusic:
                     player = new AppleMusicRemote();
+                    break;
+                case RemoteApp.YouTube:
+                    player = new YouTubeRemote(StreamingHttp);
                     break;
                 default:
                     return;
