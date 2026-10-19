@@ -136,11 +136,26 @@ float3 sceneNormal(float3 q)
 
 // ---- Light through the leaves ----
 
-// How open the canopy is at a point overhead: 0 under leaves, 1 in a gap. The leaves sway with the mids.
+// How the leaves sway with the mids, the same for every pixel, so worked out once at the start of
+// Render rather than at every step through the mist.
+static float2 Sway = 0.0;
+
+// How open the canopy is at a point overhead: 0 under leaves, 1 in a gap. Most of the canopy is
+// leaves, so once the coarser layers of leaves show the finer ones can't open a gap there, the
+// rest is skipped.
 float canopyGap(float2 xz)
 {
-    float2 sway = float2(sin(Time * 0.4), cos(Time * 0.33)) * (0.15 + Mid * 0.35);
-    float n = noise(xz * 0.22 + sway * 0.3) * 0.6 + noise(xz * 0.6 - sway * 0.5) * 0.28 + noise(xz * 1.7 + sway) * 0.12;
+    float n = noise(xz * 0.22 + Sway * 0.3) * 0.6;
+    if (n + 0.4 < 0.56)
+    {
+        return 0.0;
+    }
+    n += noise(xz * 0.6 - Sway * 0.5) * 0.28;
+    if (n + 0.12 < 0.56)
+    {
+        return 0.0;
+    }
+    n += noise(xz * 1.7 + Sway) * 0.12;
     return smoothstep(0.56, 0.68, n);
 }
 
@@ -150,6 +165,10 @@ float sunVisibility(float3 q)
     float3 sun = sunDirection();
     float up = max(CanopyHeight - q.y, 0.0) / sun.y;
     float light = canopyGap(q.xz + sun.xz * up);
+    if (light <= 0.0)
+    {
+        return 0.0;
+    }
     float2 flat = normalize(sun.xz);
     [unroll]
     for (int k = 0; k < 3; k++)
@@ -191,6 +210,7 @@ float3 cameraEye()
 
 float3 Render(float2 uv, float2 p)
 {
+    Sway = float2(sin(Time * 0.4), cos(Time * 0.33)) * (0.15 + Mid * 0.35);
     float3 eye = cameraEye();
     float3 target = eye + float3(sin(Time * 0.031) * 0.35, 0.16 + sin(Time * 0.023) * 0.08, 1.0);
     float3 direction = cameraRay(eye, target, float2(p.x, -p.y), 1.45, sin(Time * 0.02) * 0.02);

@@ -132,6 +132,12 @@ jobs:
               if (-not (Test-Shader $preset.BaseName ($source + $particleMain) "VSParticle" "vs_5_0")) { $failed = $true }
             }
           }
+          # AVS presets draw on the CPU and are shown by one shader, assembled like a visual's.
+          # AvsCheck reads and runs every bundled preset, and fails if one won't load or an effect breaks.
+          $avsDisplay = $common + "`n#line 1`n" + (Get-Content "$root/Shaders/AvsDisplay.hlsl" -Raw) + "`n" + $main
+          if (-not (Test-Shader "AvsDisplay" $avsDisplay "PSMain" "ps_5_0")) { $failed = $true }
+          dotnet run --project tools/AvsCheck -c Release | Out-Host
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::AvsCheck failed"; $failed = $true }
           # MilkDrop presets: the engine's own passes, then the sample presets' shaders as the app
           # translates them. MilkDropCheck also checks the expression language and runs each preset.
           $milkDrop = (Get-Content "$root/Shaders/MilkDrop.hlsli" -Raw) + "`n" + (Get-Content "$root/Shaders/MilkDrop.hlsl" -Raw)
@@ -430,7 +436,9 @@ jobs:
   # visuals (and built-in ones they've edited) to Metal. So its library is built here as one universal
   # file for both kinds of Mac, once per DXC version (the result is cached), and ships inside Lucent.app.
   dxc-mac:
-    runs-on: macos-latest
+    # macOS 15 rather than macos-latest: since macos-latest moved to macOS 26, its jobs often waited
+    # for a machine until GitHub cancelled them (about 15 minutes), and no Mac build ran.
+    runs-on: macos-15
     env:
       DXC_VERSION: v1.8.2407
     steps:
@@ -501,7 +509,7 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-latest
+            runner: macos-15
             cpu: arm64
           - arch: x64
             runner: macos-15-intel

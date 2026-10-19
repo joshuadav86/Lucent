@@ -50,6 +50,8 @@
     <None Include="..\WinampInspiredVisualizer\Presets\*.hlsl" Link="Presets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The MilkDrop presets that come with Lucent, and the credits for them. -->
     <None Include="..\WinampInspiredVisualizer\Presets\MilkDrop\*.milk;..\WinampInspiredVisualizer\Presets\MilkDrop\CREDITS.md" Link="Presets\MilkDrop\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The Winamp AVS presets that come with Lucent, and the credits for them. -->
+    <None Include="..\WinampInspiredVisualizer\Presets\AVS\*.avs;..\WinampInspiredVisualizer\Presets\AVS\CREDITS.md" Link="Presets\AVS\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The engine's HLSL, which the user's own visuals are assembled with before they're translated. -->
     <None Include="..\WinampInspiredVisualizer\Shaders\*.hlsl*" Link="Shaders\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Their Metal translations, from tools/MetalShaders. -->

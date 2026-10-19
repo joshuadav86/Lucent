@@ -32,6 +32,12 @@ public static class PresetLibrary
     /// </summary>
     public static string MilkDropFolder => Path.Combine(UserPresetsFolder, "MilkDrop");
 
+    /// <summary>
+    /// Where the user's Winamp AVS presets go, %AppData%\Lucent\Presets\AVS ("Import AVS presets…" copies them
+    /// here). Like MilkDrop presets, .avs files anywhere under either Presets folder load too.
+    /// </summary>
+    public static string AvsFolder => Path.Combine(UserPresetsFolder, "AVS");
+
     public static IReadOnlyList<PresetSource> LoadPresets()
     {
         var files = Read(PresetsFolder);
@@ -39,7 +45,7 @@ public static class PresetLibrary
         {
             files = typeof(PresetLibrary).Assembly.GetManifestResourceNames()
                 .Where(name => name.StartsWith("Presets/", StringComparison.Ordinal))
-                .Select(name => (Path: Path.Combine(PresetsFolder, name["Presets/".Length..]), Code: ReadBuiltIn(name)!))
+                .Select(name => (Path: Path.Combine(PresetsFolder, name["Presets/".Length..]), Code: ReadBuiltInPreset(name)!))
                 .ToList();
         }
 
@@ -57,7 +63,7 @@ public static class PresetLibrary
             .ToList());
     }
 
-    /// <summary>The .hlsl visuals in a folder, and the MilkDrop presets in it and in the folders inside it.</summary>
+    /// <summary>The .hlsl visuals in a folder, and the MilkDrop and AVS presets in it and in the folders inside it.</summary>
     private static List<(string Path, string Code)> Read(string folder)
     {
         if (!Directory.Exists(folder))
@@ -77,7 +83,29 @@ public static class PresetLibrary
             ErrorLog.Write("MilkDrop presets", ex);
         }
 
+        try
+        {
+            files.AddRange(Directory.EnumerateFiles(folder, "*.avs", SearchOption.AllDirectories)
+                .Select(path => (Path: path, Code: PresetSource.ReadCode(path))));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ErrorLog.Write("AVS presets", ex);
+        }
+
         return files;
+    }
+
+    // AVS presets are binary, so they're read as PresetSource.ReadCode reads them from a file.
+    private static string? ReadBuiltInPreset(string name)
+    {
+        if (!PresetSource.IsAvsFile(name))
+        {
+            return ReadBuiltIn(name);
+        }
+
+        using var stream = typeof(PresetLibrary).Assembly.GetManifestResourceStream(name);
+        return stream is null ? null : PresetSource.ReadCode(name, stream);
     }
 
     private static string? ReadBuiltIn(string name)

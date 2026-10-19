@@ -5,6 +5,7 @@ using SharpMetal.Metal;
 using Lucent.Mac.Visualizer;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Visualizer;
+using WinampInspiredVisualizer.Visualizer.Avs;
 
 namespace Lucent.Mac.Visuals;
 
@@ -14,7 +15,9 @@ namespace Lucent.Mac.Visuals;
 /// of it; mid-change, the old and new visuals both draw and the engine's blend shader mixes them.
 /// Above window resolution the result is shrunk to the window (supersampling), then it's bloomed
 /// and tone-mapped onto the output. Particle visuals move their particles with a compute shader and
-/// draw them as glowing dots into a layer before their own pass. Visuals compile in the background,
+/// draw them as glowing dots into a layer before their own pass. Winamp AVS presets draw on the CPU
+/// (<see cref="AvsVisual"/>); their picture is uploaded each frame and shown by Shaders/AvsDisplay.hlsl
+/// as if it were a visual of Lucent's own. Visuals compile in the background,
 /// so the first one appears straight away. Given a half-float output it draws in HDR (EDR), with
 /// normal white at 1.0 and highlights reaching up to the screen's peak, as the Windows renderer does
 /// on HDR screens.
@@ -88,6 +91,8 @@ public sealed partial class VisualEngine : IDisposable
     private int _current;
     private int _frameCount;
     private int _activePreset = -1;
+    private readonly AutoResolution _autoResolution = new();
+    private volatile bool _autoResolutionOn;
     private int _fromPreset = -1;
     private double _transitionStart;
     private double _lastSwitch;
@@ -172,6 +177,16 @@ public sealed partial class VisualEngine : IDisposable
     {
         get => _targetPixels;
         set => _targetPixels = Math.Max(0, value);
+    }
+
+    /// <summary>
+    /// With <see cref="TargetPixels"/> at 0, draw a visual that can't keep up with the screen at fewer
+    /// pixels until it can (the Automatic resolution).
+    /// </summary>
+    public bool AutoResolution
+    {
+        get => _autoResolutionOn;
+        set => _autoResolutionOn = value;
     }
 
     /// <summary>Detail level for visuals: 0 low, 1 normal, 2 high, 3 ultra.</summary>
@@ -367,6 +382,16 @@ public sealed partial class VisualEngine : IDisposable
                 return null;
             }
 
+            if (slot.Source.IsAvs)
+            {
+                // AVS presets compile their code; every one is shown by the same display shader.
+                slot.Avs = AvsVisual.Load(slot.Source);
+                var display = LoadFunction(_files.AvsDisplay(), "preset_fragment", slot.Libraries);
+                slot.Pipeline = MakePipeline(_vertexFunction, display, FeedbackFormat, additive: false);
+                Volatile.Write(ref slot.State, PresetSlot.Ready);
+                return null;
+            }
+
             var fragment = LoadFunction(_files.Preset(slot.Source, "PSMain"), "preset_fragment", slot.Libraries);
             slot.Pipeline = MakePipeline(_vertexFunction, fragment, FeedbackFormat, additive: false);
             if (slot.Source.IsParticles)
@@ -391,10 +416,10 @@ public sealed partial class VisualEngine : IDisposable
         catch (Exception ex)
         {
             Volatile.Write(ref slot.State, PresetSlot.Failed);
-            if (slot.Source.IsMilkDrop)
+            if (slot.Source.IsCommunityPreset)
             {
-                // A broken .milk file is skipped; the log says which and why.
-                ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
+                // A broken .milk or .avs file is skipped; the log says which and why.
+                ErrorLog.Write($"{KindOf(slot.Source)} {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
             }
 
             var message = $"{slot.Source.Name}: {ex.Message}";
@@ -568,6 +593,12 @@ public sealed partial class VisualEngine : IDisposable
             return;
         }
 
+        if (slot.Avs is { } avs)
+        {
+            DrawAvs(commands, audio, destination, source, presetIndex, avs);
+            return;
+        }
+
         MTLTexture? particleLayer = null;
         if (slot.Simulation is { } simulation)
         {
@@ -604,33 +635,95 @@ public sealed partial class VisualEngine : IDisposable
         }
         catch (Exception ex)
         {
-            // A preset that goes wrong while drawing (rather than while compiling) is dropped for the rest
-            // of the session and the visuals move on, instead of the whole visualizer stopping.
-            Volatile.Write(ref slot.State, PresetSlot.Failed);
-            ErrorLog.Write($"MilkDrop preset {Path.GetFileName(slot.Source.FilePath)} stopped", ex);
-            PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
-            var next = NextUsable(presetIndex);
-            if (_requestedPreset == presetIndex && next >= 0)
-            {
-                _requestedPreset = next;
-                PresetChanged?.Invoke(next);
-            }
+            StopCommunityPreset(presetIndex, ex);
         }
     }
 
     /// <summary>
-    /// How much of the picture is a MilkDrop preset's (1 when one is showing, part-way during a
-    /// transition to or from one), which the screen pass shows without Lucent's glow and tone-mapping.
+    /// Moves an AVS preset on by a frame, puts its picture in this frame's texture (each frame in flight has its
+    /// own, so the CPU never writes one the GPU is still reading) and shows it with the display shader.
+    /// </summary>
+    private void DrawAvs(MTLCommandBuffer commands, MTLTexture audio, RenderTarget destination, RenderTarget source, int presetIndex, AvsVisual avs)
+    {
+        var slot = _slots[presetIndex];
+        if (!avs.NotesLogged)
+        {
+            avs.NotesLogged = true;
+            if (avs.Notes.Count > 0)
+            {
+                ErrorLog.Write($"AVS preset {Path.GetFileName(slot.Source.FilePath)}", string.Join(Environment.NewLine, avs.Notes));
+            }
+        }
+
+        MTLTexture? picture = null;
+        if (!HasFailed(presetIndex))
+        {
+            try
+            {
+                var pixels = avs.Draw(_analyzer, _frame, _renderWidth, _renderHeight, _frameTime, _quality, AvsVisual.ModernLook);
+                picture = slot.AvsPicture(_device, _frameSlot, avs.Runner.Width, avs.Runner.Height);
+                var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+                try
+                {
+                    picture.Value.ReplaceRegion(
+                        new MTLRegion { origin = new MTLOrigin(), size = new MTLSize { width = (ulong)avs.Runner.Width, height = (ulong)avs.Runner.Height, depth = 1 } },
+                        0, handle.AddrOfPinnedObject(), (ulong)avs.Runner.Width * sizeof(uint));
+                }
+                finally
+                {
+                    handle.Free();
+                }
+            }
+            catch (Exception ex)
+            {
+                picture = null;
+                StopCommunityPreset(presetIndex, ex);
+            }
+        }
+
+        if (picture is null)
+        {
+            EndPass(BeginPass(commands, destination.Texture, clear: true));
+            return;
+        }
+
+        DrawPass(commands, audio, destination.Texture, _renderWidth, _renderHeight, slot.Pipeline, source.Texture, null, picture);
+    }
+
+    /// <summary>
+    /// A MilkDrop or AVS preset that goes wrong while drawing (rather than while compiling) is dropped for the rest
+    /// of the session and the visuals move on, instead of the whole visualizer stopping.
+    /// </summary>
+    private void StopCommunityPreset(int presetIndex, Exception ex)
+    {
+        var slot = _slots[presetIndex];
+        Volatile.Write(ref slot.State, PresetSlot.Failed);
+        ErrorLog.Write($"{KindOf(slot.Source)} {Path.GetFileName(slot.Source.FilePath)} stopped", ex);
+        PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
+        var next = NextUsable(presetIndex);
+        if (_requestedPreset == presetIndex && next >= 0)
+        {
+            _requestedPreset = next;
+            PresetChanged?.Invoke(next);
+        }
+    }
+
+    private static string KindOf(PresetSource source) => source.IsAvs ? "AVS preset" : "MilkDrop preset";
+
+    /// <summary>
+    /// How much of the picture is a MilkDrop preset's, or an AVS preset's shown as Winamp drew it (1 when one is
+    /// showing, part-way during a transition to or from one), which the screen pass shows without Lucent's glow
+    /// and tone-mapping.
     /// </summary>
     private float PlainOutputAmount(float progress)
     {
-        var to = _slots[_activePreset].Source.IsMilkDrop ? 1f : 0f;
+        var to = AvsVisual.ShownPlain(_slots[_activePreset].Source) ? 1f : 0f;
         if (_fromPreset < 0)
         {
             return to;
         }
 
-        var from = _slots[_fromPreset].Source.IsMilkDrop ? 1f : 0f;
+        var from = AvsVisual.ShownPlain(_slots[_fromPreset].Source) ? 1f : 0f;
         return from + (to - from) * progress;
     }
 
@@ -912,17 +1005,27 @@ public sealed partial class VisualEngine : IDisposable
         _transitionStyle = styles[_random.Next(styles.Length)];
     }
 
-    /// <summary>Frees a visual's particles once it's no longer on screen; they start afresh next time.</summary>
+    /// <summary>Frees a visual's particles (or a MilkDrop or AVS preset's pictures) once it's no longer on screen; they start afresh next time.</summary>
     private void ReleaseParticles(int presetIndex)
     {
         if (presetIndex >= 0 && presetIndex != _activePreset)
         {
             _slots[presetIndex].ReleaseParticles();
             _slots[presetIndex].MilkDrop?.ReleaseImages();
+            _slots[presetIndex].ReleaseAvsPictures();
         }
     }
 
     // ---- Sizes ----
+
+    /// <summary>Call on the render thread once each frame is shown, so the Automatic resolution can watch the frame rate.</summary>
+    public void FramePresented(double now)
+    {
+        if (_autoResolutionOn && _targetPixels <= 0 && _activePreset >= 0)
+        {
+            _autoResolution.Frame(now, Display.RefreshRate, _activePreset);
+        }
+    }
 
     /// <summary>The size to draw at: the output's own, or about <see cref="TargetPixels"/> pixels in its shape.</summary>
     private (int Width, int Height) RenderSizeFor(int windowWidth, int windowHeight)
@@ -930,7 +1033,12 @@ public sealed partial class VisualEngine : IDisposable
         var target = _targetPixels;
         if (target <= 0)
         {
-            return (windowWidth, windowHeight);
+            if (!_autoResolutionOn || _autoResolution.PixelShare >= 1.0)
+            {
+                return (windowWidth, windowHeight);
+            }
+
+            target = (int)(_autoResolution.PixelShare * windowWidth * windowHeight);
         }
 
         var scale = Math.Clamp(Math.Sqrt(target / ((double)windowWidth * windowHeight)), MinRenderScale, MaxRenderScale);
@@ -1050,6 +1158,10 @@ public sealed partial class VisualEngine : IDisposable
         // MilkDrop presets only: the running preset and its shaders, drawn instead of Pipeline.
         public MilkDropVisual? MilkDrop;
 
+        // AVS presets only: the running preset, and a texture per frame in flight for its picture, shown by Pipeline.
+        public AvsVisual? Avs;
+        private readonly MTLTexture?[] _avsPictures = new MTLTexture?[FramesInFlight];
+
         public PresetSlot(PresetSource source) => Source = source;
 
         public PresetSource Source { get; }
@@ -1062,9 +1174,40 @@ public sealed partial class VisualEngine : IDisposable
             Particles = null;
         }
 
+        /// <summary>This frame's texture for the AVS picture, made (again) to fit.</summary>
+        public MTLTexture AvsPicture(MTLDevice device, int frameSlot, int width, int height)
+        {
+            if (_avsPictures[frameSlot] is { } texture && (int)texture.Width == width && (int)texture.Height == height)
+            {
+                return texture;
+            }
+
+            _avsPictures[frameSlot]?.Dispose();
+            var description = MTLTextureDescriptor.Texture2DDescriptor(MTLPixelFormat.BGRA8Unorm, (ulong)width, (ulong)height, false);
+            description.Usage = MTLTextureUsage.ShaderRead;
+            description.StorageMode = MTLStorageMode.Shared;
+            // The descriptor is autoreleased, so it isn't disposed here: releasing it as well crashed the app
+            // when the autorelease pool emptied, as soon as the first AVS preset came on screen.
+            var made = device.NewTexture(description);
+            _avsPictures[frameSlot] = made;
+            return made;
+        }
+
+        /// <summary>Frees the AVS picture's textures; the preset starts over when it's next shown.</summary>
+        public void ReleaseAvsPictures()
+        {
+            Avs?.Hide();
+            for (var i = 0; i < _avsPictures.Length; i++)
+            {
+                _avsPictures[i]?.Dispose();
+                _avsPictures[i] = null;
+            }
+        }
+
         public void Dispose()
         {
             ReleaseParticles();
+            ReleaseAvsPictures();
             if (Pipeline.NativePtr != IntPtr.Zero)
             {
                 Pipeline.Dispose();

@@ -13,7 +13,7 @@ static const int Magnets = 5;
 static const float MagnetLength = 0.12;  // half length
 static const float MagnetWidth = 0.042;   // half width
 
-void magnet(int i, out float2 position, out float2 moment, out float3 colour)
+void placeMagnet(int i, out float2 position, out float2 moment, out float3 colour)
 {
     float k = i;
     float t = Time * (0.045 + k * 0.007) + k * 1.9;
@@ -23,6 +23,29 @@ void magnet(int i, out float2 position, out float2 moment, out float3 colour)
     float strength = 0.25 + spectrum(0.04 + k * 0.17) * 0.9 + Bass * 0.15;
     moment = float2(cos(angle), sin(angle)) * strength;
     colour = hsv2rgb(0.52 + k * 0.11, 0.7, 1.0);
+}
+
+// Where each magnet is, how it pulls and its colour stay the same for every pixel and filing in a
+// frame, so setUpMagnets works them out once at the start of Render and Simulate, rather than each
+// of the three passes over the magnets working them out again.
+static float2 MagnetPosition[Magnets];
+static float2 MagnetMoment[Magnets];
+static float3 MagnetColour[Magnets];
+
+void setUpMagnets()
+{
+    [unroll]
+    for (int i = 0; i < Magnets; i++)
+    {
+        placeMagnet(i, MagnetPosition[i], MagnetMoment[i], MagnetColour[i]);
+    }
+}
+
+void magnet(int i, out float2 position, out float2 moment, out float3 colour)
+{
+    position = MagnetPosition[i];
+    moment = MagnetMoment[i];
+    colour = MagnetColour[i];
 }
 
 // The flux function at q, and its slope.
@@ -80,6 +103,7 @@ void Spawn(inout Particle particle, uint id)
 
 void Simulate(inout Particle particle, uint id)
 {
+    setUpMagnets();
     float dt = min(DeltaTime, 0.05);
     float2 q = particle.position.xy;
     float2 slope;
@@ -146,6 +170,7 @@ Sprite Show(Particle particle, uint id)
 
 float3 Render(float2 uv, float2 p)
 {
+    setUpMagnets();
     // A dark plate of blued steel, softly lit from above.
     float grain = noise(float2(p.x * 3.0, p.y * 260.0)) * 0.5 + noise(p * 40.0) * 0.5;
     float3 plate = float3(0.012, 0.014, 0.02) * (0.7 + grain * 0.6) * (1.2 - dot(p, p) * 0.15);

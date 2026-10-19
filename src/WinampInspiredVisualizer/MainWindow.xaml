@@ -87,6 +87,7 @@
                                     <TextBlock Style="{StaticResource OptionLabel}" Text="Resolution" />
                                     <Border Style="{StaticResource SegmentBar}">
                                         <UniformGrid Rows="1">
+                                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Auto" Content="Auto" Click="OnOptionChosen" />
                                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Window" Content="Window" Click="OnOptionChosen" />
                                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="FullHd" Content="1080p" Click="OnOptionChosen" />
                                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="QuadHd" Content="1440p" Click="OnOptionChosen" />
@@ -94,7 +95,7 @@
                                         </UniformGrid>
                                     </Border>
                                     <TextBlock Style="{StaticResource OptionHint}"
-                                               Text="Above your window's own size, visuals are drawn bigger and shrunk to fit: smoother and more detailed, but more work for the graphics card." />
+                                               Text="Auto draws at your window's size, and at fewer pixels while a visual can't keep up, so it stays smooth. Above your window's own size, visuals are drawn bigger and shrunk to fit: smoother and more detailed, but more work for the graphics card." />
 
                                     <TextBlock Style="{StaticResource OptionLabel}" Text="Detail" />
                                     <Border Style="{StaticResource SegmentBar}">
@@ -160,6 +161,16 @@
                                               Content="MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Style="{StaticResource OptionHint}"
                                                Text="List the MilkDrop presets in the visual picker and play them in Auto." />
+
+                                    <CheckBox x:Name="AvsSwitch" Style="{StaticResource SwitchToggle}"
+                                              Content="Winamp AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                                    <TextBlock Style="{StaticResource OptionHint}"
+                                               Text="List the Winamp AVS presets in the visual picker and play them in Auto." />
+
+                                    <CheckBox x:Name="ModernAvsSwitch" Style="{StaticResource SwitchToggle}"
+                                              Content="Modern look for AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                                    <TextBlock Style="{StaticResource OptionHint}"
+                                               Text="Draw AVS presets sharper, with Lucent's glow. Off shows them as Winamp drew them." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="SoundTab" Visibility="Collapsed">

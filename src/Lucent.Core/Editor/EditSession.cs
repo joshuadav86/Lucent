@@ -35,7 +35,7 @@ public readonly record struct FrameRange(int Start, int Length)
 /// one at a time. <see cref="Peaks"/> is replaced as a whole after each change, so the UI can keep
 /// drawing the previous version until the new one is ready.
 /// </remarks>
-public sealed class EditSession
+public sealed partial class EditSession
 {
     private readonly List<HistoryStep> _undo = new();
     private readonly List<HistoryStep> _redo = new();
@@ -43,6 +43,10 @@ public sealed class EditSession
     private List<int> _splits = new();
     // Sorted by frame.
     private List<Marker> _markers = new();
+    // Audio trimmed off clip edges (or covered by a cut), so dragging an edge back out brings it back.
+    private List<HiddenAudio> _hidden = new();
+    // Fades made with a clip's fade handles, with the audio from before, so they can be changed again.
+    private List<ClipFade> _fades = new();
     private long _nextStepId = 1;
     private long _savedStepId;
     // The state below the oldest step still in the undo history (0 is the file as opened).
@@ -388,8 +392,17 @@ public sealed class EditSession
             ? m with { Frame = m.Frame + offset }
             : m.Frame >= end ? m with { Frame = m.Frame + grown } : m).OrderBy(m => m.Frame).ToList();
 
+        // So does what's hidden behind its edges, and its fades.
+        int? Moved(int frame, bool isStart) =>
+            frame == (isStart ? clip.Start : clip.End) ? frame + offset
+            : frame >= end ? frame + grown
+            : frame <= start ? frame
+            : null;
+        var hidden = _hidden.Select(h => Moved(h.Frame, h.Before) is { } f ? h with { Frame = f } : null).OfType<HiddenAudio>().ToList();
+        var fades = _fades.Select(f => Moved(f.Frame, f.In) is { } at ? f with { Frame = at } : null).OfType<ClipFade>().ToList();
+
         Commit("Move clip", new[] { new Change(start, end - start, replacement) },
-            Normalized(splits, Audio.Frames + grown), markersAfter: markers);
+            Normalized(splits, Audio.Frames + grown), markersAfter: markers, hiddenAfter: hidden, fadesAfter: fades);
         return moved;
     }
 
@@ -450,7 +463,7 @@ public sealed class EditSession
 
         var splits = _splits.Where(s => s <= start || s >= end).Append(start).Append(end);
         Commit(description, new[] { new Change(start, end - start, AudioBuffer.Silent(Audio.ChannelCount, end - start, Audio.SampleRate)) },
-            Normalized(splits));
+            Normalized(splits), hiddenAfter: HiddenAfterCut(start, end));
     }
 
     /// <summary>Puts silence in at a frame, as a clip of its own. Returns where the silence is.</summary>
@@ -650,16 +663,31 @@ public sealed class EditSession
     /// the edit (a crossfade either side); otherwise the changes themselves say it.
     /// </summary>
     /// <remarks>Changes are made one at a time, in order, so a later one can be worked out from the audio the earlier ones left.</remarks>
+    /// <remarks>
+    /// Audio hidden behind clip edges moves with them too, while the audio it carries on from is left as it was
+    /// (otherwise it would no longer match). A fade made with a clip's handles is kept only while nothing else
+    /// changes the audio it covers: after that it's just part of the audio (until the step is undone).
+    /// </remarks>
     private void Commit(string description, IEnumerable<Change> changes, List<int>? splitsAfter = null,
-        IReadOnlyList<Edit>? edits = null, List<Marker>? markersAfter = null, string? details = null)
+        IReadOnlyList<Edit>? edits = null, List<Marker>? markersAfter = null, string? details = null,
+        List<HiddenAudio>? hiddenAfter = null, List<ClipFade>? fadesAfter = null)
     {
         var splitsBefore = _splits;
         var markersBefore = _markers;
+        var hiddenBefore = _hidden;
+        var fadesBefore = _fades;
         var splits = _splits;
         var markers = _markers;
+        var hidden = _hidden;
+        var fades = _fades;
         var inverse = new List<Change>();
         foreach (var change in changes)
         {
+            var moved = new Edit(change.Start, change.Length, change.Replacement.Frames);
+            hidden = hidden.Where(h => !h.TouchedBy(change.Start, change.Length))
+                .Select(h => h with { Frame = Remap(h.Frame, moved, keepInside: false) }).Where(h => h.Frame >= 0).ToList();
+            fades = fades.Where(f => !f.Overlaps(change.Start, change.Length))
+                .Select(f => f with { Frame = Remap(f.Frame, moved, keepInside: false) }).Where(f => f.Frame >= 0).ToList();
             if (edits is null)
             {
                 var edit = new Edit(change.Start, change.Length, change.Replacement.Frames);
@@ -680,12 +708,13 @@ public sealed class EditSession
 
         _splits = splitsAfter ?? Normalized(splits);
         _markers = markersAfter ?? markers;
+        (_hidden, _fades) = OnClipEdges(hiddenAfter ?? hidden, fadesAfter ?? fades);
         // Undoing walks the inverse changes backwards.
         inverse.Reverse();
         // A step that only moves splits or markers leaves the audio as it was, so it keeps the same id and the
         // audio doesn't count as changed since the last save.
         var id = inverse.Count > 0 ? _nextStepId++ : CurrentStepId;
-        _undo.Add(new HistoryStep(id, description, details, DateTime.Now, inverse, splitsBefore, markersBefore));
+        _undo.Add(new HistoryStep(id, description, details, DateTime.Now, inverse, splitsBefore, markersBefore, hiddenBefore, fadesBefore));
         _redo.Clear();
         TrimHistory();
         if (inverse.Count > 0)
@@ -756,9 +785,11 @@ public sealed class EditSession
 
         inverse.Reverse();
         // The step keeps its id, so undoing back to the saved state counts as unmodified again.
-        to.Add(step with { Changes = inverse, Splits = _splits, Markers = _markers });
+        to.Add(step with { Changes = inverse, Splits = _splits, Markers = _markers, Hidden = _hidden, Fades = _fades });
         _splits = step.Splits;
         _markers = step.Markers;
+        _hidden = step.Hidden;
+        _fades = step.Fades;
         TrimHistory();
         if (step.Changes.Count > 0)
         {
@@ -811,9 +842,11 @@ public sealed class EditSession
 
     /// <param name="Splits">Where the splits go when this step is undone (or redone).</param>
     /// <param name="Markers">Where the markers go when this step is undone (or redone).</param>
+    /// <param name="Hidden">What's hidden behind the clip edges when this step is undone (or redone).</param>
+    /// <param name="Fades">The clips' adjustable fades when this step is undone (or redone).</param>
     /// <param name="Time">When the step was first made (redoing it keeps the time).</param>
     private sealed record HistoryStep(long Id, string Description, string? Details, DateTime Time, IReadOnlyList<Change> Changes,
-        List<int> Splits, List<Marker> Markers)
+        List<int> Splits, List<Marker> Markers, List<HiddenAudio> Hidden, List<ClipFade> Fades)
     {
         public long SizeInBytes => Changes.Sum(change => change.Replacement.SizeInBytes);
     }

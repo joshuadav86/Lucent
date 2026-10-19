@@ -1,10 +1,15 @@
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace WinampInspiredVisualizer.Visualizer;
 
-/// <summary>A visual loaded from a .hlsl file in the Presets folder, or a MilkDrop preset from a .milk file.</summary>
+/// <summary>
+/// A visual loaded from a .hlsl file in the Presets folder, a MilkDrop preset from a .milk file, or a Winamp
+/// AVS preset from a .avs file. An AVS preset is binary, so its code is the file's bytes as Latin-1 characters
+/// (see <see cref="ReadCode"/>).
+/// </summary>
 public sealed record PresetSource(string Name, string FilePath, string Code)
 {
     public const int DefaultParticleCount = 262144;
@@ -18,34 +23,44 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     /// <summary>A MilkDrop preset (a .milk file) rather than a Lucent shader. See Visualizer/MilkDrop.</summary>
     public bool IsMilkDrop { get; } = IsMilkDropFile(FilePath);
 
+    /// <summary>A Winamp AVS preset (a .avs file) rather than a Lucent shader. See Visualizer/Avs.</summary>
+    public bool IsAvs { get; } = IsAvsFile(FilePath);
+
+    /// <summary>A preset from Winamp's world (MilkDrop or AVS), named "Author - Title" and listed in its own folder.</summary>
+    public bool IsCommunityPreset => IsMilkDrop || IsAvs;
+
     /// <summary>A particle visual: it defines Simulate (and Spawn and Show) as well as Render. See Shaders/Particles.hlsli.</summary>
-    public bool IsParticles { get; } = !IsMilkDropFile(FilePath) && SimulatePattern.IsMatch(Code);
+    public bool IsParticles { get; } = !IsMilkDropFile(FilePath) && !IsAvsFile(FilePath) && SimulatePattern.IsMatch(Code);
 
     /// <summary>How many particles run on Normal detail, from a "// Particles: 300000" line.</summary>
     public int NormalParticleCount { get; } = ReadParticleCount(Code);
 
-    /// <summary>The folder the visual picker lists it in, from a "// Family: Fractal" line ("Other" without one; "MilkDrop" for MilkDrop presets).</summary>
-    public string Family { get; } = IsMilkDropFile(FilePath)
-        ? VisualStyles.MilkDropFamily
+    /// <summary>
+    /// The folder the visual picker lists it in, from a "// Family: Fractal" line ("Other" without one; "MilkDrop"
+    /// for MilkDrop presets, "Winamp AVS" for AVS presets).
+    /// </summary>
+    public string Family { get; } = IsMilkDropFile(FilePath) ? VisualStyles.MilkDropFamily
+        : IsAvsFile(FilePath) ? VisualStyles.AvsFamily
         : VisualStyles.FamilyName(ReadHeader(FamilyPattern, Code));
 
     /// <summary>
     /// The picker's tick boxes it answers to, from a "// Tags: Calm, Space" line (none without one).
-    /// Particle visuals are always tagged Particles too, and MilkDrop presets Retro.
+    /// Particle visuals are always tagged Particles too, and MilkDrop and AVS presets Retro and MilkDrop or Winamp AVS,
+    /// so they can be picked out with a tick box.
     /// </summary>
-    public IReadOnlyList<string> Tags { get; } = IsMilkDropFile(FilePath)
-        ? VisualStyles.TagNames("Retro")
+    public IReadOnlyList<string> Tags { get; } = IsMilkDropFile(FilePath) ? VisualStyles.TagNames($"Retro, {VisualStyles.MilkDropFamily}")
+        : IsAvsFile(FilePath) ? VisualStyles.TagNames($"Retro, {VisualStyles.AvsFamily}")
         : VisualStyles.TagNames(ReadHeader(TagsPattern, Code) + (SimulatePattern.IsMatch(Code) ? $", {VisualStyles.ParticlesTag}" : string.Empty));
 
     /// <summary>
     /// When it joined Lucent's visuals, from a "// Added: 2026-10-17 21:37" line, for the picker's "Newest first"
-    /// order. Without one (the user's own visuals, MilkDrop presets) it's when the file was made, or null if
+    /// order. Without one (the user's own visuals, MilkDrop and AVS presets) it's when the file was made, or null if
     /// there's no file to ask.
     /// </summary>
     public DateTime? Added { get; } = ReadAdded(FilePath, Code);
 
     /// <summary>
-    /// Who made it, for MilkDrop presets named the community's way ("Geiss - Reaction Diffusion.milk"),
+    /// Who made it, for MilkDrop and AVS presets named the community's way ("Geiss - Reaction Diffusion.milk"),
     /// or null. The name is then just the title.
     /// </summary>
     public string? Author { get; init; }
@@ -57,10 +72,10 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     public static string LabelFor(string name, string? author) =>
         author is null || name.EndsWith($"({author})", StringComparison.OrdinalIgnoreCase) ? name : $"{name} by {author}";
 
-    /// <summary>A visual from its file, named by its first line (MilkDrop presets by their file name).</summary>
+    /// <summary>A visual from its file, named by its first line (MilkDrop and AVS presets by their file name).</summary>
     public static PresetSource Load(string path, string code)
     {
-        if (!IsMilkDropFile(path))
+        if (!IsMilkDropFile(path) && !IsAvsFile(path))
         {
             return new(ReadName(path, code), path, code);
         }
@@ -70,7 +85,7 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     }
 
     /// <summary>
-    /// The title and author in a MilkDrop preset's file name. Preset packs name them "Author - Title" (and
+    /// The title and author in a MilkDrop or AVS preset's file name. Preset packs name them "Author - Title" (and
     /// collaborations "Author1 + Author2 - Title"); a name without " - " is all title.
     /// </summary>
     public static (string Title, string? Author) MilkDropName(string path)
@@ -89,15 +104,15 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
 
     /// <summary>
     /// Gives every visual its own name, since favorites, lists and the last visual shown are kept by name.
-    /// A MilkDrop preset whose title another visual already has gets its author added, "Tunnel (Geiss)",
+    /// A MilkDrop or AVS preset whose title another visual already has gets its author added, "Tunnel (Geiss)",
     /// and anything still the same is numbered.
     /// </summary>
     public static IReadOnlyList<PresetSource> WithUniqueNames(IReadOnlyList<PresetSource> presets)
     {
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var result = new PresetSource[presets.Count];
-        // Lucent's own visuals keep their names; MilkDrop presets give way.
-        foreach (var (preset, index) in presets.Select((preset, index) => (preset, index)).OrderBy(item => item.preset.IsMilkDrop))
+        // Lucent's own visuals keep their names; MilkDrop and AVS presets give way.
+        foreach (var (preset, index) in presets.Select((preset, index) => (preset, index)).OrderBy(item => item.preset.IsCommunityPreset))
         {
             var name = preset.Name;
             if (taken.Contains(name) && preset.Author is not null)
@@ -121,6 +136,23 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     /// <summary>Whether a file is a MilkDrop preset, by its .milk extension.</summary>
     public static bool IsMilkDropFile(string path) => path.EndsWith(".milk", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Whether a file is a Winamp AVS preset, by its .avs extension.</summary>
+    public static bool IsAvsFile(string path) => path.EndsWith(".avs", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A visual's file as Lucent keeps its code: text for shaders and MilkDrop presets, and for AVS presets (which
+    /// are binary) each byte as the Latin-1 character of the same number, so <see cref="Encoding.Latin1"/> gives the bytes back.
+    /// </summary>
+    public static string ReadCode(string path) =>
+        IsAvsFile(path) ? File.ReadAllText(path, Encoding.Latin1) : File.ReadAllText(path);
+
+    /// <summary><see cref="ReadCode"/> for a visual read from a stream (one built into the app).</summary>
+    public static string ReadCode(string path, Stream stream)
+    {
+        using var reader = IsAvsFile(path) ? new StreamReader(stream, Encoding.Latin1) : new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
     private static string? ReadHeader(Regex pattern, string code)
     {
         var match = pattern.Match(code);
@@ -129,7 +161,7 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
 
     private static DateTime? ReadAdded(string path, string code)
     {
-        if (!IsMilkDropFile(path)
+        if (!IsMilkDropFile(path) && !IsAvsFile(path)
             && DateTime.TryParse(ReadHeader(AddedPattern, code), CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var added))
         {

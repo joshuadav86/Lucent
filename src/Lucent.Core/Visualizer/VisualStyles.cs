@@ -13,11 +13,14 @@ public static class VisualStyles
     public static IReadOnlyList<string> Families { get; } = new[]
     {
         "Fly-through", "Kaleidoscope", "Geometric", "Minimal", "Fractal", "Music-shaped", "Cosmic", "Organic", "Particles", "Ray traced", "Cyberpunk",
-        MilkDropFamily,
+        MilkDropFamily, AvsFamily,
     };
 
     /// <summary>The folder every MilkDrop preset (.milk file) is listed in.</summary>
     public const string MilkDropFamily = "MilkDrop";
+
+    /// <summary>The folder every Winamp AVS preset (.avs file) is listed in.</summary>
+    public const string AvsFamily = "Winamp AVS";
 
     /// <summary>The tag every particle visual gets, whether or not its header lists it.</summary>
     public const string ParticlesTag = "Particles";
@@ -26,6 +29,7 @@ public static class VisualStyles
     public static IReadOnlyList<string> Tags { get; } = new[]
     {
         "Calm", "Intense", "Colourful", "Dark", "Neon", "Space", "Water", "Fire", "Geometric", "Minimal", "Retro", "3D", ParticlesTag,
+        MilkDropFamily, AvsFamily,
     };
 
     // Other spellings that mean the same thing, so "Colorful" or "Raytraced" still land in the right place.

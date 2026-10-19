@@ -77,6 +77,30 @@
             </Style>
         </ControlTheme>
 
+        <!-- A plugin, or a section of the left column, in the plugin browser: the whole row is the button. -->
+        <ControlTheme x:Key="PluginRow" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Chrome" CornerRadius="{DynamicResource TinyCorner}" Padding="8,5" Margin="0,0,0,1"
+                            Background="{TemplateBinding Background}">
+                        <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Chrome">
+                <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#Chrome">
+                <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            </Style>
+        </ControlTheme>
+
         <!-- An empty insert slot: click it to add a plugin. -->
         <ControlTheme x:Key="EmptySlot" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
@@ -703,7 +727,7 @@
         <!-- Stems -->
         <Popup x:Name="StemsPopup" PlacementTarget="{Binding #StemsButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
                IsLightDismissEnabled="True">
-            <Border Theme="{StaticResource PopupCard}" Width="360">
+            <Border Theme="{StaticResource PopupCard}" Width="420">
                 <StackPanel>
                     <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Keep" />
                     <WrapPanel x:Name="StemChoices" Margin="0,6,0,0" />
@@ -715,6 +739,8 @@
                     </StackPanel>
                     <TextBlock x:Name="StemsHint" Theme="{StaticResource OptionHint}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Theme="{StaticResource ToolButton}" Content="Listen…" Click="OnListenToStems"
+                                ToolTip.Tip="Split it and open the stems in their own window, to hear each one before keeping or saving them" />
                         <Button Theme="{StaticResource ToolButton}" Content="Save stems as files…" Click="OnSaveStems"
                                 ToolTip.Tip="Save the vocals, drums, bass and other instruments as four files, in a folder next to this one" />
                         <Button x:Name="StemsApplyButton" Theme="{StaticResource ToolButton}" Margin="0" Click="OnApplyStems"
@@ -795,6 +821,50 @@
                         <Button Theme="{StaticResource ToolButton}" Margin="0" Content="Close" Click="OnCloseAnalysis" />
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- The plugin browser: search across the top, every plugin or the favorites or one type on the left, and the
+             plugins under their types or makers on the right. It opens from the Plugins button or an empty insert slot. -->
+        <Popup x:Name="PluginPopup" IsLightDismissEnabled="True" Closed="OnPluginPopupClosed">
+            <Border x:Name="PluginCard" Theme="{StaticResource PopupCard}" Width="660" Padding="8">
+                <Grid RowDefinitions="Auto,440,Auto" ColumnDefinitions="170,*">
+                    <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="4,4,4,8">
+                        <Button x:Name="PluginGroupingButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}"
+                                Click="OnPluginGrouping" />
+                        <!-- No right-click menu: opening one would close the browser. ⌘V still pastes. -->
+                        <Grid Margin="0,0,8,0">
+                            <TextBox x:Name="PluginSearchBox" Theme="{StaticResource SearchInput}" Watermark="Search plugins by name, maker, or type"
+                                     ToolTip.Tip="Type to find plugins by name, maker, or type. Return adds the first one, Down goes to the list, Esc clears the search."
+                                     ContextFlyout="{x:Null}" ContextMenu="{x:Null}"
+                                     TextChanged="OnPluginSearchChanged" />
+                            <Button x:Name="ClearPluginSearchButton" Theme="{StaticResource IconButton}" Width="22" Height="22"
+                                    HorizontalAlignment="Right" Margin="0,0,3,0" IsVisible="False"
+                                    ToolTip.Tip="Clear the search (Esc)" Click="OnClearPluginSearch">
+                                <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                            </Button>
+                        </Grid>
+                    </DockPanel>
+
+                    <!-- Every plugin, the favorites, or one type. -->
+                    <Border Grid.Row="1" Grid.Column="0" Margin="0,0,6,0" Padding="0,0,6,0"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="PluginSections" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <ScrollViewer x:Name="PluginScroller" Grid.Row="1" Grid.Column="1"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="PluginRows" Margin="0,0,4,0" />
+                    </ScrollViewer>
+
+                    <DockPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="4,8,4,0">
+                        <TextBlock x:Name="PluginCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <WrapPanel x:Name="PluginActions" />
+                    </DockPanel>
+                </Grid>
             </Border>
         </Popup>
     </Grid>

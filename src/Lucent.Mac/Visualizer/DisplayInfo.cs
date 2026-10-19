@@ -8,9 +8,10 @@ namespace Lucent.Mac.Visualizer;
 /// normal (SDR) white, and its peak brightness. As on Windows, brightness is in nits where 80 is the
 /// unit the shaders count in; on a Mac that unit is the screen's own normal white, whatever its
 /// brightness setting, so <see cref="SdrWhiteNits"/> is always 80 and <see cref="PeakNits"/> is 80
-/// times how many times brighter than normal white the screen can go right now.
+/// times how many times brighter than normal white the screen can go right now. <see cref="RefreshRate"/>
+/// is the most frames a second the screen shows (120 on a ProMotion screen).
 /// </summary>
-public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float PeakNits)
+public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float PeakNits, int RefreshRate = 60)
 {
     public static DisplayInfo Standard => new(false, 80f, 80f);
 
@@ -36,6 +37,9 @@ public readonly record struct DisplayInfo(bool HdrOn, float SdrWhiteNits, float 
         var hdrOn = potential > 1.0;
         var headroom = current > 1.0 ? current : potential;
         var peak = (float)(80.0 * Math.Round(Math.Clamp(headroom, 1.0, 125.0), 2));
-        return new DisplayInfo(hdrOn, 80f, Math.Max(peak, 80f * 1.25f));
+        var refreshRate = ObjC.SendBool(screen, "respondsToSelector:", ObjC.Selector("maximumFramesPerSecond"))
+            ? (int)ObjC.Send(screen, "maximumFramesPerSecond")
+            : 60;
+        return new DisplayInfo(hdrOn, 80f, Math.Max(peak, 80f * 1.25f), refreshRate > 0 ? refreshRate : 60);
     }
 }

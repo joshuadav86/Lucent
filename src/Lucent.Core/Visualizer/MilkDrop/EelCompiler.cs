@@ -664,6 +664,21 @@ public sealed class EelCompiler
                 return Expression.Block(typeof(double), args.Select(Generate).Append(Expression.Constant(0.0)));
         }
 
+        if (_context.Functions.TryGetValue(call.Name, out var extra))
+        {
+            // A function the host adds (AVS's getosc and getspec, say), called with its numbers.
+            var count = extra.Method.GetParameters().Length;
+            if (args.Count != count)
+            {
+                _warnings.Add($"'{call.Name}' takes {count} value(s) but was given {args.Count}.");
+            }
+
+            var extraValues = Enumerable.Range(0, count)
+                .Select(i => i < args.Count ? Generate(args[i]) : Expression.Constant(0.0))
+                .ToArray();
+            return Expression.Invoke(Expression.Constant(extra), extraValues);
+        }
+
         if (!Functions.TryGetValue(call.Name, out var function))
         {
             _warnings.Add($"Unknown function '{call.Name}' is treated as 0.");

@@ -1,6 +1,6 @@
 # MilkDrop preset credits
 
-These 148 presets come from projectM's "Cream of the Crop" collection:
+These 147 presets come from projectM's "Cream of the Crop" collection:
 https://github.com/projectM-visualizer/presets-cream-of-the-crop (commit 0180df2, 2025-10-08).
 
 License note from that pack (LICENSE.md): MilkDrop presets were, in almost all cases, not released under any specific
@@ -62,7 +62,6 @@ team for curating the collection.
 | Rovastar - Twilight Tunnel.milk | Fractal/Nested Square |
 | PieturP - HSL-here-we-go-2.milk | Fractal/Nested Triangle |
 | Rovastar - VooV's Light Pattern.milk | Fractal/Pointy |
-| Stahlregen - Crossroads (Rainbow Falls).milk | Fractal/Trees |
 | amandio c - embrace 01.milk | Geometric/Circles Nested |
 | amandio c - living boxes 5.milk | Geometric/Cube Array |
 | shifter - tumbling cubes (ripples)_phat_frame_rate_tweak.milk | Geometric/Cube |

@@ -123,6 +123,7 @@ public sealed class MetalRenderer : IDisposable
                 var commands = _engine.EncodeFrame(new CAMetalDrawable(drawable).Texture, now, deltaTime);
                 commands.PresentDrawable(new MTLDrawable(drawable));
                 commands.Commit();
+                _engine.FramePresented(now);
 
                 frames++;
                 if (now - frameRateStart >= 1.0)

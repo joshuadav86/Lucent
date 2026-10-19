@@ -255,6 +255,10 @@
                                                             <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="20" Padding="8,0"
                                                                     Margin="8,0,0,0" Content="IMPORT" IsVisible="{Binding IsMilkDrop}"
                                                                     ToolTip.Tip="Add MilkDrop presets of your own" Click="OnImportIntoMilkDropFolder" />
+                                                            <!-- Only the Winamp AVS folder has it. -->
+                                                            <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="20" Padding="8,0"
+                                                                    Margin="8,0,0,0" Content="IMPORT" IsVisible="{Binding IsAvs}"
+                                                                    ToolTip.Tip="Add Winamp AVS presets of your own" Click="OnImportIntoAvsFolder" />
                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
                                                                        Margin="8,0,2,0" VerticalAlignment="Center"
                                                                        Foreground="{DynamicResource FaintTextBrush}" />
@@ -274,11 +278,16 @@
                                                         <Path Classes="star" Classes.favorite="{Binding IsFavorite}" Data="{StaticResource StarIcon}"
                                                               StrokeThickness="1.2" StrokeJoin="Round" Width="12" Height="12" Stretch="Uniform" />
                                                     </Button>
-                                                    <!-- MilkDrop presets carry a small tag, so they stand out in the A to Z list. -->
+                                                    <!-- MilkDrop and AVS presets carry a small tag, so they stand out in the A to Z list. -->
                                                     <Border DockPanel.Dock="Right" IsVisible="{Binding IsMilkDrop}" Margin="8,0,0,0" Padding="5,1"
                                                             CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
                                                             VerticalAlignment="Center" ToolTip.Tip="A MilkDrop preset">
                                                         <TextBlock Text="MILKDROP" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
+                                                    </Border>
+                                                    <Border DockPanel.Dock="Right" IsVisible="{Binding IsAvs}" Margin="8,0,0,0" Padding="5,1"
+                                                            CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
+                                                            VerticalAlignment="Center" ToolTip.Tip="A Winamp AVS preset">
+                                                        <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </Border>
                                                     <TextBlock Classes="label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />

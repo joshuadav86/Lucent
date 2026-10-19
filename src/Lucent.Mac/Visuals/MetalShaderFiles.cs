@@ -48,6 +48,12 @@ public sealed class MetalShaderFiles
     /// </summary>
     public string MilkDropFolder => Path.Combine(UserPresetsFolder, "MilkDrop");
 
+    /// <summary>
+    /// Where the user's Winamp AVS presets go, ~/Library/Application Support/Lucent/Presets/AVS ("Import AVS
+    /// presets…" copies them here). .avs files anywhere under either Presets folder load too, as on Windows.
+    /// </summary>
+    public string AvsFolder => Path.Combine(UserPresetsFolder, "AVS");
+
     /// <summary>Every visual, built-in and the user's own, by name, like the Windows app's list.</summary>
     public IReadOnlyList<PresetSource> LoadPresets()
     {
@@ -66,7 +72,7 @@ public sealed class MetalShaderFiles
             .ToList());
     }
 
-    /// <summary>The .hlsl visuals in a folder, and the MilkDrop presets in it and in the folders inside it.</summary>
+    /// <summary>The .hlsl visuals in a folder, and the MilkDrop and AVS presets in it and in the folders inside it.</summary>
     private static List<(string Path, string Code)> Read(string folder)
     {
         var files = new List<(string Path, string Code)>();
@@ -77,6 +83,8 @@ public sealed class MetalShaderFiles
                 files.AddRange(Directory.EnumerateFiles(folder, "*.hlsl").Select(path => (Path: path, Code: File.ReadAllText(path))));
                 files.AddRange(Directory.EnumerateFiles(folder, "*.milk", SearchOption.AllDirectories)
                     .Select(path => (Path: path, Code: File.ReadAllText(path))));
+                files.AddRange(Directory.EnumerateFiles(folder, "*.avs", SearchOption.AllDirectories)
+                    .Select(path => (Path: path, Code: PresetSource.ReadCode(path))));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -118,6 +126,20 @@ public sealed class MetalShaderFiles
 
         // A visual of the user's own never uses a shipped translation, even one with the same file name.
         return Find(IsBuiltIn(preset) ? shipped : null, hlsl, entryPoint, fileName);
+    }
+
+    /// <summary>
+    /// The Metal source for Shaders/AvsDisplay.hlsl's PSMain, which shows every AVS preset's picture (drawn on the
+    /// CPU, see Lucent.Core's Visualizer/Avs) as a visual of Lucent's own.
+    /// </summary>
+    public string AvsDisplay()
+    {
+        var shipped = Path.Combine(MetalFolder, "AvsDisplay.PSMain.metal");
+        var sources = _sources.Value;
+        var hlsl = sources?.AvsDisplay is null ? null
+            : MetalTranslation.PresetSource(sources.Common, sources.Particles, sources.PresetMain, sources.ParticleMain,
+                sources.AvsDisplay, false, "PSMain");
+        return Find(shipped, hlsl, "PSMain", "AvsDisplay.hlsl");
     }
 
     /// <summary>MilkDrop.hlsli: what MilkDrop presets' shaders are given, put in front of each of them.</summary>
@@ -191,10 +213,11 @@ public sealed class MetalShaderFiles
         return common is null || engine is null || particles is null || presetMain is null || particleMain is null
             || milkDropPrelude is null || milkDropEngine is null
             ? null
-            : new EngineSources(common, engine, particles, presetMain, particleMain, milkDropPrelude, milkDropEngine);
+            : new EngineSources(common, engine, particles, presetMain, particleMain, milkDropPrelude, milkDropEngine, Read("AvsDisplay.hlsl"));
     }
 
     /// <summary>The shared shader files a visual is assembled from.</summary>
     private sealed record EngineSources(
-        string Common, string Engine, string Particles, string PresetMain, string ParticleMain, string MilkDropPrelude, string MilkDropEngine);
+        string Common, string Engine, string Particles, string PresetMain, string ParticleMain, string MilkDropPrelude, string MilkDropEngine,
+        string? AvsDisplay);
 }

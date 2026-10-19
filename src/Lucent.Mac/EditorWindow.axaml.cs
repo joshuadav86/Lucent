@@ -93,6 +93,9 @@ public partial class EditorWindow : Window
         };
         Waveform.ClipMoveRequested += async (_, move) => await MoveClipAsync(move.Clip, move.ToIndex);
         Waveform.ClipSlideRequested += async (_, slide) => await SlideClipAsync(slide.Clip, slide.Offset);
+        Waveform.ClipEdgeRequested += async (_, edge) => await MoveClipEdgeAsync(edge.Clip, edge.Start, edge.Frame);
+        Waveform.ClipFadeRequested += async (_, fade) => await SetClipFadeAsync(fade.Clip, fade.FadeIn, fade.Frames);
+        Waveform.SplitMoveRequested += (_, move) => MoveSplit(move.Split, move.Frame);
         Waveform.SilenceBeforeClip = clip => _session is { } session && !IsBusy ? session.SilenceBefore(clip) : 0;
         Waveform.MarkerClicked += (_, index) => GoToMarker(index);
         Waveform.MarkerMoved += (_, move) => MoveMarker(move.Marker, move.Frame);
@@ -102,6 +105,8 @@ public partial class EditorWindow : Window
 
         // Like WPF's PreviewKeyDown: the editor's keys work wherever the focus is, unless typing.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        PluginCard.AddHandler(KeyDownEvent, OnPluginBrowserKeyDown, RoutingStrategies.Tunnel);
+        PluginSearchBox.AddHandler(KeyDownEvent, OnPluginSearchKeyDown, RoutingStrategies.Tunnel);
 
         PitchSlider.Value = 0;
         UpdatePitchText();
@@ -166,6 +171,10 @@ public partial class EditorWindow : Window
         session.AddMarker((int)(frames * 0.31), "Verse");
         session.AddMarker((int)(frames * 0.63), "Chorus");
         session.Split(new[] { (int)(frames * 0.47) });
+        // The second clip trimmed back a little, with fades dragged out at the song's start and end.
+        session.MoveClipEdge(1, start: true, (int)(frames * 0.5));
+        session.SetClipFade(0, fadeIn: true, (int)(frames * 0.05));
+        session.SetClipFade(session.Clips.Count - 1, fadeIn: false, (int)(frames * 0.07));
         Waveform.View = view;
         SpectrogramToggle.IsChecked = view == EditorView.Spectrogram;
         ShowAudio();
@@ -399,6 +408,7 @@ public partial class EditorWindow : Window
 
         Waveform.Peaks = _session.Peaks;
         Waveform.Splits = _session.Splits;
+        Waveform.ClipEdgeDetails = _session.ClipEdgeDetails;
         Waveform.Markers = _session.Markers;
         // Problem spots found earlier may not be where they were any more.
         Waveform.Highlights = Array.Empty<FrameRange>();
@@ -573,6 +583,8 @@ public partial class EditorWindow : Window
         }
 
         Waveform.Splits = session.Splits;
+
+        Waveform.ClipEdgeDetails = session.ClipEdgeDetails;
         UpdateHistory();
         ShowStatus($"Split into {session.Clips.Count} clips. Drag a clip's tab to slide it along (Option+drag to move it past the others), or right-click it for more. ⌘Z undoes it.");
     }
@@ -587,6 +599,46 @@ public partial class EditorWindow : Window
     {
         var moved = default(FrameRange);
         await EditAsync("Move clip", session => moved = session.SlideClip(clip, offset), () => moved);
+    }
+
+    /// <summary>Trims a clip by one of its edges, or brings back what was trimmed or cut, then selects the clip.</summary>
+    private async Task MoveClipEdgeAsync(int clip, bool start, int frame)
+    {
+        if (_session is not { } session || clip >= session.Clips.Count)
+        {
+            return;
+        }
+
+        var range = session.Clips[clip];
+        var trimming = start ? frame > range.Start : frame < range.End;
+        var moved = default(FrameRange);
+        await EditAsync(trimming ? "Trim clip" : "Extend clip", s => moved = s.MoveClipEdge(clip, start, frame), () => moved);
+    }
+
+    private async Task SetClipFadeAsync(int clip, bool fadeIn, int frames)
+    {
+        if (_session is not { } session || clip >= session.Clips.Count)
+        {
+            return;
+        }
+
+        var selection = Selection;
+        await EditAsync(fadeIn ? "Fade in" : "Fade out", s => s.SetClipFade(clip, fadeIn, frames), () => selection);
+    }
+
+    /// <summary>Moves the split between two touching clips, so one grows as the other shrinks.</summary>
+    private void MoveSplit(int split, int frame)
+    {
+        if (_session is not { } session || IsBusy)
+        {
+            return;
+        }
+
+        session.MoveSplit(split, frame);
+        Waveform.Splits = session.Splits;
+        Waveform.ClipEdgeDetails = session.ClipEdgeDetails;
+        UpdateHistory();
+        ShowStatus("Moved the edge between the clips. ⌘Z undoes it.");
     }
 
     private async Task InsertSilenceAsync(int at, double seconds)
@@ -751,6 +803,7 @@ public partial class EditorWindow : Window
 
         session.Join(split);
         Waveform.Splits = session.Splits;
+        Waveform.ClipEdgeDetails = session.ClipEdgeDetails;
         UpdateHistory();
         ShowStatus("Joined. ⌘Z undoes it.");
     }
@@ -1157,8 +1210,8 @@ public partial class EditorWindow : Window
 
     private async void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        // Typing in a box, or using the sliders in the tool cards, keeps its keys.
-        if (e.Source is TextBox || ToolPopups.Any(popup => popup.IsOpen))
+        // Typing in a box, using the sliders in the tool cards, or choosing a plugin keeps its keys.
+        if (e.Source is TextBox || ToolPopups.Any(popup => popup.IsOpen) || PluginPopup.IsOpen)
         {
             return;
         }
@@ -1444,6 +1497,7 @@ public partial class EditorWindow : Window
         _player.Dispose();
         ClosePluginInBackground();
         // The last split's stems can take hundreds of megabytes.
+        _stemsWindow?.Close();
         WinampInspiredVisualizer.Editor.Stems.StemCache.Clear();
     }
 }

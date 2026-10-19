@@ -34,7 +34,10 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>A MilkDrop preset, listed in the MilkDrop folder.</summary>
     public bool IsMilkDrop => Family == VisualStyles.MilkDropFamily;
 
-    /// <summary>Who made it (MilkDrop presets), or null.</summary>
+    /// <summary>A Winamp AVS preset, listed in the Winamp AVS folder.</summary>
+    public bool IsAvs => Family == VisualStyles.AvsFamily;
+
+    /// <summary>Who made it (MilkDrop and AVS presets), or null.</summary>
     public string? Author { get; }
 
     /// <summary>When it joined the visuals, for the picker's "Newest first" order, or null if that isn't known.</summary>
@@ -46,8 +49,15 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>Its name, family and tags, ready for the picker's search box to look in.</summary>
     public string SearchKey { get; }
 
-    /// <summary>"Fractal · Calm, Geometric", shown when the mouse rests on the visual in the picker.</summary>
-    public string StyleText => (Author is null ? Family : $"{Family} · by {Author}") + (Tags.Count == 0 ? "" : $" · {string.Join(", ", Tags)}");
+    /// <summary>"Fractal · Calm, Geometric", shown when the mouse rests on the visual in the picker (without a tag that just repeats the family).</summary>
+    public string StyleText
+    {
+        get
+        {
+            var tags = Tags.Where(tag => !string.Equals(tag, Family, StringComparison.OrdinalIgnoreCase)).ToList();
+            return (Author is null ? Family : $"{Family} · by {Author}") + (tags.Count == 0 ? "" : $" · {string.Join(", ", tags)}");
+        }
+    }
 
     public bool IsFavorite
     {

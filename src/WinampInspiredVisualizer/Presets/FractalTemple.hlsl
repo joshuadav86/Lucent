@@ -45,9 +45,18 @@ float templeTracery(float2 q, out float depth)
 // edge returns the distance to the nearest carved edge.
 float templeWall(float across, float along, float height, out float depth, out float edge)
 {
+    float slab = abs(across) - WallHalf;
+    // The wall is never nearer than its slab, so away from it the slab alone is a safe step and
+    // the tracery, which costs most of the march, waits until the ray is close.
+    if (slab > 0.3)
+    {
+        depth = 0.0;
+        edge = slab;
+        return slab;
+    }
+
     float2 q = float2(along, height - ArchSpring) / ArchWidth;
     float stone = min(templeTracery(q, depth) * ArchWidth, height - 0.25);
-    float slab = abs(across) - WallHalf;
     edge = max(abs(slab), abs(stone));
     return max(slab, stone);
 }
@@ -69,7 +78,8 @@ float templeDE(float3 pos, out float part, out float depth, out float edge, out 
     float wallX = templeWall(toEdge.x, cell.y, height, depthX, edgeX);
     float wallZ = templeWall(toEdge.y, cell.x, height, depthZ, edgeZ);
     // Fluted columns.
-    float column = length(toEdge) - 0.13 - 0.008 * cos(atan2(toEdge.y, toEdge.x) * 16.0);
+    float column = length(toEdge) - 0.13;
+    column = column > 0.1 ? column - 0.008 : column - 0.008 * cos(atan2(toEdge.y, toEdge.x) * 16.0);
     float walls = min(wallX, wallZ);
     depth = wallX < wallZ ? depthX : depthZ;
     edge = wallX < wallZ ? edgeX : edgeZ;

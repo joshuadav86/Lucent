@@ -21,6 +21,7 @@ using WinampInspiredVisualizer.Stores;
 using WinampInspiredVisualizer.Themes;
 using WinampInspiredVisualizer.Updates;
 using WinampInspiredVisualizer.Visualizer;
+using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Windows;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
@@ -1079,8 +1080,10 @@ public partial class MainWindow : Window
     public void ApplyVisualizerSettings()
     {
         _visualizer.TargetPixels = GraphicsOptions.Pixels(_settings.Resolution);
+        _visualizer.AutoResolution = _settings.Resolution == RenderResolution.Auto;
         _visualizer.Quality = GraphicsOptions.Quality(_settings.Detail);
         _visualizer.BloomStrength = GraphicsOptions.BloomStrength(_settings.Glow);
+        AvsVisual.ModernLook = _settings.ModernAvs;
         _visualizer.Hdr = _settings.Hdr;
         _visualizer.AutoCycle = _settings.AutoCycle;
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
@@ -1211,6 +1214,15 @@ public partial class MainWindow : Window
             _settings.MilkDropVisuals = on;
             _visuals.ShowMilkDrop(on);
         }
+        else if (sender == AvsSwitch)
+        {
+            _settings.AvsVisuals = on;
+            _visuals.ShowAvs(on);
+        }
+        else if (sender == ModernAvsSwitch)
+        {
+            _visuals.UseModernAvs(on);
+        }
 
         ApplyVisualizerSettings();
         UpdateHdrHint();
@@ -1245,6 +1257,8 @@ public partial class MainWindow : Window
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
         MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;
+        AvsSwitch.IsChecked = _settings.AvsVisuals;
+        ModernAvsSwitch.IsChecked = _settings.ModernAvs;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
     }

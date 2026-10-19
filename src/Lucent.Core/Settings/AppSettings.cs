@@ -87,6 +87,12 @@ public sealed class AppSettings
     /// <summary>List MilkDrop presets in the visual picker and play them in Auto.</summary>
     public bool MilkDropVisuals { get; set; } = true;
 
+    /// <summary>List Winamp AVS presets in the visual picker and play them in Auto.</summary>
+    public bool AvsVisuals { get; set; } = true;
+
+    /// <summary>Draw Winamp AVS presets sharper and smoother, in Lucent's light; off shows them as Winamp drew them.</summary>
+    public bool ModernAvs { get; set; } = true;
+
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
 
@@ -95,7 +101,13 @@ public sealed class AppSettings
 
     // ---- Graphics ----
 
-    public RenderResolution Resolution { get; set; } = RenderResolution.Window;
+    public RenderResolution Resolution { get; set; } = RenderResolution.Auto;
+
+    /// <summary>
+    /// Whether this settings file has been moved onto the Automatic resolution, which came later:
+    /// anyone still on the old default (the window's size) is moved over once.
+    /// </summary>
+    public bool AutoResolutionOffered { get; set; }
 
     public DetailLevel Detail { get; set; } = DetailLevel.Normal;
 
@@ -258,16 +270,17 @@ public sealed class AppSettings
             {
                 var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
                 settings.CarryOverReplacedVisuals();
+                settings.OfferAutoResolution();
                 return settings;
             }
         }
         catch (Exception)
         {
             // A damaged settings file just means starting from the defaults.
-            return new AppSettings();
+            return new AppSettings { AutoResolutionOffered = true };
         }
 
-        return new AppSettings { AddStarterMusic = true };
+        return new AppSettings { AddStarterMusic = true, AutoResolutionOffered = true };
     }
 
     /// <summary>
@@ -295,6 +308,18 @@ public sealed class AppSettings
         foreach (var list in VisualLists.Keys.ToList())
         {
             VisualLists[list] = ReplaceAll(VisualLists[list]);
+        }
+    }
+
+    private void OfferAutoResolution()
+    {
+        if (!AutoResolutionOffered)
+        {
+            AutoResolutionOffered = true;
+            if (Resolution == RenderResolution.Window)
+            {
+                Resolution = RenderResolution.Auto;
+            }
         }
     }
 
