@@ -527,6 +527,7 @@ public sealed partial class WaveformView : Control
         }
 
         DrawRuler(dc, width, linePen);
+        DrawBeatGrid(dc, width, lanesTop, height);
         DrawClips(dc, width, height);
 
         for (var c = 0; c < channels; c++)
@@ -582,6 +583,7 @@ public sealed partial class WaveformView : Control
 
         DrawHighlights(dc, width, lanesTop, height);
         DrawMarkers(dc, width, height);
+        DrawLoopLength(dc, width, lanesTop);
 
         // The cursor, when nothing is selected.
         if (_selection.IsEmpty)

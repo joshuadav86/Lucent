@@ -484,6 +484,14 @@
                     </Button>
                     <Button Theme="{StaticResource ToolButton}" Content="Batch…" Click="OnBatch"
                             ToolTip.Tip="Process and convert many sounds at once: normalize, limit, trim silence, remove hum, and more" />
+                    <Border Width="1" Height="20" Margin="4,0,10,0" Background="{DynamicResource HairlineBrush}" />
+                    <ToggleButton x:Name="BeatsToggle" Theme="{StaticResource ToolToggle}" Content="Beats" Click="OnBeatsToggle"
+                                  ToolTip.Tip="Show the beats and bars over the waveform, and snap the cursor and selection to the beat. Hold ⌘ to place them freely." />
+                    <Button x:Name="LoopMakerButton" Theme="{StaticResource ToolButton}" Content="Loop maker" Click="OnLoopMaker"
+                            ToolTip.Tip="Make loops on the beat: pick a length in bars, find the stretches that loop best, and save them as files" />
+                    <TextBlock x:Name="MusicSummary" FontSize="12" VerticalAlignment="Center" Margin="4,0,0,0"
+                               Foreground="{DynamicResource MutedTextBrush}"
+                               ToolTip.Tip="The tempo and key Lucent hears, with the key's Camelot number for DJ mixing" />
                 </WrapPanel>
                 <TextBlock x:Name="ScopeHint" Theme="{StaticResource OptionHint}" Margin="2,4,0,0" />
             </StackPanel>
@@ -546,6 +554,53 @@
                     <Slider x:Name="TransientSlider" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
                             ValueChanged="OnTransientSensitivityChanged" />
                     <TextBlock x:Name="TransientCount" Theme="{StaticResource OptionHint}" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- The loop maker -->
+        <Popup x:Name="LoopPopup" PlacementTarget="{Binding #LoopMakerButton}" Placement="TopEdgeAlignedLeft" VerticalOffset="4"
+               IsLightDismissEnabled="True">
+            <Border Theme="{StaticResource PopupCard}" Width="420">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,4">
+                        <TextBlock x:Name="MusicText" DockPanel.Dock="Right" FontSize="12" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Margin="0" Text="Loop maker" />
+                    </DockPanel>
+                    <TextBlock x:Name="LoopHint" Theme="{StaticResource OptionHint}" TextWrapping="Wrap" />
+                    <TextBlock Theme="{StaticResource CardValue}" Text="Length in bars" Margin="0,12,0,6" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid x:Name="LoopBarsChoices" Rows="1" />
+                    </Border>
+                    <WrapPanel x:Name="LoopMoveButtons" Margin="0,10,0,0">
+                        <Button x:Name="MakeLoopButton" Theme="{StaticResource ToolButton}" Content="Loop here" Click="OnMakeLoop"
+                                Foreground="{DynamicResource AccentBrush}"
+                                ToolTip.Tip="Select that many bars from the bar at the cursor and play them round and round" />
+                        <Button Theme="{StaticResource ToolButton}" Content="◀" Click="OnLoopPrevious"
+                                ToolTip.Tip="Move the loop back by its own length" />
+                        <Button Theme="{StaticResource ToolButton}" Content="▶" Click="OnLoopNext"
+                                ToolTip.Tip="Move the loop on by its own length" />
+                        <Button Theme="{StaticResource ToolButton}" Content="Halve" Click="OnLoopHalve"
+                                ToolTip.Tip="Make the loop half as long" />
+                        <Button Theme="{StaticResource ToolButton}" Content="Double" Margin="0" Click="OnLoopDouble"
+                                ToolTip.Tip="Make the loop twice as long" />
+                    </WrapPanel>
+                    <DockPanel Margin="0,14,0,6">
+                        <Button x:Name="FindLoopsButton" DockPanel.Dock="Right" Theme="{StaticResource ToolButton}" Margin="0"
+                                Content="Find loops" Click="OnFindLoops"
+                                ToolTip.Tip="Find the stretches of this many bars that loop most seamlessly: where the song repeats itself, and the end flows back into the start" />
+                        <TextBlock Theme="{StaticResource CardValue}" Text="Best loops in the song" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <ScrollViewer MaxHeight="220" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="LoopList" />
+                    </ScrollViewer>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button x:Name="SaveFoundLoopsButton" Theme="{StaticResource ToolButton}" Content="Save all found" Click="OnSaveFoundLoops"
+                                ToolTip.Tip="Save every loop found as a WAV file, in a folder beside the song" />
+                        <Button x:Name="SaveLoopButton" Theme="{StaticResource ToolButton}" Content="Save loop" Margin="0" Click="OnSaveLoop"
+                                ToolTip.Tip="Save the selection as a WAV file in a folder beside the song, named with its length, tempo and key" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Popup>

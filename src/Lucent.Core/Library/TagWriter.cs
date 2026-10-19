@@ -376,6 +376,9 @@ public static class TagWriter
                 case TagField.Bpm:
                     tag.BeatsPerMinute = number;
                     break;
+                case TagField.Key:
+                    tag.InitialKey = value;
+                    break;
                 case TagField.Comment:
                     tag.Comment = value;
                     break;
@@ -462,6 +465,7 @@ public static class TagWriter
         TagField.Genre => TagFields.JoinList(tag.Genres),
         TagField.Composer => TagFields.JoinList(tag.Composers),
         TagField.Bpm => TagFields.NumberText(tag.BeatsPerMinute),
+        TagField.Key => tag.InitialKey ?? string.Empty,
         TagField.Comment => tag.Comment ?? string.Empty,
         _ => tag.Lyrics ?? string.Empty,
     };

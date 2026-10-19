@@ -121,6 +121,7 @@ public partial class EditorWindow : Window
         SpectrogramToggle.IsChecked = _settings.View == EditorView.Spectrogram;
         SnapToggle.IsChecked = _settings.SnapToZeroCrossings;
         InitTransients();
+        InitLoops();
         LoopToggle.IsChecked = _settings.Loop;
         HistoryToggle.IsChecked = _settings.ShowHistory;
         HistoryPanel.IsVisible = _settings.ShowHistory;
@@ -1035,6 +1036,8 @@ public partial class EditorWindow : Window
         LengthText.Text = $"Length {Format(_session.Audio.Frames)}  ·  {rate / 1000.0:0.#} kHz  ·  " +
                           (_session.Audio.ChannelCount == 1 ? "mono" : "stereo");
         var hasSelection = !selection.IsEmpty && !IsBusy;
+        SaveLoopButton.IsEnabled = hasSelection;
+        RefreshMusic();
         TrimButton.IsEnabled = hasSelection;
         DeleteButton.IsEnabled = hasSelection;
         PlaySelectionButton.IsEnabled = hasSelection;

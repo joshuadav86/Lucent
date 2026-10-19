@@ -76,6 +76,7 @@ public partial class TrackInfoWindow : Window
             [TagField.Genre] = GenreBox,
             [TagField.Composer] = ComposerBox,
             [TagField.Bpm] = BpmBox,
+            [TagField.Key] = KeyBox,
             [TagField.Comment] = CommentBox,
             [TagField.Lyrics] = LyricsBox,
         };
@@ -184,6 +185,7 @@ public partial class TrackInfoWindow : Window
         FillDetails();
         ContentGrid.IsEnabled = true;
         SaveButton.IsEnabled = true;
+        DetectButton.IsEnabled = _tracks.Count == 1;
         ShowStatus(_tracks.Count > 1 ? "Anything you type here is saved into every one of these tracks." : string.Empty);
         (_tracks.Count == 1 ? TitleBox : ArtistBox).Focus();
     }
@@ -970,6 +972,7 @@ public partial class TrackInfoWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _detecting?.Cancel();
         if (_open == this)
         {
             _open = null;

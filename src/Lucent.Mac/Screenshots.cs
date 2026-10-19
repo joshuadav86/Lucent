@@ -62,6 +62,8 @@ public static class Screenshots
         ("VisualsPicker", () => PreviewVisualsPicker()),
         ("Editor", () => PreviewEditor(EditorView.Waveform)),
         ("EditorSpectrogram", () => PreviewEditor(EditorView.Spectrogram)),
+        ("EditorBeats", () => PreviewEditorBeats()),
+        ("EditorLoopMaker", () => PreviewLoopMaker()),
         ("SaveAs", () => ExportWindow.PrepareSaveDialog(Path.Combine(SampleFolder(), "Night Drive.flac"),
             new ExportOptions { Format = ExportFormat.Flac }, null)),
         ("Convert", () => ExportWindow.PrepareConverter(
@@ -409,6 +411,39 @@ public static class Screenshots
     /// </summary>
     private static Window PreviewEditor(EditorView view)
     {
+        var editor = OpenPreviewEditor();
+        editor.ShowPreviewEdits(view);
+        Dispatcher.UIThread.RunJobs();
+        return editor;
+    }
+
+    /// <summary>The audio editor with Beats on: the bars drawn over the waveform, and a four-bar loop selected.</summary>
+    private static Window PreviewEditorBeats()
+    {
+        var editor = OpenPreviewEditor();
+        editor.ShowPreviewLoop();
+        Dispatcher.UIThread.RunJobs();
+        return editor;
+    }
+
+    /// <summary>The loop maker (normally a pop-up under its button), with the best four-bar loops found.</summary>
+    private static Window PreviewLoopMaker()
+    {
+        var editor = OpenPreviewEditor();
+        editor.ShowPreviewLoop();
+        var card = editor.TakeLoopMakerCard();
+        editor.Close();
+        return new Window
+        {
+            Width = 440,
+            SizeToContent = SizeToContent.Height,
+            Background = Avalonia.Media.Brushes.Transparent,
+            Content = card,
+        };
+    }
+
+    private static EditorWindow OpenPreviewEditor()
+    {
         var path = Path.Combine(SampleFolder(), "Night Drive.wav");
         if (!File.Exists(path))
         {
@@ -431,8 +466,6 @@ public static class Screenshots
         while ((!editor.Loading.IsCompleted || editor.IsBusy) && waited.Elapsed < TimeSpan.FromSeconds(30));
 
         AudioReaderFactory.OpenWithSystemDecoder = decoder;
-        editor.ShowPreviewEdits(view);
-        Dispatcher.UIThread.RunJobs();
         return editor;
     }
 

@@ -10,7 +10,7 @@ namespace WinampInspiredVisualizer.Audio;
 public sealed class BeatMap
 {
     // The song is measured in short slices, this many a second.
-    private const int FramesPerSecond = 100;
+    internal const int FramesPerSecond = 100;
 
     private BeatMap(double tempo, double[] downbeats, double[] phraseStarts)
     {
@@ -77,6 +77,45 @@ public sealed class BeatMap
             return null;
         }
 
+        var found = FindBeats(full, low, cancel);
+        if (found is null)
+        {
+            return null;
+        }
+
+        var (beats, bar, periodFound) = found.Value;
+        var downbeats = beats.Where((_, i) => i % 4 == bar).ToList();
+
+        // Sections change on phrase boundaries: the bar where the loudness of the four bars ahead
+        // differs most from the four bars before.
+        var phraseStarts = new List<int>();
+        if (downbeats.Count >= 16)
+        {
+            var barLoudness = new double[downbeats.Count - 1];
+            for (var i = 0; i < barLoudness.Length; i++)
+            {
+                barLoudness[i] = Average(Enumerable.Range(downbeats[i], downbeats[i + 1] - downbeats[i]).Select(f => Math.Log(1e-6 + full[f])));
+            }
+
+            double Change(int at) => Math.Abs(barLoudness.Skip(at).Take(4).Average() - barLoudness.Skip(at - 4).Take(4).Average());
+            var phase = Enumerable.Range(0, 4)
+                .Select(offset => (Offset: offset, Strength: Average(Enumerable.Range(4, barLoudness.Length - 8).Where(i => i % 4 == offset).Select(Change))))
+                .MaxBy(choice => choice.Strength).Offset;
+            phraseStarts = downbeats.Where((_, i) => i % 4 == phase).ToList();
+        }
+
+        static double Seconds(int frame) => (double)frame / FramesPerSecond;
+        return new BeatMap(60.0 * FramesPerSecond / periodFound,
+            downbeats.Select(Seconds).ToArray(), phraseStarts.Select(Seconds).ToArray());
+    }
+
+    /// <summary>
+    /// The beats in the loudness of a song measured <see cref="FramesPerSecond"/> times a second: each beat's
+    /// slice, which of every four beats is the downbeat (0 to 3), and the slices between beats. Null for
+    /// music shorter than ten seconds or without a steady beat to follow.
+    /// </summary>
+    internal static (List<int> Beats, int Bar, double Period)? FindBeats(float[] full, float[] low, CancellationToken cancel)
+    {
         if (full.Length < FramesPerSecond * 10)
         {
             return null;
@@ -120,29 +159,45 @@ public sealed class BeatMap
         var bar = Enumerable.Range(0, 4)
             .Select(offset => (Offset: offset, Strength: Average(beats.Where((_, i) => i % 4 == offset).Select(beat => Peak(kicks, beat)))))
             .MaxBy(choice => choice.Strength).Offset;
-        var downbeats = beats.Where((_, i) => i % 4 == bar).ToList();
+        return (beats, bar, periodFound);
+    }
 
-        // Sections change on phrase boundaries: the bar where the loudness of the four bars ahead
-        // differs most from the four bars before.
-        var phraseStarts = new List<int>();
-        if (downbeats.Count >= 16)
+    /// <summary>
+    /// The loudness of each slice of audio already in memory, overall and of the bass alone, as
+    /// <see cref="FindBeats"/> takes it, and how many samples make a slice.
+    /// </summary>
+    internal static (float[] Full, float[] Low, int Hop) MeasureEnergy(float[][] channels, int rate)
+    {
+        var hop = Math.Max(1, rate / FramesPerSecond);
+        var lowPass = (float)(1 - Math.Exp(-2 * Math.PI * 120 / rate));
+        var frames = channels[0].Length;
+        var count = frames / hop;
+        var full = new float[count];
+        var low = new float[count];
+        float bass = 0, bass2 = 0;
+        for (var f = 0; f < count; f++)
         {
-            var barLoudness = new double[downbeats.Count - 1];
-            for (var i = 0; i < barLoudness.Length; i++)
+            float sumFull = 0, sumLow = 0;
+            for (var i = f * hop; i < (f + 1) * hop; i++)
             {
-                barLoudness[i] = Average(Enumerable.Range(downbeats[i], downbeats[i + 1] - downbeats[i]).Select(f => Math.Log(1e-6 + full[f])));
+                float mono = 0;
+                foreach (var channel in channels)
+                {
+                    mono += channel[i];
+                }
+
+                mono /= channels.Length;
+                bass += lowPass * (mono - bass);
+                bass2 += lowPass * (bass - bass2);
+                sumFull += mono * mono;
+                sumLow += bass2 * bass2;
             }
 
-            double Change(int at) => Math.Abs(barLoudness.Skip(at).Take(4).Average() - barLoudness.Skip(at - 4).Take(4).Average());
-            var phase = Enumerable.Range(0, 4)
-                .Select(offset => (Offset: offset, Strength: Average(Enumerable.Range(4, barLoudness.Length - 8).Where(i => i % 4 == offset).Select(Change))))
-                .MaxBy(choice => choice.Strength).Offset;
-            phraseStarts = downbeats.Where((_, i) => i % 4 == phase).ToList();
+            full[f] = sumFull / hop;
+            low[f] = sumLow / hop;
         }
 
-        static double Seconds(int frame) => (double)frame / FramesPerSecond;
-        return new BeatMap(60.0 * FramesPerSecond / periodFound,
-            downbeats.Select(Seconds).ToArray(), phraseStarts.Select(Seconds).ToArray());
+        return (full, low, hop);
     }
 
     /// <summary>The loudness of each slice of the song, overall and of the bass alone.</summary>
@@ -198,7 +253,7 @@ public sealed class BeatMap
     }
 
     /// <summary>Rises in loudness, slice by slice, measured against the music around them.</summary>
-    private static double[] Onsets(float[] energy)
+    internal static double[] Onsets(float[] energy)
     {
         var rise = new double[energy.Length];
         for (var f = 1; f < energy.Length; f++)
@@ -340,7 +395,7 @@ public sealed class BeatMap
         return beats;
     }
 
-    private static double Peak(double[] values, int frame)
+    internal static double Peak(double[] values, int frame)
     {
         var peak = 0.0;
         for (var f = Math.Max(0, frame - 2); f <= Math.Min(values.Length - 1, frame + 2); f++)
