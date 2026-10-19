@@ -720,6 +720,9 @@ public sealed class MilkPresetRunner
             {
                 // 6: a straight wave across the screen at an angle set by the mystery value.
                 // 7: two of them, one per channel, apart by wave_y.
+                // As in MilkDrop, the line sits wave_x away from the centre, measured across it (not
+                // along x): a level line (mystery 0) is moved up and down by wave_x, and a standing one
+                // (mystery 1) sits on the left for wave_x above 0.5.
                 points = 256;
                 var angle = mystery * Math.PI * 0.5;
                 var dirX = Math.Cos(angle);
@@ -729,8 +732,8 @@ public sealed class MilkPresetRunner
                 {
                     var source = line == 0 ? _waveL : _waveR;
                     var apart = mode == 7 ? (line == 0 ? 1 : -1) * (this[V.WaveY] * 0.5) : 0.0;
-                    var originX = (mode == 7 ? 0 : cx) - dirY * apart;
-                    var originY = (mode == 7 ? 0 : cy) + dirX * apart;
+                    var originX = -dirY * (cx + apart);
+                    var originY = dirX * (cx + apart);
                     for (var i = 0; i < points; i++)
                     {
                         var along = (i / (double)(points - 1) * 2 - 1) * 1.5;
