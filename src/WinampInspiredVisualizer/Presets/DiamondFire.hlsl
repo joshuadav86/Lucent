@@ -172,22 +172,52 @@ float3 toStone(float3 v)
 
 // Small, very bright lamps overhead and around: the sharp light a diamond needs to show fire.
 // The treble makes them twinkle; the colour of the room's glow slowly turns with the music.
-float3 lamps(float3 direction)
+// Each lamp's height (cos, sin) never changes; how bright each is and where the ring of them has
+// turned to only change from frame to frame, so setUpLamps works them out once at the start of Render
+// rather than every time a ray looks out of the stone.
+static const float2 LampRise[8] =
 {
-    float3 total = 0.0;
+    float2(0.90044710, 0.43496553),
+    float2(0.76664300, 0.64207361),
+    float2(0.85543819, 0.51790492),
+    float2(0.70270785, 0.71147852),
+    float2(0.80281181, 0.59623250),
+    float2(0.88420830, 0.46709280),
+    float2(0.74303661, 0.66925077),
+    float2(0.83624337, 0.54835848)
+};
+static float LampGlow[8];
+static float2 LampTurn = float2(1.0, 0.0);
+static float WindowGlow = 0.0;
+
+void setUpLamps()
+{
+    float angle = 0.4 + Time * 0.02;
+    LampTurn = float2(cos(angle), sin(angle));
     [unroll]
     for (int i = 0; i < 8; i++)
     {
-        float angle = i * 0.785 + 0.4 + Time * 0.02;
-        float rise = 0.45 + 0.4 * frac(i * 0.618);
-        float3 lamp = normalize(float3(cos(angle) * cos(rise), sin(rise), sin(angle) * cos(rise)));
-        float twinkle = 1.0 + Beat * 0.6 + Treble * 2.5 * (0.5 + 0.5 * sin(Time * (9.0 + i * 3.1) + i));
+        LampGlow[i] = 7.0 * (1.0 + Beat * 0.6 + Treble * 2.5 * (0.5 + 0.5 * sin(Time * (9.0 + i * 3.1) + i)));
+    }
+    WindowGlow = 1.3 * (0.8 + Level * 0.5);
+}
+
+float3 lamps(float3 direction)
+{
+    float glow = 0.0;
+    // The lamps sit every 0.785 radians round the ring: step from one to the next by turning.
+    float2 around = LampTurn;
+    const float2 next = float2(cos(0.785), sin(0.785));
+    [unroll]
+    for (int i = 0; i < 8; i++)
+    {
+        float3 lamp = float3(around.x * LampRise[i].x, LampRise[i].y, around.y * LampRise[i].x);
         float tightness = 260.0 + i * 60.0;
-        total += float3(1.0, 0.97, 0.92) * 7.0 * twinkle * exp(-(1.0 - dot(direction, lamp)) * tightness);
+        glow += LampGlow[i] * exp(-(1.0 - dot(direction, lamp)) * tightness);
+        around = float2(around.x * next.x - around.y * next.y, around.x * next.y + around.y * next.x);
     }
     // One big soft window light from above, breathing with the level.
-    total += float3(0.8, 0.85, 1.0) * 1.3 * (0.8 + Level * 0.5) * exp(-(1.0 - direction.y) * 6.0);
-    return total;
+    return float3(1.0, 0.97, 0.92) * glow + float3(0.8, 0.85, 1.0) * WindowGlow * exp(-(1.0 - direction.y) * 6.0);
 }
 
 float velvetFolds(float2 q)
@@ -229,35 +259,41 @@ float3 surroundings(float3 origin, float3 direction)
     return float3(0.006, 0.006, 0.01) + lamps(world);
 }
 
-// One colour's journey through the stone: in at the front, bouncing off the facets inside
-// (mostly trapped by total internal reflection) until it escapes. ior is that colour's refractive index.
-float traceColour(float3 position, float3 direction, float3 normal, float ior, int channel, int bounces)
+// Light's journey through the stone: in at the front, bouncing off the facets inside (mostly
+// trapped by total internal reflection) until it escapes. Each colour has its own refractive index
+// (iors), so at every facet it reaches it bends out by a different amount, or stays trapped where
+// another escapes: that spread is the fire. The colours follow one shared path between facets,
+// which costs a third of tracing each colour through the stone on its own and looks the same,
+// since the colours separate far more where they leave the stone than inside it.
+float3 traceFire(float3 position, float3 direction, float3 normal, float3 iors, int bounces)
 {
-    float3 inside = refract(direction, normal, 1.0 / ior);
-    float result = 0.0;
-    float carried = 1.0;
+    float3 inside = refract(direction, normal, 1.0 / iors.g);
+    float3 result = 0.0;
+    float3 carried = 1.0;
     float3 origin = position;
+    float3 f0 = (iors - 1.0) / (iors + 1.0);
+    f0 *= f0;
     [loop]
     for (int b = 0; b < bounces; b++)
     {
         float3 exitNormal;
         float t = leaveDiamond(origin + inside * 1e-4, inside, exitNormal);
         origin = origin + inside * t;
-        float3 outside = refract(inside, -exitNormal, ior);
-        if (dot(outside, outside) > 0.0)
+        [unroll]
+        for (int c = 0; c < 3; c++)
         {
-            // Some escapes here; the rest reflects back inside.
-            float cosine = saturate(dot(outside, exitNormal));
-            float f0 = (ior - 1.0) / (ior + 1.0);
-            f0 *= f0;
-            float fresnel = f0 + (1.0 - f0) * pow(1.0 - cosine, 5.0);
-            float3 seen = surroundings(origin, outside);
-            float3 pick = channel == 0 ? float3(1.0, 0.0, 0.0) : (channel == 1 ? float3(0.0, 1.0, 0.0) : float3(0.0, 0.0, 1.0));
-            result += carried * (1.0 - fresnel) * dot(seen, pick);
-            carried *= fresnel;
+            float3 outside = refract(inside, -exitNormal, iors[c]);
+            if (dot(outside, outside) > 0.0)
+            {
+                // Some escapes here; the rest reflects back inside.
+                float cosine = saturate(dot(outside, exitNormal));
+                float fresnel = f0[c] + (1.0 - f0[c]) * pow(1.0 - cosine, 5.0);
+                result[c] += carried[c] * (1.0 - fresnel) * surroundings(origin, outside)[c];
+                carried[c] *= fresnel;
+            }
         }
         inside = reflect(inside, -exitNormal);
-        if (carried < 0.02)
+        if (max(carried.r, max(carried.g, carried.b)) < 0.02)
         {
             break;
         }
@@ -269,6 +305,7 @@ float3 Render(float2 uv, float2 p)
 {
     Turn = Time * 0.22 + sin(Time * 0.13) * 0.3;
     Tilt = 0.18 + sin(Time * 0.09) * 0.12;
+    setUpLamps();
 
     float drift = sin(Time * 0.04) * 0.5;
     float3 eye = float3(sin(drift) * 3.4, 1.9 + sin(Time * 0.07) * 0.25, -cos(drift) * 3.4);
@@ -305,11 +342,7 @@ float3 Render(float2 uv, float2 p)
 
     // Then light inside, each colour bent by a slightly different amount: that spread is the fire.
     // Real diamond spreads colours a little; this one is pushed further so the fire reads on screen.
-    int bounces = qualitySteps(5);
-    float3 inside;
-    inside.r = traceColour(position, direction, normal, 2.32, 0, bounces);
-    inside.g = traceColour(position, direction, normal, 2.42, 1, bounces);
-    inside.b = traceColour(position, direction, normal, 2.55, 2, bounces);
+    float3 inside = traceFire(position, direction, normal, float3(2.32, 2.42, 2.55), qualitySteps(5));
     colour += inside * (1.0 - fresnel);
 
     return colour;
