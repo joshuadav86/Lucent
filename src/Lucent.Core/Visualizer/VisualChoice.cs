@@ -62,5 +62,9 @@ public sealed class VisualChoice : INotifyPropertyChanged
         }
     }
 
+    /// <summary>"412 visuals", or "37 of 412" when a search or tags narrow the list, for the picker's count.</summary>
+    public static string CountText(int shown, int total) =>
+        shown == total ? $"{total} visual{(total == 1 ? "" : "s")}" : $"{shown} of {total}";
+
     public override string ToString() => Name;
 }

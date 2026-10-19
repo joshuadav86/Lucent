@@ -256,7 +256,9 @@ public sealed class AppSettings
         {
             if (File.Exists(FilePath))
             {
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
+                var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
+                settings.CarryOverReplacedVisuals();
+                return settings;
             }
         }
         catch (Exception)
@@ -266,6 +268,34 @@ public sealed class AppSettings
         }
 
         return new AppSettings { AddStarterMusic = true };
+    }
+
+    /// <summary>
+    /// Visuals that were taken out and replaced: old name to the name of the visual that took its place.
+    /// </summary>
+    private static readonly Dictionary<string, string> ReplacedVisuals = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Midnight Snowfall"] = "Julia Dust",
+    };
+
+    /// <summary>
+    /// Points favourites, lists, recent picks and the last visual saved under a replaced visual's name at its
+    /// replacement, so nothing is left pointing at a visual that isn't there any more.
+    /// </summary>
+    private void CarryOverReplacedVisuals()
+    {
+        static string Replace(string name) => ReplacedVisuals.TryGetValue(name, out var replacement) ? replacement : name;
+        static List<string> ReplaceAll(List<string>? names) =>
+            (names ?? new()).Select(Replace).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        LastVisual = LastVisual is null ? null : Replace(LastVisual);
+        FavoriteVisuals = ReplaceAll(FavoriteVisuals);
+        RecentVisuals = ReplaceAll(RecentVisuals);
+        VisualLists ??= new();
+        foreach (var list in VisualLists.Keys.ToList())
+        {
+            VisualLists[list] = ReplaceAll(VisualLists[list]);
+        }
     }
 
     public void Save()

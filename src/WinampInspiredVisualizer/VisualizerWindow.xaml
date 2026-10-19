@@ -232,6 +232,9 @@
                                         <Button x:Name="CollapseAllButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Height="22"
                                                 Padding="8,0" Margin="0,0,6,0" Content="COLLAPSE ALL" ToolTip="Close every folder"
                                                 Click="OnCollapseAllFamilies" />
+                                        <!-- How many visuals the list has, and how many the search and tags leave. -->
+                                        <TextBlock x:Name="VisualCount" DockPanel.Dock="Right" Margin="0,0,10,0" FontSize="11"
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
                                         <Button x:Name="SortButton" Style="{StaticResource PickerButton}" Height="24" Padding="8,0"
                                                 HorizontalAlignment="Left" ToolTip="Change the order" Click="OnSortMenu">
                                             <StackPanel Orientation="Horizontal">
@@ -310,6 +313,12 @@
                                                               StrokeThickness="1.2" StrokeLineJoin="Round" Fill="Transparent"
                                                               Width="12" Height="12" Stretch="Uniform" />
                                                     </Button>
+                                                    <!-- MilkDrop presets carry a small tag, so they stand out in the A to Z list. -->
+                                                    <Border x:Name="MilkDropTag" DockPanel.Dock="Right" Visibility="Collapsed" Margin="8,0,0,0" Padding="5,1"
+                                                            CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
+                                                            VerticalAlignment="Center" ToolTip="A MilkDrop preset">
+                                                        <TextBlock Text="MILKDROP" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
+                                                    </Border>
                                                     <TextBlock x:Name="Label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
                                                 </DockPanel>
@@ -317,6 +326,9 @@
                                                     <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                                                                  Value="True">
                                                         <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsMilkDrop}" Value="True">
+                                                        <Setter TargetName="MilkDropTag" Property="Visibility" Value="Visible" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsFavorite}" Value="True">
                                                         <Setter TargetName="StarShape" Property="Fill" Value="{DynamicResource AccentBrush}" />

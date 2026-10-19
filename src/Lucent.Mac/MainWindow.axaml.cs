@@ -1211,14 +1211,13 @@ public partial class MainWindow : Window
     {
         // Shutting down before closing, so the windows around the player close with it instead of
         // hiding (which would stop the player closing, and save them as closed for after the restart).
-        // The update is handed over once the player has closed; if something stops it closing, such
-        // as unsaved edits, nothing has changed.
+        // The update is handed over once the player has closed, with a restart; the choice stays made
+        // until it closes, including after something such as unsaved edits holds the close up.
         _restartIntoUpdate = true;
         IsShuttingDown = true;
         Close();
         if (!_closed)
         {
-            _restartIntoUpdate = false;
             IsShuttingDown = false;
         }
     }
