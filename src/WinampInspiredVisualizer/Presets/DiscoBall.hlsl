@@ -46,15 +46,36 @@ float3 tileNormal(float3 local, out float tileRandom)
     return float3(cos(centreLatitude) * cos(centreLongitude), sin(centreLatitude), cos(centreLatitude) * sin(centreLongitude));
 }
 
+// What stays the same for every pixel in a frame, worked out once at the start of Render: how far
+// the ball has turned, and where each spotlight is, which way its light hits the ball and its colour.
+// The haze asks for all of it at every step, which made it most of the visual's work.
+static float TurnSin = 0.0;
+static float TurnCos = 1.0;
+static float3 SpotPosition[Lights];
+static float3 SpotIncoming[Lights];
+static float3 SpotColour[Lights];
+
+void setUpFrame()
+{
+    sincos(ballTurn(), TurnSin, TurnCos);
+    [unroll]
+    for (int i = 0; i < Lights; i++)
+    {
+        SpotPosition[i] = lightPosition(i);
+        SpotIncoming[i] = normalize(BallCentre - SpotPosition[i]);
+        SpotColour[i] = lightColour(i);
+    }
+}
+
 float3 toBall(float3 v)
 {
-    v.xz = rotate(v.xz, -ballTurn());
+    v.xz = float2(TurnCos * v.x + TurnSin * v.z, -TurnSin * v.x + TurnCos * v.z);
     return v;
 }
 
 float3 fromBall(float3 v)
 {
-    v.xz = rotate(v.xz, ballTurn());
+    v.xz = float2(TurnCos * v.x - TurnSin * v.z, TurnSin * v.x + TurnCos * v.z);
     return v;
 }
 
@@ -66,7 +87,7 @@ float3 reflectedSpots(float3 d, float width)
     [unroll]
     for (int i = 0; i < Lights; i++)
     {
-        float3 incoming = normalize(BallCentre - lightPosition(i));
+        float3 incoming = SpotIncoming[i];
         // The tile that would send this light our way faces halfway between.
         float3 wanted = normalize(d - incoming);
         float tileRandom;
@@ -76,7 +97,7 @@ float3 reflectedSpots(float3 d, float width)
         float lit = step(0.0, -dot(tile, incoming));
         // Some tiles are slightly tarnished or askew, so spots vary; a few twinkle with the treble.
         float twinkle = 0.6 + 0.4 * tileRandom + step(0.93, frac(tileRandom * 13.7 + Time * 0.5)) * Treble * 1.5;
-        total += lightColour(i) * exp(-miss / width) * lit * twinkle;
+        total += SpotColour[i] * exp(-miss / width) * lit * twinkle;
     }
     return total;
 }
@@ -147,6 +168,7 @@ float2 raySegment(float3 origin, float3 direction, float3 a, float3 b)
 
 float3 Render(float2 uv, float2 p)
 {
+    setUpFrame();
     float orbit = Time * 0.05;
     float3 eye = float3(sin(orbit) * 4.6, 1.5 + sin(Time * 0.09) * 0.3, cos(orbit) * 4.6);
     float3 target = BallCentre + float3(0.0, -1.0 + sin(Time * 0.06) * 0.3, 0.0);
@@ -189,8 +211,8 @@ float3 Render(float2 uv, float2 p)
         [unroll]
         for (int i = 0; i < Lights; i++)
         {
-            float3 toLight = normalize(lightPosition(i) - hit);
-            ball += lightColour(i) * 25.0 * exp(-(1.0 - dot(mirrored, toLight)) / 0.012) * (0.5 + tileRandom);
+            float3 toLight = normalize(SpotPosition[i] - hit);
+            ball += SpotColour[i] * 25.0 * exp(-(1.0 - dot(mirrored, toLight)) / 0.012) * (0.5 + tileRandom);
         }
         // Grout: the thin dark lines between tiles.
         float bandSize = PI / Rows;
@@ -227,13 +249,13 @@ float3 Render(float2 uv, float2 p)
     [unroll]
     for (int i = 0; i < Lights; i++)
     {
-        float3 lamp = lightPosition(i);
+        float3 lamp = SpotPosition[i];
         float2 beam = raySegment(eye, direction, lamp, BallCentre);
         float along = saturate(dot(eye + direction * beam.y - lamp, normalize(BallCentre - lamp)) / length(BallCentre - lamp));
         float width = 0.08 + along * BallRadius;
-        colour += lightColour(i) * 0.12 * exp(-beam.x * beam.x / (width * width)) * step(beam.y, distance);
+        colour += SpotColour[i] * 0.12 * exp(-beam.x * beam.x / (width * width)) * step(beam.y, distance);
         float2 bulb = raySegment(eye, direction, lamp, lamp);
-        colour += lightColour(i) * 3.0 * exp(-bulb.x * bulb.x / 0.006) * step(bulb.y, distance + 0.1);
+        colour += SpotColour[i] * 3.0 * exp(-bulb.x * bulb.x / 0.006) * step(bulb.y, distance + 0.1);
     }
     // The ball's own soft glow in the haze.
     float2 core = raySegment(eye, direction, BallCentre, BallCentre);

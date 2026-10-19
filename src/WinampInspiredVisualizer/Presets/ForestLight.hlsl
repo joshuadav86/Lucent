@@ -64,11 +64,18 @@ float trunkDistance(float3 q, float4 trunk)
         return 1e3;
     }
     float2 offset = q.xz - trunk.xy - float2(trunk.w * q.y, 0.0);
-    float angle = atan2(offset.y, offset.x);
     // Roots flare out at the foot; bark is ridged up and down.
     float flare = 1.0 + 0.7 * exp(-max(q.y, 0.0) * 2.5);
+    float rounded = length(offset) - trunk.z * flare;
+    // The ridges are never more than 0.025 deep, so away from the bark that bound is as good as
+    // the exact distance for marching, and saves the angle and the noise.
+    if (rounded > 0.2)
+    {
+        return rounded - 0.025;
+    }
+    float angle = atan2(offset.y, offset.x);
     float bark = (noise(float2(angle * 3.0, q.y * 1.5)) - 0.5) * 0.05;
-    return length(offset) - trunk.z * flare - bark;
+    return rounded - bark;
 }
 
 float treesDistance(float3 q)
@@ -104,10 +111,15 @@ float groundHeight(float2 xz)
     return h + fern * (0.35 + 0.15 * fronds);
 }
 
+// The ground is never higher than this: the rolling noise reaches 0.75, the ferns 0.5 more.
+static const float HighestGround = 1.25;
+
 float sceneDistance(float3 q, out int material)
 {
     float trees = treesDistance(q);
-    float ground = (q.y - groundHeight(q.xz)) * 0.6;
+    // Well above the highest ground, how far above it is a safe step and saves working out the
+    // ground's shape; close to it, the exact height.
+    float ground = q.y > HighestGround + 0.1 ? (q.y - HighestGround) * 0.6 : (q.y - groundHeight(q.xz)) * 0.6;
     material = trees < ground ? 1 : 0;
     return min(trees, ground);
 }
