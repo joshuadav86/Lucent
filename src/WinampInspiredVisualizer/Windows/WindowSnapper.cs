@@ -26,6 +26,7 @@ public sealed class WindowSnapper
     private const int WM_MOVING = 0x0216;
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
+    private const int WM_DPICHANGED = 0x02E0;
 
     private const int WMSZ_LEFT = 1;
     private const int WMSZ_RIGHT = 2;
@@ -58,7 +59,11 @@ public sealed class WindowSnapper
 
     private readonly Window _main;
     private readonly List<Window> _windows = new();
-    private readonly List<(IntPtr Handle, int OffsetX, int OffsetY)> _carried = new();
+    private readonly List<Carried> _carried = new();
+
+    /// <summary>Where the player is right now during a drag that carries other windows, and its scale there.</summary>
+    private Rect _carrierRect;
+    private double _carrierScale = 1;
     private IntPtr _moving;
     private Point _startCursor;
     private Rect _startRect;
@@ -131,6 +136,8 @@ public sealed class WindowSnapper
                 Marshal.StructureToPtr(rect, lParam, false);
                 if (_carried.Count > 0)
                 {
+                    _carrierRect = rect;
+                    _carrierScale = Scale(hwnd);
                     MoveTogether(hwnd, rect);
                 }
 
@@ -154,10 +161,21 @@ public sealed class WindowSnapper
                 Marshal.StructureToPtr(Outer(rect, _startMargins), lParam, false);
                 break;
             }
+            case WM_DPICHANGED when _moving != IntPtr.Zero && _carried.Count > 0:
+                OnDpiChanged(hwnd, wParam, lParam);
+                break;
             case WM_EXITSIZEMOVE:
                 if (hwnd == _moving && !_resized && _carried.Count == 0)
                 {
                     MatchCorners(hwnd);
+                }
+
+                if (hwnd == _moving && _carried.Count > 0)
+                {
+                    // Put the group back together where the player was dropped, at the scale it ended up at.
+                    GetWindowRect(hwnd, out _carrierRect);
+                    _carrierScale = Scale(hwnd);
+                    MoveTogether(hwnd, _carrierRect);
                 }
 
                 _moving = IntPtr.Zero;
@@ -178,17 +196,22 @@ public sealed class WindowSnapper
     private void MoveTogether(IntPtr hwnd, Rect rect)
     {
         const uint flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE;
-        var batch = BeginDeferWindowPos(_carried.Count + 1);
+        var places = _carried.Select(carried =>
+        {
+            GetWindowRect(carried.Handle, out var own);
+            return (carried.Handle, Place: carried.PlaceBeside(rect, _carrierScale, own.Right - own.Left, own.Bottom - own.Top));
+        }).ToList();
+        var batch = BeginDeferWindowPos(places.Count + 1);
         if (batch != IntPtr.Zero)
         {
             batch = DeferWindowPos(batch, hwnd, IntPtr.Zero, rect.Left, rect.Top, 0, 0, flags);
         }
 
-        foreach (var (handle, offsetX, offsetY) in _carried)
+        foreach (var (handle, place) in places)
         {
             if (batch != IntPtr.Zero)
             {
-                batch = DeferWindowPos(batch, handle, IntPtr.Zero, rect.Left + offsetX, rect.Top + offsetY, 0, 0, flags);
+                batch = DeferWindowPos(batch, handle, IntPtr.Zero, place.X, place.Y, 0, 0, flags);
             }
         }
 
@@ -198,10 +221,44 @@ public sealed class WindowSnapper
         }
 
         // Windows couldn't move them together; move them one by one instead.
-        foreach (var (handle, offsetX, offsetY) in _carried)
+        foreach (var (handle, place) in places)
         {
-            SetWindowPos(handle, IntPtr.Zero, rect.Left + offsetX, rect.Top + offsetY, 0, 0, flags);
+            SetWindowPos(handle, IntPtr.Zero, place.X, place.Y, 0, 0, flags);
         }
+    }
+
+    /// <summary>
+    /// Keeps a carried group together as it crosses onto a screen with a different scale. Windows
+    /// rescales each window on its own, when most of that window is over the new screen, and moves
+    /// it to a spot of its own choosing; left to that, the docked windows scatter for a moment and
+    /// the gaps between them open and close. So when the player changes scale, the docked windows
+    /// are laid out again around it at its new scale, and when a docked window changes scale, it's
+    /// put where it belongs beside the player rather than where Windows suggested.
+    /// </summary>
+    private void OnDpiChanged(IntPtr hwnd, IntPtr wParam, IntPtr lParam)
+    {
+        var suggested = Marshal.PtrToStructure<Rect>(lParam);
+        var dpi = wParam.ToInt64() & 0xFFFF;
+        var scale = dpi > 0 ? dpi / 96.0 : 1.0;
+        if (hwnd == _moving)
+        {
+            // Windows keeps the player under the mouse; the docked windows follow it there.
+            _carrierRect = suggested;
+            _carrierScale = scale;
+            MoveTogether(hwnd, suggested);
+            return;
+        }
+
+        var index = _carried.FindIndex(carried => carried.Handle == hwnd);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var width = suggested.Right - suggested.Left;
+        var height = suggested.Bottom - suggested.Top;
+        var place = _carried[index].PlaceBeside(_carrierRect, _carrierScale, width, height);
+        Marshal.StructureToPtr(new Rect { Left = place.X, Top = place.Y, Right = place.X + width, Bottom = place.Y + height }, lParam, false);
     }
 
     /// <summary>
@@ -435,6 +492,47 @@ public sealed class WindowSnapper
     }
 
     /// <summary>
+    /// A window docked to the player during a drag, and where it sits relative to the player, in
+    /// pixels at 100% scaling so that it keeps its place when the group changes scale.
+    /// </summary>
+    private sealed class Carried
+    {
+        private readonly double _left;
+        private readonly double _top;
+        private readonly double _right;
+        private readonly double _bottom;
+
+        public Carried(IntPtr handle, Rect offset, double scale)
+        {
+            Handle = handle;
+            _left = offset.Left / scale;
+            _top = offset.Top / scale;
+            _right = offset.Right / scale;
+            _bottom = offset.Bottom / scale;
+        }
+
+        public IntPtr Handle { get; }
+
+        /// <summary>
+        /// Where the window goes, at this size, beside the player at that rectangle and scale. A window
+        /// left of (or above) the player keeps its right (or bottom) edge where it was against the
+        /// player, so while it's still at a different scale from the player it doesn't overlap it or
+        /// leave a gap; every other window keeps its left (or top) edge in place.
+        /// </summary>
+        public (int X, int Y) PlaceBeside(Rect player, double scale, int width, int height)
+        {
+            const double tolerance = 2;
+            var x = _right * scale <= tolerance
+                ? player.Left + (int)Math.Round(_right * scale) - width
+                : player.Left + (int)Math.Round(_left * scale);
+            var y = _bottom * scale <= tolerance
+                ? player.Top + (int)Math.Round(_bottom * scale) - height
+                : player.Top + (int)Math.Round(_top * scale);
+            return (x, y);
+        }
+    }
+
+    /// <summary>
     /// After a window is dropped beside others with one corner lined up, stretches it so the
     /// other corner lines up too, if it's close: a window dropped beside the player and the queue
     /// takes the height of the two together. Only for windows that can be resized.
@@ -591,10 +689,12 @@ public sealed class WindowSnapper
             }
         }
 
+        _carrierRect = mainRect;
+        _carrierScale = Scale(main);
         foreach (var (handle, _) in group.Skip(1))
         {
             GetWindowRect(handle, out var rect);
-            _carried.Add((handle, rect.Left - mainRect.Left, rect.Top - mainRect.Top));
+            _carried.Add(new Carried(handle, Offset(rect, -mainRect.Left, -mainRect.Top), _carrierScale));
         }
     }
 
