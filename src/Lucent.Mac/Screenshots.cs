@@ -11,6 +11,7 @@ using Lucent.Mac.Audio;
 using NAudio.Wave;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Editor;
+using WinampInspiredVisualizer.Editor.Stems;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Settings;
 
@@ -67,6 +68,7 @@ public static class Screenshots
             new[] { "Night Drive.flac", "Harbour Lights.wav", "Glass Garden.mp3", "Slow Orbit.m4a" }
                 .Select(name => Path.Combine(SampleFolder(), name)).ToList(), new AppSettings())),
         ("RecordVideo", () => PreviewRecordVideo()),
+        ("Stems", () => PreviewStems()),
     };
 
     public static int Run(string[] args)
@@ -301,6 +303,25 @@ public static class Screenshots
             window.UpdateLayout();
             AnalyzerSampleMusic.Play(player.Capture, 11, seconds => window.Picture.Advance(seconds));
         });
+        return window;
+    }
+
+    /// <summary>The stems window, with four made-up stems of different loudness and shape.</summary>
+    private static Window PreviewStems()
+    {
+        const int rate = 44100;
+        var frames = rate * 20;
+        AudioBuffer Stem(Func<double, double> wave) => new(Enumerable.Range(0, 2).Select(_ =>
+            Enumerable.Range(0, frames).Select(i => (float)wave(i / (double)rate)).ToArray()).ToArray(), rate);
+        var stems = new StemSet(new[] { "drums", "bass", "other", "vocals" }, new[]
+        {
+            Stem(t => 0.9 * Math.Exp(-12 * (t % 0.5)) * Math.Sin(2 * Math.PI * 60 * t)),
+            Stem(t => 0.4 * Math.Sin(2 * Math.PI * 55 * t) * (0.6 + 0.4 * Math.Sin(2 * Math.PI * 0.25 * t))),
+            Stem(t => 0.3 * Math.Sin(2 * Math.PI * 330 * t) * (0.5 + 0.5 * Math.Sin(2 * Math.PI * 0.1 * t))),
+            Stem(t => t % 4 < 3 ? 0.6 * Math.Sin(2 * Math.PI * 440 * t) * Math.Sin(Math.PI * (t % 4) / 3) : 0),
+        });
+        var window = new StemsWindow(stems, "Night Drive", _ => Task.CompletedTask, () => Task.CompletedTask);
+        window.PreviewMuted(0);
         return window;
     }
 

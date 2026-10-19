@@ -1497,6 +1497,7 @@ public partial class EditorWindow : Window
         _player.Dispose();
         ClosePluginInBackground();
         // The last split's stems can take hundreds of megabytes.
+        _stemsWindow?.Close();
         WinampInspiredVisualizer.Editor.Stems.StemCache.Clear();
     }
 }
