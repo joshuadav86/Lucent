@@ -53,6 +53,8 @@ public static class Screenshots
         ("ArtworkEmpty", TrackInfoPreviews.ArtworkEmpty),
         ("Equalizer", () => PreviewEqualizer()),
         ("Analyzer", () => PreviewAnalyzer()),
+        ("Radio", () => PreviewRadio(genre: false)),
+        ("RadioGenre", () => PreviewRadio(genre: true)),
         ("Stores", () => PreviewStores(signedIn: false)),
         ("StoresSyncing", () => PreviewStores(signedIn: true, syncing: true)),
         ("StoresFirstSync", () => PreviewStores(signedIn: true, firstSync: true)),
@@ -328,6 +330,41 @@ public static class Screenshots
         var window = new StemsWindow(stems, "Night Drive", "Split on the graphics card.", _ => Task.CompletedTask, () => Task.CompletedTask);
         window.PreviewMuted(0);
         window.ShowSaved("Night Drive stems/Night Drive (Vocals).flac");
+        return window;
+    }
+
+    private static Window PreviewRadio(bool genre)
+    {
+        var settings = new AppSettings { RadioSection = WinampInspiredVisualizer.Radio.RadioGuide.Featured };
+        var featured = WinampInspiredVisualizer.Radio.FeaturedStations.Stations;
+        WinampInspiredVisualizer.Radio.RadioGuide.SetFavorite(settings, featured[0], true);
+        WinampInspiredVisualizer.Radio.RadioGuide.SetFavorite(settings, featured[2], true);
+        WinampInspiredVisualizer.Radio.RadioGuide.Remember(settings, featured[0]);
+        var window = new RadioWindow(new MainWindow(), settings);
+        if (genre)
+        {
+            var stations = new (string Name, string Tags, string Country, int Kbps)[]
+            {
+                ("Deep House Lounge", "deep house,house,lounge", "Netherlands", 192),
+                ("Ibiza Global Radio", "house,electronic,balearic", "Spain", 128),
+                ("Frisky Radio", "progressive house,trance,electronic", "United States", 128),
+                ("Chicago House Radio", "house,chicago house", "United States", 320),
+                ("Soulful House FM", "house,soulful,soul", "United Kingdom", 256),
+                ("Tech House Radio", "tech house,house,techno", "Germany", 128),
+            }.Select((station, i) => new WinampInspiredVisualizer.Radio.RadioStation
+            {
+                Id = $"preview-{i}",
+                Name = station.Name,
+                StreamUrl = "https://example.com/stream",
+                Tags = station.Tags.Split(',').ToList(),
+                Country = station.Country,
+                Bitrate = station.Kbps,
+                Codec = "MP3",
+                Votes = 900 - i * 120,
+            }).ToList();
+            window.PreviewDirectory("House", stations);
+        }
+
         return window;
     }
 

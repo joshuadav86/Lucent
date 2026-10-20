@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.RadioWindow"
+        Title="Online radio - Lucent"
+        Width="820" Height="600" MinWidth="620" MinHeight="380"
+        Background="{DynamicResource SurfaceBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <!-- A row in the left column or the station list, as in the plugin browser. -->
+        <ControlTheme x:Key="StationRow" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Chrome" CornerRadius="{DynamicResource TinyCorner}" Padding="8,5" Margin="0,0,0,1"
+                            Background="{TemplateBinding Background}">
+                        <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Chrome">
+                <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#Chrome">
+                <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            </Style>
+        </ControlTheme>
+    </Window.Resources>
+
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <Grid RowDefinitions="40,Auto,*,Auto" ColumnDefinitions="180,*">
+            <!-- Title bar -->
+            <Grid Grid.Row="0" Grid.ColumnSpan="2" Background="Transparent" w:Chrome.IsCaption="True">
+                <TextBlock Text="ONLINE RADIO" Margin="20,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <Button Theme="{StaticResource CloseCaptionButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip.Tip="Close" Click="OnCloseButton">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <!-- The search, and the sort and filters beside it. -->
+            <DockPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="14,0,14,10">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="SortButton" Theme="{StaticResource PillButton}" Margin="8,0,0,0" Click="OnSortMenu" />
+                    <Button x:Name="QualityButton" Theme="{StaticResource PillButton}" Margin="6,0,0,0" Click="OnQualityMenu" />
+                    <Button x:Name="CountryButton" Theme="{StaticResource PillButton}" Margin="6,0,0,0" Click="OnCountryMenu" />
+                </StackPanel>
+                <Grid>
+                    <TextBox x:Name="SearchBox" Theme="{StaticResource SearchInput}" Watermark="Search stations by name, genre, or country"
+                             ToolTip.Tip="Type to find stations by name, genre, or country. Return plays the first one, Down goes to the list, Esc clears the search."
+                             TextChanged="OnSearchChanged" />
+                    <Button x:Name="ClearSearchButton" Theme="{StaticResource IconButton}" Width="22" Height="22"
+                            HorizontalAlignment="Right" Margin="0,0,3,0" IsVisible="False"
+                            ToolTip.Tip="Clear the search (Esc)" Click="OnClearSearch">
+                        <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </Grid>
+            </DockPanel>
+
+            <!-- Featured, favorites, recently played, every station, or one genre. -->
+            <Border Grid.Row="2" Grid.Column="0" Margin="10,0,6,0" Padding="0,0,6,0"
+                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="Sections" />
+                </ScrollViewer>
+            </Border>
+
+            <ScrollViewer x:Name="StationScroller" Grid.Row="2" Grid.Column="1" Margin="0,0,10,0"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="StationRows" Margin="0,0,4,0" />
+            </ScrollViewer>
+
+            <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="14,8,14,12">
+                <TextBlock x:Name="StationCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+                <Button DockPanel.Dock="Left" Theme="{StaticResource PillButton}" Content="PLAY AN ADDRESS…" Margin="0,0,10,0"
+                        ToolTip.Tip="Play a station that isn't listed, from its stream's address (or its .pls or .m3u link)"
+                        Click="OnPlayAddress" />
+                <TextBlock FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource FaintTextBrush}"
+                           Text="Stations from radio-browser.info, a free directory kept up by its listeners. MP3 stations only for now."
+                           ToolTip.Tip="Radio Browser lists about 50,000 stations. Lucent shows the MP3 ones that were on the air at its last check." />
+            </DockPanel>
+        </Grid>
+    </Border>
+</Window>
