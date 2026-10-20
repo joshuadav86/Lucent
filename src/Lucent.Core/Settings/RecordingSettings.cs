@@ -69,6 +69,9 @@ public sealed class RecordingSettings
     /// <summary>A .cue sheet listing the tracks is saved beside each recording, for players and DJ software that read them.</summary>
     public bool WriteCueSheet { get; set; } = true;
 
+    /// <summary>Finished recordings show up in the library: their folder becomes a library folder.</summary>
+    public bool AddToLibrary { get; set; } = true;
+
     /// <summary>The live plugins, in order, with their settings, so they come back the next time the window opens.</summary>
     public ChainPreset? Plugins { get; set; }
 

@@ -75,10 +75,17 @@ public static class RecordingSelfTest
                     }
                 }
 
+                var heldBack = RecordingsInProgress.Contains(path);
                 if (!recorder.StopAsync().Wait(TimeSpan.FromSeconds(30)))
                 {
                     problems++;
                     log("::error::Recording: the file took more than 30 seconds to finish.");
+                }
+
+                if (!heldBack || RecordingsInProgress.Contains(path))
+                {
+                    problems++;
+                    log("::error::Recording: the file wasn't kept out of the library while it was being written, or was still kept out afterwards.");
                 }
 
                 if (recorder.Dropped > TimeSpan.Zero)

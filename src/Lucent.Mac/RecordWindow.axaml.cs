@@ -88,6 +88,7 @@ public partial class RecordWindow : Window
         DrySwitch.IsChecked = _settings.KeepDryCopy;
         DetectSwitch.IsChecked = _settings.DetectSongChanges;
         CueSwitch.IsChecked = _settings.WriteCueSheet;
+        LibrarySwitch.IsChecked = _settings.AddToLibrary;
         IdentifySwitch.IsChecked = _settings.IdentifySongs;
         ShowSongId();
         foreach (var (token, meaning) in RecordingNames.Tokens)
@@ -900,6 +901,7 @@ public partial class RecordWindow : Window
         _settings.KeepDryCopy = DrySwitch.IsChecked == true;
         _settings.DetectSongChanges = DetectSwitch.IsChecked == true;
         _settings.WriteCueSheet = CueSwitch.IsChecked == true;
+        _settings.AddToLibrary = LibrarySwitch.IsChecked == true;
         _settings.IdentifySongs = IdentifySwitch.IsChecked == true;
         _settings.Save();
         if (_recorder is { IsRecording: false } recorder)
@@ -958,7 +960,7 @@ public partial class RecordWindow : Window
     private RecordingTarget NextTarget()
     {
         var path = RecordingNames.NextPath(Folder, TemplateInput.Text ?? string.Empty, NameParts(DateTime.Now));
-        return new RecordingTarget(path, (NameInput.Text ?? string.Empty).Trim(), _settings.KeepDryCopy ? RecordingNames.DryPath(path) : null, _settings.WriteCueSheet);
+        return new RecordingTarget(path, Path.GetFileNameWithoutExtension(path), _settings.KeepDryCopy ? RecordingNames.DryPath(path) : null, _settings.WriteCueSheet);
     }
 
     private async Task StopRecordingAsync()
@@ -994,6 +996,7 @@ public partial class RecordWindow : Window
         _shownTracks = -1;
         if (finished is not null)
         {
+            AddToLibrary(finished);
             StatusText.Text = $"Saved {Path.GetFileName(finished.Path)}; carrying on in a new file.";
         }
     }
@@ -1028,11 +1031,21 @@ public partial class RecordWindow : Window
             return;
         }
 
+        AddToLibrary(finished);
         var tracks = finished.Tracks.Count;
         StatusText.Text = $"Saved {Path.GetFileName(finished.Path)}: {TimeFormat.Format(finished.Duration)}" +
                           (tracks > 1 ? $", {tracks} tracks." : ".");
         ShowFileButton.IsVisible = true;
         QueueButton.IsVisible = true;
+    }
+
+    // Finished recordings show up in the library (and the folder is watched for the next ones), under the folder's own heading.
+    private void AddToLibrary(FinishedRecording finished)
+    {
+        if (_settings.AddToLibrary && (Editor.AudioTools.MainWindow) is { } main)
+        {
+            main.AddRecordingToLibrary(finished.Path);
+        }
     }
 
     private void OnRecordingFailed(Exception ex)

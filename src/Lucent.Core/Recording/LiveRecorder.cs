@@ -721,6 +721,12 @@ public sealed class LiveRecorder : IDisposable
         }
 
         _target = target;
+        RecordingsInProgress.Add(target.Path);
+        if (target.DryPath is { } dryPath)
+        {
+            RecordingsInProgress.Add(dryPath);
+        }
+
         _detector = DetectSongChanges ? new SongChangeDetector(SampleRate) : null;
         _lastFlush = DateTime.UtcNow;
         Interlocked.Exchange(ref _recordedFrames, 0);
@@ -749,6 +755,13 @@ public sealed class LiveRecorder : IDisposable
         if (file is null || target is null)
         {
             return null;
+        }
+
+        // Finishing the files rewrites them, which lets the library see them now they're whole.
+        RecordingsInProgress.Remove(target.Path);
+        if (target.DryPath is { } dryPath)
+        {
+            RecordingsInProgress.Remove(dryPath);
         }
 
         lock (_markerLock)

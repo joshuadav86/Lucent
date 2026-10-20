@@ -148,6 +148,8 @@
                                    Foreground="{DynamicResource TextBrush}" />
                     </DockPanel>
                     <TextBlock x:Name="SpaceHint" Style="{StaticResource OptionHint}" />
+                    <CheckBox x:Name="LibrarySwitch" Style="{StaticResource SwitchToggle}" Margin="0,8,0,0"
+                              Content="Show recordings in the Library" Click="OnOptionSwitch" />
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Track marks" />
                     <CheckBox x:Name="DetectSwitch" Style="{StaticResource SwitchToggle}" Content="Mark song changes Lucent hears"
