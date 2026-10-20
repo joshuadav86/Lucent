@@ -135,6 +135,9 @@ public sealed class AppSettings
 
     public bool MorphTransitionsOnly { get; set; }
 
+    /// <summary>Whether Previous visual goes back to the one shown before, or up the picker's list.</summary>
+    public PreviousVisualMode PreviousVisual { get; set; } = PreviousVisualMode.LastShown;
+
     /// <summary>The visual showing when the app last closed.</summary>
     public string? LastVisual { get; set; }
 
