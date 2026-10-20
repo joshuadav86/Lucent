@@ -1518,23 +1518,6 @@ public partial class MainWindow : Window
 
     // ---- Adding music ----
 
-    private void OnOpenMenu(object? sender, RoutedEventArgs e)
-    {
-        var menu = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedLeft };
-        var files = new MenuItem { Header = "Add files…" };
-        files.Click += (_, _) => AddFilesFromDialog(this);
-        var folder = new MenuItem { Header = "Add a folder…" };
-        folder.Click += (_, _) => AddFolderFromDialog(this);
-        menu.Items.Add(files);
-        menu.Items.Add(folder);
-        var radio = new MenuItem { Header = "Online radio…" };
-        ToolTip.SetTip(radio, "SomaFM, FRISKY and thousands of other stations, by genre. The visuals play along.");
-        radio.Click += (_, _) => ShowRadio();
-        menu.Items.Add(radio);
-        AddStreamingItems(menu);
-        menu.ShowAt(OpenButton);
-    }
-
     public async void AddFilesFromDialog(Window owner)
     {
         var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -2091,6 +2074,10 @@ public partial class MainWindow : Window
                 Activate();
                 ToggleOptions();
                 break;
+            case Key.M:
+                Activate();
+                ToggleSources(SourcesButton);
+                break;
             default:
                 return;
         }
@@ -2261,7 +2248,7 @@ public partial class MainWindow : Window
         if (track is null)
         {
             SetMarquee("Nothing playing");
-            TrackDetails.Text = _playlist.Count == 0 ? "Drop music on any Lucent window to begin" : $"{_playlist.Count} in the queue";
+            TrackDetails.Text = _playlist.Count == 0 ? "Drop music here, or open Sources to begin" : $"{_playlist.Count} in the queue";
             ToolTip.SetTip(TrackDetails, null);
             Title = "Lucent";
             return;

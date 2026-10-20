@@ -74,4 +74,13 @@ public partial class MainWindow
         OptionsPopup.Child = null;
         return panel;
     }
+
+    /// <summary>The Sources panel, out of its popup so a screenshot can show it.</summary>
+    internal Control TakeSourcesPanel()
+    {
+        UpdateSourcesPanel();
+        var panel = SourcesPopup.Child!;
+        SourcesPopup.Child = null;
+        return panel;
+    }
 }

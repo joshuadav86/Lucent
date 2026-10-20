@@ -41,6 +41,7 @@ public static class Screenshots
         ("Player-Options-Sound", () => PreviewOptions("Sound")),
         ("Player-Options-Look", () => PreviewOptions("Theme")),
         ("Player-Options-Updates", () => PreviewOptions("Updates")),
+        ("Player-Sources", () => PreviewSources()),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
@@ -137,6 +138,19 @@ public static class Screenshots
     }
 
     /// <summary>The player's options panel (normally a pop-up under its button), on one of its tabs.</summary>
+    private static Window PreviewSources()
+    {
+        var player = new MainWindow();
+        player.PreviewSkin("Lucent");
+        return new Window
+        {
+            Width = 352,
+            SizeToContent = SizeToContent.Height,
+            Background = Avalonia.Media.Brushes.Transparent,
+            Content = player.TakeSourcesPanel(),
+        };
+    }
+
     private static Window PreviewOptions(string tab)
     {
         var player = new MainWindow();
