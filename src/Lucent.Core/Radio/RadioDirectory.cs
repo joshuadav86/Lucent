@@ -161,8 +161,9 @@ public sealed class RadioDirectory
         }
 
         var stations = await GetAsync<List<DirectoryStation>>("json/stations/search?" + string.Join("&", parts), cancel);
-        return stations.Select(ToStation)
-            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec))
+        return stations.Where(listed => listed.Hls == 0)
+            .Select(ToStation)
+            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec) && !IsHls(station.StreamUrl))
             .Take(query.Limit)
             .ToList();
     }
@@ -173,6 +174,11 @@ public sealed class RadioDirectory
         "MP3" or "AAC" or "AAC+" or "AACP" or "HE-AAC" => true,
         _ => false,
     };
+
+    // HLS streams come in segments, not as one stream, which Lucent doesn't play, so they're left out. The directory
+    // marks most of them; the rest give themselves away by their address.
+    private static bool IsHls(string address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.AbsolutePath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase);
 
     private static RadioStation ToStation(DirectoryStation station) => new()
     {
@@ -306,6 +312,8 @@ public sealed class RadioDirectory
         public int ClickCount { get; set; }
 
         public int ClickTrend { get; set; }
+
+        public int Hls { get; set; }
     }
 
     private sealed class DirectoryCount
