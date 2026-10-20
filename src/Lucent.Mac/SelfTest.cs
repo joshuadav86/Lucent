@@ -24,7 +24,7 @@ namespace Lucent.Mac;
 /// slowest (SelfTest.Timing.cs). The sound checks (listing the outputs, and gapless
 /// playback) are in SelfTest.Sound.cs.
 /// </summary>
-/// <remarks>Usage: Lucent --self-test [--sheet picture.png] [music files...]</remarks>
+/// <remarks>Usage: Lucent --self-test [--sheet picture.png] [--video clip.mp4] [music files...]</remarks>
 public static partial class SelfTest
 {
     private const int Width = 320;
@@ -57,11 +57,16 @@ public static partial class SelfTest
     {
         string? sheetPath = null;
         var music = new List<string>();
+        var videos = new List<string>();
         for (var i = 0; i < args.Length; i++)
         {
             if (args[i] == "--sheet" && i + 1 < args.Length)
             {
                 sheetPath = args[++i];
+            }
+            else if (args[i] == "--video" && i + 1 < args.Length)
+            {
+                videos.Add(args[++i]);
             }
             else
             {
@@ -74,6 +79,8 @@ public static partial class SelfTest
         {
             failures += TestDecoding(path) ? 0 : 1;
         }
+
+        failures += WinampInspiredVisualizer.Video.VideoSelfTest.Run(Console.WriteLine, videos);
 
         failures += TestOutputDevices();
         failures += TestGapless();

@@ -25,6 +25,15 @@ public partial class VisualizerWindow
         var menu = new ContextMenu();
         menu.Items.Add(Item(_isFullscreen ? "Leave fullscreen" : "Fullscreen",
             _isFullscreen ? new KeyGesture(Key.Escape) : FullscreenGesture, ToggleFullscreen));
+        if (_video is { HasPicture: true })
+        {
+            // While a video plays: its picture, or the visuals to its sound.
+            var visualsInstead = Item("Show visuals instead of the video", null, ToggleVisualsInsteadOfVideo);
+            visualsInstead.ToggleType = MenuItemToggleType.CheckBox;
+            visualsInstead.IsChecked = _visualsInsteadOfVideo;
+            menu.Items.Add(visualsInstead);
+        }
+
         menu.Items.Add(new Separator());
         if (_isFullscreen && Player is { } playback)
         {
@@ -158,7 +167,7 @@ public partial class VisualizerWindow
         return time > TimeSpan.Zero ? time : TimeSpan.FromMilliseconds(500);
     }
 
-    private static MenuItem Item(string header, KeyGesture keys, Action action)
+    private static MenuItem Item(string header, KeyGesture? keys, Action action)
     {
         var item = new MenuItem { Header = header, InputGesture = keys };
         item.Click += (_, _) => action();

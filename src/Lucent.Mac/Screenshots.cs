@@ -63,6 +63,7 @@ public static class Screenshots
         ("ImportDone", () => PreviewImport(done: true)),
         ("Visuals", () => PreviewVisuals()),
         ("VisualsPicker", () => PreviewVisualsPicker()),
+        ("VisualsVideo", () => PreviewVisualsVideo()),
         ("Editor", () => PreviewEditor(EditorView.Waveform)),
         ("EditorSpectrogram", () => PreviewEditor(EditorView.Spectrogram)),
         ("EditorEffects", () => PreviewEditorEffects()),
@@ -190,6 +191,30 @@ public static class Screenshots
         window.ShowFrameRate(settings.ShowFrameRate);
         Dispatcher.UIThread.RunJobs();
         window.FrameRateText.Text = "60 fps · 1638 × 1012";
+        return window;
+    }
+
+    /// <summary>
+    /// A video playing in the visuals window: the file in LUCENT_PREVIEW_VIDEO (or the self-test's clip in
+    /// tools/test-media), a second in. It needs libVLC, so it's drawn only where libVLC is installed or shipped.
+    /// </summary>
+    private static VisualizerWindow PreviewVisualsVideo()
+    {
+        var window = PreviewVisuals();
+        var path = Environment.GetEnvironmentVariable("LUCENT_PREVIEW_VIDEO")
+            ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "tools", "test-media", "sync-test.mp4");
+        var video = new WinampInspiredVisualizer.Video.VideoStream(path);
+        video.CurrentTime = TimeSpan.FromSeconds(1.5);
+        video.Playing();
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (video.Frames.Count < 3 && waited.Elapsed < TimeSpan.FromSeconds(10))
+        {
+            Thread.Sleep(20);
+        }
+
+        video.Paused();
+        window.ShowVideo(video);
+        window.Closed += (_, _) => video.Dispose();
         return window;
     }
 

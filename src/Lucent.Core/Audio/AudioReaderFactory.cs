@@ -1,6 +1,7 @@
 using System.IO;
 using NAudio.Vorbis;
 using NAudio.Wave;
+using WinampInspiredVisualizer.Video;
 
 namespace WinampInspiredVisualizer.Audio;
 
@@ -21,6 +22,16 @@ public static class AudioReaderFactory
     /// </summary>
     public static Func<string, WaveStream>? OpenWithSystemDecoder { get; set; }
 
+    /// <summary>
+    /// Opens a file for the player. A video (see <see cref="VideoFiles"/>) opens as a <see cref="VideoStream"/>: its
+    /// sound, played as it's shown, with its pictures alongside. Anything else opens with <see cref="Open"/>.
+    /// </summary>
+    public static WaveStream OpenForPlaying(string path) => VideoFiles.IsVideo(path) ? new VideoStream(path) : Open(path);
+
+    /// <summary>
+    /// Opens a music file, to be read as fast as it decodes (for the editor, converting and finding beats too). A
+    /// video's sound opens this way only where the system's decoders read it (an .mp4's, say).
+    /// </summary>
     public static WaveStream Open(string path)
     {
         return Path.GetExtension(path).ToLowerInvariant() switch

@@ -402,12 +402,22 @@ public sealed class VisualizerHost : Border, IDisposable
         }
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == IsVisibleProperty)
+        {
+            UpdateVisible();
+        }
+    }
+
     /// <summary>Nothing is drawn while the window is hidden or minimized.</summary>
     private void UpdateVisible()
     {
         if (_renderer is not null)
         {
-            _renderer.Visible = TopLevel.GetTopLevel(this) is Window { IsVisible: true } window && window.WindowState != WindowState.Minimized;
+            // Hidden in its window too while a video shows there instead.
+            _renderer.Visible = IsVisible && TopLevel.GetTopLevel(this) is Window { IsVisible: true } window && window.WindowState != WindowState.Minimized;
         }
     }
 
