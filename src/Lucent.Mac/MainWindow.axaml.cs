@@ -132,6 +132,7 @@ public partial class MainWindow : Window
             UpdatePosition();
             UpdateSongClock();
             LineUpNext();
+            UpdateStationStatus();
         };
         _positionTimer.Start();
 
@@ -1526,6 +1527,10 @@ public partial class MainWindow : Window
         folder.Click += (_, _) => AddFolderFromDialog(this);
         menu.Items.Add(files);
         menu.Items.Add(folder);
+        var radio = new MenuItem { Header = "Online radio…" };
+        ToolTip.SetTip(radio, "SomaFM, FRISKY and thousands of other stations, by genre. The visuals play along.");
+        radio.Click += (_, _) => ShowRadio();
+        menu.Items.Add(radio);
         AddStreamingItems(menu);
         menu.ShowAt(OpenButton);
     }
@@ -1571,7 +1576,12 @@ public partial class MainWindow : Window
 
     public void ClearQueue()
     {
-        _player.Close();
+        // A radio station isn't in the queue, so it plays on.
+        if (_station is null)
+        {
+            _player.Close();
+        }
+
         _current = null;
         _playlist.Clear();
         _shuffleHistory.Clear();
@@ -1713,6 +1723,7 @@ public partial class MainWindow : Window
     {
         // Playing Lucent's own music: the other app being controlled pauses, and the player is Lucent's again.
         StopControllingRemote(pause: true);
+        LeaveRadio();
         try
         {
             _player.Load(entry.Track.Path);
@@ -1756,6 +1767,12 @@ public partial class MainWindow : Window
 
     private void OnTrackEnded()
     {
+        if (_station is not null)
+        {
+            OnStationEnded();
+            return;
+        }
+
         if (_current is { } ended)
         {
             CountPlay(ended.Track.Path);
@@ -1774,6 +1791,12 @@ public partial class MainWindow : Window
     {
         if (RemoteTakes(remote => remote.NextAsync()))
         {
+            return;
+        }
+
+        if (_station is not null)
+        {
+            StepStation(+1);
             return;
         }
 
@@ -1809,6 +1832,12 @@ public partial class MainWindow : Window
     {
         if (RemoteTakes(remote => remote.PreviousAsync()))
         {
+            return;
+        }
+
+        if (_station is not null)
+        {
+            StepStation(-1);
             return;
         }
 
@@ -1898,6 +1927,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_station is not null)
+        {
+            StopStation();
+            return;
+        }
+
         _player.Stop();
         UpdatePlayPauseButton();
         UpdatePosition();
@@ -1911,6 +1946,21 @@ public partial class MainWindow : Window
     {
         if (RemoteTakes(remote => remote.PlayPauseAsync()))
         {
+            return;
+        }
+
+        // A station can't be paused and picked up later, so pausing stops it and playing tunes in again.
+        if (_station is { } station)
+        {
+            if (_player.IsPlaying || _tuning is not null)
+            {
+                StopStation();
+            }
+            else
+            {
+                PlayStation(station, _radioList);
+            }
+
             return;
         }
 
@@ -2198,6 +2248,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_station is not null)
+        {
+            ShowStation();
+            UpdateMediaControls();
+            return;
+        }
+
         ArtworkWindow.ShowTrack(track);
         UpdateMediaControls();
         UpdateTrackFavoriteButton();
@@ -2317,6 +2374,7 @@ public partial class MainWindow : Window
         _stores.Dispose();
         _positionTimer.Stop();
         StopStreaming();
+        StopRadio();
         _visualizer.Dispose();
         _player.Dispose();
         _updater.InstallOnExit(restart: _restartIntoUpdate);

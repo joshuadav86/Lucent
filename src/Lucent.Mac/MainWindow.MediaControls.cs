@@ -124,13 +124,13 @@ public partial class MainWindow
             return;
         }
 
-        controls.ShowTrack(_current?.Track);
+        controls.ShowTrack(_station is not null ? StationTrack() : _current?.Track);
         // Stopped rather than closed while there's a queue, so the media keys still come to Lucent to start it.
         var state = _player.IsPlaying ? MediaState.Playing
             : _player.HasTrack && _player.Position > TimeSpan.Zero ? MediaState.Paused
-            : _player.HasTrack || _playlist.Count > 0 ? MediaState.Stopped
+            : _player.HasTrack || _playlist.Count > 0 || _station is not null ? MediaState.Stopped
             : MediaState.Closed;
-        controls.ShowState(state, canSkip: _playlist.Count > 0);
+        controls.ShowState(state, canSkip: _station is not null ? _radioList.Count > 1 : _playlist.Count > 0);
         _shownMediaPosition = TimeSpan.MinValue;
         ShowMediaPosition();
     }

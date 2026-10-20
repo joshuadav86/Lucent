@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Radio;
 using WinampInspiredVisualizer.Streaming;
 using WinampInspiredVisualizer.Visualizer;
 
@@ -265,6 +266,25 @@ public sealed class AppSettings
 
     /// <summary>The other app the player shows and controls instead of Lucent's own music, if any.</summary>
     public RemoteApp RemoteApp { get; set; }
+
+    // ---- Online radio ----
+
+    /// <summary>Stations starred in the radio browser, kept whole so they play even when the directory is down.</summary>
+    public List<RadioStation> RadioFavorites { get; set; } = new();
+
+    /// <summary>Stations played lately, most recent first.</summary>
+    public List<RadioStation> RadioRecent { get; set; } = new();
+
+    /// <summary>The radio browser's section: Featured, Favorites, Recently played, All stations, or a genre.</summary>
+    public string RadioSection { get; set; } = RadioGuide.Featured;
+
+    public RadioSort RadioSort { get; set; } = RadioSort.Popular;
+
+    /// <summary>The quality filter: only stations of at least this many kbps (0 for any).</summary>
+    public int RadioMinBitrate { get; set; }
+
+    /// <summary>The country filter: a two-letter country code, or null for anywhere.</summary>
+    public string? RadioCountry { get; set; }
 
     private static string FilePath => Path.Combine(AppDataFolder.Path, "settings.json");
 

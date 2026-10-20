@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using WinampInspiredVisualizer.Playlist;
 using Track = WinampInspiredVisualizer.Playlist.Track;
+using WinampInspiredVisualizer.Radio;
 
 namespace WinampInspiredVisualizer;
 
@@ -47,6 +48,13 @@ public partial class MainWindow
 
     private void ToggleTrackFavorite()
     {
+        // While a radio station is on, the heart stars the station.
+        if (_station is { } station)
+        {
+            SetStationFavorite(station, !RadioGuide.IsFavorite(_settings, station));
+            return;
+        }
+
         if (_current is { } entry)
         {
             SetFavoriteTracks(new[] { entry.Track.Path }, !IsFavoriteTrack(entry.Track.Path));
@@ -55,10 +63,12 @@ public partial class MainWindow
 
     private void UpdateTrackFavoriteButton()
     {
-        var favorite = _current is not null && IsFavoriteTrack(_current.Track.Path);
-        TrackFavoriteButton.IsEnabled = _current is not null;
-        TrackFavoriteButton.Opacity = _current is null ? 0.4 : 1;
-        TrackFavoriteButton.ToolTip = favorite ? "Remove this sound from your favorites (H)" : "Add this sound to your favorites (H)";
+        var favorite = _station is not null ? RadioGuide.IsFavorite(_settings, _station) : _current is not null && IsFavoriteTrack(_current.Track.Path);
+        var has = _current is not null || _station is not null;
+        TrackFavoriteButton.IsEnabled = has;
+        TrackFavoriteButton.Opacity = has ? 1 : 0.4;
+        var thing = _station is not null ? "station" : "sound";
+        TrackFavoriteButton.ToolTip = favorite ? $"Remove this {thing} from your favorites (H)" : $"Add this {thing} to your favorites (H)";
         if (favorite)
         {
             TrackFavoriteIcon.SetResourceReference(Shape.FillProperty, "AccentBrush");
