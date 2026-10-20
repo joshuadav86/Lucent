@@ -1058,11 +1058,14 @@ public partial class MainWindow : Window
 
     private void OnInstallUpdate(object sender, RoutedEventArgs e)
     {
-        // The update is handed over once the player has closed, with a restart. CloseWindow only posts
-        // the close, so the window is still open when it returns: the choice stays made until it closes,
-        // including after something such as unsaved edits holds the close up.
+        // The update is handed over once the player has closed, with a restart. The choice stays made
+        // until it closes, including after something such as unsaved edits holds the close up.
         _restartIntoUpdate = true;
-        SystemCommands.CloseWindow(this);
+
+        // Close the Options popup first, then the player itself. A close posted with
+        // SystemCommands.CloseWindow from this button, inside the popup, never arrived.
+        OptionsPopup.IsOpen = false;
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(Close));
     }
 
     private void OnBuyMeACoffee(object sender, RoutedEventArgs e)
