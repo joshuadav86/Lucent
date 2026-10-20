@@ -26,6 +26,8 @@
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <!-- A managed MP3 decoder, for online radio: the same on every platform, and it decodes a stream frame by frame. -->
     <PackageReference Include="NLayer.NAudioSupport" Version="1.4.0" />
+    <!-- A managed AAC and HE-AAC (AAC+) decoder, for the AAC radio stations, the same on every platform. MIT. -->
+    <PackageReference Include="SharpJaad.AAC" Version="0.1.1" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 

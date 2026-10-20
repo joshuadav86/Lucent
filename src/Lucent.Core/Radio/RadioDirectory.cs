@@ -31,7 +31,7 @@ public sealed record RadioQuery(string Text, string? Tag, string? CountryCode, i
 
 /// <summary>
 /// The Radio Browser directory (radio-browser.info): a free, open list of about 50,000 stations around the world,
-/// kept up by its listeners, with no account or key. Lucent lists only the MP3 stations, which it can play on every
+/// kept up by its listeners, with no account or key. Lucent lists only the MP3 and AAC stations, which it can play on every
 /// platform, and leaves out the ones whose stream was down at the directory's last check.
 /// </summary>
 /// <remarks>
@@ -134,11 +134,11 @@ public sealed class RadioDirectory
         };
         var parts = new List<string>
         {
-            "codec=MP3",
             "hidebroken=true",
             $"order={order}",
             $"reverse={(reverse ? "true" : "false")}",
-            $"limit={query.Limit}",
+            // The directory takes one codec at a time, so it's asked for more than are shown and the others are left out here.
+            $"limit={query.Limit * 2}",
         };
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -161,8 +161,18 @@ public sealed class RadioDirectory
         }
 
         var stations = await GetAsync<List<DirectoryStation>>("json/stations/search?" + string.Join("&", parts), cancel);
-        return stations.Select(ToStation).Where(station => station.StreamUrl.Length > 0).ToList();
+        return stations.Select(ToStation)
+            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec))
+            .Take(query.Limit)
+            .ToList();
     }
+
+    /// <summary>True for the formats Lucent plays: MP3, and AAC (including HE-AAC, which the directory calls AAC+).</summary>
+    public static bool IsPlayable(string codec) => codec.Trim().ToUpperInvariant() switch
+    {
+        "MP3" or "AAC" or "AAC+" or "AACP" or "HE-AAC" => true,
+        _ => false,
+    };
 
     private static RadioStation ToStation(DirectoryStation station) => new()
     {

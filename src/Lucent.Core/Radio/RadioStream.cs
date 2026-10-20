@@ -4,19 +4,19 @@ using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
 using NAudio.Wave;
-using NLayer.NAudioSupport;
 
 namespace WinampInspiredVisualizer.Radio;
 
 /// <summary>
-/// An online radio station, playing: its MP3 stream decoded as it arrives, with a few seconds held in hand so a
+/// An online radio station, playing: its MP3 or AAC stream decoded as it arrives, with a few seconds held in hand so a
 /// slow moment on the network doesn't stop the music. The player plays it like a track that never ends, so the
 /// equalizer, the visuals, the meter and the analyzer all get it as they do a file.
 /// </summary>
 /// <remarks>
 /// Shoutcast and Icecast stations send the song that's on in the stream itself (ICY metadata); that's read off as it
 /// goes by and reported with <see cref="TitleChanged"/>. When the connection drops, it reconnects by itself a few
-/// times, playing silence meanwhile, before giving up. MP3 is decoded by NLayer, the same on every platform.
+/// times, playing silence meanwhile, before giving up. The decoders are written in C# (see <see cref="RadioDecoder"/>),
+/// so a station sounds the same on every platform.
 /// </remarks>
 public sealed class RadioStream : WaveStream
 {
@@ -30,10 +30,10 @@ public sealed class RadioStream : WaveStream
     private readonly HttpClient _http;
     private readonly string _address;
     private readonly string _userAgent;
+    private readonly string? _codecHint;
     private readonly BufferedWaveProvider _buffer;
     private readonly CancellationTokenSource _stop = new();
     private readonly int _prebufferBytes;
-    private Mp3FrameDecompressor _decoder;
     private Connection? _connection;
     private Task? _reading;
     private long _position;
@@ -41,21 +41,22 @@ public sealed class RadioStream : WaveStream
     private volatile bool _rebuffering = true;
     private string? _nowPlaying;
 
-    private RadioStream(HttpClient http, Connection connection, string address, string userAgent)
+    private RadioStream(HttpClient http, Connection connection, string address, string userAgent, string? codec)
     {
+        _codecHint = codec;
         _http = http;
         _connection = connection;
         _address = address;
         _userAgent = userAgent;
-        _decoder = new Mp3FrameDecompressor(connection.Format);
-        _buffer = new BufferedWaveProvider(_decoder.OutputFormat)
+        var format = connection.Decoder.Format;
+        _buffer = new BufferedWaveProvider(format)
         {
             BufferDuration = TimeSpan.FromSeconds(20),
             DiscardOnBufferOverflow = true,
             ReadFully = true,
         };
-        _prebufferBytes = (int)(_decoder.OutputFormat.AverageBytesPerSecond * Prebuffer.TotalSeconds) / _decoder.OutputFormat.BlockAlign
-            * _decoder.OutputFormat.BlockAlign;
+        _prebufferBytes = (int)(format.AverageBytesPerSecond * Prebuffer.TotalSeconds) / format.BlockAlign * format.BlockAlign;
+        Codec = connection.Decoder.Codec;
         StationName = connection.StationName;
         Genre = connection.Genre;
         Bitrate = connection.Bitrate;
@@ -82,6 +83,9 @@ public sealed class RadioStream : WaveStream
     /// <summary>Kilobits per second.</summary>
     public int Bitrate { get; }
 
+    /// <summary>"MP3", "AAC" or "AAC+".</summary>
+    public string Codec { get; }
+
     /// <summary>The song that's on, as the station last said, or null when it doesn't say.</summary>
     public string? NowPlaying => _nowPlaying;
 
@@ -106,17 +110,18 @@ public sealed class RadioStream : WaveStream
     }
 
     /// <summary>
-    /// Tunes in: finds the stream (through a .pls or .m3u playlist if that's what the address is), checks it's MP3,
+    /// Tunes in: finds the stream (through a .pls or .m3u playlist if that's what the address is), checks it's MP3 or AAC,
     /// and waits for the first moments of audio. Throws <see cref="RadioProblem"/> with words fit to show when the
-    /// station can't be played.
+    /// station can't be played. <paramref name="codec"/> is what the directory says the stream is ("AAC", say), for
+    /// servers that don't say themselves.
     /// </summary>
-    public static async Task<RadioStream> OpenAsync(string address, string userAgent, CancellationToken cancel)
+    public static async Task<RadioStream> OpenAsync(string address, string userAgent, CancellationToken cancel, string? codec = null)
     {
         var http = CreateClient();
         try
         {
-            var connection = await Connection.OpenAsync(http, address, userAgent, cancel);
-            var stream = new RadioStream(http, connection, address, userAgent);
+            var connection = await Connection.OpenAsync(http, address, userAgent, codec, cancel);
+            var stream = new RadioStream(http, connection, address, userAgent, codec);
             try
             {
                 stream._reading = Task.Factory.StartNew(stream.ReadLoop, TaskCreationOptions.LongRunning);
@@ -240,20 +245,23 @@ public sealed class RadioStream : WaveStream
     // On its own thread: decodes frames as they arrive, reconnecting when the stream drops.
     private void ReadLoop()
     {
-        var pcm = new byte[16384];
+        var pcm = new byte[RadioDecoder.MaxFrameBytes];
         var reconnects = 0;
         Exception? problem = null;
         var connection = _connection;
-        var frame = connection?.FirstFrames.Dequeue();
         while (!_stop.IsCancellationRequested && connection is not null)
         {
             try
             {
-                while (frame is not null && !_stop.IsCancellationRequested)
+                int bytes;
+                while (!_stop.IsCancellationRequested && (bytes = connection.Decoder.Next(pcm)) >= 0)
                 {
-                    Decode(frame, pcm);
-                    frame = connection.FirstFrames.Count > 0 ? connection.FirstFrames.Dequeue() : connection.NextFrame();
-                    reconnects = 0;
+                    if (bytes > 0)
+                    {
+                        _buffer.AddSamples(pcm, 0, bytes);
+                        UpdateTitle();
+                        reconnects = 0;
+                    }
                 }
 
                 problem = null;
@@ -277,7 +285,14 @@ public sealed class RadioStream : WaveStream
                 try
                 {
                     Task.Delay(TimeSpan.FromSeconds(reconnects), _stop.Token).Wait();
-                    connection = Connection.OpenAsync(_http, _address, _userAgent, _stop.Token).GetAwaiter().GetResult();
+                    connection = Connection.OpenAsync(_http, _address, _userAgent, _codecHint, _stop.Token).GetAwaiter().GetResult();
+                    // The sound has to carry on as it was; a station that came back in another format is started again by hand.
+                    if (!connection.Decoder.Format.Equals(_buffer.WaveFormat))
+                    {
+                        connection.Dispose();
+                        connection = null;
+                        break;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -296,9 +311,6 @@ public sealed class RadioStream : WaveStream
                 connection.Dispose();
                 break;
             }
-
-            _decoder.Reset();
-            frame = connection.FirstFrames.Dequeue();
         }
 
         _ended = true;
@@ -306,31 +318,6 @@ public sealed class RadioStream : WaveStream
         {
             Lost?.Invoke(problem);
         }
-    }
-
-    private void Decode(Mp3Frame frame, byte[] pcm)
-    {
-        var format = _decoder.OutputFormat;
-        // The odd stray frame that doesn't fit (a false start in the data, a station switching formats) is skipped.
-        if (frame.SampleRate != format.SampleRate || Channels(frame) != format.Channels)
-        {
-            return;
-        }
-
-        int bytes;
-        try
-        {
-            bytes = _decoder.DecompressFrame(frame, pcm, 0);
-        }
-        catch (Exception)
-        {
-            _decoder.Dispose();
-            _decoder = new Mp3FrameDecompressor(new Mp3WaveFormat(frame.SampleRate, Channels(frame), frame.FrameLength, frame.BitRate));
-            return;
-        }
-
-        _buffer.AddSamples(pcm, 0, bytes);
-        UpdateTitle();
     }
 
     private void UpdateTitle()
@@ -342,8 +329,6 @@ public sealed class RadioStream : WaveStream
         }
     }
 
-    private static int Channels(Mp3Frame frame) => frame.ChannelMode == ChannelMode.Mono ? 1 : 2;
-
     private static string Describe(Exception ex) => ex switch
     {
         HttpRequestException { StatusCode: HttpStatusCode.NotFound } => "The station's address doesn't work any more (the server says it isn't there).",
@@ -353,29 +338,24 @@ public sealed class RadioStream : WaveStream
         _ => $"Lucent couldn't play the station. {ex.Message}",
     };
 
-    /// <summary>One connection to the station: its response, its audio, and the frames read to check it's MP3.</summary>
+    /// <summary>One connection to the station: its response, its audio, and the decoder reading it.</summary>
     private sealed class Connection : IDisposable
     {
         private readonly HttpResponseMessage _response;
 
-        private Connection(HttpResponseMessage response, IcyStream audio, Queue<Mp3Frame> firstFrames)
+        private Connection(HttpResponseMessage response, IcyStream audio, RadioDecoder decoder)
         {
             _response = response;
             Audio = audio;
-            FirstFrames = firstFrames;
-            var first = firstFrames.Peek();
-            Format = new Mp3WaveFormat(first.SampleRate, Channels(first), first.FrameLength, first.BitRate);
+            Decoder = decoder;
             StationName = Header(response, "icy-name");
             Genre = Header(response, "icy-genre");
-            Bitrate = int.TryParse(Header(response, "icy-br")?.Split(',')[0], out var kbps) ? kbps : first.BitRate / 1000;
+            Bitrate = int.TryParse(Header(response, "icy-br")?.Split(',')[0], out var kbps) && kbps > 0 ? kbps : decoder.Bitrate;
         }
 
         public IcyStream Audio { get; }
 
-        /// <summary>The frames read while checking the stream, to be played first.</summary>
-        public Queue<Mp3Frame> FirstFrames { get; }
-
-        public Mp3WaveFormat Format { get; }
+        public RadioDecoder Decoder { get; }
 
         public string? StationName { get; }
 
@@ -383,7 +363,7 @@ public sealed class RadioStream : WaveStream
 
         public int Bitrate { get; }
 
-        public static async Task<Connection> OpenAsync(HttpClient http, string address, string userAgent, CancellationToken cancel)
+        public static async Task<Connection> OpenAsync(HttpClient http, string address, string userAgent, string? codecHint, CancellationToken cancel)
         {
             for (var hops = 0; ; hops++)
             {
@@ -413,16 +393,18 @@ public sealed class RadioStream : WaveStream
 
                     if (Unsupported(type) is { } format)
                     {
-                        throw new RadioProblem($"This station streams {format}. Lucent plays MP3 stations for now; try another.");
+                        throw new RadioProblem($"This station streams {format}. Lucent plays MP3 and AAC stations for now; try another.");
                     }
+
+                    var codec = IsAac(type, address, codecHint) ? RadioCodec.Aac : RadioCodec.Mp3;
 
                     var metaInterval = int.TryParse(Header(response, "icy-metaint"), out var interval) && interval > 0 ? interval : 0;
                     var body = await response.Content.ReadAsStreamAsync(connecting.Token);
                     var audio = new IcyStream(body, metaInterval);
                     // Reading the first frames blocks, so a station that connects and then sends nothing is given up on in time.
                     using var stall = connecting.Token.Register(() => response.Dispose());
-                    var frames = await Task.Run(() => FirstFramesOf(audio), connecting.Token);
-                    return new Connection(response, audio, frames);
+                    var decoder = await Task.Run(() => RadioDecoder.Open(audio, codec), connecting.Token);
+                    return new Connection(response, audio, decoder);
                 }
                 catch (Exception ex) when (ex is not RadioProblem && connecting.IsCancellationRequested && !cancel.IsCancellationRequested)
                 {
@@ -437,45 +419,10 @@ public sealed class RadioStream : WaveStream
             }
         }
 
-        /// <summary>The next frame, or null when the stream has ended.</summary>
-        public Mp3Frame? NextFrame() => Mp3Frame.LoadFromStream(Audio);
-
-        public void Dispose() => _response.Dispose();
-
-        // Finds where the MP3 frames start, and checks it really is MP3: two frames in a row that agree.
-        private static Queue<Mp3Frame> FirstFramesOf(IcyStream audio)
+        public void Dispose()
         {
-            // Plenty for the junk some streams start with, without reading a non-MP3 stream forever.
-            audio.Limit = 256 * 1024;
-            try
-            {
-                var previous = Mp3Frame.LoadFromStream(audio);
-                while (previous is not null)
-                {
-                    var next = Mp3Frame.LoadFromStream(audio);
-                    if (next is null)
-                    {
-                        break;
-                    }
-
-                    if (next.SampleRate == previous.SampleRate && Channels(next) == Channels(previous) && next.FileOffset == previous.FileOffset + previous.FrameLength)
-                    {
-                        return new Queue<Mp3Frame>(new[] { previous, next });
-                    }
-
-                    previous = next;
-                }
-            }
-            catch (EndOfStreamException)
-            {
-                // Fall through to the problem below.
-            }
-            finally
-            {
-                audio.Limit = 0;
-            }
-
-            throw new RadioProblem("The station's stream isn't MP3 audio Lucent can play.");
+            _response.Dispose();
+            Decoder.Dispose();
         }
 
         private static bool IsPlaylist(string address, string type)
@@ -486,9 +433,35 @@ public sealed class RadioStream : WaveStream
                    || path.EndsWith(".pls") || path.EndsWith(".m3u") || path.EndsWith(".m3u8");
         }
 
+        /// <summary>
+        /// True for AAC streams, by their type, or by their address when the server doesn't say (or says something
+        /// generic). Everything else is tried as MP3.
+        /// </summary>
+        internal static bool IsAac(string type, string address, string? codecHint)
+        {
+            if (type is "audio/aac" or "audio/aacp" or "audio/x-aac" or "audio/x-aacp" or "audio/aac-adts")
+            {
+                return true;
+            }
+
+            if (type is not ("" or "application/octet-stream" or "audio/x-unknown"))
+            {
+                return false;
+            }
+
+            if (codecHint?.Trim().ToUpperInvariant() is { } hint && hint.StartsWith("AAC"))
+            {
+                return true;
+            }
+
+            var path = Uri.TryCreate(address, UriKind.Absolute, out var uri) ? uri.AbsolutePath.ToLowerInvariant() : address.ToLowerInvariant();
+            return path.EndsWith(".aac") || path.EndsWith(".aacp") || path.Contains("aac");
+        }
+
         private static string? Unsupported(string type) => type switch
         {
-            "audio/aac" or "audio/aacp" or "audio/x-aac" or "audio/mp4" or "audio/x-m4a" => "AAC",
+            // MP4 and M4A are AAC in a container made for files, not the ADTS frames stations send.
+            "audio/mp4" or "audio/x-m4a" => "AAC in MP4",
             "application/ogg" or "audio/ogg" or "audio/vorbis" => "Ogg",
             "audio/opus" => "Opus",
             "audio/flac" or "audio/x-flac" => "FLAC",
@@ -515,7 +488,7 @@ public sealed class RadioStream : WaveStream
         {
             if (text.Contains("#EXT-X-", StringComparison.OrdinalIgnoreCase))
             {
-                throw new RadioProblem("This station streams HLS. Lucent plays MP3 stations for now; try another.");
+                throw new RadioProblem("This station streams HLS. Lucent plays MP3 and AAC stations for now; try another.");
             }
 
             foreach (var raw in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
