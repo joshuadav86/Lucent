@@ -22,7 +22,8 @@ public partial class MainWindow
     // What the player shows: the other app's song while one is being controlled, otherwise Lucent's own.
     private bool ShownHasTrack => _remote is not null ? _remote.State?.Track is not null : _player.HasTrack;
 
-    private bool ShownIsPlaying => _remote?.IsPlaying ?? _player.IsPlaying;
+    // A station tuning in counts as playing, so the button shows it can be stopped.
+    private bool ShownIsPlaying => _remote?.IsPlaying ?? (_player.IsPlaying || _tuning is not null);
 
     private TimeSpan ShownPosition => _remote is not null ? _remote.State?.PositionNow ?? TimeSpan.Zero : _player.Position;
 

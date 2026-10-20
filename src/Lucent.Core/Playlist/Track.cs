@@ -64,6 +64,13 @@ public sealed class Track
 
     public string DurationText => Duration > TimeSpan.Zero ? TimeFormat.Format(Duration) : string.Empty;
 
+    /// <summary>
+    /// The song on a radio station, for showing like a track (in the media controls, say). The station's address
+    /// stands in for the path, and the station's name for the album.
+    /// </summary>
+    public static Track ForStation(string address, string title, string artist, string station, int bitrate) =>
+        new(address, title, artist, TimeSpan.Zero, bitrate, album: station);
+
     public static Track FromFile(string path)
     {
         var fallbackTitle = System.IO.Path.GetFileNameWithoutExtension(path);

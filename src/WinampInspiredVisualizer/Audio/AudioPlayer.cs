@@ -138,6 +138,26 @@ public sealed class AudioPlayer : IDisposable
     }
 
     /// <summary>
+    /// Plays audio that isn't a file: an online radio station, say. <paramref name="name"/> stands in for the file's path
+    /// (the station's address). The player takes the stream over and closes it with the track.
+    /// </summary>
+    public void Load(string name, WaveStream stream)
+    {
+        Close();
+        _generation++;
+        try
+        {
+            Open(name, stream);
+        }
+        catch
+        {
+            stream.Dispose();
+            Close();
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Opens <paramref name="path"/> and lines it up to follow the current track without a gap, or with
     /// null forgets the one lined up. Returns false when it can't follow seamlessly (gapless playback is
     /// off, the file won't open, or it has a different number of channels, or in exclusive mode a
@@ -277,8 +297,9 @@ public sealed class AudioPlayer : IDisposable
         }
     }
 
+    // A station's address is never a file.
     private static bool SameFile(string? a, string? b) =>
-        a is not null && b is not null && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+        a is not null && b is not null && !a.Contains("://") && !b.Contains("://") && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 
     // Sets up the output for a newly opened file: exclusive if asked for and possible, else shared.
     private void Open(string path, WaveStream reader)
@@ -374,6 +395,12 @@ public sealed class AudioPlayer : IDisposable
     // Bits per sample in the file itself (0 for lossy formats, which have none).
     private static int SourceBits(string path)
     {
+        if (path.Contains("://"))
+        {
+            // A radio station: MP3, so lossy.
+            return 0;
+        }
+
         try
         {
             using var file = TagLib.File.Create(path);
