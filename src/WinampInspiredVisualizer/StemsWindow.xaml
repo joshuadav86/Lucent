@@ -60,6 +60,10 @@
             <Button DockPanel.Dock="Right" Style="{StaticResource PillButton}" Height="30" Padding="12,0"
                     Content="SAVE AS FILES…" Click="OnSave"
                     ToolTip="Save the vocals, drums, bass and other instruments as four files, in a folder next to the song" />
+            <!-- Shown once the stems are saved: opens the folder they went to. -->
+            <Button x:Name="ShowFolderButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Height="30" Padding="12,0"
+                    Margin="0,0,6,0" Content="SHOW IN FOLDER" Visibility="Collapsed" Click="OnShowFolder"
+                    ToolTip="Open the folder the stems were saved in" />
         </DockPanel>
     </Grid>
 </Window>
