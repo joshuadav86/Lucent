@@ -44,7 +44,7 @@
             <Border x:Name="VisualizerFrame" Grid.Row="1" Background="Black" />
 
             <!-- Visuals bar -->
-            <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6" ColumnDefinitions="*,Auto,*">
+            <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6" ColumnDefinitions="*,Auto,*" SizeChanged="OnBottomBarSizeChanged">
 
                 <!-- Frame rate readout, shown when "Show frame rate" is on in Options. -->
                 <TextBlock x:Name="FrameRateText" Grid.Column="0" Text="– fps" Margin="4,0,12,0" FontSize="11"
@@ -52,8 +52,8 @@
                            Foreground="{DynamicResource MutedTextBrush}" IsVisible="False"
                            ToolTip.Tip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Previous visual (B)" Click="OnPreviousPreset">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button x:Name="PreviousButton" Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Previous visual (B)" Click="OnPreviousPreset">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ArrowLeftIcon}" />
                     </Button>
                     <Button x:Name="PresetPickerButton" Theme="{StaticResource PickerButton}" Width="220" Margin="4,0"
@@ -305,17 +305,23 @@
                     </Popup>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <StackPanel x:Name="BarRightControls" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <ToggleButton x:Name="FavoriteButton" Theme="{StaticResource PanelToggle}" Padding="8,0"
                                   ToolTip.Tip="Make this visual a favorite (F)" Click="OnToggleFavorite">
                         <Path x:Name="FavoriteIcon" Data="{StaticResource StarIcon}" StrokeThickness="1.3" StrokeJoin="Round"
                               Stroke="{Binding $parent[ToggleButton].Foreground}"
                               Fill="Transparent" Width="14" Height="14" Stretch="Uniform" />
                     </ToggleButton>
-                    <!-- Auto mode: the pill turns it on or off (right-click it, or use the arrow, to choose how often it changes). -->
-                    <Button x:Name="AutoCycleButton" Theme="{StaticResource PillButton}" Content="AUTO · 25s"
+                    <!-- Auto mode: the pill turns it on or off (right-click it, or use the arrow, to choose how often it changes).
+                         The circling arrow says "the visuals change by themselves"; in a narrow window only the arrow shows. -->
+                    <Button x:Name="AutoCycleButton" Theme="{StaticResource PillButton}"
                             Margin="6,0,0,0" Foreground="{DynamicResource AccentBrush}"
-                            Click="OnToggleAutoCycle" />
+                            Click="OnToggleAutoCycle">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource AutoChangeIcon}" StrokeThickness="1.4" />
+                            <TextBlock x:Name="AutoCycleText" Text="AUTO · 25s" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="AutoCycleIntervalButton" Theme="{StaticResource IconButton}" Width="22" Height="26"
                             Margin="1,0,6,0" ToolTip.Tip="How often Auto changes the visual" Click="OnAutoCycleIntervalMenu">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronUpIcon}" />

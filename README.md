@@ -272,7 +272,7 @@ Shortcuts work from any Lucent window. Your keyboard's media keys work even when
 
 | Playback | | Windows | | Visuals | |
 |---|---|---|---|---|---|
-| `Space` | Play or pause | `W` `Q` `L` | Visuals, queue, library | `N` / `B` | Next or previous visual |
+| `Space` | Play or pause | `W` `Q` `L` | Visuals, queue, library | `N` / `B` | Next visual, or back to the last one shown |
 | `Z` / `X` | Previous or next track | `E` | Equalizer | `V` | Visual picker |
 | `S` | Shuffle | `Y` | Analyzer | `A` | Auto mode |
 | `R` | Repeat off, all, or one | `C` | Artwork | `F` | Star the visual |

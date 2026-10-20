@@ -133,7 +133,7 @@ public partial class MainWindow
 
         var visuals = new NativeMenu();
         visuals.Add(Item("Next Visual", () => _visuals.ChangePreset(+1)));
-        visuals.Add(Item("Previous Visual", () => _visuals.ChangePreset(-1)));
+        visuals.Add(Item("Previous Visual", _visuals.PreviousPreset));
         visuals.Add(Item("Choose a Visual…", _visuals.TogglePresetPicker));
         var auto = Check("Change on the Beat", () =>
         {

@@ -137,6 +137,16 @@
                                         </UniformGrid>
                                     </Border>
 
+                                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Previous visual goes to" />
+                                    <Border Theme="{StaticResource SegmentBar}">
+                                        <UniformGrid Rows="1">
+                                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="LastShown" Content="Last one shown" Click="OnOptionChosen" />
+                                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="UpInList" Content="Up the list" Click="OnOptionChosen" />
+                                        </UniformGrid>
+                                    </Border>
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Last one shown steps back through the visuals you've seen, Auto's picks too. Up the list goes to the one above in the picker." />
+
                                     <CheckBox x:Name="MorphsOnlySwitch" Theme="{StaticResource SwitchToggle}"
                                               Content="Morphing transitions only" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
