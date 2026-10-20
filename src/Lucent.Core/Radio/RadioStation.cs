@@ -60,9 +60,15 @@ public sealed record RadioStation
             parts.Add(Country);
         }
 
+        // Listeners often add the same station more than once, at different qualities, so both are shown.
+        var codec = Codec.Trim().ToUpperInvariant();
         if (Bitrate > 0)
         {
-            parts.Add($"{Bitrate} kbps");
+            parts.Add(codec.Length > 0 ? $"{Bitrate} kbps {codec}" : $"{Bitrate} kbps");
+        }
+        else if (codec.Length > 0)
+        {
+            parts.Add(codec);
         }
 
         return string.Join(" · ", parts);

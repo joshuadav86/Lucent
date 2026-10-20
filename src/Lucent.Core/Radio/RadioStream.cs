@@ -8,7 +8,7 @@ using NAudio.Wave;
 namespace WinampInspiredVisualizer.Radio;
 
 /// <summary>
-/// An online radio station, playing: its MP3 or AAC stream decoded as it arrives, with a few seconds held in hand so a
+/// An online radio station, playing: its MP3 or AAC stream (or HLS pieces, see <see cref="HlsStream"/>) decoded as it arrives, with a few seconds held in hand so a
 /// slow moment on the network doesn't stop the music. The player plays it like a track that never ends, so the
 /// equalizer, the visuals, the meter and the analyzer all get it as they do a file.
 /// </summary>
@@ -23,6 +23,9 @@ public sealed class RadioStream : WaveStream
     /// <summary>How much audio is held in hand before playing starts, and again after the stream ran dry.</summary>
     private static readonly TimeSpan Prebuffer = TimeSpan.FromSeconds(1.5);
 
+    /// <summary>How much decoded audio is held at most. A live stream never gets this far ahead; HLS would.</summary>
+    private static readonly TimeSpan Hold = TimeSpan.FromSeconds(12);
+
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(15);
 
     private const int MaxReconnects = 4;
@@ -34,12 +37,15 @@ public sealed class RadioStream : WaveStream
     private readonly BufferedWaveProvider _buffer;
     private readonly CancellationTokenSource _stop = new();
     private readonly int _prebufferBytes;
+    private readonly int _holdBytes;
     private Connection? _connection;
     private Task? _reading;
     private long _position;
     private volatile bool _ended;
     private volatile bool _rebuffering = true;
     private string? _nowPlaying;
+    private string? _heardTitle;
+    private volatile ComingTitle? _comingTitle;
 
     private RadioStream(HttpClient http, Connection connection, string address, string userAgent, string? codec)
     {
@@ -56,6 +62,7 @@ public sealed class RadioStream : WaveStream
             ReadFully = true,
         };
         _prebufferBytes = (int)(format.AverageBytesPerSecond * Prebuffer.TotalSeconds) / format.BlockAlign * format.BlockAlign;
+        _holdBytes = (int)Math.Min(_buffer.BufferLength, format.AverageBytesPerSecond * Hold.TotalSeconds);
         Codec = connection.Decoder.Codec;
         StationName = connection.StationName;
         Genre = connection.Genre;
@@ -170,7 +177,15 @@ public sealed class RadioStream : WaveStream
 
         _rebuffering = false;
         var read = _buffer.Read(buffer, offset, count);
-        Interlocked.Add(ref _position, read);
+        var position = Interlocked.Add(ref _position, read);
+        // The song changes when its sound is heard, not when it arrived, which with HLS can be many seconds before.
+        if (_comingTitle is { } coming && position >= coming.At)
+        {
+            _comingTitle = null;
+            _nowPlaying = coming.Title;
+            TitleChanged?.Invoke(coming.Title);
+        }
+
         return read;
     }
 
@@ -258,8 +273,14 @@ public sealed class RadioStream : WaveStream
                 {
                     if (bytes > 0)
                     {
+                        // HLS arrives a piece at a time, faster than it plays: it waits here for room rather than lose any.
+                        while (_buffer.BufferedBytes + bytes > _holdBytes && !_stop.IsCancellationRequested)
+                        {
+                            _stop.Token.WaitHandle.WaitOne(50);
+                        }
+
                         _buffer.AddSamples(pcm, 0, bytes);
-                        UpdateTitle();
+                        UpdateTitle(bytes);
                         reconnects = 0;
                     }
                 }
@@ -320,12 +341,23 @@ public sealed class RadioStream : WaveStream
         }
     }
 
-    private void UpdateTitle()
+    // Called with the bytes just added, which are the first of the new song's.
+    private void UpdateTitle(int added)
     {
-        if (_connection?.Audio.Title is { } title && title != _nowPlaying)
+        if (_connection?.Title is { } title && title != _heardTitle)
         {
-            _nowPlaying = title;
-            TitleChanged?.Invoke(title);
+            _heardTitle = title;
+            if (_nowPlaying is null)
+            {
+                // The first title is the song that's on as it tunes in.
+                _nowPlaying = title;
+                TitleChanged?.Invoke(title);
+            }
+            else
+            {
+                // Said once the sound already in hand has played.
+                _comingTitle = new ComingTitle(title, Interlocked.Read(ref _position) + _buffer.BufferedBytes - added);
+            }
         }
     }
 
@@ -338,14 +370,17 @@ public sealed class RadioStream : WaveStream
         _ => $"Lucent couldn't play the station. {ex.Message}",
     };
 
-    /// <summary>One connection to the station: its response, its audio, and the decoder reading it.</summary>
+    private sealed record ComingTitle(string Title, long At);
+
+    /// <summary>One connection to the station: its response (or HLS stream), its audio, and the decoder reading it.</summary>
     private sealed class Connection : IDisposable
     {
-        private readonly HttpResponseMessage _response;
+        private readonly IDisposable _source;
+        private readonly HlsStream? _hls;
 
         private Connection(HttpResponseMessage response, IcyStream audio, RadioDecoder decoder)
         {
-            _response = response;
+            _source = response;
             Audio = audio;
             Decoder = decoder;
             StationName = Header(response, "icy-name");
@@ -353,7 +388,19 @@ public sealed class RadioStream : WaveStream
             Bitrate = int.TryParse(Header(response, "icy-br")?.Split(',')[0], out var kbps) && kbps > 0 ? kbps : decoder.Bitrate;
         }
 
+        private Connection(HlsStream hls, IcyStream audio, RadioDecoder decoder)
+        {
+            _source = hls;
+            _hls = hls;
+            Audio = audio;
+            Decoder = decoder;
+            Bitrate = hls.Bitrate > 0 ? hls.Bitrate : decoder.Bitrate;
+        }
+
         public IcyStream Audio { get; }
+
+        /// <summary>The song that's on, as the station last said.</summary>
+        public string? Title => _hls?.Title ?? Audio.Title;
 
         public RadioDecoder Decoder { get; }
 
@@ -386,7 +433,14 @@ public sealed class RadioStream : WaveStream
                         }
 
                         var text = await ReadTextAsync(response, connecting.Token);
-                        address = StreamInPlaylist(text, response.RequestMessage?.RequestUri ?? new Uri(address))
+                        var from = response.RequestMessage?.RequestUri ?? new Uri(address);
+                        if (HlsStream.IsHls(text))
+                        {
+                            response.Dispose();
+                            return await OpenHlsAsync(http, from, text, userAgent, connecting.Token);
+                        }
+
+                        address = StreamInPlaylist(text, from)
                             ?? throw new RadioProblem("The station's playlist doesn't say where its stream is.");
                         continue;
                     }
@@ -421,8 +475,25 @@ public sealed class RadioStream : WaveStream
 
         public void Dispose()
         {
-            _response.Dispose();
+            _source.Dispose();
             Decoder.Dispose();
+        }
+
+        private static async Task<Connection> OpenHlsAsync(HttpClient http, Uri address, string playlist, string userAgent, CancellationToken cancel)
+        {
+            var hls = await HlsStream.OpenAsync(http, address, playlist, userAgent, cancel);
+            try
+            {
+                var audio = new IcyStream(hls, 0);
+                using var stall = cancel.Register(hls.Dispose);
+                var decoder = await Task.Run(() => RadioDecoder.Open(audio, hls.Codec), cancel);
+                return new Connection(hls, audio, decoder);
+            }
+            catch
+            {
+                hls.Dispose();
+                throw;
+            }
         }
 
         private static bool IsPlaylist(string address, string type)
@@ -483,14 +554,9 @@ public sealed class RadioStream : WaveStream
             return Encoding.UTF8.GetString(bytes, 0, total);
         }
 
-        /// <summary>The first stream a .pls or .m3u playlist lists. HLS playlists (segments, not a stream) aren't supported.</summary>
+        /// <summary>The first stream a .pls or .m3u playlist lists. (HLS playlists are read by <see cref="HlsStream"/>.)</summary>
         internal static string? StreamInPlaylist(string text, Uri from)
         {
-            if (text.Contains("#EXT-X-", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new RadioProblem("This station streams HLS. Lucent plays MP3 and AAC stations for now; try another.");
-            }
-
             foreach (var raw in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 var line = raw;

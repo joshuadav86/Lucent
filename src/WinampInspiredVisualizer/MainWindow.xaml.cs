@@ -1097,6 +1097,7 @@ public partial class MainWindow : Window
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
         _visuals.ShowFrameRate(_settings.ShowFrameRate);
         _visuals.UpdateAutoCycleButton();
+        _visuals.UpdatePreviousButton();
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
     }
 
@@ -1175,6 +1176,9 @@ public partial class MainWindow : Window
                 break;
             case "TransitionSpeed" when Enum.TryParse<TransitionSpeed>(value, out var speed):
                 _settings.TransitionSpeed = speed;
+                break;
+            case "PreviousVisual" when Enum.TryParse<PreviousVisualMode>(value, out var previous):
+                _settings.PreviousVisual = previous;
                 break;
             case "Theme":
                 _settings.Theme = value;
@@ -1270,6 +1274,7 @@ public partial class MainWindow : Window
                 "Glow" => _settings.Glow.ToString(),
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
+                "PreviousVisual" => _settings.PreviousVisual.ToString(),
                 "Theme" => ThemeManager.Find(_settings.Theme).Name,
                 "Skin" => SkinManager.Find(_settings.Skin).Name,
                 "Updates" => _settings.EveryBuild ? "EveryBuild" : "Stable",
@@ -1877,7 +1882,7 @@ public partial class MainWindow : Window
                 _visuals.ChangePreset(+1);
                 break;
             case Key.B:
-                _visuals.ChangePreset(-1);
+                _visuals.PreviousPreset();
                 break;
             case Key.V:
                 _visuals.TogglePresetPicker();

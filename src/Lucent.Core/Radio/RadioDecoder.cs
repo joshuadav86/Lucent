@@ -163,6 +163,7 @@ internal sealed class AacRadioDecoder : RadioDecoder
     private readonly SampleBuffer _samples = new();
     private readonly WaveFormat _format;
     private readonly byte[] _header = new byte[9];
+    private readonly int _channels;
     private Header _stream;
     private byte[]? _firstPcm;
 
@@ -177,12 +178,14 @@ internal sealed class AacRadioDecoder : RadioDecoder
         _decoder = new Decoder(config);
         _samples.SetBigEndian(false);
         _decoder.DecodeFrame(firstFrame, _samples);
-        if (_samples.SampleRate <= 0 || _samples.Channels is <= 0 or > 2)
+        if (_samples.SampleRate <= 0 || _samples.Channels is <= 0 or > 8)
         {
-            throw new RadioProblem("The station's AAC stream is in a form Lucent can't play (only mono and stereo).");
+            throw new RadioProblem("The station's AAC stream is in a form Lucent can't play.");
         }
 
-        _format = WaveFormat.CreateIeeeFloatWaveFormat(_samples.SampleRate, _samples.Channels);
+        _channels = _samples.Channels;
+        // Surround is folded down to stereo, which is what the player, the equalizer and the visuals take.
+        _format = WaveFormat.CreateIeeeFloatWaveFormat(_samples.SampleRate, Math.Min(_channels, 2));
         Codec = _samples.SampleRate > SampleRates[first.RateIndex] ? "AAC+" : "AAC";
         // ADTS frames carry no bitrate; it's worked out from the frame's size and how long it plays.
         Bitrate = (int)Math.Round(first.Length * 8.0 * SampleRates[first.RateIndex] / 1024 / 1000);
@@ -287,13 +290,18 @@ internal sealed class AacRadioDecoder : RadioDecoder
             return 0;
         }
 
-        return _samples.SampleRate == _format.SampleRate && _samples.Channels == _format.Channels ? ToFloat(pcm) : 0;
+        return _samples.SampleRate == _format.SampleRate && _samples.Channels == _channels ? ToFloat(pcm) : 0;
     }
 
-    // The decoder's 16-bit samples as floats.
+    // The decoder's 16-bit samples as floats, surround folded down to stereo.
     private int ToFloat(byte[] pcm)
     {
         var data = _samples.Data;
+        if (_channels > 2)
+        {
+            return Downmix(data, pcm);
+        }
+
         var count = Math.Min(data.Length / 2, pcm.Length / sizeof(float));
         for (var i = 0; i < count; i++)
         {
@@ -302,6 +310,50 @@ internal sealed class AacRadioDecoder : RadioDecoder
         }
 
         return count * sizeof(float);
+    }
+
+    /// <summary>
+    /// Surround as stereo. AAC puts the centre first, then the front pair, then the surrounds (and, with 7.1, the back
+    /// pair), and the low-frequency channel last (for 5.1 and 7.1). The centre and surrounds go into both sides at
+    /// -3 dB, the usual fold-down, and the low-frequency channel is left out, as it is on stereo speakers.
+    /// </summary>
+    private int Downmix(byte[] data, byte[] pcm)
+    {
+        const float side = 0.7071f;
+        var lfe = _channels is 6 or 8;
+        var frames = Math.Min(data.Length / 2 / _channels, pcm.Length / sizeof(float) / 2);
+        var heard = _channels - (lfe ? 1 : 0);
+        // Each side takes its own channel, the centre, and its surrounds (or the one back channel, with 4).
+        var extras = heard == 4 ? 1 : (heard - 3) / 2;
+        // Divided by the loudest the sum can be, so the folded sound doesn't clip.
+        var scale = 1f / (1f + side * (1 + extras));
+        for (var frame = 0; frame < frames; frame++)
+        {
+            var at = frame * _channels;
+            float Sample(int channel) => (short)(data[(at + channel) * 2] | (data[(at + channel) * 2 + 1] << 8)) / 32768f;
+            var centre = Sample(0) * side;
+            var left = Sample(1) + centre;
+            var right = Sample(2) + centre;
+            if (heard == 4)
+            {
+                // A single back channel, in both.
+                left += Sample(3) * side;
+                right += Sample(3) * side;
+            }
+            else
+            {
+                for (var channel = 3; channel + 1 < heard; channel += 2)
+                {
+                    left += Sample(channel) * side;
+                    right += Sample(channel + 1) * side;
+                }
+            }
+
+            BitConverter.TryWriteBytes(pcm.AsSpan(frame * 2 * sizeof(float)), left * scale);
+            BitConverter.TryWriteBytes(pcm.AsSpan((frame * 2 + 1) * sizeof(float)), right * scale);
+        }
+
+        return frames * 2 * sizeof(float);
     }
 
     /// <summary>
@@ -374,7 +426,8 @@ internal sealed class AacRadioDecoder : RadioDecoder
             var channels = ((bytes[2] & 0x01) << 2) | (bytes[3] >> 6);
             var length = ((bytes[3] & 0x03) << 11) | (bytes[4] << 3) | (bytes[5] >> 5);
             var headerSize = (bytes[1] & 0x01) == 1 ? 7 : 9;
-            if (rateIndex >= SampleRates.Length || channels is < 1 or > 2 || length <= headerSize)
+            // Channel layouts 1 to 7 (mono to 7.1); 0, a layout described in the stream itself, isn't supported.
+            if (rateIndex >= SampleRates.Length || channels is < 1 or > 7 || length <= headerSize)
             {
                 return null;
             }
