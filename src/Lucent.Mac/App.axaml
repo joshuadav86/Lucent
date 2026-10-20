@@ -690,7 +690,7 @@
                     <ControlTemplate>
                         <StackPanel>
                             <ToggleButton Name="Header" Focusable="False" Cursor="Hand" Background="Transparent"
-                                          Tag="{TemplateBinding Tag}"
+                                          BorderBrush="Transparent" Tag="{TemplateBinding Tag}"
                                           IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
                                 <!-- (Here, as a style can't reach into a template inside a template.) -->
                                 <ToggleButton.Styles>
@@ -700,7 +700,8 @@
                                 </ToggleButton.Styles>
                                 <ToggleButton.Template>
                                     <ControlTemplate>
-                                        <Border Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="{TemplateBinding Background}">
+                                        <Border Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="{TemplateBinding Background}"
+                                                BorderThickness="1" BorderBrush="{TemplateBinding BorderBrush}">
                                             <DockPanel>
                                                 <Path Name="Chevron" DockPanel.Dock="Left" Margin="2,0,10,0" VerticalAlignment="Center"
                                                       Data="{StaticResource ChevronRightIcon}" Stroke="{DynamicResource MutedTextBrush}"
@@ -728,6 +729,10 @@
                 <!-- A heading the library has highlighted. -->
                 <Style Selector="^.highlighted /template/ ToggleButton#Header">
                     <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </Style>
+                <Style Selector="^.highlighted /template/ ToggleButton#Header /template/ Path#Chevron">
+                    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
                 </Style>
             </ControlTheme>
         </ResourceDictionary>

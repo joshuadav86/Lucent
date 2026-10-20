@@ -288,6 +288,8 @@ public partial class LibraryWindow : ToolWindow
 
     private void UpdateLibraryStatus()
     {
+        var picked = ShowingPlaylists || _library.Folders.Count == 0 ? 0 : _highlightedFolders.Count;
+        LibraryCount.SetResourceReference(ForegroundProperty, picked > 0 ? "AccentBrush" : "FaintTextBrush");
         if (ShowingPlaylists)
         {
             UpdatePlaylistsStatus();
@@ -316,11 +318,14 @@ public partial class LibraryWindow : ToolWindow
                 : $"{count:N0} {(count == 1 ? "track" : "tracks")}{updating}";
         }
 
+        // While folder headings are picked, say how many, and what Delete does with them.
         LibraryCount.Text = !linked
             ? "No folder linked"
-            : _library.IsScanning && count == 0
-                ? "Looking for music…"
-                : countText;
+            : picked > 0
+                ? $"{picked} {(picked == 1 ? "folder" : "folders")} selected  ·  Delete to remove"
+                : _library.IsScanning && count == 0
+                    ? "Looking for music…"
+                    : countText;
 
         var noMatches = searching && shown == 0;
         EmptyLibraryHint.IsVisible = shown == 0 && !_library.IsScanning;
@@ -627,9 +632,10 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
-        // With folder headings highlighted, ⌘A highlights every heading, ready for Delete.
-        if (e.Key == Key.A && e.KeyModifiers == KeyModifiers.Meta && _highlightedFolders.Count > 0
-            && !SearchBox.IsKeyboardFocusWithin)
+        // In the folders view, ⌘A picks every folder heading, ready for Delete, unless songs are chosen.
+        if (e.Key == Key.A && e.KeyModifiers == KeyModifiers.Meta && !SearchBox.IsKeyboardFocusWithin
+            && _settings.GroupLibraryByFolder && !ShowingPlaylists
+            && (_highlightedFolders.Count > 0 || LibraryView.SelectedItems is not { Count: > 0 }))
         {
             HighlightFolders(GroupNames());
             e.Handled = true;
@@ -1116,8 +1122,8 @@ public partial class LibraryWindow : ToolWindow
     }
 
     // ---- Highlighting folder headings ----
-    // ⌘-click a heading to highlight it, Shift-click to highlight a run of them, then right-click
-    // them or press Delete to take them out of the library. A plain click still opens or closes one.
+    // Click a heading to pick it (it also opens or closes), ⌘-click to add one, Shift-click for a run,
+    // or ⌘A for all of them; then right-click them or press Delete to take them out of the library.
 
     private readonly HashSet<string> _highlightedFolders = new(StringComparer.OrdinalIgnoreCase);
     private string? _folderAnchor;
@@ -1157,8 +1163,16 @@ public partial class LibraryWindow : ToolWindow
         }
         else
         {
-            // A plain click opens or closes the folder, and ends any highlight.
-            HighlightFolders(Array.Empty<string>());
+            // A plain click opens or closes the folder. Under FOLDERS it also picks that folder on its own, so it's
+            // clear what Delete acts on; playlists can't be removed that way, so there it just ends any highlight.
+            HighlightFolders(ShowingPlaylists ? Array.Empty<string>() : new[] { name });
+            if (ShowingPlaylists)
+            {
+                return;
+            }
+
+            LibraryView.SelectedItems?.Clear();
+            LibraryView.Focus();
             return;
         }
 
@@ -1182,6 +1196,8 @@ public partial class LibraryWindow : ToolWindow
         {
             heading.IsHighlighted = _highlightedFolders.Contains(heading.Name);
         }
+
+        UpdateLibraryStatus();
     }
 
     private List<string> GroupNames() => _groups.Select(group => group.Name).ToList();
