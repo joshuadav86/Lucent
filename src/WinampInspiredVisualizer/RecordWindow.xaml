@@ -111,6 +111,12 @@
                             <Border x:Name="RightHold" HorizontalAlignment="Left" Width="2" Background="{DynamicResource TextBrush}" />
                         </Grid>
                     </Border>
+                    <!-- Offered when a stereo recording only has sound on one side: a mono mic in one input. -->
+                    <StackPanel x:Name="MonoHint" Visibility="Collapsed" Margin="0,10,0,0">
+                        <TextBlock x:Name="MonoHintText" Style="{StaticResource OptionHint}" Margin="2,0,0,6" />
+                        <Button x:Name="MonoButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left" Click="OnUseMono"
+                                ToolTip="Records just that input, as a mono file that plays in both ears. Not while recording." />
+                    </StackPanel>
                     <CheckBox x:Name="ListenSwitch" Style="{StaticResource SwitchToggle}" Margin="0,14,0,0" Content="Hear it through the speakers"
                               Click="OnListen" />
                     <TextBlock x:Name="ListenHint" Style="{StaticResource OptionHint}" />
@@ -148,12 +154,37 @@
                                    Foreground="{DynamicResource TextBrush}" />
                     </DockPanel>
                     <TextBlock x:Name="SpaceHint" Style="{StaticResource OptionHint}" />
+                    <CheckBox x:Name="LibrarySwitch" Style="{StaticResource SwitchToggle}" Margin="0,8,0,0"
+                              Content="Show recordings in the Library" Click="OnOptionSwitch" />
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Track marks" />
                     <CheckBox x:Name="DetectSwitch" Style="{StaticResource SwitchToggle}" Content="Mark song changes Lucent hears"
                               Click="OnOptionSwitch" />
                     <CheckBox x:Name="CueSwitch" Style="{StaticResource SwitchToggle}" Margin="0,8,0,0"
                               Content="Save a .cue sheet beside the recording" Click="OnOptionSwitch" />
+                    <DockPanel Margin="0,8,0,0">
+                        <Button x:Name="KeyButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Content="SET UP"
+                                Margin="10,0,0,0" VerticalAlignment="Center" Click="OnKeyButton"
+                                ToolTip="Enter your own ACRCloud key" />
+                        <CheckBox x:Name="IdentifySwitch" Style="{StaticResource SwitchToggle}"
+                                  Content="Name the songs with ACRCloud" Click="OnOptionSwitch" />
+                    </DockPanel>
+                    <TextBlock x:Name="IdentifyHint" Style="{StaticResource OptionHint}" />
+                    <StackPanel x:Name="KeyPanel" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource OptionHint}"
+                                   Text="In ACRCloud's console, make an Audio &amp; Video Recognition project with the ACRCloud Music bucket and Line-in audio, then copy its host, access key, and access secret here. Lookups count on your ACRCloud account, and the key stays on this computer, encrypted for your Windows account." />
+                        <TextBlock Style="{StaticResource OptionLabel}" Text="Host" />
+                        <TextBox x:Name="HostInput" Style="{StaticResource TextInput}" />
+                        <TextBlock Style="{StaticResource OptionLabel}" Text="Access key" />
+                        <TextBox x:Name="AccessKeyInput" Style="{StaticResource TextInput}" />
+                        <TextBlock Style="{StaticResource OptionLabel}" Text="Access secret" />
+                        <TextBox x:Name="SecretInput" Style="{StaticResource TextInput}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Style="{StaticResource PillButton}" Content="SAVE KEY" Click="OnSaveKey" />
+                            <Button x:Name="RemoveKeyButton" Style="{StaticResource PillButton}" Content="REMOVE" Margin="8,0,0,0" Click="OnRemoveKey" />
+                            <Button Style="{StaticResource PillButton}" Content="ACRCLOUD CONSOLE" Margin="8,0,0,0" Click="OnOpenConsole" />
+                        </StackPanel>
+                    </StackPanel>
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Press New track (or M) as each song starts. The marks go into the WAV file as cue points, so Next and Previous in Lucent skip from song to song, and DJ software and editors show them. Lucent's own guesses are only made while recording, about 20 seconds after each change." />
                     <ScrollViewer Margin="0,8,0,0" MaxHeight="150" VerticalScrollBarVisibility="Auto">

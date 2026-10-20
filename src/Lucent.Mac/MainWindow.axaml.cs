@@ -2365,6 +2365,25 @@ public partial class MainWindow : Window
     /// <summary>Opens the Bandcamp and Beatport window: importing downloads, and syncing a Bandcamp collection.</summary>
     public void ShowStores() => StoreWindow.Open(this, _stores, _settings);
 
+    /// <summary>
+    /// Puts a finished recording's folder into the library (from the Record window), listed under its one
+    /// heading the first time, so the recording and the ones after it show up there.
+    /// </summary>
+    public void AddRecordingToLibrary(string path)
+    {
+        if (Path.GetDirectoryName(path) is not { Length: > 0 } folder)
+        {
+            return;
+        }
+
+        if (LibraryFolderList.LinkedFolderOf(_settings.LibraryFolders, folder) is null)
+        {
+            LibraryFolderList.SetTogether(_settings.LibraryFoldersTogether, folder, on: true);
+        }
+
+        LinkLibraryFolder(folder);
+    }
+
     /// <summary>Puts a folder into the library, if it isn't in it already (the Bandcamp folder, say).</summary>
     private void LinkLibraryFolder(string folder)
     {
