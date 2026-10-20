@@ -284,7 +284,7 @@ public static class SkinManager
         });
         time.Children.Add(new TextBlock
         {
-            Text = "4:20",
+            Text = "1:23",
             Margin = new Thickness(6, 2, 6, 2),
             FontFamily = (FontFamily)look["DisplayFont"],
             FontWeight = skin.DisplayWeight,
@@ -299,8 +299,26 @@ public static class SkinManager
         row.Children.Add(time);
         row.Children.Add(name);
 
+        // A short seek bar under them, a third of the way through, so the swatch reads as a little player.
+        var seek = new Grid { Height = 3, Margin = new Thickness(0, 6, 0, 0) };
+        seek.Children.Add(new Border
+        {
+            CornerRadius = (CornerRadius)look["TrackCorner"],
+            Background = ThemeManager.Solid(theme.Hairline),
+        });
+        seek.Children.Add(new Border
+        {
+            CornerRadius = (CornerRadius)look["TrackCorner"],
+            Background = accentGradient,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Width = 44,
+        });
+        var player = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        player.Children.Add(row);
+        player.Children.Add(seek);
+
         var corner = (CornerRadius)look["BarCorner"];
-        var card = new Grid { Height = 40 };
+        var card = new Grid { Height = 52 };
         ToolTip.SetTip(card, skin.Description);
         card.Children.Add(new Border { CornerRadius = corner, Background = ThemeManager.Solid(theme.Surface) });
         card.Children.Add(new Border
@@ -310,7 +328,7 @@ public static class SkinManager
             BorderBrush = (IBrush)look["WindowFrameBrush"],
             BorderThickness = new Thickness(1),
             Padding = new Thickness(9, 0, 8, 0),
-            Child = row,
+            Child = player,
         });
         return card;
     }
