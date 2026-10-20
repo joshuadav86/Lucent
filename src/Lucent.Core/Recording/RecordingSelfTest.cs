@@ -161,6 +161,7 @@ public static class RecordingSelfTest
             }
 
             problems += CheckAnswers(log);
+            problems += CheckMonoMix(folder, log);
 
             if (problems == 0)
             {
@@ -185,6 +186,36 @@ public static class RecordingSelfTest
         }
 
         return problems;
+    }
+
+    // A pair mixed to mono: inputs 1 and 2 at 0.4 and 0.2 make a one-channel file at 0.3.
+    private static int CheckMonoMix(string folder, Action<string> log)
+    {
+        var capture = new AudioCapture();
+        capture.Reset(48000);
+        var path = Path.Combine(folder, "mono mix.wav");
+        using (var recorder = new LiveRecorder(capture, 48000, 1) { BitDepth = 32, SumPair = true, DetectSongChanges = false })
+        {
+            recorder.Start(new RecordingTarget(path, "mono mix", null, CueSheet: false));
+            var block = Enumerable.Range(0, 480 * 2).Select(i => i % 2 == 0 ? 0.4f : 0.2f).ToArray();
+            for (var b = 0; b < 100; b++)
+            {
+                recorder.Write(block, 480, 2, 0, 48000);
+            }
+
+            recorder.StopAsync().Wait(TimeSpan.FromSeconds(30));
+        }
+
+        using var reader = new WaveFileReader(path);
+        var samples = new float[4800];
+        var read = reader.ToSampleProvider().Read(samples, 0, samples.Length);
+        if (reader.WaveFormat.Channels != 1 || read == 0 || samples.Take(read).Any(x => Math.Abs(x - 0.3f) > 0.001f))
+        {
+            log($"::error::Recording: inputs 1 + 2 mixed to mono came out as {reader.WaveFormat.Channels} channel(s), first sample {samples[0]:0.000} (wanted 1 channel at 0.300).");
+            return 1;
+        }
+
+        return 0;
     }
 
     // ACRCloud's other answers: not known, a wrong key, and nonsense.

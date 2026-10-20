@@ -147,6 +147,12 @@ public sealed class LiveRecorder : IDisposable
     /// <summary>Sound the input sent that had to be let go because the recorder fell too far behind.</summary>
     public TimeSpan Dropped => TimeSpan.FromSeconds((double)Interlocked.Read(ref _dropped) / SampleRate);
 
+    /// <summary>
+    /// For a mono recording: the input's channel and the one after it are mixed together, rather than the
+    /// first taken on its own (a mono source that arrives on both sides of a pair, or a stereo one folded down).
+    /// </summary>
+    public bool SumPair { get; set; }
+
     /// <summary>Lucent marks song changes it hears in the files recorded from now on.</summary>
     public bool DetectSongChanges { get; set; } = true;
 
@@ -227,11 +233,19 @@ public sealed class LiveRecorder : IDisposable
         // One block: the rate it came at, then the chosen channels interleaved.
         var block = new float[1 + frames * Channels];
         block[0] = inputRate;
+        var first = Math.Min(firstChannel, inputChannels - 1);
         var second = Math.Min(firstChannel + 1, inputChannels - 1);
+        var sum = Channels == 1 && SumPair && second != first;
         for (var f = 0; f < frames; f++)
         {
             var at = f * inputChannels;
-            block[1 + f * Channels] = audio[at + Math.Min(firstChannel, inputChannels - 1)];
+            if (sum)
+            {
+                block[1 + f] = 0.5f * (audio[at + first] + audio[at + second]);
+                continue;
+            }
+
+            block[1 + f * Channels] = audio[at + first];
             if (Channels > 1)
             {
                 block[2 + f * Channels] = audio[at + second];

@@ -58,6 +58,9 @@ public partial class RecordWindow : Window
     private FinishedRecording? _finished;
     private int _pluginFormat;          // the rate × channels the open plugins were started at
     private int _shownTracks = -1;
+    // Stereo with sound on one side only (a mono mic in input 1, say): which side is silent, and since when.
+    private int? _silentSide;
+    private DateTime _lopsidedSince;
     // Read from the keychain as the input opens (not for a screenshot, where it could ask).
     private AcrCloudKey? _key;
     private double _levelLeft;
@@ -219,6 +222,7 @@ public partial class RecordWindow : Window
                 BitDepth = _settings.BitDepth,
                 DetectSongChanges = _settings.DetectSongChanges,
                 Identifier = MakeIdentifier(),
+                SumPair = _settings.SumToMono,
             };
             recorder.Failed += (_, ex) => Dispatcher.UIThread.Post(() => OnRecordingFailed(ex));
             _recorder = recorder;
@@ -254,10 +258,11 @@ public partial class RecordWindow : Window
             return;
         }
 
-        if (_settings.FirstChannel + _settings.Channels > details.Channels)
+        if (_settings.FirstChannel + InputsTaken(_settings.Channels, _settings.SumToMono) > details.Channels)
         {
             _settings.FirstChannel = 0;
             _settings.Channels = Math.Min(2, details.Channels);
+            _settings.SumToMono = false;
         }
 
     }
@@ -274,6 +279,7 @@ public partial class RecordWindow : Window
                 _settings.InputId = input.Id;
                 _settings.FirstChannel = 0;
                 _settings.Channels = 2;
+                _settings.SumToMono = false;
                 _settings.Save();
                 await OpenInputAsync();
             };
@@ -299,20 +305,17 @@ public partial class RecordWindow : Window
     {
         var count = _details?.Channels ?? 2;
         var menu = new ContextMenu { Placement = PlacementMode.BottomEdgeAlignedLeft };
-        foreach (var (first, channels) in ChannelChoices(count))
+        foreach (var (first, channels, summed) in ChannelChoices(count))
         {
             var item = new MenuItem
             {
-                Header = ChannelName(first, channels),
+                Header = ChannelName(first, channels, summed),
                 ToggleType = MenuItemToggleType.CheckBox,
-                IsChecked = first == _settings.FirstChannel && channels == _settings.Channels,
+                IsChecked = first == _settings.FirstChannel && channels == _settings.Channels && summed == _settings.SumToMono,
             };
             item.Click += async (_, _) =>
             {
-                _settings.FirstChannel = first;
-                _settings.Channels = channels;
-                _settings.Save();
-                await OpenInputAsync();
+                await UseChannelsAsync(first, channels, summed);
             };
             menu.Items.Add(item);
         }
@@ -320,26 +323,49 @@ public partial class RecordWindow : Window
         menu.Open(ChannelsButton);
     }
 
-    /// <summary>Stereo pairs first (1 + 2, 3 + 4…), then each channel on its own.</summary>
-    private static IEnumerable<(int First, int Channels)> ChannelChoices(int count)
+    /// <summary>Stereo pairs first (1 + 2, 3 + 4…), then each channel on its own, then each pair mixed to mono.</summary>
+    private static IEnumerable<(int First, int Channels, bool Summed)> ChannelChoices(int count)
     {
         for (var first = 0; first + 1 < count; first += 2)
         {
-            yield return (first, 2);
+            yield return (first, 2, false);
         }
 
         for (var channel = 0; channel < count; channel++)
         {
-            yield return (channel, 1);
+            yield return (channel, 1, false);
+        }
+
+        // A mono mic or mixer out on both sides of a pair, or a stereo source folded down to one channel.
+        for (var first = 0; first + 1 < count; first += 2)
+        {
+            yield return (first, 1, true);
         }
     }
 
-    private static string ChannelName(int first, int channels) =>
-        channels == 2 ? $"Inputs {first + 1} + {first + 2} (stereo)" : $"Input {first + 1} (mono)";
+    private static string ChannelName(int first, int channels, bool summed) => (channels, summed) switch
+    {
+        (2, _) => $"Inputs {first + 1} + {first + 2} (stereo)",
+        (_, true) => $"Inputs {first + 1} + {first + 2} mixed to mono",
+        _ => $"Input {first + 1} (mono)",
+    };
+
+    // How many of the input's channels a choice takes.
+    private static int InputsTaken(int channels, bool summed) => summed ? 2 : channels;
+
+    private async Task UseChannelsAsync(int first, int channels, bool summed)
+    {
+        _settings.FirstChannel = first;
+        _settings.Channels = channels;
+        _settings.SumToMono = channels == 1 && summed;
+        _settings.Save();
+        _silentSide = null;
+        await OpenInputAsync();
+    }
 
     private void ShowFormat()
     {
-        ChannelsText.Text = ChannelName(_settings.FirstChannel, _settings.Channels);
+        ChannelsText.Text = ChannelName(_settings.FirstChannel, _settings.Channels, _settings.SumToMono);
         RatePanel.Children.Clear();
         foreach (var rate in RecordingSettings.SampleRates)
         {
@@ -1094,6 +1120,7 @@ public partial class RecordWindow : Window
 
         var (left, right, clipped) = recorder.ReadMeters();
         ShowMeters(left, right, clipped);
+        WatchForMono(left, right);
         if (recorder.IsRecording)
         {
             TimeText.Text = Clock(recorder.Elapsed);
@@ -1202,6 +1229,60 @@ public partial class RecordWindow : Window
             });
             TrackList.Children.Add(row);
         }
+    }
+
+    // A stereo recording with sound on one side only is most likely a mono mic or instrument in one input,
+    // which would play in one ear: after a few seconds of that, the window offers to record that input in mono.
+    private void WatchForMono(float left, float right)
+    {
+        int? silent = null;
+        if (_settings.Channels == 2)
+        {
+            if (left > 0.003f && right < 0.0003f)
+            {
+                silent = 1;
+            }
+            else if (right > 0.003f && left < 0.0003f)
+            {
+                silent = 0;
+            }
+        }
+
+        // Quiet moments say nothing either way; sound on both sides, or a mono choice, ends it.
+        var quiet = left <= 0.003f && right <= 0.003f;
+        if (silent is null && quiet && _settings.Channels == 2)
+        {
+            return;
+        }
+
+        if (silent != _silentSide)
+        {
+            _silentSide = silent;
+            _lopsidedSince = DateTime.UtcNow;
+            MonoHint.IsVisible = false;
+            return;
+        }
+
+        if (silent is { } side && DateTime.UtcNow - _lopsidedSince > TimeSpan.FromSeconds(3))
+        {
+            var heard = _settings.FirstChannel + 1 + (1 - side);
+            var other = _settings.FirstChannel + 1 + side;
+            MonoHintText.Text = $"Only input {heard} has sound; input {other} is silent. A mono mic or instrument recorded in stereo plays in one ear.";
+            MonoButton.Content = $"RECORD INPUT {heard} IN MONO";
+            MonoButton.IsEnabled = _recorder?.IsRecording != true;
+            MonoHint.IsVisible = true;
+        }
+    }
+
+    private async void OnUseMono(object? sender, RoutedEventArgs e)
+    {
+        if (_silentSide is not { } side || _recorder?.IsRecording == true)
+        {
+            return;
+        }
+
+        MonoHint.IsVisible = false;
+        await UseChannelsAsync(_settings.FirstChannel + (1 - side), 1, summed: false);
     }
 
     // ---- Naming the songs ----

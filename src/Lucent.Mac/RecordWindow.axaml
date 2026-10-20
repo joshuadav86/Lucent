@@ -103,6 +103,12 @@
                             <Border x:Name="RightHold" HorizontalAlignment="Left" Width="2" Background="{DynamicResource TextBrush}" />
                         </Grid>
                     </Border>
+                    <!-- Offered when a stereo recording only has sound on one side: a mono mic in one input. -->
+                    <StackPanel x:Name="MonoHint" IsVisible="False" Margin="0,10,0,0">
+                        <TextBlock x:Name="MonoHintText" Theme="{StaticResource OptionHint}" Margin="2,0,0,6" />
+                        <Button x:Name="MonoButton" Theme="{StaticResource PillButton}" HorizontalAlignment="Left" Click="OnUseMono"
+                                ToolTip.Tip="Records just that input, as a mono file that plays in both ears. Not while recording." />
+                    </StackPanel>
                     <CheckBox x:Name="ListenSwitch" Theme="{StaticResource SwitchToggle}" Margin="0,14,0,0" Content="Hear it through the speakers"
                               Click="OnListen" />
                     <TextBlock x:Name="ListenHint" Theme="{StaticResource OptionHint}" />

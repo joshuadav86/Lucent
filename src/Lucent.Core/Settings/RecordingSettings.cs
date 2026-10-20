@@ -38,6 +38,12 @@ public sealed class RecordingSettings
     /// <summary>1 for a mono file from one channel, 2 for stereo from a pair.</summary>
     public int Channels { get; set; } = 2;
 
+    /// <summary>
+    /// With <see cref="Channels"/> 1: the pair starting at <see cref="FirstChannel"/> is mixed into one mono
+    /// channel, rather than one input being taken on its own.
+    /// </summary>
+    public bool SumToMono { get; set; }
+
     public int SampleRate { get; set; } = 48000;
 
     public int BitDepth { get; set; } = 24;
@@ -114,6 +120,7 @@ public sealed class RecordingSettings
 
                     settings.Channels = Math.Clamp(settings.Channels, 1, 2);
                     settings.FirstChannel = Math.Max(0, settings.FirstChannel);
+                    settings.SumToMono &= settings.Channels == 1;
                     return settings;
                 }
             }
