@@ -51,8 +51,17 @@
                         <Path Style="{StaticResource LineIcon}"
                               Data="M2.5,6.5 H11 V10 A3.5,3.5 0 0 1 7.5,13.5 H6 A3.5,3.5 0 0 1 2.5,10 Z M11,7.5 H12 A1.75,1.75 0 0 1 12,11 H10.8 M5.5,4.5 C4.8,3.7 6.2,2.8 5.5,1.5 M8.5,4.5 C7.8,3.7 9.2,2.8 8.5,1.5" />
                     </Button>
+                    <!-- Record from an audio interface: a DJ set, a mixer, a microphone. Also in the waveform menu beside it. -->
+                    <Button x:Name="RecordButton" Style="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
+                            ToolTip="Record from an audio interface: a DJ set, a mixer, or a microphone" Click="OnRecord"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Grid Width="16" Height="16">
+                            <Ellipse Width="14" Height="14" Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.3" />
+                            <Ellipse Width="7" Height="7" Fill="#E5484D" />
+                        </Grid>
+                    </Button>
                     <ToggleButton x:Name="AudioToolsButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
-                                  ToolTip="Edit or convert sounds" Click="OnAudioTools"
+                                  ToolTip="Record, edit, or convert sounds" Click="OnAudioTools"
                                   WindowChrome.IsHitTestVisibleInChrome="True">
                         <Path Style="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
                     </ToggleButton>
