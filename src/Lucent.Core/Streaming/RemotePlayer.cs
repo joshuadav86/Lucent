@@ -8,6 +8,8 @@ public enum RemoteApp
     Spotify,
     AppleMusic,
     YouTube,
+    Tidal,
+    SoundCloud,
 }
 
 /// <summary>A song playing in another app, as that app describes it.</summary>

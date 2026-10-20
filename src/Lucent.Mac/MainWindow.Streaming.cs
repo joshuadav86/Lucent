@@ -100,6 +100,28 @@ public partial class MainWindow
         youTube.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
         menu.Items.Add(youTube);
 
+        var tidal = new MenuItem
+        {
+            Header = "Control TIDAL",
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = _settings.RemoteApp == RemoteApp.Tidal,
+        };
+        ToolTip.SetTip(tidal, "Show what TIDAL's web player (tidal.com) is playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. "
+            + "TIDAL's Mac app can't be controlled by other apps. The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
+        tidal.Click += (_, _) => ToggleRemote(RemoteApp.Tidal);
+        menu.Items.Add(tidal);
+
+        var soundCloud = new MenuItem
+        {
+            Header = "Control SoundCloud",
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = _settings.RemoteApp == RemoteApp.SoundCloud,
+        };
+        ToolTip.SetTip(soundCloud, "Show what SoundCloud is playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. The sound stays in the browser. "
+            + "The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
+        soundCloud.Click += (_, _) => ToggleRemote(RemoteApp.SoundCloud);
+        menu.Items.Add(soundCloud);
+
         if (spotifySaved)
         {
             var signOut = new MenuItem { Header = "Sign out of Spotify" };
@@ -167,6 +189,12 @@ public partial class MainWindow
                     break;
                 case RemoteApp.YouTube:
                     player = new YouTubeRemote(StreamingHttp);
+                    break;
+                case RemoteApp.Tidal:
+                    player = new TidalRemote(StreamingHttp);
+                    break;
+                case RemoteApp.SoundCloud:
+                    player = new SoundCloudRemote(StreamingHttp);
                     break;
                 default:
                     return;
@@ -419,11 +447,16 @@ public partial class MainWindow
     {
         SpotifyRemote => ["com.spotify.client"],
         AppleMusicRemote => ["com.apple.Music"],
-        YouTubeRemote youTube => youTube.BundlePrefixes,
+        BrowserTabRemote browser => browser.BundlePrefixes,
         _ => [],
     };
 
-    private static string RemoteName(RemoteApp app) => app == RemoteApp.AppleMusic ? "Apple Music" : app.ToString();
+    private static string RemoteName(RemoteApp app) => app switch
+    {
+        RemoteApp.AppleMusic => "Apple Music",
+        RemoteApp.Tidal => "TIDAL",
+        _ => app.ToString(),
+    };
 
     private static void OpenInBrowser(string url)
     {

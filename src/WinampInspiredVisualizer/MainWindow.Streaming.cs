@@ -88,16 +88,28 @@ public partial class MainWindow
         appleMusic.Click += (_, _) => ToggleRemote(RemoteApp.AppleMusic);
         menu.Items.Add(appleMusic);
 
-        var youTube = new MenuItem
+        var tidal = new MenuItem
         {
-            Header = "Control YouTube",
+            Header = "Control TIDAL",
+            IsCheckable = true,
+            IsChecked = _settings.RemoteApp == RemoteApp.Tidal,
+            IsEnabled = TidalRemote.IsSupported,
+            ToolTip = "Show what the TIDAL app is playing and use the player's buttons for it. The sound stays in TIDAL. For TIDAL's web player, use the browser item below.",
+        };
+        tidal.Click += (_, _) => ToggleRemote(RemoteApp.Tidal);
+        menu.Items.Add(tidal);
+
+        // YouTube, SoundCloud and every other site: Windows says which browser is playing, not which site.
+        var browser = new MenuItem
+        {
+            Header = "Control your web browser (YouTube, SoundCloud)",
             IsCheckable = true,
             IsChecked = _settings.RemoteApp == RemoteApp.YouTube,
             IsEnabled = YouTubeRemote.IsSupported,
-            ToolTip = "Show the YouTube video playing in your web browser and use the player's buttons for it. The sound stays in the browser.",
+            ToolTip = "Show what's playing in your web browser (YouTube, SoundCloud, TIDAL's web player, or any site) and use the player's buttons for it. The sound stays in the browser.",
         };
-        youTube.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
-        menu.Items.Add(youTube);
+        browser.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
+        menu.Items.Add(browser);
 
         if (spotifySaved)
         {
@@ -166,6 +178,9 @@ public partial class MainWindow
                     break;
                 case RemoteApp.YouTube when YouTubeRemote.IsSupported:
                     player = new YouTubeRemote();
+                    break;
+                case RemoteApp.Tidal when TidalRemote.IsSupported:
+                    player = new TidalRemote();
                     break;
                 default:
                     return;
@@ -443,7 +458,13 @@ public partial class MainWindow
         _ => [],
     };
 
-    private static string RemoteName(RemoteApp app) => app == RemoteApp.AppleMusic ? "Apple Music" : app.ToString();
+    private static string RemoteName(RemoteApp app) => app switch
+    {
+        RemoteApp.AppleMusic => "Apple Music",
+        RemoteApp.Tidal => "TIDAL",
+        RemoteApp.YouTube => "your browser",
+        _ => app.ToString(),
+    };
 
     private static void OpenInBrowser(string url)
     {
