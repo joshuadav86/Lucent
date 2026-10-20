@@ -133,11 +133,14 @@ public static class SkinManager
         switch (skin.Finish)
         {
             case SkinFinish.Bevel:
-                // Raised windows and buttons (light top and left, dark bottom and right) around a sunken LCD.
-                frame = Diagonal(Mix(raised, white, 0.35), Mix(background, black, 0.5));
-                titleBar = Lines(Fade(Mix(hairline, text, 0.15), 0.8), 2);
+                // Raised windows and buttons (light along the top, dark along the bottom) around a sunken LCD.
+                // Top to bottom rather than corner to corner, so a wide window's top edge is one colour
+                // all the way along instead of turning dark halfway across.
+                frame = Vertical(Mix(raised, white, 0.35), Mix(background, black, 0.5));
+                // A raised bar with light catching its top. (Ridges behind the title ran through its text.)
+                titleBar = Vertical(Fade(white, light ? 0.45 : 0.07), Fade(black, light ? 0.04 : 0.22));
                 display = Solid(Mix(background, black, light ? 0.85 : 0.6));
-                displayEdge = Diagonal(Mix(background, black, 0.6), Mix(raised, white, 0.25));
+                displayEdge = Vertical(Mix(background, black, 0.6), Mix(raised, white, 0.25));
                 displayInset = Solid(Fade(black, 0.6));
                 displayLines = Lines(Fade(black, 0.35), 3);
                 timeText = Solid(accent);
@@ -359,11 +362,6 @@ public static class SkinManager
 
     private static IBrush Vertical(Color top, Color bottom) =>
         Stops(new RelativePoint(0, 0, RelativeUnit.Relative), new RelativePoint(0, 1, RelativeUnit.Relative), (top, 0), (bottom, 1));
-
-    /// <summary>Light in the top left corner to dark in the bottom right, for raised and sunken edges.</summary>
-    private static IBrush Diagonal(Color topLeft, Color bottomRight) =>
-        Stops(new RelativePoint(0, 0, RelativeUnit.Relative), new RelativePoint(1, 1, RelativeUnit.Relative),
-            (topLeft, 0), (topLeft, 0.45), (bottomRight, 0.55), (bottomRight, 1));
 
     /// <summary>Thin horizontal lines, one every <paramref name="spacing"/> pixels: scan lines and ridges.</summary>
     private static IBrush Lines(Color colour, double spacing)
