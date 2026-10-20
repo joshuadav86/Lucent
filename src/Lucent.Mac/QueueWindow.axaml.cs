@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Lucent.Mac.Windows;
 using WinampInspiredVisualizer.Playlist;
+using WinampInspiredVisualizer.Streaming;
 
 namespace Lucent.Mac;
 
@@ -130,6 +131,93 @@ public partial class QueueWindow : ToolWindow
         {
             // The Mac's delete key sends Back; the forward-delete key sends Delete.
             Player?.RemoveFromQueue(SelectedEntries());
+            e.Handled = true;
+        }
+    }
+
+    // ---- Another app's playlist ----
+
+    private RemoteList? _remoteList;
+    private List<RemoteListEntry> _remoteEntries = new();
+    private string? _remotePlaying;
+
+    /// <summary>True while another app's playlist shows in place of the queue.</summary>
+    public bool ShowingRemoteList => _remoteList is not null;
+
+    /// <summary>
+    /// Shows <paramref name="list"/>, the songs <paramref name="appName"/> is playing through, in place of the queue,
+    /// marking the one with <paramref name="playingId"/>; or puts the queue back when <paramref name="list"/> is null.
+    /// </summary>
+    public void ShowRemoteList(string appName, RemoteList? list, string? playingId)
+    {
+        if (!ReferenceEquals(list, _remoteList))
+        {
+            _remoteList = list;
+            _remoteEntries = list?.Tracks.Select(track => new RemoteListEntry(track)).ToList() ?? new List<RemoteListEntry>();
+            RemoteListView.ItemsSource = _remoteEntries;
+            _remotePlaying = null;
+            var showing = list is not null;
+            PlaylistView.IsVisible = !showing;
+            RemoteListView.IsVisible = showing;
+            AddFilesButton.IsVisible = AddFolderButton.IsVisible = ClearQueueButton.IsVisible = !showing;
+            if (showing)
+            {
+                EmptyPlaylistHint.IsVisible = false;
+            }
+
+            RemoteListNote.Text = list?.Note ?? string.Empty;
+            RemoteListNote.IsVisible = list?.Note is not null;
+            RemotePlayItem.Header = $"Play in {appName}";
+            QueueTitle.Text = list is null ? "QUEUE" : appName.ToUpperInvariant();
+            if (list is not null)
+            {
+                QueueCount.Text = list.Tracks.Count == 1 ? $"{list.Name}  ·  1 song" : $"{list.Name}  ·  {list.Tracks.Count} songs";
+            }
+        }
+
+        if (playingId == _remotePlaying)
+        {
+            return;
+        }
+
+        _remotePlaying = playingId;
+        RemoteListEntry? playing = null;
+        foreach (var entry in _remoteEntries)
+        {
+            entry.IsCurrent = entry.Track.Id == playingId;
+            playing ??= entry.IsCurrent ? entry : null;
+        }
+
+        if (playing is not null)
+        {
+            RemoteListView.ScrollIntoView(playing);
+        }
+    }
+
+    private void PlayChosenRemoteSong()
+    {
+        if (RemoteListView.SelectedItem is RemoteListEntry entry)
+        {
+            Player?.PlayFromRemoteList(entry.Track);
+        }
+    }
+
+    private void OnRemoteListDoubleClick(object? sender, TappedEventArgs e)
+    {
+        // Only rows count, as in the queue.
+        if ((e.Source as Control)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: RemoteListEntry entry })
+        {
+            Player?.PlayFromRemoteList(entry.Track);
+        }
+    }
+
+    private void OnRemoteListPlay(object? sender, RoutedEventArgs e) => PlayChosenRemoteSong();
+
+    private void OnRemoteListKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            PlayChosenRemoteSong();
             e.Handled = true;
         }
     }

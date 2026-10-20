@@ -17,7 +17,7 @@ namespace Lucent.Mac.Streaming;
 /// macOS has nothing like those that other apps may press, so the Mac goes to the tab itself. Only
 /// running browsers are asked, so Lucent never opens one by itself.
 /// </remarks>
-public sealed class YouTubeRemote : IRemotePlayer
+public sealed class YouTubeRemote : IRemotePlayer, IRemoteLists
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -28,16 +28,38 @@ public sealed class YouTubeRemote : IRemotePlayer
     private const string FindVideo = "var v=document.querySelector('#movie_player video')||document.querySelector('video');if(!v)return 'none';";
 
     // Fields between tabs: state, the video's ID, title, channel, album (YouTube Music), length, position
-    // (in seconds) and the cover's address. YouTube tells the browser's media controls the title, channel
+    // (in seconds), the cover's address and the playlist's ID (empty when it isn't playing through one). YouTube tells the browser's media controls the title, channel
     // and cover, so they're read from there, with the page's title to fall back on.
     private const string ReadVideo = FindVideo + """
         var m=navigator.mediaSession&&navigator.mediaSession.metadata;
         var art=m&&m.artwork&&m.artwork.length?m.artwork[m.artwork.length-1].src:'';
         var id=new URLSearchParams(location.search).get('v')||location.pathname;
         var title=(m&&m.title)||document.title.replace(/ - YouTube( Music)?$/,'');
-        var f=[v.paused?'paused':'playing',id,title,(m&&m.artist)||'',(m&&m.album)||'',isFinite(v.duration)?v.duration:0,v.currentTime,art];
+        var list=new URLSearchParams(location.search).get('list')||'';
+        var f=[v.paused?'paused':'playing',id,title,(m&&m.artist)||'',(m&&m.album)||'',isFinite(v.duration)?v.duration:0,v.currentTime,art,list];
         var t=String.fromCharCode(9),n=String.fromCharCode(10);
         return f.map(function(x){return String(x).split(t).join(' ').split(n).join(' ');}).join(t);
+        """;
+
+    // Run in the tab. The playlist panel beside a video playing through a playlist (the one on screen, as a narrow
+    // window has a second one under the video), or null when there's none.
+    private const string FindPlaylist = """
+        var p=[].slice.call(document.querySelectorAll('ytd-playlist-panel-renderer')).filter(function(x){return x.querySelector('ytd-playlist-panel-video-renderer');});
+        p=p.filter(function(x){return x.offsetParent!==null;})[0]||p[0];
+        if(!p)return 'none';
+        var rows=[].slice.call(p.querySelectorAll('ytd-playlist-panel-video-renderer'));
+        var idOf=function(r){var a=r.querySelector('a#wc-endpoint')||r.querySelector('a[href]');return a?[a,new URL(a.href,location.href).searchParams.get('v')]:[null,null];};
+        """;
+
+    // Lines: the playlist's name, then a line a video: its ID, title, channel and length (as YouTube shows it, 3:45), between tabs.
+    private const string ReadPlaylist = FindPlaylist + """
+        var t=String.fromCharCode(9),n=String.fromCharCode(10);
+        var clean=function(x){return String(x||'').trim().split(t).join(' ').split(n).join(' ');};
+        var h=p.querySelector('.title')||p.querySelector('h3');
+        var out=[clean(h&&h.textContent)];
+        rows.forEach(function(r){var id=idOf(r)[1];if(!id)return;var ti=r.querySelector('#video-title');var by=r.querySelector('#byline');var d=r.querySelector('ytd-thumbnail-overlay-time-status-renderer');
+        out.push([id,clean(ti&&(ti.getAttribute('title')||ti.textContent)),clean(by&&by.textContent),clean(d&&d.textContent)].join(t));});
+        return out.join(n);
         """;
 
     private readonly HttpClient _http;
@@ -100,8 +122,65 @@ public sealed class YouTubeRemote : IRemotePlayer
 
         var track = new RemoteTrack($"{tab.Browser}|{video[1]}", video[2], video[3], video[4], Seconds(video[5]),
             video[7].StartsWith("http", StringComparison.Ordinal) ? video[7] : null);
-        return new RemoteState(track, video[0] == "playing", Seconds(video[6]), readAt);
+        var playlist = video.Length > 8 && video[8].Length > 0 ? $"{tab.Browser}|{video[8]}" : null;
+        return new RemoteState(track, video[0] == "playing", Seconds(video[6]), readAt, playlist);
     }
+
+    // A playlist's videos, from the panel YouTube shows beside the video. YouTube Music's queue isn't read.
+    public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel)
+    {
+        if (state.ListId is null || _tab is not { } tab)
+        {
+            return null;
+        }
+
+        var result = await AskTabAsync(ReadPlaylist, cancel);
+        return result == "none" ? null : ParsePlaylist(state.ListId, tab.Browser, result);
+    }
+
+    // Clicking the video in the panel, as the user would, plays it and carries on through the playlist.
+    public async Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel)
+    {
+        var video = track.Id[(track.Id.IndexOf('|') + 1)..];
+        var result = await AskTabAsync(FindPlaylist
+            + $"var r=rows.filter(function(r){{return idOf(r)[1]==={Json(video)};}})[0];if(!r)return 'none';idOf(r)[0].click();return 'ok';", cancel);
+        if (result != "ok")
+        {
+            throw new RemoteProblem("That video isn't in the YouTube tab's playlist any more.");
+        }
+    }
+
+    /// <summary>The playlist <see cref="ReadPlaylist"/> prints, in <paramref name="browser"/>, for <paramref name="id"/>.</summary>
+    internal static RemoteList ParsePlaylist(string id, string browser, string text)
+    {
+        var lines = text.Split('\n');
+        var tracks = lines.Skip(1)
+            .Select(line => line.TrimEnd('\r').Split('\t'))
+            .Where(fields => fields.Length >= 4)
+            .Select(fields => new RemoteTrack($"{browser}|{fields[0]}", fields[1], fields[2], string.Empty, Clock(fields[3])))
+            .ToList();
+        return new RemoteList(id, lines[0].Length > 0 ? lines[0] : "Playlist", tracks);
+    }
+
+    // "3:45" or "1:02:03", as YouTube shows a video's length.
+    private static TimeSpan Clock(string text)
+    {
+        var seconds = 0.0;
+        foreach (var part in text.Trim().Split(':'))
+        {
+            if (!int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var value))
+            {
+                return TimeSpan.Zero;
+            }
+
+            seconds = seconds * 60 + value;
+        }
+
+        return TimeSpan.FromSeconds(seconds);
+    }
+
+    // A JavaScript string. A video ID is only letters, digits, - and _, but nothing else can get through either.
+    private static string Json(string text) => System.Text.Json.JsonSerializer.Serialize(text);
 
     public Task PlayAsync(CancellationToken cancel) => TellAsync("v.play();", cancel);
 
@@ -154,13 +233,23 @@ public sealed class YouTubeRemote : IRemotePlayer
 
     private async Task TellAsync(string action, CancellationToken cancel)
     {
+        if (await AskTabAsync(FindVideo + action + "return 'ok';", cancel) != "ok")
+        {
+            _tab = null;
+            throw new RemoteProblem("That YouTube tab has closed or moved on. Lucent will find the next one that plays.");
+        }
+    }
+
+    // Runs the JavaScript in the tab last shown and returns what it returns ("gone" when the tab has).
+    private async Task<string> AskTabAsync(string script, CancellationToken cancel)
+    {
         if (_tab is not { } tab || !RunningBrowsers().Contains(tab.Browser))
         {
             throw new RemoteProblem("Play a YouTube video in Safari, Chrome, Edge or Brave, then Lucent can control it.");
         }
 
-        var js = Quote(Wrap(FindVideo + action + "return 'ok';"));
-        var script = IsSafari(tab.Browser)
+        var js = Quote(Wrap(script));
+        var apple = IsSafari(tab.Browser)
             ? $$"""
                 tell application "Safari"
                     try
@@ -183,16 +272,8 @@ public sealed class YouTubeRemote : IRemotePlayer
                 end tell
                 return "gone"
                 """;
-        switch (await RunAsync(tab.Browser, script, cancel))
-        {
-            case "nojs":
-                throw new RemoteProblem(AllowJavaScript(tab.Browser));
-            case "ok":
-                return;
-            default:
-                _tab = null;
-                throw new RemoteProblem("That YouTube tab has closed or moved on. Lucent will find the next one that plays.");
-        }
+        var result = await RunAsync(tab.Browser, apple, cancel);
+        return result == "nojs" ? throw new RemoteProblem(AllowJavaScript(tab.Browser)) : result;
     }
 
     private static string AllowJavaScript(string browser) => IsSafari(browser)

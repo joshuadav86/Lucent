@@ -222,6 +222,7 @@ public partial class MainWindow
         _settings.Save();
         _shownRemoteTrack = null;
         _shownRemoteArtwork = null;
+        ShowRemoteList();
         UpdateListening();
         ShowNowPlaying(_current?.Track);
         UpdatePlayPauseButton();
@@ -254,6 +255,37 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>How long the queue is, in its window's title bar, unless another app's playlist is showing there instead.</summary>
+    private void ShowQueueSize()
+    {
+        if (_queue.ShowingRemoteList)
+        {
+            return;
+        }
+
+        _queue.EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        _queue.QueueCount.Text = _playlist.Count switch
+        {
+            0 => "Empty",
+            1 => "1 track",
+            var count => $"{count} tracks",
+        };
+    }
+
+    /// <summary>Shows the playlist the other app is playing through in the queue window, or the queue again.</summary>
+    private void ShowRemoteList()
+    {
+        var showing = _queue.ShowingRemoteList;
+        _queue.ShowRemoteList(_remote?.Player.Name ?? string.Empty, _remote?.List, _remote?.State?.Track?.Id);
+        if (showing && !_queue.ShowingRemoteList)
+        {
+            ShowQueueSize();
+        }
+    }
+
+    /// <summary>Plays one of the songs from the other app's playlist, in that app.</summary>
+    public void PlayFromRemoteList(RemoteTrack track) => RemoteTakes(remote => remote.PlayFromListAsync(track));
+
     private void OnRemoteChanged(object? sender, EventArgs e)
     {
         if (sender != _remote)
@@ -262,6 +294,7 @@ public partial class MainWindow
         }
 
         ShowRemote();
+        ShowRemoteList();
         UpdatePlayPauseButton();
         UpdatePosition();
     }
