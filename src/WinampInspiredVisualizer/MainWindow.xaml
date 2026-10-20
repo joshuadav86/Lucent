@@ -217,13 +217,13 @@
                                     </Border>
                                     <TextBlock Style="{StaticResource OptionHint}"
                                                Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
-                                    <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" Margin="2,8,0,0" />
+                                    <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" />
                                     <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
-                                    <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionHint}" Visibility="Collapsed" />
+                                    <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed" />
                                     <StackPanel x:Name="WhatsNewPanel" Visibility="Collapsed">
                                         <TextBlock Style="{StaticResource OptionLabel}" Text="What's new" />
                                         <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
-                                            <TextBlock x:Name="WhatsNewText" Style="{StaticResource OptionHint}" Margin="2,0,0,0" />
+                                            <TextBlock x:Name="WhatsNewText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource TextBrush}" Margin="2,0,0,0" />
                                         </ScrollViewer>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">

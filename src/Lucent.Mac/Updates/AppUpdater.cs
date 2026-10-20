@@ -190,9 +190,10 @@ public sealed class AppUpdater
             _downloadedWith.WaitExitThenApplyUpdates(_downloaded, silent: true, restart: restart);
             _applying = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // The update stays downloaded; Velopack installs it the next time Lucent starts.
+            ErrorLog.Write("Installing the update", ex);
         }
     }
 
