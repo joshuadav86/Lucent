@@ -48,10 +48,9 @@ public partial class MainWindow
         {
             Header = "Visuals for every app's sound",
             IsCheckable = true,
-            IsChecked = _settings.ListenToOtherApps || _remote is not null,
-            IsEnabled = _remote is null,
-            ToolTip = _remote is not null
-                ? $"Always on while Lucent controls {_remote.Player.Name}."
+            IsChecked = _settings.ListenToOtherApps,
+            ToolTip = _remote is not null && !_settings.ListenToOtherApps
+                ? $"While Lucent controls {_remote.Player.Name}, the visuals hear only {_remote.Player.Name}. Turn this on to have them hear every app."
                 : $"The visuals, meter and analyzer react to whatever is playing on {SystemAudio.DefaultOutputName() ?? "this PC"}: Spotify, a browser, a game.",
         };
         listen.Click += (_, _) =>
@@ -295,6 +294,7 @@ public partial class MainWindow
 
         ShowRemote();
         ShowRemoteList();
+        UpdateListening();
         UpdatePlayPauseButton();
         UpdatePosition();
     }
@@ -333,42 +333,114 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Has the visuals listen to every app's sound when asked to, or while another app is being controlled.</summary>
+    // What the visuals are listening to: null for nothing (Lucent's own music), EveryApp for every app's sound,
+    // or the process ID of the app being controlled.
+    private const int EveryApp = -1;
+    private int? _listeningTo;
+
+    // Set when Windows couldn't listen to just one app, so every app's sound is listened to instead.
+    private bool _oneAppFailed;
+
+    /// <summary>
+    /// Has the visuals listen to every app's sound when asked to, and otherwise, while another app is being
+    /// controlled, to just that app, so a video or a call playing alongside doesn't move them. Called again
+    /// with each read of the app, to follow it when it starts, quits or moves to another browser.
+    /// </summary>
     private void UpdateListening()
     {
-        var wanted = _settings.ListenToOtherApps || _remote is not null;
-        if (wanted == (_systemAudio is not null))
+        int? wanted;
+        if (_settings.ListenToOtherApps || (_remote is not null && (!SystemAudio.CanListenToOneApp || _oneAppFailed)))
+        {
+            wanted = EveryApp;
+        }
+        else if (_remote is null)
+        {
+            wanted = null;
+        }
+        else
+        {
+            wanted = _systemAudio is not null && _listeningTo is int current and > 0 && IsRemoteProcess(current)
+                ? current
+                : FindRemoteProcess();
+        }
+
+        if (wanted == (_systemAudio is null ? null : _listeningTo))
         {
             return;
         }
 
-        if (!wanted)
+        _systemAudio?.Dispose();
+        _systemAudio = null;
+        _listeningTo = null;
+        if (wanted is not { } target)
         {
-            _systemAudio?.Dispose();
-            _systemAudio = null;
             return;
         }
 
         try
         {
-            var listening = SystemAudio.Start(_player.Capture);
+            var listening = target == EveryApp ? SystemAudio.Start(_player.Capture) : SystemAudio.StartForApp(_player.Capture, target);
             listening.Stopped += (_, _) => Dispatcher.BeginInvoke(() =>
             {
-                // The output went away (unplugged headphones, say): listen to whichever one Windows uses now.
+                // The output went away (unplugged headphones, say), or the app did: listen again to whatever's there now.
                 if (_systemAudio == listening)
                 {
                     listening.Dispose();
                     _systemAudio = null;
+                    _listeningTo = null;
                     UpdateListening();
                 }
             });
             _systemAudio = listening;
+            _listeningTo = target;
         }
         catch (Exception ex)
         {
             Trace.WriteLine($"Couldn't listen to other apps: {ex}");
+            if (target != EveryApp)
+            {
+                // This Windows can't listen to one app after all, so the visuals hear every app's sound.
+                _oneAppFailed = true;
+                UpdateListening();
+            }
         }
     }
+
+    // The process the controlled app's sound comes from, or null when it isn't running on this PC (Spotify
+    // playing on a phone, say).
+    private int? FindRemoteProcess()
+    {
+        foreach (var name in RemoteProcessNames())
+        {
+            using var process = SystemAudio.FindApp(name);
+            if (process is not null)
+            {
+                return process.Id;
+            }
+        }
+
+        return null;
+    }
+
+    private bool IsRemoteProcess(int id)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(id);
+            return !process.HasExited && RemoteProcessNames().Contains(process.ProcessName, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private IReadOnlyList<string> RemoteProcessNames() => _remote?.Player switch
+    {
+        SpotifyRemote => ["Spotify"],
+        MediaControlsRemote media => media.ProcessNames,
+        _ => [],
+    };
 
     private static string RemoteName(RemoteApp app) => app == RemoteApp.AppleMusic ? "Apple Music" : app.ToString();
 

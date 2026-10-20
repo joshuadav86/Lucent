@@ -144,6 +144,24 @@ public static class SelfTest
             Console.WriteLine($"::warning::Couldn't listen to other apps here: {ex.Message}");
         }
 
+        // Listening to one app (the one Lucent controls), tried on Lucent itself.
+        if (SystemAudio.CanListenToOneApp)
+        {
+            try
+            {
+                using (SystemAudio.StartForApp(capture, Environment.ProcessId))
+                {
+                    Thread.Sleep(300);
+                }
+
+                Console.WriteLine("Listened to one app's sound.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"::warning::Couldn't listen to one app here: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
         if (capture.IsExternal)
         {
             problems++;

@@ -23,6 +23,15 @@ public abstract class MediaControlsRemote : IRemotePlayer
     /// <summary>What to tell the user when the app isn't playing anything Windows can see.</summary>
     protected abstract string NotOpen { get; }
 
+    /// <summary>
+    /// The processes the app's sound comes from, as Task Manager names them (without .exe), so the visuals can
+    /// listen to just that app.
+    /// </summary>
+    public abstract IReadOnlyList<string> ProcessNames { get; }
+
+    /// <summary>How Windows names the app last read (its AppUserModelID), or null before then.</summary>
+    protected string? SourceAppId { get; private set; }
+
     /// <summary>The app's player among everything Windows' media controls know about, or null.</summary>
     protected abstract GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions);
 
@@ -96,7 +105,13 @@ public abstract class MediaControlsRemote : IRemotePlayer
     private async Task<GlobalSystemMediaTransportControlsSession?> SessionAsync()
     {
         _manager ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-        return Pick(_manager.GetSessions());
+        var session = Pick(_manager.GetSessions());
+        if (session is not null)
+        {
+            SourceAppId = session.SourceAppUserModelId;
+        }
+
+        return session;
     }
 
     public void Dispose()

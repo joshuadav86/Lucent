@@ -71,6 +71,19 @@ public sealed class YouTubeRemote : IRemotePlayer, IRemoteLists
 
     public string Name => "YouTube";
 
+    /// <summary>
+    /// The bundle IDs the playing browser's sound comes from (its helpers' IDs start the same way; Safari's sound
+    /// comes from WebKit's), so the visuals can listen to just that browser. Empty until a YouTube tab is found.
+    /// </summary>
+    public IReadOnlyList<string> BundlePrefixes => _tab?.Browser switch
+    {
+        "Safari" => ["com.apple.Safari", "com.apple.WebKit"],
+        "Google Chrome" => ["com.google.Chrome"],
+        "Microsoft Edge" => ["com.microsoft.edgemac"],
+        "Brave Browser" => ["com.brave.Browser"],
+        _ => [],
+    };
+
     public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
         var found = new List<(Tab Tab, string[] Video)>();

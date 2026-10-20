@@ -48,11 +48,12 @@ public partial class MainWindow
         {
             Header = "Visuals for every app's sound",
             ToggleType = MenuItemToggleType.CheckBox,
-            IsChecked = _settings.ListenToOtherApps || _remote is not null,
-            IsEnabled = _remote is null && SystemAudio.IsSupported,
+            IsChecked = _settings.ListenToOtherApps,
+            IsEnabled = SystemAudio.IsSupported,
         };
         ToolTip.SetTip(listen, !SystemAudio.IsSupported ? "Listening to other apps needs macOS 14.2 or later."
-            : _remote is not null ? $"Always on while Lucent controls {_remote.Player.Name}."
+            : _remote is not null && !_settings.ListenToOtherApps
+                ? $"While Lucent controls {_remote.Player.Name}, the visuals hear only {_remote.Player.Name}. Turn this on to have them hear every app."
             : $"The visuals, meter and analyzer react to whatever is playing on {SystemAudio.DefaultOutputName() ?? "this Mac"}: Spotify, a browser, a game. macOS asks once whether Lucent may record the Mac's sound.");
         listen.Click += (_, _) =>
         {
@@ -294,6 +295,7 @@ public partial class MainWindow
 
         ShowRemote();
         ShowRemoteList();
+        UpdateListening();
         UpdatePlayPauseButton();
         UpdatePosition();
     }
@@ -332,25 +334,59 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Has the visuals listen to every app's sound when asked to, or while another app is being controlled.</summary>
+    // What the visuals are listening to: null for nothing (Lucent's own music), EveryApp for every app's sound,
+    // or the controlled app's processes (Core Audio's objects for them, joined with commas).
+    private const string EveryApp = "*";
+    private string? _listeningTo;
+
+    // Set when macOS couldn't listen to just one app, so every app's sound is listened to instead.
+    private bool _oneAppFailed;
+
+    /// <summary>
+    /// Has the visuals listen to every app's sound when asked to, and otherwise, while another app is being
+    /// controlled, to just that app, so a video or a call playing alongside doesn't move them. Called again
+    /// with each read of the app, to follow it when it starts, quits or moves to another browser.
+    /// </summary>
     private void UpdateListening()
     {
-        var wanted = _settings.ListenToOtherApps || _remote is not null;
-        if (wanted == (_systemAudio is not null))
+        List<uint>? processes = null;
+        string? wanted;
+        if (!SystemAudio.IsSupported)
         {
             return;
         }
 
-        if (!wanted)
+        if (_settings.ListenToOtherApps || (_remote is not null && _oneAppFailed))
         {
-            _systemAudio?.Dispose();
-            _systemAudio = null;
+            wanted = EveryApp;
+        }
+        else if (_remote is null)
+        {
+            wanted = null;
+        }
+        else
+        {
+            // Only processes that use sound have an object, so the app is looked for again until it plays.
+            processes = SystemAudio.FindApp(RemoteBundles());
+            wanted = processes.Count == 0 ? null : string.Join(",", processes);
+        }
+
+        if (wanted == (_systemAudio is null ? null : _listeningTo))
+        {
+            return;
+        }
+
+        _systemAudio?.Dispose();
+        _systemAudio = null;
+        _listeningTo = null;
+        if (wanted is null)
+        {
             return;
         }
 
         try
         {
-            var listening = SystemAudio.Start(_player.Capture);
+            var listening = processes is null ? SystemAudio.Start(_player.Capture) : SystemAudio.StartForApp(_player.Capture, processes);
             listening.Stopped += (_, _) => Dispatcher.UIThread.Post(() =>
             {
                 // The output went away (unplugged headphones, say): listen to whichever one the Mac uses now.
@@ -358,16 +394,33 @@ public partial class MainWindow
                 {
                     listening.Dispose();
                     _systemAudio = null;
+                    _listeningTo = null;
                     UpdateListening();
                 }
             });
             _systemAudio = listening;
+            _listeningTo = wanted;
         }
         catch (Exception ex)
         {
             Trace.WriteLine($"Couldn't listen to other apps: {ex}");
+            if (processes is not null)
+            {
+                // macOS wouldn't tap just the one app, so the visuals hear every app's sound.
+                _oneAppFailed = true;
+                UpdateListening();
+            }
         }
     }
+
+    // The bundle IDs the controlled app's sound comes from.
+    private IReadOnlyList<string> RemoteBundles() => _remote?.Player switch
+    {
+        SpotifyRemote => ["com.spotify.client"],
+        AppleMusicRemote => ["com.apple.Music"],
+        YouTubeRemote youTube => youTube.BundlePrefixes,
+        _ => [],
+    };
 
     private static string RemoteName(RemoteApp app) => app == RemoteApp.AppleMusic ? "Apple Music" : app.ToString();
 
