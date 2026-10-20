@@ -1,6 +1,6 @@
 # MilkDrop preset credits
 
-These 217 presets come from projectM's "Cream of the Crop" collection:
+These 216 presets come from projectM's "Cream of the Crop" collection:
 https://github.com/projectM-visualizer/presets-cream-of-the-crop (commit 0180df2, 2025-10-08).
 
 License note from that pack (LICENSE.md): MilkDrop presets were, in almost all cases, not released under any specific
@@ -17,11 +17,13 @@ Two file names don't follow the pack's pattern, so Lucent credits them by hand (
 shader. "i made hexcollies day!" doesn't say who made it, so it shows without a name; if it's yours, open an issue.
 
 The first table was picked in October 2026 (one, "PieturP - stripes-goingSlowMix", was dropped later because it
-flashes about ten times a second). The 72 in the second table were added later: they're presets that
+flashes about ten times a second). The 71 in the second table were added later: they're presets that
 first shipped with MilkDrop 2 itself (projectM's "Milkdrop Original" pack,
 https://github.com/projectM-visualizer/presets-milkdrop-original) and are in Cream of the Crop too, where these
 copies come from, picked the same way: they run without notes in Lucent, need no image textures, their shaders
-compile, and the self-tests found them neither black nor flashing more than three times a second.
+compile, and the self-tests found them neither black nor flashing more than three times a second. One more, "Goody - LSD
+Zoomtunnel", was dropped later: it never fades its picture (decay 1), so with some music it washes out to a flat
+white field and stays that way.
 
 **If you made one of these and want it removed, open an issue.**
 
@@ -200,7 +202,6 @@ compile, and the self-tests found them neither black nor flashing more than thre
 | Geiss - Tokamak Plus 4.milk | Waveform/Wire Tangle |
 | Goody - Acid Angel - Fallen Angel.milk | Waveform/Wire Tangle |
 | Goody - Aurora Totalis.milk | Waveform/Wire Rising |
-| Goody - LSD Zoomtunnel.milk | Waveform/Wire Circular |
 | Goody - Need - Desire remix.milk | Waveform/Wire Rising |
 | Goody - Need - Transcendance remix.milk | Waveform/Wire Rising |
 | Goody - The Thing That Lives Between.milk | Waveform/Wire Tangle |
