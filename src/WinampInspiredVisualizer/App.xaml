@@ -111,6 +111,7 @@
         <Geometry x:Key="VisualsSparkIcon">M9.1,6.2 Q9.98,9.72 13.5,10.6 Q9.98,11.48 9.1,15 Q8.22,11.48 4.7,10.6 Q8.22,9.72 9.1,6.2 Z M14.4,5.1 Q14.86,6.54 16.3,7 Q14.86,7.46 14.4,8.9 Q13.94,7.46 12.5,7 Q13.94,6.54 14.4,5.1 Z</Geometry>
         <Geometry x:Key="HeartIcon">M8,14 C8,14 1.2,9.6 1.2,5.4 A3.3,3.3 0 0 1 8,4.2 A3.3,3.3 0 0 1 14.8,5.4 C14.8,9.6 8,14 8,14 Z</Geometry>
         <Geometry x:Key="StarIcon">M8,1 L10.1,5.6 L15,6.1 L11.3,9.4 L12.4,14.3 L8,11.8 L3.6,14.3 L4.7,9.4 L1,6.1 L5.9,5.6 Z</Geometry>
+        <Geometry x:Key="WebsiteIcon">M8,1 A7,7 0 1 1 7.99,1 Z M1,8 H15 M8,1 C4.8,4 4.8,12 8,15 M8,1 C11.2,4 11.2,12 8,15</Geometry>
         <Geometry x:Key="ListIcon">M1,3 H11 M1,8 H11 M1,13 H8 M13,10 V16 M10,13 H16</Geometry>
         <Geometry x:Key="EjectIcon">M7,0 L14,8 H0 Z M0,10 H14 V12.5 H0 Z</Geometry>
         <Geometry x:Key="ShuffleIcon">M1,4 H3.5 Q6.5,4 8,8 Q9.5,12 12.5,12 H15 M1,12 H3.5 Q6.5,12 8,8 Q9.5,4 12.5,4 H15 M13,2 L15,4 L13,6 M13,10 L15,12 L13,14</Geometry>
