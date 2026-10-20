@@ -50,11 +50,13 @@ float4 trunkIn(float2 cell)
     {
         return float4(0.0, 0.0, 0.0, 0.0);
     }
+    // Two hashes give the place; the size and lean are stirred out of them rather than hashed
+    // afresh, since this runs for four cells at every step of the march.
     float a = hash(cell * 1.37 + 0.5);
     float b = hash(cell * 2.11 + 3.1);
     float2 centre = (cell + 0.5) * CellSize + (float2(a, b) - 0.5) * CellSize * 0.5;
-    float radius = 0.16 + hash(cell + 7.7) * 0.26;
-    return float4(centre, radius, (hash(cell + 9.1) - 0.5) * 0.06);
+    float radius = 0.16 + frac(a * 7.31 + b * 3.17) * 0.26;
+    return float4(centre, radius, (frac(a * 5.13 + b * 11.7) - 0.5) * 0.06);
 }
 
 float trunkDistance(float3 q, float4 trunk)
@@ -114,24 +116,27 @@ float groundHeight(float2 xz)
 // The ground is never higher than this: the rolling noise reaches 0.75, the ferns 0.5 more.
 static const float HighestGround = 1.25;
 
-float sceneDistance(float3 q, out int material)
+// groundStep is how much of the height above the ground to step: 0.6 is safe on the ferns' steep
+// fronds. Further off, where a frond slightly overstepped can't be seen, longer steps let rays that
+// skim the ground reach it in far fewer steps.
+float sceneDistance(float3 q, out int material, float groundStep = 0.6)
 {
     float trees = treesDistance(q);
     // Well above the highest ground, how far above it is a safe step and saves working out the
     // ground's shape; close to it, the exact height.
-    float ground = q.y > HighestGround + 0.1 ? (q.y - HighestGround) * 0.6 : (q.y - groundHeight(q.xz)) * 0.6;
+    float ground = (q.y > HighestGround + 0.1 ? q.y - HighestGround : q.y - groundHeight(q.xz)) * groundStep;
     material = trees < ground ? 1 : 0;
     return min(trees, ground);
 }
 
 float3 sceneNormal(float3 q)
 {
+    // Four samples at the corners of a tetrahedron rather than six along the axes.
     const float e = 0.01;
+    const float2 k = float2(1.0, -1.0);
     int m;
-    return normalize(float3(
-        sceneDistance(q + float3(e, 0, 0), m) - sceneDistance(q - float3(e, 0, 0), m),
-        sceneDistance(q + float3(0, e, 0), m) - sceneDistance(q - float3(0, e, 0), m),
-        sceneDistance(q + float3(0, 0, e), m) - sceneDistance(q - float3(0, 0, e), m)));
+    return normalize(k.xyy * sceneDistance(q + k.xyy * e, m) + k.yyx * sceneDistance(q + k.yyx * e, m)
+        + k.yxy * sceneDistance(q + k.yxy * e, m) + k.xxx * sceneDistance(q + k.xxx * e, m));
 }
 
 // ---- Light through the leaves ----
@@ -190,7 +195,9 @@ float sunVisibility(float3 q)
 float mistDensity(float3 q)
 {
     float drift = Time * 0.15;
-    float n = mistNoise(q * 0.35 + float3(drift, 0.0, drift * 0.4)) * 0.65 + mistNoise(q * 0.9 - float3(0.0, drift, 0.0)) * 0.35;
+    // The finer wisps are flat noise across the ground rather than a second 3D noise: half the
+    // hashing, and the shafts look the same.
+    float n = mistNoise(q * 0.35 + float3(drift, 0.0, drift * 0.4)) * 0.65 + noise(q.xz * 0.9 + float2(q.y * 0.7, -drift)) * 0.35;
     return 0.022 * exp(-max(q.y, 0.0) * 0.25) * (0.35 + n * 1.1);
 }
 
@@ -227,7 +234,7 @@ float3 Render(float2 uv, float2 p)
     {
         float3 q = eye + direction * t;
         int m;
-        float d = sceneDistance(q, m);
+        float d = sceneDistance(q, m, lerp(0.6, 0.95, saturate((t - 3.0) / 9.0)));
         if (d < 0.002 * t * surfacePrecision())
         {
             material = m;
@@ -287,7 +294,9 @@ float3 Render(float2 uv, float2 p)
     }
 
     // March back through the mist, adding the light it scatters our way.
-    int mistSteps = qualitySteps(48);
+    // The steps are jittered every frame and blended with the last frames, so fewer of them still
+    // settle into smooth shafts.
+    int mistSteps = qualitySteps(32);
     float jitter = frac(hash(uv * Resolution + frac(FrameCount * 0.618) * 97.0) + FrameCount * 0.618);
     float stepLength = t / mistSteps;
     float3 scattered = 0.0;
@@ -323,7 +332,11 @@ float3 Render(float2 uv, float2 p)
             float size = 0.025 + 0.02 / depth;
             float twinkle = 0.5 + 0.5 * sin(Time * (2.0 + pick * 5.0) + pick * 40.0);
             float mote = step(0.8, pick) * exp(-distanceToMote * distanceToMote / (size * size)) * twinkle;
-            colour += light * mote * sunVisibility(q) * (0.25 + Treble * 0.9) * transmittance;
+            // Most of the time there's no mote here: skip asking whether the sun reaches it.
+            if (mote > 0.002)
+            {
+                colour += light * mote * sunVisibility(q) * (0.25 + Treble * 0.9) * transmittance;
+            }
         }
     }
 
