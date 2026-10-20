@@ -153,7 +153,7 @@ public partial class VisualizerWindow : ToolWindow
 
         var index = Math.Clamp(_host.PresetIndex, 0, _presetNames.Count - 1);
         var current = _choices[index];
-        PresetName.Text = current.Name;
+        PresetName.Text = current.Label;
         PresetList.SelectedItem = _shown.Contains(current) && _rows.Contains(current) ? current : null;
         _settings.LastVisual = current.Name;
         UpdateFavoriteButton();

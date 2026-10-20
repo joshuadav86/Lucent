@@ -26,6 +26,7 @@ using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Visualizer.Avs;
+using WinampInspiredVisualizer.Visualizer.MilkDrop;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace Lucent.Mac;
@@ -1247,6 +1248,7 @@ public partial class MainWindow : Window
         _visualizer.Quality = GraphicsOptions.Quality(_settings.Detail);
         _visualizer.BloomStrength = GraphicsOptions.BloomStrength(_settings.Glow);
         AvsVisual.ModernLook = _settings.ModernAvs;
+        MilkDropLook.Modern = _settings.ModernMilkDrop;
         _visualizer.Hdr = _settings.Hdr;
         _visualizer.AutoCycle = _settings.AutoCycle;
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
@@ -1411,6 +1413,10 @@ public partial class MainWindow : Window
         {
             _visuals.UseModernAvs(on);
         }
+        else if (sender == ModernMilkDropSwitch)
+        {
+            _visuals.UseModernMilkDrop(on);
+        }
 
         ApplyVisualizerSettings();
         UpdateHdrHint();
@@ -1447,6 +1453,7 @@ public partial class MainWindow : Window
         MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;
         AvsSwitch.IsChecked = _settings.AvsVisuals;
         ModernAvsSwitch.IsChecked = _settings.ModernAvs;
+        ModernMilkDropSwitch.IsChecked = _settings.ModernMilkDrop;
         CrashReportsSwitch.IsChecked = _settings.SendCrashReports;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();

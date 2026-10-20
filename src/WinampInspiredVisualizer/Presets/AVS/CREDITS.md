@@ -11,6 +11,10 @@ Lucent's AVS engine (`src/Lucent.Core/Visualizer/Avs`) is a C# port of the same 
 plug-in effects (APEs) ported in grandchild's fork, https://github.com/grandchild/vis_avs (commit 1cee1f3), whose
 authors include Tom Holden (Video Delay, Multi Delay, and Convolution Filter) and Steven Wittens (Texer II). Both are under the licence below.
 
+Lucent shows each preset with its artist ("Pretty Dots by Justin") in the visual picker, over the visuals and when
+recording a video. Six of Winamp's presets (New Taste, Pulsing Shit, and the four Yays) never carried a name, so
+they're credited to Nullsoft, who made and released them.
+
 **If you made one of these and want it removed, open an issue.**
 
 ## Licence (AVS)

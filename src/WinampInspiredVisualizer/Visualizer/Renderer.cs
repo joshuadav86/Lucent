@@ -28,7 +28,7 @@ public sealed partial class Renderer : IDisposable
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
     private const Format HdrBackBufferFormat = Format.R16G16B16A16_Float;
-    private const int ConstantCount = 24;
+    private const int ConstantCount = 28;
     private const int ParticleStride = 48;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const double MaxRenderScale = 4.0;
@@ -676,7 +676,8 @@ public sealed partial class Renderer : IDisposable
         _constants[17] = _display.SdrWhiteNits / 80f;
         _constants[18] = _display.PeakNits / 80f;
         _constants[19] = _frameCount++;
-        _constants[23] = PlainOutputAmount(progress);
+        _constants[23] = LookAmount(AvsVisual.ShownPlain, progress);
+        _constants[24] = LookAmount(MilkDropLook.BringsIntoLight, progress);
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
         _frameTime = now;
@@ -735,19 +736,20 @@ public sealed partial class Renderer : IDisposable
     }
 
     /// <summary>
-    /// How much of the picture is a MilkDrop preset's, or an AVS preset's shown as Winamp drew it (1 when one is
-    /// showing, part-way during a transition to or from one), which the screen pass shows without Lucent's glow
-    /// and tone-mapping.
+    /// How much of the picture is a visual that <paramref name="shows"/> picks out (1 when one is showing, part-way
+    /// during a transition to or from one), for the screen pass: classic presets shown as they first looked, which
+    /// it shows without Lucent's glow and tone-mapping, and modernised MilkDrop presets, which it brings into
+    /// Lucent's light first.
     /// </summary>
-    private float PlainOutputAmount(float progress)
+    private float LookAmount(Func<PresetSource, bool> shows, float progress)
     {
-        var to = AvsVisual.ShownPlain(_slots[_activePreset].Source) ? 1f : 0f;
+        var to = shows(_slots[_activePreset].Source) ? 1f : 0f;
         if (_fromPreset < 0)
         {
             return to;
         }
 
-        var from = AvsVisual.ShownPlain(_slots[_fromPreset].Source) ? 1f : 0f;
+        var from = shows(_slots[_fromPreset].Source) ? 1f : 0f;
         return from + (to - from) * progress;
     }
 

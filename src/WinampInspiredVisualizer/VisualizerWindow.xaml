@@ -338,8 +338,12 @@
                                                             VerticalAlignment="Center" ToolTip="A Winamp AVS preset">
                                                         <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </Border>
-                                                    <TextBlock x:Name="Label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+                                                    <!-- MilkDrop and AVS presets credit their artist after the name: "Reaction Diffusion  by Geiss". -->
+                                                    <TextBlock x:Name="Label" FontSize="13" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}">
+                                                        <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="{Binding Byline, Mode=OneWay}"
+                                                             FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
+                                                    </TextBlock>
                                                 </DockPanel>
                                                 <DataTemplate.Triggers>
                                                     <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
