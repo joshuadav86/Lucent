@@ -115,6 +115,7 @@ public partial class MainWindow : Window
         VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
         _player.Volume = (float)VolumeSlider.Value;
         _player.Equalizer.Apply(_settings.Equalizer);
+        _player.Equalizer.Balance = _settings.Balance;
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
         ApplySoundSettings();
@@ -145,6 +146,7 @@ public partial class MainWindow : Window
 
         ApplyLook();
         BuildThemeSwatches();
+        ApplyClassicSkin();
 
         _libraryWindow.Attach(_library, _settings);
         _stores = new StoreService(_settings, LinkLibraryFolder);
@@ -233,6 +235,8 @@ public partial class MainWindow : Window
 
             StepMarquee();
         }
+
+        TickClassicPlayer();
 
         RequestAnimationFrame(OnFrame);
     }
@@ -1278,6 +1282,7 @@ public partial class MainWindow : Window
     {
         ShowOptionValues();
         UpdateHdrHint();
+        BuildClassicSkinSwatches();
 
         // The panel's right edge lines up with the button's (Placement and HorizontalOffset in the XAML
         // allow for the panel's 16px margin, which makes room for its shadow).
@@ -1345,8 +1350,12 @@ public partial class MainWindow : Window
                 ApplyLook();
                 break;
             case "Skin":
-                // A skin brings the theme it was made for; another theme can be picked after it.
+                // A skin brings the theme it was made for; another theme can be picked after it. Picking one
+                // also brings back Lucent's own player if a classic skin was drawing it.
                 _settings.Skin = value;
+                _settings.ClassicSkin = null;
+                ApplyClassicSkin();
+                BuildClassicSkinSwatches();
                 _settings.Theme = SkinManager.Find(value).Theme;
                 ApplyLook();
                 ShowOptionValues();
@@ -1558,12 +1567,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Music dropped on the queue: added to the end of it.</summary>
-    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(paths);
+    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(TakeDroppedSkins(paths));
 
     /// <summary>Music dropped on the player (or the visuals): it replaces the queue and plays now, as in Winamp.</summary>
     public async void PlayDroppedPaths(IEnumerable<string> paths)
     {
-        var input = paths.ToList();
+        // A Winamp skin dropped with (or instead of) the music is put on, not played.
+        var input = TakeDroppedSkins(paths);
+        if (input.Count == 0)
+        {
+            return;
+        }
+
         var tracks = await Task.Run(() => ExpandPaths(input).Select(Track.FromFile).ToList());
         ReplaceQueue(tracks, 0);
     }
@@ -2173,11 +2188,14 @@ public partial class MainWindow : Window
 
     private void OnTimeClick(object? sender, PointerReleasedEventArgs e)
     {
-        if (e.InitialPressMouseButton != MouseButton.Left)
+        if (e.InitialPressMouseButton == MouseButton.Left)
         {
-            return;
+            ToggleRemainingTime();
         }
+    }
 
+    private void ToggleRemainingTime()
+    {
         _settings.ShowRemainingTime = !_settings.ShowRemainingTime;
         _settings.Save();
         UpdatePosition();
@@ -2185,11 +2203,15 @@ public partial class MainWindow : Window
 
     private void OnMeterClick(object? sender, PointerReleasedEventArgs e)
     {
-        if (e.InitialPressMouseButton != MouseButton.Left)
+        if (e.InitialPressMouseButton == MouseButton.Left)
         {
-            return;
+            CycleMeter();
         }
+    }
 
+    /// <summary>The meter's (and the classic player's visualizer's) next mode: bars, a scope line, or off.</summary>
+    private void CycleMeter()
+    {
         _settings.Meter = _settings.Meter switch
         {
             MeterMode.Bars => MeterMode.Scope,
