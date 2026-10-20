@@ -6,7 +6,7 @@
   notarization). .NET compiles code as it runs, so it needs JIT and unsigned executable memory; the
   rest are what Velopack's updater (UpdateMac) needs, and Apple events are also how Lucent controls the
   Music app (Streaming/AppleMusicRemote.cs). Audio input is for hearing other apps' sound through a
-  process tap (Audio/SystemAudio.cs). Ad-hoc signed builds don't use the hardened runtime.
+  process tap (Audio/SystemAudio.cs) and recording from an audio interface (Audio/LiveInputs.cs). Ad-hoc signed builds don't use the hardened runtime.
 -->
 <dict>
 	<key>com.apple.security.cs.allow-jit</key>

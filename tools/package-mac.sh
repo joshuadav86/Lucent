@@ -46,6 +46,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
+  <key>NSMicrophoneUsageDescription</key><string>Lucent records from your audio interface, mixer or microphone when you use its Record window, and its visuals react to what you're recording. Recordings are saved only where you choose.</string>
   <key>NSAudioCaptureUsageDescription</key><string>Lucent listens to what other apps are playing so its visuals and analyzer can react to it. Nothing is recorded or sent anywhere.</string>
   <!-- The music Lucent opens from the Finder (Open With, or as the default player). The same list is in
        src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg or Opus, so they're declared below. -->

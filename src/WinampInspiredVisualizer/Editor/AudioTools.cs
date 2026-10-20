@@ -19,6 +19,7 @@ public static class AudioTools
     private static readonly List<EditorWindow> Editors = new();
     private static readonly List<ExportWindow> Converters = new();
     private static readonly HashSet<Window> WatchedOwners = new();
+    private static RecordWindow? _recorder;
 
     /// <summary>Set when the user asked to quit while something was still working: quit once it has stopped.</summary>
     private static Window? _closeWhenIdle;
@@ -146,7 +147,36 @@ public static class AudioTools
     }
 
     /// <summary>
-    /// The menu under the title bar's Edit button: edit or convert the song that's playing, or choose files.
+    /// Opens the Record window (there's one at a time, as there's one input to record from), or brings it to the front.
+    /// <paramref name="player"/> is the main player, whose visuals follow the input while the window is open.
+    /// </summary>
+    public static void OpenRecorder(Window owner, AudioPlayer player, AppSettings settings)
+    {
+        if (_recorder is { } open)
+        {
+            if (open.WindowState == WindowState.Minimized)
+            {
+                open.WindowState = WindowState.Normal;
+            }
+
+            open.Activate();
+            return;
+        }
+
+        Watch(owner);
+        var window = new RecordWindow(player, settings) { Owner = owner };
+        _recorder = window;
+        (Application.Current.MainWindow as MainWindow)?.AddToSnapping(window);
+        window.Closed += (_, _) =>
+        {
+            _recorder = null;
+            QuitIfIdle();
+        };
+        window.Show();
+    }
+
+    /// <summary>
+    /// The menu under the title bar's Edit button: record, edit or convert the song that's playing, or choose files.
     /// </summary>
     public static void ShowMenu(FrameworkElement target, Window owner, AudioPlayer player, AppSettings settings)
     {
@@ -154,6 +184,8 @@ public static class AudioTools
         var playing = currentPath is not null && File.Exists(currentPath);
         var name = playing ? $" ({Path.GetFileNameWithoutExtension(currentPath)})" : string.Empty;
         var menu = new ContextMenu { PlacementTarget = target, Placement = PlacementMode.Bottom };
+        menu.Items.Add(Item("Record from an audio interface…", true, () => OpenRecorder(owner, player, settings)));
+        menu.Items.Add(new Separator());
         menu.Items.Add(Item($"Edit the sound that's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
         menu.Items.Add(Item("Convert the sound that's playing…", playing, () => Convert(owner, settings, new[] { currentPath! })));
         menu.Items.Add(new Separator());
@@ -216,7 +248,8 @@ public static class AudioTools
 
         var busyEditors = Editors.Where(editor => editor.IsBusy).ToList();
         var busyConverters = Converters.Where(converter => converter.IsRunning).ToList();
-        if (busyEditors.Count == 0 && busyConverters.Count == 0)
+        var recording = _recorder is { IsBusy: true };
+        if (busyEditors.Count == 0 && busyConverters.Count == 0 && !recording)
         {
             return;
         }
@@ -228,7 +261,7 @@ public static class AudioTools
             return;
         }
 
-        var what = busyConverters.Count > 0 ? "still converting" : "still working in the audio editor";
+        var what = recording ? "still recording" : busyConverters.Count > 0 ? "still converting" : "still working in the audio editor";
         var answer = MessageBox.Show(owner, $"Lucent is {what}. Stop and close Lucent?", "Lucent",
             MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes)
@@ -242,13 +275,17 @@ public static class AudioTools
         {
             window.Close();
         }
+
+        // The recording is finished and saved before the window closes.
+        _recorder?.StopAndClose();
     }
 
     private static void QuitIfIdle()
     {
         if (_closeWhenIdle is { } owner
             && !Editors.Any(editor => editor.IsBusy)
-            && !Converters.Any(converter => converter.IsRunning))
+            && !Converters.Any(converter => converter.IsRunning)
+            && _recorder is not { IsBusy: true })
         {
             _closeWhenIdle = null;
             // Let the closing window finish first.
