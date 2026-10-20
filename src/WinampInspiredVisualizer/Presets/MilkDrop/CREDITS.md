@@ -1,6 +1,6 @@
 # MilkDrop preset credits
 
-These 225 presets come from projectM's "Cream of the Crop" collection:
+These 217 presets come from projectM's "Cream of the Crop" collection:
 https://github.com/projectM-visualizer/presets-cream-of-the-crop (commit 0180df2, 2025-10-08).
 
 License note from that pack (LICENSE.md): MilkDrop presets were, in almost all cases, not released under any specific
@@ -16,11 +16,12 @@ Two file names don't follow the pack's pattern, so Lucent credits them by hand (
 "phat_RippleNebula9" by Phat, and "Unchained-liquardoblitz [shifter's esc shader]" by Unchained, with shifter's
 shader. "i made hexcollies day!" doesn't say who made it, so it shows without a name; if it's yours, open an issue.
 
-The first 147 below were picked in October 2026. The 78 in the second table were added later: they're presets that
+The first table was picked in October 2026 (one, "PieturP - stripes-goingSlowMix", was dropped later because it
+flashes about ten times a second). The 72 in the second table were added later: they're presets that
 first shipped with MilkDrop 2 itself (projectM's "Milkdrop Original" pack,
 https://github.com/projectM-visualizer/presets-milkdrop-original) and are in Cream of the Crop too, where these
-copies come from, picked the same way: they run without notes in Lucent, need no image textures, and their shaders
-compile.
+copies come from, picked the same way: they run without notes in Lucent, need no image textures, their shaders
+compile, and the self-tests found them neither black nor flashing more than three times a second.
 
 **If you made one of these and want it removed, open an issue.**
 
@@ -79,7 +80,6 @@ compile.
 | shifter - fuzzball_1.milk | Geometric/Sphere Particles |
 | Goody - Ego Decontructor.milk | Geometric/Squares Glass |
 | Martin - beamer code 04h.milk | Geometric/Stripes Dance |
-| PieturP - stripes-goingSlowMix.milk | Geometric/Stripes |
 | EoS - sarc f.milk | Geometric/Wire Circles |
 | Telek - Target Practice.milk | Geometric/Wire Circles |
 | EoS - matrix cube G.milk | Geometric/Wire Grid |
@@ -198,7 +198,6 @@ compile.
 | Geiss - Liquid Beats (janky ripple warp reflecto).milk | Waveform/Wire Tangle |
 | Geiss - Spiral Artifact.milk | Waveform/Wire Flat |
 | Geiss - Tokamak Plus 4.milk | Waveform/Wire Tangle |
-| Geiss and Zylot - Reaction Diffusion 3 (Overload Mix 2).milk | Reaction/Rorschach |
 | Goody - Acid Angel - Fallen Angel.milk | Waveform/Wire Tangle |
 | Goody - Aurora Totalis.milk | Waveform/Wire Rising |
 | Goody - LSD Zoomtunnel.milk | Waveform/Wire Circular |
@@ -214,12 +213,10 @@ compile.
 | Illusion & Unchained - New Strategy.milk | Reaction/Liquid Gradient |
 | ORB - Acid Cycle.milk | Waveform/Wire Spirograph |
 | ORB - Acid Sunrise.milk | Reaction/Liquid Blobby |
-| ORB - Dark Omen.milk | Reaction/Liquid Blobby |
 | ORB - Kalidescope.milk | Dancer/Comet Mirror |
 | ORB - Mega Spectrum.milk | Geometric/Wire Morph |
 | ORB - Pastel Primer.milk | Dancer/Whirl |
 | ORB - Planetary Alignment.milk | Geometric/Wire Circles |
-| ORB - Quicksand Lab.milk | Reaction/Liquid Ripples |
 | Rovastar & Idiot24-7 - Marphet's Shrine.milk | Reaction/Liquid Gradient |
 | Rovastar & Loadus - FractalDrop (Active Sparks Mix).milk | Fractal/Core Mirror |
 | Rovastar & Rocke - Sugar Spun Sister.milk | Waveform/Wire Tangle |
@@ -236,7 +233,6 @@ compile.
 | Stahlregen & fishbrain + geiss + martin  - Flowercraft.milk | Drawing/Trails Mirror |
 | Stahlregen - Spiral Beats (Fluctuating Flowers).milk | Fractal/Nested Spiral |
 | Unchained vs Rovastar vs Zylot - Tripmaker (Trip Machine v3).milk | Fractal/Nested Spiral |
-| Zylot & Idiot24-7 - Unknown Power Source.milk | Fractal/Pointy |
 | Zylot - In death there is life (Geiss Layered Mix).milk | Reaction/Feedback |
 | Zylot - Spiral (Hypnotic)_Phat_Double_Spiral_Mix.milk | Geometric/Wire Spiral |
 | cope - digital sea.milk | Reaction/Rorschach |
@@ -248,11 +244,8 @@ compile.
 | shifter & fiShbRaiN - witchcraft (i'm melting).milk | Drawing/Trails Mirror |
 | shifter + geiss - neon pulse (glow mix).milk | Fractal/Nested Spiral Multiple |
 | shifter - brain coral.milk | Fractal/Nested Circle |
-| shifter - digi.milk | Dancer/Tree Branch |
 | shifter - fractal grinder.milk | Fractal/Nested Circle |
 | shifter - lazerspecs_phat_edit.milk | Geometric/Wire Morph |
 | shifter - spincycle c.milk | Reaction/Liquid Blobby |
 | shifter - swarm.milk | Reaction/Feedback |
-| yin - 100 - Through the ether - Bitcore Tweak.milk | Fractal/Nested Square |
-| yin - 140 - Ohm to the stars.milk | Waveform/Wire Circular |
 | yin - 191 - Temporal singularities.milk | Waveform/Wire Mirror |
