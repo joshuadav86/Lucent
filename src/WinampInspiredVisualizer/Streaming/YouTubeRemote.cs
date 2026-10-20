@@ -24,6 +24,19 @@ public sealed class YouTubeRemote : MediaControlsRemote
 
     protected override string NotOpen => "Play a YouTube video in your web browser";
 
+    // The browser playing, as its process is named; every browser Lucent knows until one has been read.
+    public override IReadOnlyList<string> ProcessNames => SourceAppId switch
+    {
+        { } id when id.Contains("MSEdge", StringComparison.OrdinalIgnoreCase) || id.Contains("Edge", StringComparison.OrdinalIgnoreCase) => ["msedge"],
+        { } id when id.Contains("Brave", StringComparison.OrdinalIgnoreCase) => ["brave"],
+        { } id when id.Contains("Opera", StringComparison.OrdinalIgnoreCase) => ["opera"],
+        { } id when id.Contains("Vivaldi", StringComparison.OrdinalIgnoreCase) => ["vivaldi"],
+        { } id when id.Contains("Firefox", StringComparison.OrdinalIgnoreCase) || id.Contains("308046B0AF4A39CB", StringComparison.OrdinalIgnoreCase) => ["firefox"],
+        { } id when id.Contains("Chromium", StringComparison.OrdinalIgnoreCase) => ["chromium"],
+        { } id when id.Contains("Chrome", StringComparison.OrdinalIgnoreCase) => ["chrome"],
+        _ => ["chrome", "msedge", "brave", "opera", "vivaldi", "firefox", "chromium"],
+    };
+
     protected override GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions)
     {
         var browsers = sessions.Where(session => IsBrowser(session.SourceAppUserModelId)).ToList();

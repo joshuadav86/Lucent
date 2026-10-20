@@ -127,6 +127,14 @@ public static partial class SelfTest
             Console.WriteLine("::error::The Music app's artwork, as AppleScript gives it, didn't read back as its bytes.");
         }
 
+        var playlist = Streaming.AppleMusicRemote.ParseList("A1", "Road trip\u001fB2\u001eC3\u001fOne\u001eTwo\u001fArtist\u001eArtist\u001fAlbum\u001e\u001f245.5\u001e61,25");
+        if (playlist is not { Name: "Road trip", Tracks.Count: 2 } || playlist.Tracks[1] is not { Id: "C3", Title: "Two", Album: "" }
+            || playlist.Tracks[1].Duration != TimeSpan.FromSeconds(61.25))
+        {
+            problems++;
+            Console.WriteLine("::error::The Music app's playlist, as AppleScript gives it, didn't read back as its songs.");
+        }
+
         if (!SystemAudio.IsSupported)
         {
             Console.WriteLine("::notice::This macOS is older than 14.2, so listening to other apps wasn't tried.");

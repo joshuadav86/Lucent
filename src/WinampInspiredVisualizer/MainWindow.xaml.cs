@@ -78,13 +78,7 @@ public partial class MainWindow : Window
         _queue.PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>
         {
-            _queue.EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            _queue.QueueCount.Text = _playlist.Count switch
-            {
-                0 => "Empty",
-                1 => "1 track",
-                var count => $"{count} tracks",
-            };
+            ShowQueueSize();
             _shuffleHistory.RemoveAll(entry => !_playlist.Contains(entry));
             ForgetUpNext();
             ShowNowPlaying(_current?.Track);
@@ -93,6 +87,7 @@ public partial class MainWindow : Window
         VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
         _player.Volume = (float)VolumeSlider.Value;
         _player.Equalizer.Apply(_settings.Equalizer);
+        _player.Equalizer.Balance = _settings.Balance;
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
         ApplySoundSettings();
@@ -126,6 +121,7 @@ public partial class MainWindow : Window
 
         ApplyLook();
         BuildThemeSwatches();
+        ApplyClassicSkin();
 
         _libraryWindow.Attach(_library, _settings);
         _stores = new StoreService(_settings, LinkLibraryFolder);
@@ -170,6 +166,8 @@ public partial class MainWindow : Window
         {
             _meter.Tick();
         }
+
+        TickClassicPlayer();
     }
 
     /// <summary>True once the player is closing, so the other windows close for real instead of hiding.</summary>
@@ -1127,8 +1125,11 @@ public partial class MainWindow : Window
         ShowOptionValues();
         UpdateHdrHint();
 
-        // Line the panel's right edge up with the button's (the panel has a 16px margin for its shadow).
-        OptionsPopup.HorizontalOffset = OptionsButton.ActualWidth - 356;
+        BuildClassicSkinSwatches();
+
+        // Line the panel's right edge up with the button's (the panel has a 16px margin for its shadow), or
+        // with the classic player's.
+        OptionsPopup.HorizontalOffset = ((FrameworkElement)OptionsPopup.PlacementTarget).ActualWidth - 356;
         OptionsPopup.IsOpen = true;
     }
 
@@ -1180,8 +1181,12 @@ public partial class MainWindow : Window
                 ApplyLook();
                 break;
             case "Skin":
-                // A skin brings the theme it was made for; another theme can be picked after it.
+                // A skin brings the theme it was made for; another theme can be picked after it. Picking one
+                // also brings back Lucent's own player if a classic skin was drawing it.
                 _settings.Skin = value;
+                _settings.ClassicSkin = null;
+                ApplyClassicSkin();
+                BuildClassicSkinSwatches();
                 _settings.Theme = SkinManager.Find(value).Theme;
                 ApplyLook();
                 ShowOptionValues();
@@ -1389,12 +1394,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Music dropped on the queue: added to the end of it.</summary>
-    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(paths);
+    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(TakeDroppedSkins(paths));
 
     /// <summary>Music dropped on the player (or the visuals): it replaces the queue and plays now, as in Winamp.</summary>
     public async void PlayDroppedPaths(IEnumerable<string> paths)
     {
-        var input = paths.ToList();
+        // A Winamp skin dropped with (or instead of) the music is put on, not played.
+        var input = TakeDroppedSkins(paths);
+        if (input.Count == 0)
+        {
+            return;
+        }
+
         var tracks = await Task.Run(() => ExpandPaths(input).Select(Track.FromFile).ToList());
         ReplaceQueue(tracks, 0);
     }
@@ -1978,14 +1989,19 @@ public partial class MainWindow : Window
 
     // ---- Display ----
 
-    private void OnTimeClick(object sender, MouseButtonEventArgs e)
+    private void OnTimeClick(object sender, MouseButtonEventArgs e) => ToggleRemainingTime();
+
+    private void ToggleRemainingTime()
     {
         _settings.ShowRemainingTime = !_settings.ShowRemainingTime;
         _settings.Save();
         UpdatePosition();
     }
 
-    private void OnMeterClick(object sender, MouseButtonEventArgs e)
+    private void OnMeterClick(object sender, MouseButtonEventArgs e) => CycleMeter();
+
+    /// <summary>The meter's (and the classic player's visualizer's) next mode: bars, a scope line, or off.</summary>
+    private void CycleMeter()
     {
         _settings.Meter = _settings.Meter switch
         {

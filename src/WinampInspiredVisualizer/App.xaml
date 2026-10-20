@@ -849,7 +849,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="Transparent">
+                        <Border x:Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="Transparent"
+                                BorderThickness="1" BorderBrush="Transparent">
                             <DockPanel>
                                 <Path x:Name="Chevron" DockPanel.Dock="Left" Margin="2,0,10,0" VerticalAlignment="Center"
                                       Data="{StaticResource ChevronRightIcon}" Stroke="{DynamicResource MutedTextBrush}"
@@ -875,6 +876,8 @@
                                     <sys:Boolean>True</sys:Boolean>
                                 </Trigger.Value>
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Chevron" Property="Stroke" Value="{DynamicResource AccentBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

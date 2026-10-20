@@ -15,11 +15,12 @@ namespace Lucent.Mac.Streaming;
 /// than controlling the Music app, so Lucent talks to the Music app the way Mac apps always have. Windows
 /// uses Windows' media controls to reach the Apple Music app (see Windows' Streaming/AppleMusicRemote.cs).
 /// </remarks>
-public sealed class AppleMusicRemote : IRemotePlayer
+public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists
 {
     private const string Osascript = "/usr/bin/osascript";
 
-    // Fields between tabs: state, then the song's ID, name, artist, album, length and the position, in seconds.
+    // Fields between tabs: state, then the song's ID, name, artist, album, length and the position, in seconds, and
+    // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station).
     // "is running" doesn't open Music, so Lucent never starts it by itself.
     private const string ReadScript = """
         if application "Music" is not running then return "closed"
@@ -28,7 +29,11 @@ public sealed class AppleMusicRemote : IRemotePlayer
             if playerState is "stopped" then return "stopped"
             try
                 set t to current track
-                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position
+                set playlistId to ""
+                try
+                    set playlistId to persistent ID of current playlist
+                end try
+                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId
             on error
                 return playerState
             end try
@@ -42,6 +47,32 @@ public sealed class AppleMusicRemote : IRemotePlayer
             on error
                 return ""
             end try
+        end tell
+        """;
+
+    // The playlist's name, then its songs' IDs, names, artists, albums and lengths, up to 1,000 songs. Each property comes
+    // for every song at once (one request to Music, not one a song), each a list split by character 30, and they're
+    // split from one another by character 31: characters no song name has.
+    private const string ListScript = """
+        if application "Music" is not running then return ""
+        tell application "Music"
+            try
+                set p to current playlist
+            on error
+                return ""
+            end try
+            set n to count of tracks of p
+            if n > 1000 then set n to 1000
+            set sep to character id 31
+            if n is 0 then return (name of p) & sep
+            set AppleScript's text item delimiters to character id 30
+            set ids to (persistent ID of tracks 1 thru n of p) as text
+            set names to (name of tracks 1 thru n of p) as text
+            set artists to (artist of tracks 1 thru n of p) as text
+            set albums to (album of tracks 1 thru n of p) as text
+            set lengths to (duration of tracks 1 thru n of p) as text
+            set AppleScript's text item delimiters to ""
+            return (name of p) & sep & ids & sep & names & sep & artists & sep & albums & sep & lengths
         end tell
         """;
 
@@ -66,8 +97,42 @@ public sealed class AppleMusicRemote : IRemotePlayer
         }
 
         var track = new RemoteTrack(fields[1], fields[2], fields[3], fields[4], Seconds(fields[5]));
-        return new RemoteState(track, playing, Seconds(fields[6]), readAt);
+        var playlist = fields.Length > 7 && fields[7].Length > 0 ? fields[7] : null;
+        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist);
     }
+
+    public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel) =>
+        state.ListId is null ? null : ParseList(state.ListId, await RunAsync(ListScript, cancel));
+
+    public Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel) =>
+        // Played from its playlist, Music carries on through the playlist after it.
+        TellAsync($"play (first track of (first playlist whose persistent ID is \"{Hex(list.Id)}\") whose persistent ID is \"{Hex(track.Id)}\")", cancel);
+
+    /// <summary>The list <see cref="ListScript"/> prints, for the playlist with the ID <paramref name="id"/>, or null when there's none.</summary>
+    internal static RemoteList? ParseList(string id, string text)
+    {
+        var sections = text.Split('\u001f');
+        if (sections.Length < 2 || sections[0].Length == 0)
+        {
+            return null;
+        }
+
+        var tracks = new List<RemoteTrack>();
+        if (sections.Length >= 6)
+        {
+            var columns = sections[1..6].Select(section => section.Split('\u001e')).ToArray();
+            var count = columns.Min(column => column.Length);
+            for (var i = 0; i < count; i++)
+            {
+                tracks.Add(new RemoteTrack(columns[0][i], columns[1][i], columns[2][i], columns[3][i], Seconds(columns[4][i])));
+            }
+        }
+
+        return new RemoteList(id, sections[0], tracks);
+    }
+
+    // Music's persistent IDs are hexadecimal; anything else is left out, so an ID can't end the script's quotes.
+    private static string Hex(string? id) => new((id ?? string.Empty).Where(Uri.IsHexDigit).ToArray());
 
     public Task PlayAsync(CancellationToken cancel) => TellAsync("play", cancel);
 

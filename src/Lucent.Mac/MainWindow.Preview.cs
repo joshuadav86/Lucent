@@ -54,6 +54,20 @@ public partial class MainWindow
         ApplyLook();
     }
 
+    /// <summary>Draws the player with Lucent Classic, playing the first track at <paramref name="position"/>.</summary>
+    internal void PreviewClassicSkin(TimeSpan position, bool shaded)
+    {
+        _settings.ClassicSkin = WinampInspiredVisualizer.ClassicSkins.ClassicSkinLibrary.DefaultName;
+        ApplyClassicSkin();
+        var classic = _classicView!.Player;
+        classic.PlayState = WinampInspiredVisualizer.ClassicSkins.ClassicPlayState.Playing;
+        classic.Position = position;
+        classic.Duration = _current?.Track.Duration ?? TimeSpan.Zero;
+        classic.CanSeek = classic.Duration > TimeSpan.Zero;
+        classic.IsShaded = shaded;
+        _classicView.Tick();
+    }
+
     /// <summary>Takes the options panel out of its pop-up, on a tab, so a screenshot can show it in a window of its own.</summary>
     internal Control TakeOptionsPanel(string tab)
     {
@@ -70,6 +84,7 @@ public partial class MainWindow
         ThemeTab.IsVisible = tab == "Theme";
         UpdatesTab.IsVisible = tab == "Updates";
         BuildSkinSwatches(Themes.ThemeManager.Find(_settings.Theme));
+        BuildClassicSkinSwatches();
         var panel = OptionsPopup.Child!;
         OptionsPopup.Child = null;
         return panel;

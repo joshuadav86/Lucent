@@ -30,6 +30,12 @@ public partial class MainWindow
             return;
         }
 
+        // A classic skin hides Lucent's own player and its buttons: open under the classic player instead.
+        if (!from.IsVisible)
+        {
+            from = PlayerRoot;
+        }
+
         UpdateSourcesPanel();
         SourcesPopup.PlacementTarget = from;
         // The panel has a 16px margin for its shadow. Under the title bar's button it lines up with the button's
@@ -67,10 +73,9 @@ public partial class MainWindow
         YouTubeSwitch.IsEnabled = YouTubeRemote.IsSupported;
         YouTubeSwitch.ToolTip = "Show the YouTube video playing in your web browser and use the player's buttons for it. The sound stays in the browser.";
 
-        ListenSwitch.IsChecked = _settings.ListenToOtherApps || _remote is not null;
-        ListenSwitch.IsEnabled = _remote is null;
-        ListenHint.Text = _remote is not null
-            ? $"Always on while Lucent controls {_remote.Player.Name}."
+        ListenSwitch.IsChecked = _settings.ListenToOtherApps;
+        ListenHint.Text = _remote is not null && !_settings.ListenToOtherApps
+            ? $"While Lucent controls {_remote.Player.Name}, the visuals hear only {_remote.Player.Name}. Turn this on to have them hear every app."
             : $"The visuals, meter, and analyzer react to whatever is playing on {SystemAudio.DefaultOutputName() ?? "this PC"}: Spotify, a browser, a game.";
     }
 

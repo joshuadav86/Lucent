@@ -32,6 +32,12 @@ public partial class MainWindow
             return;
         }
 
+        // A classic skin hides Lucent's own player and its buttons: open under the classic player instead.
+        if (!from.IsEffectivelyVisible)
+        {
+            from = PlayerRoot;
+        }
+
         UpdateSourcesPanel();
         SourcesPopup.PlacementTarget = from;
         // The panel has a 16px margin for its shadow. Under the title bar's button it lines up with the button's
@@ -70,10 +76,11 @@ public partial class MainWindow
         ToolTip.SetTip(YouTubeSwitch, "Show the YouTube video playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. The sound stays in the browser. "
             + "The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
 
-        ListenSwitch.IsChecked = _settings.ListenToOtherApps || _remote is not null;
-        ListenSwitch.IsEnabled = _remote is null && SystemAudio.IsSupported;
+        ListenSwitch.IsChecked = _settings.ListenToOtherApps;
+        ListenSwitch.IsEnabled = SystemAudio.IsSupported;
         ListenHint.Text = !SystemAudio.IsSupported ? "Listening to other apps needs macOS 14.2 or later."
-            : _remote is not null ? $"Always on while Lucent controls {_remote.Player.Name}."
+            : _remote is not null && !_settings.ListenToOtherApps
+                ? $"While Lucent controls {_remote.Player.Name}, the visuals hear only {_remote.Player.Name}. Turn this on to have them hear every app."
             : $"The visuals, meter, and analyzer react to whatever is playing on {SystemAudio.DefaultOutputName() ?? "this Mac"}: Spotify, a browser, a game. macOS asks once whether Lucent may record the Mac's sound.";
     }
 

@@ -30,6 +30,7 @@ public sealed class Equalizer : ISampleProvider
     private EqualizerDesign _design;
     private EqualizerDesign _preview;
     private volatile EqualizerStream? _stream;
+    private volatile float _balance;
 
     public Equalizer()
     {
@@ -92,11 +93,34 @@ public sealed class Equalizer : ISampleProvider
     /// </summary>
     public double HeadroomDb => _stream?.HeadroomDb ?? 0;
 
+    /// <summary>
+    /// Left and right balance, from -1 (left only) to 1 (right only), as on Winamp's balance slider. The side
+    /// it leans away from is turned down; centred (0), the sound isn't touched.
+    /// </summary>
+    public double Balance
+    {
+        get => _balance;
+        set => _balance = (float)Math.Clamp(value, -1, 1);
+    }
+
     public int Read(float[] buffer, int offset, int count)
     {
         // Read the stream once: a track change on the UI thread may swap it mid-call.
         var stream = _stream;
-        return stream?.Read(buffer, offset, count) ?? 0;
+        var read = stream?.Read(buffer, offset, count) ?? 0;
+        var balance = _balance;
+        if (balance != 0 && stream is { WaveFormat.Channels: 2 })
+        {
+            var left = Math.Min(1f, 1f - balance);
+            var right = Math.Min(1f, 1f + balance);
+            for (var i = offset; i + 1 < offset + read; i += 2)
+            {
+                buffer[i] *= left;
+                buffer[i + 1] *= right;
+            }
+        }
+
+        return read;
     }
 
     /// <summary>Takes on saved settings: on or off, band count, slider gains and preamp.</summary>

@@ -33,6 +33,12 @@ internal static unsafe partial class AudioTap
     {
         var description = ObjC.Send(ObjC.Send(ObjC.Class("CATapDescription"), "alloc"), "initStereoGlobalTapButExcludeProcesses:",
             ObjC.Send(ObjC.Class("NSArray"), "array"));
+        return Finish(description, name);
+    }
+
+    // Names the tap, hides it from other apps, and reads its UUID.
+    private static (IntPtr Description, string Uuid) Finish(IntPtr description, string name)
+    {
         if (description == IntPtr.Zero)
         {
             throw new IOException("macOS wouldn't describe a tap of the Mac's sound.");
@@ -53,6 +59,69 @@ internal static unsafe partial class AudioTap
             ?? throw new IOException("macOS gave the tap of the Mac's sound no ID.");
         return (description, uuid);
     }
+
+    /// <summary>
+    /// [[CATapDescription alloc] initStereoMixdownOfProcesses:]: a stereo mix of just these processes' sound (Core
+    /// Audio's process objects, from <see cref="ProcessObjects"/>). Returns the description (to release) and its UUID's text.
+    /// </summary>
+    public static (IntPtr Description, string Uuid) DescribeAppTap(string name, IReadOnlyList<uint> processes)
+    {
+        var list = ObjC.Send(ObjC.Class("NSMutableArray"), "array");
+        foreach (var process in processes)
+        {
+            ObjC.SendVoid(list, "addObject:", IntPtr_objc_msgSend_UInt32(ObjC.Class("NSNumber"), ObjC.Selector("numberWithUnsignedInt:"), process));
+        }
+
+        var description = ObjC.Send(ObjC.Send(ObjC.Class("CATapDescription"), "alloc"), "initStereoMixdownOfProcesses:", list);
+        return Finish(description, name);
+    }
+
+    /// <summary>
+    /// Core Audio's objects for the running processes whose bundle ID starts with one of <paramref name="bundlePrefixes"/>
+    /// (com.google.Chrome takes in its helpers, com.google.Chrome.helper), in order. Only processes that use sound have one.
+    /// </summary>
+    public static List<uint> ProcessObjects(IReadOnlyList<string> bundlePrefixes)
+    {
+        var found = new List<uint>();
+        var address = new CoreAudio.AudioObjectPropertyAddress(ProcessListProperty);
+        if (CoreAudio.AudioObjectGetPropertyDataSize(CoreAudio.SystemObject, &address, 0, null, out var size) != 0 || size == 0)
+        {
+            return found;
+        }
+
+        var processes = new uint[size / sizeof(uint)];
+        fixed (uint* list = processes)
+        {
+            if (CoreAudio.AudioObjectGetPropertyData(CoreAudio.SystemObject, &address, 0, null, ref size, list) != 0)
+            {
+                return found;
+            }
+        }
+
+        foreach (var process in processes.Take((int)(size / sizeof(uint))))
+        {
+            var bundle = IntPtr.Zero;
+            var bundleAddress = new CoreAudio.AudioObjectPropertyAddress(BundleIdProperty);
+            var bundleSize = (uint)sizeof(IntPtr);
+            if (CoreAudio.AudioObjectGetPropertyData(process, &bundleAddress, 0, null, ref bundleSize, &bundle) != 0 || bundle == IntPtr.Zero)
+            {
+                continue;
+            }
+
+            var id = CoreAudio.ReadString(bundle);
+            CoreAudio.CFRelease(bundle);
+            if (id is not null && bundlePrefixes.Any(prefix => id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+            {
+                found.Add(process);
+            }
+        }
+
+        found.Sort();
+        return found;
+    }
+
+    private const uint ProcessListProperty = 0x70727323; // 'prs#': kAudioHardwarePropertyProcessObjectList
+    private const uint BundleIdProperty = 0x70626964;    // 'pbid': kAudioProcessPropertyBundleID
 
     /// <summary>
     /// The description of a private aggregate device that's clocked by <paramref name="outputUid"/> (the output
@@ -132,6 +201,9 @@ internal static unsafe partial class AudioTap
     [LibraryImport(CoreAudioFramework)]
     public static partial int AudioObjectRemovePropertyListener(uint objectId, CoreAudio.AudioObjectPropertyAddress* address,
         delegate* unmanaged<uint, uint, CoreAudio.AudioObjectPropertyAddress*, IntPtr, int> listener, IntPtr clientData);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial IntPtr IntPtr_objc_msgSend_UInt32(IntPtr receiver, IntPtr selector, uint argument);
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial IntPtr IntPtr_objc_msgSend_Byte(IntPtr receiver, IntPtr selector, byte argument);

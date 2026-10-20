@@ -221,6 +221,12 @@ Skins decide the shape, type, and finish of every window. Themes decide the colo
 
 <p align="center"><img src="assets/themes.svg" alt="The eight themes: Midnight, Deep Ocean, Glacier, Ultraviolet, Emerald, Ember, Graphite, and Rosé"></p>
 
+### Classic Winamp skins
+
+The player can also wear a classic Winamp 2 skin (.wsz), drawn pixel for pixel at double size (or actual size), with working buttons, sliders, balance, the little spectrum and oscilloscope, the O A I D V bar, and window shade mode (double-click the title bar). Lucent comes with **Lucent Classic**, its own skin drawn in Lucent's colours. Import any other from **Options → Look**, or drop a .wsz on any Lucent window; **Find skins** opens the [Winamp Skin Museum](https://skins.webamp.org/), where tens of thousands can be downloaded. Right-click the classic player to switch skins, go back to Lucent's own player, or turn on double size or always on top. The other windows keep Lucent's skin and theme.
+
+Lucent doesn't ship anyone else's skins: each belongs to whoever drew it. Lucent Classic is drawn from scratch by [`tools/ClassicSkin/make_lucent_classic.py`](tools/ClassicSkin/make_lucent_classic.py) and uses no art from Winamp. Winamp is a trademark of its owners, and Lucent isn't connected with them.
+
 ## Everything else a music player needs
 
 | | |
