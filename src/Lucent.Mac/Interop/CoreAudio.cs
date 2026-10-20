@@ -3,8 +3,8 @@ using System.Runtime.InteropServices;
 namespace Lucent.Mac.Interop;
 
 /// <summary>
-/// The parts of Core Audio's AudioToolbox (and Core Foundation) that decode files and play sound, and
-/// of the Core Audio framework itself that list the outputs and set them up.
+/// The parts of Core Audio's AudioToolbox (and Core Foundation) that decode files, play and record sound,
+/// and of the Core Audio framework itself that list the outputs and inputs and set them up.
 /// </summary>
 internal static unsafe partial class CoreAudio
 {
@@ -23,9 +23,12 @@ internal static unsafe partial class CoreAudio
     public const uint SystemObject = 1;                      // kAudioObjectSystemObject
     public const uint ScopeGlobal = 0x676C6F62;              // 'glob'
     public const uint ScopeOutput = 0x6F757470;              // 'outp'
+    public const uint ScopeInput = 0x696E7074;               // 'inpt'
     public const uint ElementMain = 0;                       // kAudioObjectPropertyElementMain
     public const uint DevicesProperty = 0x64657623;          // 'dev#': every device
     public const uint DefaultOutputDeviceProperty = 0x644F7574; // 'dOut'
+    public const uint DefaultInputDeviceProperty = 0x64496E20;  // 'dIn '
+    public const uint StreamConfigurationProperty = 0x736C6179; // 'slay': a device's channels, as an AudioBufferList
     public const uint NameProperty = 0x6C6E616D;             // 'lnam'
     public const uint DeviceUidProperty = 0x75696420;        // 'uid '
     public const uint StreamsProperty = 0x73746D23;          // 'stm#'
@@ -221,6 +224,13 @@ internal static unsafe partial class CoreAudio
     public static partial int AudioQueueNewOutput(
         AudioStreamBasicDescription* format,
         delegate* unmanaged<IntPtr, IntPtr, AudioQueueBuffer*, void> callback,
+        IntPtr userData, IntPtr runLoop, IntPtr runLoopMode, uint flags, out IntPtr queue);
+
+    /// <summary>Records into buffers, calling back with each one as it fills.</summary>
+    [LibraryImport(AudioToolbox)]
+    public static partial int AudioQueueNewInput(
+        AudioStreamBasicDescription* format,
+        delegate* unmanaged<IntPtr, IntPtr, AudioQueueBuffer*, IntPtr, uint, IntPtr, void> callback,
         IntPtr userData, IntPtr runLoop, IntPtr runLoopMode, uint flags, out IntPtr queue);
 
     [LibraryImport(AudioToolbox)]

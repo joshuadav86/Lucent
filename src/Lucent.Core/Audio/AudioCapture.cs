@@ -9,6 +9,7 @@ namespace WinampInspiredVisualizer.Audio;
 /// <remarks>
 /// It can also listen to every app's sound instead (see each app's Audio/SystemAudio.cs). While it does,
 /// what the player writes is left out, since the player's own sound is part of what's heard anyway.
+/// A live input being recorded (see Recording/LiveRecorder.cs) comes before both while it's open.
 /// </remarks>
 /// <remarks>
 /// The audio thread writes in blocks (one sound card buffer, about 75 ms, at a time), so reading
@@ -28,7 +29,9 @@ public sealed class AudioCapture
     private long _written;
     private int _lastBlock;
     private bool _external;
+    private bool _live;
     private int _playerRate = 44100;
+    private int _externalRate = 44100;
 
     /// <summary>How far ahead of the speakers the audio is decoded, in milliseconds.</summary>
     public const int OutputLatencyMs = 150;
@@ -41,11 +44,14 @@ public sealed class AudioCapture
     /// <summary>True while it's listening to every app's sound rather than the player's.</summary>
     public bool IsExternal => _external;
 
+    /// <summary>True while a live input (an audio interface being recorded) is what's shown.</summary>
+    public bool IsLive => _live;
+
     /// <summary>
     /// How many of the newest samples the speakers haven't played yet, for <see cref="ReadLatest"/>. The
     /// player decodes ahead of the speakers; other apps' sound is caught as it's played, so there's no wait.
     /// </summary>
-    public int DelaySamples => _external ? 0 : SampleRate * OutputLatencyMs / 1000 * 2 / 3;
+    public int DelaySamples => _external || _live ? 0 : SampleRate * OutputLatencyMs / 1000 * 2 / 3;
 
     public void Reset(int sampleRate)
     {
@@ -53,7 +59,7 @@ public sealed class AudioCapture
         {
             // Kept for later while other apps are being listened to.
             _playerRate = sampleRate;
-            if (!_external)
+            if (!_external && !_live)
             {
                 Clear(sampleRate);
             }
@@ -66,7 +72,11 @@ public sealed class AudioCapture
         lock (_lock)
         {
             _external = true;
-            Clear(sampleRate);
+            _externalRate = sampleRate;
+            if (!_live)
+            {
+                Clear(sampleRate);
+            }
         }
     }
 
@@ -76,7 +86,30 @@ public sealed class AudioCapture
         lock (_lock)
         {
             _external = false;
-            Clear(_playerRate);
+            if (!_live)
+            {
+                Clear(_playerRate);
+            }
+        }
+    }
+
+    /// <summary>Starts taking a live input's sound, at <paramref name="sampleRate"/>, through <see cref="WriteLive"/>.</summary>
+    public void BeginLive(int sampleRate)
+    {
+        lock (_lock)
+        {
+            _live = true;
+            Clear(sampleRate);
+        }
+    }
+
+    /// <summary>Goes back to other apps' sound, if that was being listened to, or the player's.</summary>
+    public void EndLive()
+    {
+        lock (_lock)
+        {
+            _live = false;
+            Clear(_external ? _externalRate : _playerRate);
         }
     }
 
@@ -88,7 +121,7 @@ public sealed class AudioCapture
     {
         lock (_lock)
         {
-            if (!_external)
+            if (!_external && !_live)
             {
                 Append(samples, left, right);
             }
@@ -100,7 +133,19 @@ public sealed class AudioCapture
     {
         lock (_lock)
         {
-            if (_external)
+            if (_external && !_live)
+            {
+                Append(samples, left, right);
+            }
+        }
+    }
+
+    /// <summary>Adds a live input's sound, as <see cref="Write(ReadOnlySpan{float}, ReadOnlySpan{float}, ReadOnlySpan{float})"/> does the player's.</summary>
+    public void WriteLive(ReadOnlySpan<float> samples, ReadOnlySpan<float> left, ReadOnlySpan<float> right)
+    {
+        lock (_lock)
+        {
+            if (_live)
             {
                 Append(samples, left, right);
             }

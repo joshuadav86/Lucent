@@ -80,6 +80,8 @@ public static class SelfTest
 
         failures += TestVisuals(sheetPath);
         failures += TestOtherApps();
+        failures += WinampInspiredVisualizer.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
+        failures += TestLiveInputs();
         failures += Editor.Stems.StemSelfTest.Run(Console.WriteLine);
         failures += Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
@@ -480,5 +482,23 @@ public static class SelfTest
 
             return _latest;
         }
+    }
+
+    // Lists the inputs the Record window would offer. CI machines usually have none, so this only reports.
+    private static int TestLiveInputs()
+    {
+        try
+        {
+            var inputs = LiveInputs.List();
+            Console.WriteLine(inputs.Count == 0
+                ? "Record: no audio inputs on this machine."
+                : $"Record: found {inputs.Count} input(s): {string.Join(", ", inputs.Select(input => input.Name))}.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"::warning::Record: couldn't list the audio inputs: {ex.Message}");
+        }
+
+        return 0;
     }
 }

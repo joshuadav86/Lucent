@@ -1615,6 +1615,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        // A recorded DJ set with its songs marked: Next goes to the next song in it first.
+        if (SkipWithinTrack(forward: true))
+        {
+            return;
+        }
+
         if (_playlist.Count == 0)
         {
             return;
@@ -1651,6 +1657,11 @@ public partial class MainWindow : Window
         }
 
         if (_playlist.Count == 0)
+        {
+            return;
+        }
+
+        if (SkipWithinTrack(forward: false))
         {
             return;
         }

@@ -161,7 +161,7 @@ public sealed unsafe class ExclusiveDevice : IDisposable
         return ranges.Take((int)(size / sizeof(AudioValueRange))).ToList();
     }
 
-    private static bool WriteRate(uint device, double rate)
+    internal static bool WriteRate(uint device, double rate)
     {
         var address = new AudioObjectPropertyAddress(NominalSampleRateProperty);
         return AudioObjectSetPropertyData(device, &address, 0, null, sizeof(double), &rate) == 0;

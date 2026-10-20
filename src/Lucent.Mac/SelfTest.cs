@@ -78,6 +78,8 @@ public static partial class SelfTest
         failures += TestOutputDevices();
         failures += TestGapless();
         failures += TestOtherApps();
+        failures += WinampInspiredVisualizer.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
+        failures += TestLiveInputs();
         // Before the visuals: their timing pass keeps CI's virtual GPU busy for minutes, and a
         // recording straight after it has stalled.
         failures += TestRecording();
@@ -916,5 +918,23 @@ public static partial class SelfTest
 
             return samples;
         }
+    }
+
+    // Lists the inputs the Record window would offer. CI machines usually have none, so this only reports.
+    private static int TestLiveInputs()
+    {
+        try
+        {
+            var inputs = LiveInputs.List();
+            Console.WriteLine(inputs.Count == 0
+                ? "Record: no audio inputs on this machine."
+                : $"Record: found {inputs.Count} input(s): {string.Join(", ", inputs.Select(input => input.Name))}.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"::warning::Record: couldn't list the audio inputs: {ex.Message}");
+        }
+
+        return 0;
     }
 }
