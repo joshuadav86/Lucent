@@ -91,16 +91,39 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     public static (string Title, string? Author) MilkDropName(string path)
     {
         var name = Path.GetFileNameWithoutExtension(path).Trim();
+        if (UnusualNames.TryGetValue(name, out var known))
+        {
+            return known;
+        }
+
         var split = name.IndexOf(" - ", StringComparison.Ordinal);
         if (split <= 0)
         {
             return (name, null);
         }
 
-        var author = name[..split].Trim();
+        // "Phat_shifter" is two people, as MilkDrop's forums wrote collaborations.
+        var author = name[..split].Trim().Replace("_", " + ", StringComparison.Ordinal);
         var title = name[(split + 3)..].Trim();
         return title.Length == 0 || author.Length == 0 ? (name, null) : (title, author);
     }
+
+    /// <summary>
+    /// Presets Lucent ships whose file names don't say who made them the usual way, with their title and
+    /// who to credit (see the CREDITS.md next to them).
+    /// </summary>
+    private static readonly Dictionary<string, (string Title, string? Author)> UnusualNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["phat_RippleNebula9"] = ("RippleNebula9", "Phat"),
+        ["Unchained-liquardoblitz [shifter's esc shader]"] = ("liquardoblitz [shifter's esc shader]", "Unchained"),
+        // Winamp's own AVS presets that never carried an author's name: they came from Nullsoft.
+        ["New Taste"] = ("New Taste", "Nullsoft"),
+        ["Pulsing Shit"] = ("Pulsing Shit", "Nullsoft"),
+        ["Yay"] = ("Yay", "Nullsoft"),
+        ["Yay Mk II"] = ("Yay Mk II", "Nullsoft"),
+        ["Yay Mk II Dots"] = ("Yay Mk II Dots", "Nullsoft"),
+        ["Yay Mk III"] = ("Yay Mk III", "Nullsoft"),
+    };
 
     /// <summary>
     /// Gives every visual its own name, since favorites, lists and the last visual shown are kept by name.

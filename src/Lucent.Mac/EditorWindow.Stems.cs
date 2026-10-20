@@ -194,6 +194,7 @@ public partial class EditorWindow
                 ShowStemsWindow(stems);
             }
 
+            _stemsWindow?.ShowSaved(files[0]);
             ShowStatus($"Saved {part}vocals, drums, bass and other instruments as {options.Summary} in \"{Path.GetFileName(folder)}\". " +
                        StemModel.Splitter.DeviceNote);
         }

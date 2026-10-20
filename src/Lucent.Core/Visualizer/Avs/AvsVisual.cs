@@ -28,8 +28,12 @@ public sealed class AvsVisual
     /// </summary>
     public static bool ModernLook { get; set; } = true;
 
-    /// <summary>Whether <paramref name="source"/> is shown without Lucent's glow and tone-mapping: MilkDrop presets, and AVS presets as Winamp drew them.</summary>
-    public static bool ShownPlain(PresetSource source) => source.IsMilkDrop || (source.IsAvs && !ModernLook);
+    /// <summary>
+    /// Whether <paramref name="source"/> is shown without Lucent's glow and tone-mapping: MilkDrop presets as MilkDrop
+    /// showed them, and AVS presets as Winamp drew them (see <see cref="MilkDropLook"/> and <see cref="ModernLook"/>).
+    /// </summary>
+    public static bool ShownPlain(PresetSource source) =>
+        (source.IsMilkDrop && !MilkDropLook.Modern) || (source.IsAvs && !ModernLook);
 
     public AvsPresetRunner Runner { get; }
 

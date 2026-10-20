@@ -154,6 +154,11 @@
                                               Content="Modern look for AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
                                                Text="Draw AVS presets sharper, with Lucent's glow. Off shows them as Winamp drew them." />
+
+                                    <CheckBox x:Name="ModernMilkDropSwitch" Theme="{StaticResource SwitchToggle}"
+                                              Content="Modern look for MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Light MilkDrop presets with Lucent's glow, richer colour, and HDR highlights. Off shows them as MilkDrop did." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="SoundTab" IsVisible="False">

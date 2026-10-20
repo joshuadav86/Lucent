@@ -43,6 +43,9 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>When it joined the visuals, for the picker's "Newest first" order, or null if that isn't known.</summary>
     public DateTime? Added { get; init; }
 
+    /// <summary>"  by Geiss" (with room before it), shown softly after the name in the picker so the artist gets credit, or "" without an author.</summary>
+    public string Byline => Author is null ? string.Empty : $"  by {Author}";
+
     /// <summary>The name with its author, "Reaction Diffusion by Geiss", for the name shown over the visuals.</summary>
     public string Label => PresetSource.LabelFor(Name, Author);
 

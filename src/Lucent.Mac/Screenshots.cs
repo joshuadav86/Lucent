@@ -326,6 +326,7 @@ public static class Screenshots
         });
         var window = new StemsWindow(stems, "Night Drive", "Split on the graphics card.", _ => Task.CompletedTask, () => Task.CompletedTask);
         window.PreviewMuted(0);
+        window.ShowSaved("Night Drive stems/Night Drive (Vocals).flac");
         return window;
     }
 

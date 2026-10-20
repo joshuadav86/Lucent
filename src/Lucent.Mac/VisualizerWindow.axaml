@@ -289,8 +289,12 @@
                                                             VerticalAlignment="Center" ToolTip.Tip="A Winamp AVS preset">
                                                         <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </Border>
-                                                    <TextBlock Classes="label" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+                                                    <!-- MilkDrop and AVS presets credit their artist after the name: "Reaction Diffusion  by Geiss". -->
+                                                    <TextBlock Classes="label" FontSize="13" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}">
+                                                        <Run Text="{Binding Name}" /><Run Text="{Binding Byline}"
+                                                             FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
+                                                    </TextBlock>
                                                 </DockPanel>
                                             </DataTemplate>
                                         </ListBox.DataTemplates>

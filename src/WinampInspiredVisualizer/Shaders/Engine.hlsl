@@ -40,6 +40,22 @@ float3 toneMap(float3 colour)
     return saturate((colour * (2.51 * colour + 0.03)) / (colour * (2.43 * colour + 0.59) + 0.14));
 }
 
+// A modernised MilkDrop preset's picture was made for a plain 8-bit screen, so before Lucent's look it's
+// brought into Lucent's light the way AVS presets are (see AvsDisplay.hlsl): a touch of extra colour, the
+// colour the tone-mapping below turns back into the same mid-tones, and the brightest parts pushed past white
+// so they bloom and, on an HDR screen, climb towards its peak.
+float3 intoLucentLight(float3 shown)
+{
+    float luminance = dot(shown, float3(0.2126, 0.7152, 0.0722));
+    float3 colour = saturate(lerp(luminance.xxx, shown, 1.1));
+    float3 c = min(colour * 0.92, 0.98);
+    float3 a = 2.43 * c - 2.51;
+    float3 b = 0.59 * c - 0.03;
+    float3 light = (-b - sqrt(max(b * b - 4.0 * a * (0.14 * c), 0.0))) / (2.0 * a);
+    float peak = max(colour.r, max(colour.g, colour.b));
+    return light * (1.0 + 0.9 * smoothstep(0.7, 1.0, peak));
+}
+
 float4 PSPresent(VSOut input) : SV_Target
 {
     float2 uv = input.uv;
@@ -47,8 +63,8 @@ float4 PSPresent(VSOut input) : SV_Target
     float2 texel = max(RenderScale, 1.0) / Resolution;  // one pixel of the image being shown
     float3 colour = previous(uv);
 
-    // MilkDrop presets made their own finished picture for a plain 8-bit screen, so they skip
-    // the sharpening, glow, tone-mapping and vignette (all of it, or partly mid-transition).
+    // Classic presets shown as they first looked (MilkDrop's or Winamp's finished picture for a plain 8-bit
+    // screen) skip the sharpening, glow, tone-mapping and vignette (all of it, or partly mid-transition).
     float lucentLook = 1.0 - saturate(PlainOutput);
 
     // Sharpen: push each pixel away from its neighbours' average. This undoes the slight blur
@@ -57,6 +73,7 @@ float4 PSPresent(VSOut input) : SV_Target
                        + previous(uv + float2(0.0, texel.y)) + previous(uv - float2(0.0, texel.y))) * 0.25;
     float sharpen = 0.6 * saturate(1.5 - 0.5 * RenderScale) * lucentLook;
     colour = max(colour + (colour - neighbours) * sharpen, 0.0);
+    colour = lerp(colour, intoLucentLight(saturate(colour)), saturate(ClassicLift));
 
     // Bloom only the brightest parts, so highlights glow but dark areas stay crisp and black.
     float3 bloom = 0.0;

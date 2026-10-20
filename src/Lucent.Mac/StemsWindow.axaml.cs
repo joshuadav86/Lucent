@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -29,6 +30,7 @@ public partial class StemsWindow : Window
     private readonly Func<Task> _save;
     private readonly List<StemRow> _rows = new();
     private int _position;
+    private string? _savedFile;
 
     /// <summary>For the XAML previewer only.</summary>
     public StemsWindow()
@@ -192,6 +194,29 @@ public partial class StemsWindow : Window
 
     private async void OnSave(object? sender, RoutedEventArgs e) => await _save();
 
+    /// <summary>The stems were saved as files, <paramref name="file"/> among them: offers to open their folder.</summary>
+    public void ShowSaved(string file)
+    {
+        _savedFile = file;
+        ShowFolderButton.IsVisible = true;
+    }
+
+    private void OnShowFolder(object? sender, RoutedEventArgs e)
+    {
+        if (_savedFile is not null)
+        {
+            try
+            {
+                // Opens a Finder window with the first stem selected.
+                Process.Start(new ProcessStartInfo("open") { ArgumentList = { "-R", _savedFile }, UseShellExecute = false });
+            }
+            catch (Exception)
+            {
+                // Nothing useful to add; Finder usually opens.
+            }
+        }
+    }
+
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Space)
@@ -345,6 +370,29 @@ public partial class StemsWindow : Window
             }
         }
 
+        private StreamGeometry? _outline;
+        private Size _outlineSize;
+
+        private StreamGeometry Outline(double width, double height)
+        {
+            var middle = height / 2;
+            var geometry = new StreamGeometry();
+            using var figure = geometry.Open();
+            figure.BeginFigure(new Point(0, middle), true);
+            for (var i = 0; i < _peaks.Length; i++)
+            {
+                figure.LineTo(new Point((i + 0.5) * width / _peaks.Length, middle - _peaks[i] * middle));
+            }
+
+            for (var i = _peaks.Length - 1; i >= 0; i--)
+            {
+                figure.LineTo(new Point((i + 0.5) * width / _peaks.Length, middle + _peaks[i] * middle));
+            }
+
+            figure.EndFigure(true);
+            return geometry;
+        }
+
         public override void Render(DrawingContext context)
         {
             var width = Bounds.Width;
@@ -353,24 +401,14 @@ public partial class StemsWindow : Window
             context.FillRectangle(Brushes.Transparent, new Rect(Bounds.Size));
             if (_peaks.Length > 0 && width > 0 && height > 0)
             {
-                var middle = height / 2;
-                var geometry = new StreamGeometry();
-                using (var figure = geometry.Open())
+                // The outline only changes with the size; the playhead moves many times a second.
+                if (_outline is null || _outlineSize != Bounds.Size)
                 {
-                    figure.BeginFigure(new Point(0, middle), true);
-                    for (var i = 0; i < _peaks.Length; i++)
-                    {
-                        figure.LineTo(new Point((i + 0.5) * width / _peaks.Length, middle - _peaks[i] * middle));
-                    }
-
-                    for (var i = _peaks.Length - 1; i >= 0; i--)
-                    {
-                        figure.LineTo(new Point((i + 0.5) * width / _peaks.Length, middle + _peaks[i] * middle));
-                    }
-
-                    figure.EndFigure(true);
+                    _outline = Outline(width, height);
+                    _outlineSize = Bounds.Size;
                 }
 
+                var geometry = _outline;
                 using (context.PushOpacity(FillOpacity))
                 {
                     context.DrawGeometry(Fill, null, geometry);

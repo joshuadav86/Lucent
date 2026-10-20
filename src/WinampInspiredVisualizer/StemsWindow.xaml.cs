@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -27,6 +28,7 @@ public partial class StemsWindow : Window
     private readonly Func<Task> _save;
     private readonly List<StemRow> _rows = new();
     private int _position;
+    private string? _savedFile;
 
     public StemsWindow(StemSet stems, string song, string note, Func<IReadOnlyList<string>, Task> keep, Func<Task> save)
     {
@@ -160,6 +162,29 @@ public partial class StemsWindow : Window
     }
 
     private async void OnSave(object sender, RoutedEventArgs e) => await _save();
+
+    /// <summary>The stems were saved as files, <paramref name="file"/> among them: offers to open their folder.</summary>
+    public void ShowSaved(string file)
+    {
+        _savedFile = file;
+        ShowFolderButton.Visibility = Visibility.Visible;
+    }
+
+    private void OnShowFolder(object sender, RoutedEventArgs e)
+    {
+        if (_savedFile is not null)
+        {
+            try
+            {
+                // Opens File Explorer with the first stem selected.
+                Process.Start("explorer.exe", $"/select,\"{_savedFile}\"");
+            }
+            catch (Exception)
+            {
+                // Nothing useful to add; File Explorer usually opens.
+            }
+        }
+    }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {

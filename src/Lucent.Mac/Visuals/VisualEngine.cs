@@ -6,6 +6,7 @@ using Lucent.Mac.Visualizer;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Visualizer;
 using WinampInspiredVisualizer.Visualizer.Avs;
+using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
 namespace Lucent.Mac.Visuals;
 
@@ -31,7 +32,7 @@ public sealed partial class VisualEngine : IDisposable
 {
     /// <summary>The visuals' own pictures: half-float, so glow and HDR have room above white.</summary>
     internal const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
-    private const int ConstantCount = 24;
+    private const int ConstantCount = 28;
     private const int ParticleStride = 48;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const int ParticleGroupSize = 256;
@@ -552,7 +553,8 @@ public sealed partial class VisualEngine : IDisposable
         _constants[17] = display.SdrWhiteNits / 80f;
         _constants[18] = display.PeakNits / 80f;
         _constants[19] = _frameCount++;
-        _constants[23] = PlainOutputAmount(progress);
+        _constants[23] = LookAmount(AvsVisual.ShownPlain, progress);
+        _constants[24] = LookAmount(MilkDropLook.BringsIntoLight, progress);
 
         var target = _feedback[_current]!;
         var previous = _feedback[1 - _current]!;
@@ -711,19 +713,20 @@ public sealed partial class VisualEngine : IDisposable
     private static string KindOf(PresetSource source) => source.IsAvs ? "AVS preset" : "MilkDrop preset";
 
     /// <summary>
-    /// How much of the picture is a MilkDrop preset's, or an AVS preset's shown as Winamp drew it (1 when one is
-    /// showing, part-way during a transition to or from one), which the screen pass shows without Lucent's glow
-    /// and tone-mapping.
+    /// How much of the picture is a visual that <paramref name="shows"/> picks out (1 when one is showing, part-way
+    /// during a transition to or from one), for the screen pass: classic presets shown as they first looked, which
+    /// it shows without Lucent's glow and tone-mapping, and modernised MilkDrop presets, which it brings into
+    /// Lucent's light first.
     /// </summary>
-    private float PlainOutputAmount(float progress)
+    private float LookAmount(Func<PresetSource, bool> shows, float progress)
     {
-        var to = AvsVisual.ShownPlain(_slots[_activePreset].Source) ? 1f : 0f;
+        var to = shows(_slots[_activePreset].Source) ? 1f : 0f;
         if (_fromPreset < 0)
         {
             return to;
         }
 
-        var from = AvsVisual.ShownPlain(_slots[_fromPreset].Source) ? 1f : 0f;
+        var from = shows(_slots[_fromPreset].Source) ? 1f : 0f;
         return from + (to - from) * progress;
     }
 

@@ -93,6 +93,9 @@ public sealed class AppSettings
     /// <summary>Draw Winamp AVS presets sharper and smoother, in Lucent's light; off shows them as Winamp drew them.</summary>
     public bool ModernAvs { get; set; } = true;
 
+    /// <summary>Show MilkDrop presets in Lucent's light, with its glow and tone-mapping; off shows them as MilkDrop did.</summary>
+    public bool ModernMilkDrop { get; set; } = true;
+
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
 

@@ -147,35 +147,44 @@ public sealed class StemSplitter : IDisposable
         return new StemSplitter(modelPath, new InferenceSession(modelPath, cpu), ProcessorName);
     }
 
-    /// <summary>Splits one segment of made-up music on both, and gives how far apart the stems are (dB of the music's level).</summary>
+    /// <summary>
+    /// Splits one segment of made-up music on both, and gives how far apart the stems are (dB of the music's
+    /// level) in the stretch where they differ most, so a few clicks or crackles can't hide in an average.
+    /// </summary>
     private double DifferenceFrom(StemSplitter other)
     {
+        const int stretch = 4096;
         var mix = TestSegment(_segment);
         var mine = RunSegment(mix, CancellationToken.None);
         var theirs = other.RunSegment(mix, CancellationToken.None);
-        double error = 0;
         double level = 0;
-        long count = 0;
-        for (var s = 0; s < mine.Length; s++)
-        {
-            for (var c = 0; c < 2; c++)
-            {
-                for (var i = 0; i < _segment; i++)
-                {
-                    var d = mine[s][c][i] - theirs[s][c][i];
-                    error += float.IsFinite(d) ? d * d : double.PositiveInfinity;
-                    count++;
-                }
-            }
-        }
-
         foreach (var value in mix)
         {
             level += value * value;
         }
 
-        var rms = Math.Sqrt(error / Math.Max(1, count));
-        return double.IsFinite(rms) ? 20 * Math.Log10(Math.Max(rms, 1e-12) / Math.Sqrt(level / mix.Length)) : double.PositiveInfinity;
+        var reference = Math.Sqrt(level / mix.Length);
+        var worst = 0.0;
+        for (var start = 0; start < _segment; start += stretch)
+        {
+            var end = Math.Min(_segment, start + stretch);
+            double error = 0;
+            for (var s = 0; s < mine.Length; s++)
+            {
+                for (var c = 0; c < 2; c++)
+                {
+                    for (var i = start; i < end; i++)
+                    {
+                        var d = mine[s][c][i] - theirs[s][c][i];
+                        error += float.IsFinite(d) ? d * d : double.PositiveInfinity;
+                    }
+                }
+            }
+
+            worst = Math.Max(worst, Math.Sqrt(error / (mine.Length * 2.0 * (end - start))));
+        }
+
+        return double.IsFinite(worst) ? 20 * Math.Log10(Math.Max(worst, 1e-12) / reference) : double.PositiveInfinity;
     }
 
     /// <summary>A bass line, a wobbling lead, a kick drum and a little noise, at the level the model takes ([channel][sample], flattened).</summary>
