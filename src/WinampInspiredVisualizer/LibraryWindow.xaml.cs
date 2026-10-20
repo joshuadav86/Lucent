@@ -494,6 +494,15 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
+        // With folder headings highlighted, Ctrl+A highlights every heading, ready for Delete.
+        if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control && _highlightedFolders.Count > 0
+            && !SearchBox.IsKeyboardFocusWithin)
+        {
+            HighlightFolders(GroupNames());
+            e.Handled = true;
+            return;
+        }
+
         base.OnPreviewKeyDown(e);
     }
 
@@ -680,6 +689,29 @@ public partial class LibraryWindow : ToolWindow
         removeAll.Click += (_, _) => RemoveAllLibraryFolders();
         return removeAll;
     }
+
+    /// <summary>The folders Delete acts on: the highlighted headings', else those of the chosen songs.</summary>
+    private List<string> FoldersToDelete() => _highlightedFolders.Count > 0
+        ? HighlightedDirectories()
+        : SelectedLibraryItems().Where(item => !item.IsPlaceholder).Select(item => item.Directory)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+    /// <summary>Takes folders out of the library after asking, as Delete does. Nothing on disk is touched.</summary>
+    private void AskToRemoveLibraryFolders(IReadOnlyList<string> folders)
+    {
+        var answer = MessageBox.Show(this, RemoveFoldersQuestion(folders),
+            "Library", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (answer == MessageBoxResult.Yes)
+        {
+            RemoveLibraryFolders(folders);
+        }
+    }
+
+    private static string RemoveFoldersQuestion(IReadOnlyList<string> folders) =>
+        (folders.Count == 1
+            ? $"Remove “{LibraryFolderList.Name(folders[0])}” from your library?"
+            : $"Remove these {folders.Count} folders from your library?") +
+        "\n\nYour music files stay where they are. You can add the folders back at any time.";
 
     /// <summary>Takes every folder out of the library, after asking. Nothing on disk is touched.</summary>
     private void RemoveAllLibraryFolders()
@@ -1206,10 +1238,11 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnLibraryKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Delete && _highlightedFolders.Count > 0 && !ShowingPlaylists)
+        // Delete takes the highlighted headings' folders out, or the folders the chosen songs are in, after asking.
+        if (e.Key == Key.Delete && !ShowingPlaylists && FoldersToDelete() is { Count: > 0 } folders)
         {
-            RemoveLibraryFolders(HighlightedDirectories());
             e.Handled = true;
+            AskToRemoveLibraryFolders(folders);
             return;
         }
 

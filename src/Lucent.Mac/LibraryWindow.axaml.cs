@@ -624,6 +624,15 @@ public partial class LibraryWindow : ToolWindow
         {
             FocusSearch();
             e.Handled = true;
+            return;
+        }
+
+        // With folder headings highlighted, ⌘A highlights every heading, ready for Delete.
+        if (e.Key == Key.A && e.KeyModifiers == KeyModifiers.Meta && _highlightedFolders.Count > 0
+            && !SearchBox.IsKeyboardFocusWithin)
+        {
+            HighlightFolders(GroupNames());
+            e.Handled = true;
         }
     }
 
@@ -804,6 +813,29 @@ public partial class LibraryWindow : ToolWindow
         removeAll.Click += (_, _) => RemoveAllLibraryFolders();
         return removeAll;
     }
+
+    /// <summary>The folders Delete acts on: the highlighted headings', else those of the chosen songs.</summary>
+    private List<string> FoldersToDelete() => _highlightedFolders.Count > 0
+        ? HighlightedDirectories()
+        : SelectedLibraryItems().Where(item => !item.IsPlaceholder).Select(item => item.Directory)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+    /// <summary>Takes folders out of the library after asking, as Delete does. Nothing on disk is touched.</summary>
+    private async void AskToRemoveLibraryFolders(IReadOnlyList<string> folders)
+    {
+        var answer = await MessageWindow.ShowAsync(this, RemoveFoldersQuestion(folders),
+            "Library", MessageButtons.YesNo, MessageResult.No);
+        if (answer == MessageResult.Yes)
+        {
+            RemoveLibraryFolders(folders);
+        }
+    }
+
+    private static string RemoveFoldersQuestion(IReadOnlyList<string> folders) =>
+        (folders.Count == 1
+            ? $"Remove “{LibraryFolderList.Name(folders[0])}” from your library?"
+            : $"Remove these {folders.Count} folders from your library?") +
+        "\n\nYour music files stay where they are. You can add the folders back at any time.";
 
     /// <summary>Takes every folder out of the library, after asking. Nothing on disk is touched.</summary>
     private async void RemoveAllLibraryFolders()
@@ -1373,10 +1405,11 @@ public partial class LibraryWindow : ToolWindow
     private void OnLibraryKeyDown(object? sender, KeyEventArgs e)
     {
         // The Mac's delete key sends Back; the forward-delete key sends Delete.
-        if (e.Key is Key.Delete or Key.Back && _highlightedFolders.Count > 0 && !ShowingPlaylists)
+        // It takes the highlighted headings' folders out, or the folders the chosen songs are in, after asking.
+        if (e.Key is Key.Delete or Key.Back && !ShowingPlaylists && FoldersToDelete() is { Count: > 0 } folders)
         {
-            RemoveLibraryFolders(HighlightedDirectories());
             e.Handled = true;
+            AskToRemoveLibraryFolders(folders);
             return;
         }
 
