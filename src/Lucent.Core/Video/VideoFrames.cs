@@ -37,6 +37,12 @@ public sealed class VideoFrames : IDisposable
     public long Count { get; private set; }
 
     /// <summary>
+    /// For the self-test: called with each picture (pixels, width, height, stride) the moment libVLC shows it, on
+    /// libVLC's thread, so the moment can't be missed or measured late by a busy machine.
+    /// </summary>
+    internal Action<nint, int, int, int>? Shown { get; set; }
+
+    /// <summary>
     /// Works out the size to ask libVLC for: the video's own size with its pixels made square (a widescreen DVD's
     /// are wider than tall), scaled down to fit <see cref="MaxWidth"/> × <see cref="MaxHeight"/>. Both even, which
     /// libVLC's scaler wants.
@@ -90,6 +96,10 @@ public sealed class VideoFrames : IDisposable
         {
             (_drawing, _finished) = (_finished, _drawing);
             Count++;
+            if (_finished != 0)
+            {
+                Shown?.Invoke(_finished, Width, Height, Stride);
+            }
         }
     }
 

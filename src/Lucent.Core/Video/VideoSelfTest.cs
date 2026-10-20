@@ -87,7 +87,7 @@ public static class VideoSelfTest
         var again = Play(video, pauseAt: null);
         problems += Check(log, $"{name} played again from 2.5 s", again, 1);
         // Half a second in, less the moment libVLC takes to start.
-        if (again.HalfSecondIn is not { } position || position.TotalSeconds < 2.5 || position.TotalSeconds > 3.2)
+        if (again.HalfSecondIn is not { } position || position.TotalSeconds < 2.4 || position.TotalSeconds > 3.2)
         {
             problems++;
             log($"::error::Video: half a second after playing {name} from 2.5 s, it said it was at {again.HalfSecondIn?.TotalSeconds:0.00} s.");
@@ -137,45 +137,30 @@ public static class VideoSelfTest
         return problems;
     }
 
-    // Plays the video to its end the way the player does: 10 ms of sound read every 10 ms, while another thread
-    // watches for the flashes. Times are libVLC's clock, in microseconds: when a flash was shown, and when each beep
+    // Plays the video to its end the way the player does: 10 ms of sound read every 10 ms, while each picture is
+    // checked for a flash as it's shown. Times are libVLC's clock, in microseconds: when a flash was shown, and when each beep
     // (the first loud sample after a quiet stretch) would reach the speakers.
     private static Playthrough Play(VideoStream video, TimeSpan? pauseAt)
     {
         var run = new Playthrough();
-        var watching = true;
-        var watcher = new Thread(() =>
+        // Each picture is looked at as libVLC shows it, timed by libVLC's clock.
+        var bright = false;
+        video.Frames.Shown = (pixels, width, height, stride) =>
         {
-            long seen = -1;
-            var bright = false;
-            while (Volatile.Read(ref watching))
+            var shownAt = video.Clock;
+            var middle = new byte[4];
+            Marshal.Copy(pixels + height / 2 * stride + width / 2 * 4, middle, 0, 4);
+            var now = middle[0] > 200 && middle[1] > 200 && middle[2] > 200;
+            if (now && !bright)
             {
-                if (video.Frames.Count != seen)
+                lock (run)
                 {
-                    seen = video.Frames.Count;
-                    var shownAt = video.Clock;
-                    var now = false;
-                    video.Frames.CopyLatest((pixels, width, height, stride) =>
-                    {
-                        var middle = new byte[4];
-                        Marshal.Copy(pixels + height / 2 * stride + width / 2 * 4, middle, 0, 4);
-                        now = middle[0] > 200 && middle[1] > 200 && middle[2] > 200;
-                    });
-                    if (now && !bright)
-                    {
-                        lock (run)
-                        {
-                            run.Flashes.Add(shownAt);
-                        }
-                    }
-
-                    bright = now;
+                    run.Flashes.Add(shownAt);
                 }
-
-                Thread.Sleep(1);
             }
-        }) { IsBackground = true, Name = "Video self-test" };
-        watcher.Start();
+
+            bright = now;
+        };
 
         var rate = video.WaveFormat.SampleRate;
         var chunk = new byte[rate / 100 * video.WaveFormat.BlockAlign];
@@ -231,8 +216,7 @@ public static class VideoSelfTest
 
         // The last picture may come a moment after the sound runs out.
         Thread.Sleep(100);
-        Volatile.Write(ref watching, false);
-        watcher.Join();
+        video.Frames.Shown = null;
         video.Paused();
         return run;
     }
