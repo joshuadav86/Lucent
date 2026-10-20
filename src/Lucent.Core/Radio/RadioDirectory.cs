@@ -167,19 +167,21 @@ public sealed class RadioDirectory
         }
 
         var stations = await GetAsync<List<DirectoryStation>>("json/stations/search?" + string.Join("&", parts), cancel);
-        var playable = stations.Where(listed => listed.Hls == 0)
-            .Select(ToStation)
-            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec) && !IsHls(station.StreamUrl));
+        var playable = stations.Select(ToStation)
+            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec));
         return WithoutDuplicates(playable)
             .Take(query.Limit)
             .ToList();
     }
 
-    /// <summary>True for the formats Lucent plays: MP3, and AAC (including HE-AAC, which the directory calls AAC+).</summary>
-    public static bool IsPlayable(string codec) => codec.Trim().ToUpperInvariant() switch
+    /// <summary>
+    /// True for the formats Lucent plays: MP3, and AAC (including HE-AAC, which the directory calls AAC+). A video
+    /// station ("AAC,H.264") counts when its sound is one of them, as Lucent plays the sound.
+    /// </summary>
+    public static bool IsPlayable(string codec) => codec.Trim().ToUpperInvariant().Split(',', '/')[0].Trim() switch
     {
         "MP3" or "AAC" or "AAC+" or "AACP" or "HE-AAC" => true,
-        _ => false,
+        var audio => audio.StartsWith("AAC+H") || audio.StartsWith("MP3+H"),
     };
 
     /// <summary>
@@ -218,11 +220,6 @@ public sealed class RadioDirectory
         var key = new string(plain.Where(char.IsLetterOrDigit).ToArray());
         return key.Length > 0 ? key : name.Trim().ToLowerInvariant();
     }
-
-    // HLS streams come in segments, not as one stream, which Lucent doesn't play, so they're left out. The directory
-    // marks most of them; the rest give themselves away by their address.
-    private static bool IsHls(string address) =>
-        Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.AbsolutePath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase);
 
     private static RadioStation ToStation(DirectoryStation station) => new()
     {
@@ -356,8 +353,6 @@ public sealed class RadioDirectory
         public int ClickCount { get; set; }
 
         public int ClickTrend { get; set; }
-
-        public int Hls { get; set; }
     }
 
     private sealed class DirectoryCount
