@@ -7,12 +7,12 @@ using WinampInspiredVisualizer.Visualizer.MilkDrop;
 
 namespace Lucent.Mac;
 
-/// <summary>MilkDrop presets: switching them on or off, and bringing in more. Kept in its own file.</summary>
+/// <summary>MilkDrop presets: switching them on or off, their look, and bringing in more. Kept in its own file.</summary>
 public partial class VisualizerWindow
 {
     /// <summary>
-    /// A "MilkDrop presets" submenu: switch them on or off, import files or a whole pack's folder, or open
-    /// the folder they're kept in.
+    /// A "MilkDrop presets" submenu: switch them on or off, choose between the modern look and MilkDrop's own,
+    /// import files or a whole pack's folder, or open the folder they're kept in.
     /// </summary>
     private MenuItem MilkDropMenu()
     {
@@ -24,6 +24,13 @@ public partial class VisualizerWindow
             Player?.ShowOptionsState();
         };
         parent.Items.Add(shown);
+        var modern = new MenuItem { Header = "Modern look", ToggleType = MenuItemToggleType.CheckBox, IsChecked = _settings.ModernMilkDrop };
+        modern.Click += (_, _) =>
+        {
+            UseModernMilkDrop(!_settings.ModernMilkDrop);
+            Player?.ShowOptionsState();
+        };
+        parent.Items.Add(modern);
         parent.Items.Add(new Separator());
         parent.Items.Add(MenuItemFor("Import MilkDrop presets…", ImportMilkDropFiles));
         parent.Items.Add(MenuItemFor("Import a folder of presets…", ImportMilkDropFolder));
@@ -41,6 +48,17 @@ public partial class VisualizerWindow
         _settings.MilkDropVisuals = shown;
         _settings.Save();
         ShowActiveList();
+    }
+
+    /// <summary>
+    /// Shows MilkDrop presets in Lucent's light (its glow, tone-mapping and HDR highlights) or as MilkDrop showed
+    /// them, from the next frame.
+    /// </summary>
+    public void UseModernMilkDrop(bool modern)
+    {
+        _settings.ModernMilkDrop = modern;
+        _settings.Save();
+        MilkDropLook.Modern = modern;
     }
 
     /// <summary>The Import button on the picker's MilkDrop folder: presets one by one, or a whole pack's folder.</summary>

@@ -35,6 +35,11 @@ public static class SelfTest
     // mandala away and pours it out again).
     private const int SlowStarterFrames = 12 * 60;
     private const double DarkBrightness = 0.004;
+
+    // From this frame (after the quarter-second change to a visual) to FramesPerVisual, each frame's brightness
+    // goes to a FlashCheck, to point out visuals that strobe.
+    private const int FlashWatchFrom = 16;
+
     private const double FrameSeconds = 1.0 / 60.0;
     private const int SampleRate = 44100;
     private const int StdOutputHandle = -11;
@@ -253,6 +258,7 @@ public static class SelfTest
         var dark = new List<string>();
         var slow = new List<string>();
         var heavy = new List<string>();
+        var strobing = new List<string>();
         var drawingErrors = 0;
         var drew = 0;
         var now = 0.0;
@@ -275,6 +281,7 @@ public static class SelfTest
             // slow starter. Waiting for each frame keeps the time limit honest.
             var drawn = 0;
             var brightness = 0.0;
+            var flashes = new FlashCheck();
             var waitedFor = Stopwatch.StartNew();
             try
             {
@@ -285,6 +292,11 @@ public static class SelfTest
                     var frame = renderer.DrawOffscreen(now, (float)FrameSeconds, now);
                     brightness = Brightness(renderer.Context, frame, copy, pixels);
                     drawn++;
+                    if (drawn >= FlashWatchFrom && drawn <= FramesPerVisual)
+                    {
+                        flashes.Add(brightness);
+                    }
+
                     if ((drawn >= FramesPerVisual && brightness >= DarkBrightness)
                         || drawn >= FramesPerVisual + SlowStarterFrames || waitedFor.Elapsed > TimePerVisual)
                     {
@@ -317,6 +329,11 @@ public static class SelfTest
             if (drawn < FramesPerVisual)
             {
                 heavy.Add($"{name} ({drawn} frames in {waitedFor.Elapsed.TotalSeconds:0} s)");
+            }
+
+            if (flashes.IsStrobing(FrameSeconds))
+            {
+                strobing.Add($"{name} ({flashes.FlashesPerSecond(FrameSeconds):0.#} a second)");
             }
 
             if (brightness < DarkBrightness)
@@ -353,6 +370,11 @@ public static class SelfTest
         if (dark.Count > 0)
         {
             Console.WriteLine($"::warning::Still black after {(FramesPerVisual + SlowStarterFrames) / 60} seconds (or the time limit): {string.Join(", ", dark)}");
+        }
+
+        if (strobing.Count > 0)
+        {
+            Console.WriteLine($"::warning::Flashed more than {FlashCheck.MostFlashesPerSecond} times a second, so check they aren't strobes: {string.Join(", ", strobing)}");
         }
 
         if (sheet is not null)

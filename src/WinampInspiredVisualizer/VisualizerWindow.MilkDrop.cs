@@ -13,8 +13,8 @@ namespace WinampInspiredVisualizer;
 public partial class VisualizerWindow
 {
     /// <summary>
-    /// A "MilkDrop presets" submenu: switch them on or off, import files or a whole pack's folder, or open
-    /// the folder they're kept in.
+    /// A "MilkDrop presets" submenu: switch them on or off, choose between the modern look and MilkDrop's own,
+    /// import files or a whole pack's folder, or open the folder they're kept in.
     /// </summary>
     private MenuItem MilkDropMenu()
     {
@@ -26,6 +26,13 @@ public partial class VisualizerWindow
         });
         shown.IsChecked = _settings.MilkDropVisuals;
         parent.Items.Add(shown);
+        var modern = Item("Modern look", string.Empty, () =>
+        {
+            UseModernMilkDrop(!_settings.ModernMilkDrop);
+            Player?.ShowOptionsState();
+        });
+        modern.IsChecked = _settings.ModernMilkDrop;
+        parent.Items.Add(modern);
         parent.Items.Add(new Separator());
         parent.Items.Add(Item("Import MilkDrop presets…", string.Empty, ImportMilkDropFiles));
         parent.Items.Add(Item("Import a folder of presets…", string.Empty, ImportMilkDropFolder));
@@ -53,6 +60,17 @@ public partial class VisualizerWindow
         _settings.MilkDropVisuals = shown;
         _settings.Save();
         ShowActiveList();
+    }
+
+    /// <summary>
+    /// Shows MilkDrop presets in Lucent's light (its glow, tone-mapping and HDR highlights) or as MilkDrop showed
+    /// them, from the next frame.
+    /// </summary>
+    public void UseModernMilkDrop(bool modern)
+    {
+        _settings.ModernMilkDrop = modern;
+        _settings.Save();
+        MilkDropLook.Modern = modern;
     }
 
     private void ImportMilkDropFiles()

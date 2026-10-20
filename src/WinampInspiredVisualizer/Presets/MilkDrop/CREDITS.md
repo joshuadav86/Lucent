@@ -1,6 +1,6 @@
 # MilkDrop preset credits
 
-These 147 presets come from projectM's "Cream of the Crop" collection:
+These 225 presets come from projectM's "Cream of the Crop" collection:
 https://github.com/projectM-visualizer/presets-cream-of-the-crop (commit 0180df2, 2025-10-08).
 
 License note from that pack (LICENSE.md): MilkDrop presets were, in almost all cases, not released under any specific
@@ -8,8 +8,19 @@ license. Each preset author theoretically holds the copyright on their presets, 
 have been used in many packages and applications over two decades, the collection treats them as public domain, and
 removes an author's presets from future releases on request.
 
-File names are kept exactly as in the pack ("Author - Title.milk"). Thanks to every author below and to the projectM
-team for curating the collection.
+File names are kept exactly as in the pack ("Author - Title.milk"), and Lucent shows each preset with its artist
+("Reaction Diffusion 2 by Geiss") in the visual picker, over the visuals and when recording a video. Thanks to every
+author below and to the projectM team for curating the collection.
+
+Two file names don't follow the pack's pattern, so Lucent credits them by hand (in `PresetSource.UnusualNames`):
+"phat_RippleNebula9" by Phat, and "Unchained-liquardoblitz [shifter's esc shader]" by Unchained, with shifter's
+shader. "i made hexcollies day!" doesn't say who made it, so it shows without a name; if it's yours, open an issue.
+
+The first 147 below were picked in October 2026. The 78 in the second table were added later: they're presets that
+first shipped with MilkDrop 2 itself (projectM's "Milkdrop Original" pack,
+https://github.com/projectM-visualizer/presets-milkdrop-original) and are in Cream of the Crop too, where these
+copies come from, picked the same way: they run without notes in Lucent, need no image textures, and their shaders
+compile.
 
 **If you made one of these and want it removed, open an issue.**
 
@@ -162,3 +173,86 @@ team for curating the collection.
 | Rovastar - Snapshot Of Space.milk | Waveform/Wire Tangle |
 | Unchained-liquardoblitz [shifter's esc shader].milk | Waveform/Wire Tangle |
 | Zylot - Soup.milk | Waveform/Wire Tangle |
+
+## Added later: MilkDrop 2's own presets
+
+| Preset file | Original location in the pack |
+|---|---|
+| Bmelgren & Krash - Rainbow Orb Peacock (Lonely Signal Gone Mad Mix).milk | Waveform/Wire Flat |
+| Esotic & Rozzer - Now And Later.milk | Fractal/Nested Circle |
+| Esotic & Rozzer - The Dark Side Of My Moon.milk | Fractal/Nested Circle |
+| Flexi - hue burst.milk | Reaction/Liquid Ripples |
+| Flexi - jellyfish jam.milk | Waveform/Wire Circular |
+| Flexi - mindblob [shiny mix].milk | Waveform/Wire Circular |
+| Flexi - psychenapping.milk | Fractal/Nested Spiral |
+| Flexi - reality tunnel.milk | Waveform/Wire Circular |
+| Flexi - smashing fractals [Geiss' bas relief finish].milk | Fractal/Nested Dancer |
+| Flexi - smashing fractals [acid etching mix].milk | Fractal/Core |
+| Flexi, fishbrain, Geiss + Martin - tokamak witchery.milk | Drawing/Liquid |
+| Fvese - The Tunnel (Final Stage Mix).milk | Fractal/Nested Pyramid |
+| Fvese - Zoom Effects (Remix 3).milk | Fractal/Nested Pyramid |
+| Geiss - Blur Mix 3.milk | Waveform/Wire Flat |
+| Geiss - Cauldron - painterly 5.milk | Waveform/Wire Tangle |
+| Geiss - Confetti (Kaleidoscope Mix).milk | Waveform/Wire Mirror |
+| Geiss - Cosmic Dust 2 - Tiny Reaction Diffusion Mix.milk | Waveform/Wire Flat Double |
+| Geiss - Liquid Beats (janky ripple warp reflecto).milk | Waveform/Wire Tangle |
+| Geiss - Spiral Artifact.milk | Waveform/Wire Flat |
+| Geiss - Tokamak Plus 4.milk | Waveform/Wire Tangle |
+| Geiss and Zylot - Reaction Diffusion 3 (Overload Mix 2).milk | Reaction/Rorschach |
+| Goody - Acid Angel - Fallen Angel.milk | Waveform/Wire Tangle |
+| Goody - Aurora Totalis.milk | Waveform/Wire Rising |
+| Goody - LSD Zoomtunnel.milk | Waveform/Wire Circular |
+| Goody - Need - Desire remix.milk | Waveform/Wire Rising |
+| Goody - Need - Transcendance remix.milk | Waveform/Wire Rising |
+| Goody - The Thing That Lives Between.milk | Waveform/Wire Tangle |
+| Goody - The Wild Vort.milk | Reaction/Feedback |
+| Goody - Unstable Sonic Reactor - Final.milk | Waveform/Wire Circular |
+| Hexcollie - Personal Mashup3 [Flexi's portal mix].milk | Fractal/Nested Circle |
+| Hexcollie, Aderassi, BDRV, AdamFX n Flexi - It's a start.milk | Hypnotic/Polar Rolling |
+| Idiot - 9-7-02 (Remix 2).milk | Fractal/Nested Pyramid |
+| Idiot - Marphets Surreal Dream (Hypnotic Spiral Mix).milk | Fractal/Lattice |
+| Illusion & Unchained - New Strategy.milk | Reaction/Liquid Gradient |
+| ORB - Acid Cycle.milk | Waveform/Wire Spirograph |
+| ORB - Acid Sunrise.milk | Reaction/Liquid Blobby |
+| ORB - Dark Omen.milk | Reaction/Liquid Blobby |
+| ORB - Kalidescope.milk | Dancer/Comet Mirror |
+| ORB - Mega Spectrum.milk | Geometric/Wire Morph |
+| ORB - Pastel Primer.milk | Dancer/Whirl |
+| ORB - Planetary Alignment.milk | Geometric/Wire Circles |
+| ORB - Quicksand Lab.milk | Reaction/Liquid Ripples |
+| Rovastar & Idiot24-7 - Marphet's Shrine.milk | Reaction/Liquid Gradient |
+| Rovastar & Loadus - FractalDrop (Active Sparks Mix).milk | Fractal/Core Mirror |
+| Rovastar & Rocke - Sugar Spun Sister.milk | Waveform/Wire Tangle |
+| Rovastar & Unchained - Ambrosia Mystic (Dark Heart Mix).milk | Waveform/Wire Tangle |
+| Rovastar + Loadus + Geiss - FractalDrop (Spinning Mix).milk | Fractal/Core |
+| Rovastar + Loadus + Geiss - FractalDrop (Triple Mix).milk | Fractal/Core Mirror |
+| Rovastar + Loadus + Geiss - Tone-mapped FractalDrop 7c.milk | Fractal/Core Mirror |
+| Rovastar - Dark Ritual (Star Of Destiny Denied Mix).milk | Dancer/Shapes |
+| Rozzor & Esotic - PPL (NWI) Mandala Chill Color Reactive Texture Tweaked.milk | Fractal/Nested Circle |
+| Rozzor & Neuro - Starover (Semicolon Mix).milk | Fractal/Lattice |
+| Stahlregen & Geiss + TobiasWolfBoi - Space Gelatin (Color Xplosion).milk | Waveform/Wire Circular |
+| Stahlregen & bdrv + fiSHbRAiN + flexi + Geiss + shifter - Starcraft (Hyperion RMX V3).milk | Sparkle/Mass Stars |
+| Stahlregen & fiSHbRaiN + flexi + Geiss + shifter - Stonecraft (Beetle Relief mix).milk | Drawing/Trails Mirror |
+| Stahlregen & fishbrain + geiss + martin  - Flowercraft.milk | Drawing/Trails Mirror |
+| Stahlregen - Spiral Beats (Fluctuating Flowers).milk | Fractal/Nested Spiral |
+| Unchained vs Rovastar vs Zylot - Tripmaker (Trip Machine v3).milk | Fractal/Nested Spiral |
+| Zylot & Idiot24-7 - Unknown Power Source.milk | Fractal/Pointy |
+| Zylot - In death there is life (Geiss Layered Mix).milk | Reaction/Feedback |
+| Zylot - Spiral (Hypnotic)_Phat_Double_Spiral_Mix.milk | Geometric/Wire Spiral |
+| cope - digital sea.milk | Reaction/Rorschach |
+| cope - ferrofluid [Flexis minor remix].milk | Reaction/Feedback |
+| cope - the drain to heaven.milk | Reaction/Mountains |
+| fiShbRaiN - crystal glasses.milk | Fractal/Nested Hexagon |
+| fiShbRaiN - toffee cream and icing sugar.milk | Dancer/Infect Mirror |
+| fiShbRaiN - white scream firefly.milk | Waveform/Wire Flat Double |
+| shifter & fiShbRaiN - witchcraft (i'm melting).milk | Drawing/Trails Mirror |
+| shifter + geiss - neon pulse (glow mix).milk | Fractal/Nested Spiral Multiple |
+| shifter - brain coral.milk | Fractal/Nested Circle |
+| shifter - digi.milk | Dancer/Tree Branch |
+| shifter - fractal grinder.milk | Fractal/Nested Circle |
+| shifter - lazerspecs_phat_edit.milk | Geometric/Wire Morph |
+| shifter - spincycle c.milk | Reaction/Liquid Blobby |
+| shifter - swarm.milk | Reaction/Feedback |
+| yin - 100 - Through the ether - Bitcore Tweak.milk | Fractal/Nested Square |
+| yin - 140 - Ohm to the stars.milk | Waveform/Wire Circular |
+| yin - 191 - Temporal singularities.milk | Waveform/Wire Mirror |
