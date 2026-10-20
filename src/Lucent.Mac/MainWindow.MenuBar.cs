@@ -93,6 +93,7 @@ public partial class MainWindow
         var editInfo = Item("Edit Info…", EditInfoForSelection, new KeyGesture(Key.I, KeyModifiers.Meta));
         file.Add(editInfo);
         file.Add(Item("Save the Queue as a Playlist…", () => SaveQueueAsPlaylist(this)));
+        file.Add(Item("Record from an Audio Interface…", () => Editor.AudioTools.OpenRecorder(this, _player, _settings)));
         file.Add(new NativeMenuItemSeparator());
         file.Add(Item("Online Radio…", ShowRadio));
         file.Add(Item("Bandcamp and Beatport…", ShowStores));

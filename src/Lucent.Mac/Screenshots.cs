@@ -75,6 +75,7 @@ public static class Screenshots
             new[] { "Night Drive.flac", "Harbour Lights.wav", "Glass Garden.mp3", "Slow Orbit.m4a" }
                 .Select(name => Path.Combine(SampleFolder(), name)).ToList(), new AppSettings())),
         ("RecordVideo", () => PreviewRecordVideo()),
+        ("Record", RecordWindow.PreparePreview),
         ("Stems", () => PreviewStems()),
     };
 

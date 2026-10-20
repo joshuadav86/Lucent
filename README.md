@@ -168,6 +168,12 @@ Double-click the visuals or press **F11**. Click once to pause or play, and righ
 
 Right-click the visuals and choose **Record video…** to save the song that's playing, drawn with a visual (or with Auto, changing on the beat), as an MP4 to share: the whole song or just a part, in 1080p, 1440p, or 4K at 30 or 60 fps. Every frame is drawn in turn and none are skipped, so a recording can take more or less time than the song lasts, and the visuals and music carry on as usual meanwhile. It's encoded as H.264 with AAC sound by Windows or macOS, on the graphics card or the Mac's own video encoder when it can be.
 
+### Record a DJ set (or anything) live
+
+Choose **Record from an audio interface…** under the title bar's Edit button (or **File** on a Mac) to record from an audio interface, DJ mixer, or microphone into a WAV file while the visuals react to it. Pick the input and its channels (any stereo pair or a single channel), the sample rate (44.1 to 192 kHz), and 16-bit, 24-bit, or 32-bit float. On Windows, inputs come through WASAPI or the interface's ASIO driver; on a Mac, through Core Audio, which switches the interface to the chosen rate. Run the sound through live VST3 plugins (or a chain saved in the editor) on its way to the file, keep a copy without them if you like, and listen through the speakers. Name files from a template such as `{name} {date} {time}` or `{name} {take}`, and choose the folder they go in; the window shows how much room is left. Recordings past 4 GB become RF64 files, and the file is kept up to date as it goes, so a crash keeps what was recorded.
+
+Press **New track** (M) as each song starts, and Lucent also marks where it hears one song give way to the next. The marks go into the WAV as cue points (with a .cue sheet beside it), so Next and Previous in Lucent skip from song to song in the set, and DJ software and editors show them. **New file** (N) carries on in a new file without missing a sample.
+
 ## The player
 
 A small player in the spirit of Winamp's, with the equalizer, queue, library, analyzer, artwork, and visuals each in their own window. Edges snap to each other and to the screen, docked windows travel together while you drag, and resizing one edge resizes its neighbours. Press **D** to tidy everything back into one neat rectangle, **G** to fill the screen, or **K** to shrink it all.

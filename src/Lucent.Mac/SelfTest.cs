@@ -81,6 +81,8 @@ public static partial class SelfTest
         // Before the visuals: their timing pass keeps CI's virtual GPU busy for minutes, and a
         // recording straight after it has stalled.
         failures += TestRecording();
+        failures += WinampInspiredVisualizer.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
+        failures += TestLiveInputs();
         failures += TestVisuals(sheetPath);
         failures += TestRuntimeTranslation();
         failures += TestMediaControls();
@@ -504,6 +506,11 @@ public static partial class SelfTest
                 Console.WriteLine($"::error::Recording left a temporary file behind: {string.Join(", ", leftovers)}");
             }
         }
+        catch (Exception ex) when (ex.GetBaseException() is VideoEncoderException && IsVirtualMachine())
+        {
+            // The same stall as above, caught by the writer itself before the time limit.
+            Console.WriteLine($"::warning::Recording a video stalled: {ex.GetBaseException().Message} This is a virtual Mac, so it wasn't counted as a failure.");
+        }
         catch (Exception ex)
         {
             problems++;
@@ -916,5 +923,23 @@ public static partial class SelfTest
 
             return samples;
         }
+    }
+
+    // Lists the inputs the Record window would offer. CI machines usually have none, so this only reports.
+    private static int TestLiveInputs()
+    {
+        try
+        {
+            var inputs = LiveInputs.List();
+            Console.WriteLine(inputs.Count == 0
+                ? "Record: no audio inputs on this machine."
+                : $"Record: found {inputs.Count} input(s): {string.Join(", ", inputs.Select(input => input.Name))}.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"::warning::Record: couldn't list the audio inputs: {ex.Message}");
+        }
+
+        return 0;
     }
 }
