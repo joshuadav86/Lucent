@@ -105,8 +105,8 @@
                         Click="OnPlayAddress" />
                 <TextBlock FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource FaintTextBrush}"
-                           Text="Stations from radio-browser.info, a free directory kept up by its listeners. MP3 stations only for now."
-                           ToolTip="Radio Browser lists about 50,000 stations. Lucent shows the MP3 ones that were on the air at its last check." />
+                           Text="Stations from radio-browser.info, a free directory kept up by its listeners. MP3 and AAC stations."
+                           ToolTip="Radio Browser lists about 50,000 stations. Lucent shows the MP3 and AAC ones that were on the air at its last check." />
             </DockPanel>
         </Grid>
     </Border>

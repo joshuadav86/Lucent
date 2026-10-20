@@ -148,7 +148,7 @@ public partial class MainWindow
     {
         try
         {
-            return await RadioStream.OpenAsync(station.StreamUrl, RadioUserAgent, cancel);
+            return await RadioStream.OpenAsync(station.StreamUrl, RadioUserAgent, cancel, station.Codec);
         }
         catch (RadioProblem) when (!station.IsFromDirectory && station.Network is not null && !cancel.IsCancellationRequested)
         {
@@ -160,7 +160,7 @@ public partial class MainWindow
                 throw;
             }
 
-            return await RadioStream.OpenAsync(same.StreamUrl, RadioUserAgent, cancel);
+            return await RadioStream.OpenAsync(same.StreamUrl, RadioUserAgent, cancel, same.Codec);
         }
     }
 
@@ -294,7 +294,8 @@ public partial class MainWindow
 
         var kbps = _radioStream?.Bitrate is > 0 and var bitrate ? bitrate : station.Bitrate;
         var playing = _player.IsPlaying ? "live" : _tuning is not null ? "connecting" : "stopped";
-        return kbps > 0 ? $"{station.Name} · {kbps} kbps · {playing}" : $"{station.Name} · {playing}";
+        var codec = _radioStream?.Codec is { } format ? $" {format}" : string.Empty;
+        return kbps > 0 ? $"{station.Name} · {kbps} kbps{codec} · {playing}" : $"{station.Name} · {playing}";
     }
 
     /// <summary>With the position timer: shows the stream catching up, and catching up again.</summary>

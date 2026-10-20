@@ -679,7 +679,7 @@ public partial class RadioWindow : Window
     private void OnPlayAddress(object sender, RoutedEventArgs e)
     {
         var address = PromptWindow.Ask(this, "Play a station by its address",
-            "The stream's address, or its .pls or .m3u link, from the station's website. Lucent plays MP3 streams.", "PLAY",
+            "The stream's address, or its .pls or .m3u link, from the station's website. Lucent plays MP3 and AAC streams.", "PLAY",
             check: text => RadioGuide.IsStreamAddress(text) ? null : "That doesn't look like a web address (http:// or https://).");
         if (address is not null)
         {
