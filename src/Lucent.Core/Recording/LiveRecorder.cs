@@ -67,6 +67,13 @@ public sealed class LiveRecorder : IDisposable
     private SongChangeDetector? _detector;
     private DateTime _lastFlush;
     private long _recordedFrames;
+    private int _tracksVersion;
+    // Song identification: stretches being gathered to send, and lookups on their way.
+    private readonly List<Listening> _listening = new();
+    private readonly List<Task> _lookups = new();
+    private readonly CancellationTokenSource _lookupCancel = new();
+    private volatile SongIdentifier? _identifier;
+    private volatile string? _identifyProblem;
 
     /// <param name="capture">The visuals' audio: it shows this input while the recorder is open.</param>
     /// <param name="sampleRate">The rate the recording is made at. Input at another rate is converted.</param>
@@ -86,6 +93,35 @@ public sealed class LiveRecorder : IDisposable
 
     /// <summary>Raised on the recorder's thread when Lucent hears a new song start, with where.</summary>
     public event EventHandler<TrackMarker>? SongChanged;
+
+    /// <summary>Raised (on a pool thread) when a track's song has been recognised, with the track as it is now.</summary>
+    public event EventHandler<TrackMarker>? SongIdentified;
+
+    /// <summary>
+    /// Asks ACRCloud which song each track is, a little way into it, with the DJ's own key; null to not ask.
+    /// Each track is asked about at most twice: <see cref="FirstLookup"/> in, and again a minute later if it wasn't known.
+    /// </summary>
+    public SongIdentifier? Identifier
+    {
+        get => _identifier;
+        set
+        {
+            _identifier = value;
+            _identifyProblem = null;
+        }
+    }
+
+    /// <summary>How far into a track it's first listened to for a lookup: past the mix from the last one.</summary>
+    public static readonly TimeSpan FirstLookup = TimeSpan.FromSeconds(25);
+
+    /// <summary>When the second lookup is made for a track that wasn't recognised the first time.</summary>
+    public static readonly TimeSpan SecondLookup = TimeSpan.FromSeconds(85);
+
+    /// <summary>Why songs can't be recognised right now (a wrong key, say), or null.</summary>
+    public string? IdentifyProblem => _identifyProblem;
+
+    /// <summary>Goes up each time a track is added, taken out or named, so the window knows to show them again.</summary>
+    public int TracksVersion => Volatile.Read(ref _tracksVersion);
 
     public int SampleRate { get; }
 
@@ -242,6 +278,7 @@ public sealed class LiveRecorder : IDisposable
             if (frame > 0)
             {
                 _markers.RemoveAll(m => m.Frame == frame);
+                _listening.RemoveAll(l => l.Marker == frame);
                 Renumber();
             }
         }
@@ -257,6 +294,7 @@ public sealed class LiveRecorder : IDisposable
 
         Do(() => Close());
         _stopping = true;
+        _lookupCancel.Cancel();
         _ready.Release();
         _thread.Join(TimeSpan.FromSeconds(10));
         _capture.EndLive();
@@ -505,6 +543,161 @@ public sealed class LiveRecorder : IDisposable
                 AddMarker(Math.Min(at, file.Frames), automatic: true);
             }
         }
+
+        if (_file is { } recording)
+        {
+            Listen(_mono.AsSpan(0, frames), recording.Frames - frames);
+        }
+    }
+
+    // ---- Song identification ----
+
+    // A stretch of a track being gathered to send to ACRCloud.
+    private sealed class Listening
+    {
+        public long Marker;        // the track's mark, by where it is
+        public long From;          // where in the file the stretch starts
+        public int Attempt;        // 1 or 2
+        public float[] Sound = Array.Empty<float>();
+        public int Filled;
+    }
+
+    // Call while holding _markerLock, or on the recorder's thread before anything else can see the marks.
+    private void ListenFor(long marker, int attempt)
+    {
+        if (_identifier is null || _identifyProblem is not null)
+        {
+            return;
+        }
+
+        _listening.RemoveAll(l => l.Marker == marker);
+        var into = attempt == 1 ? FirstLookup : SecondLookup;
+        _listening.Add(new Listening
+        {
+            Marker = marker,
+            From = marker + (long)(into.TotalSeconds * SampleRate),
+            Attempt = attempt,
+            Sound = new float[(int)(SongIdentifier.SampleLength.TotalSeconds * SampleRate)],
+        });
+    }
+
+    // Gathers this block (which starts at blockStart in the file) into any stretch waiting for it.
+    private void Listen(ReadOnlySpan<float> mono, long blockStart)
+    {
+        List<Listening>? ready = null;
+        lock (_markerLock)
+        {
+            if (_listening.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var listening in _listening)
+            {
+                var end = blockStart + mono.Length;
+                var at = listening.From + listening.Filled;
+                if (end <= at)
+                {
+                    continue;
+                }
+
+                var skip = (int)Math.Max(0, at - blockStart);
+                var count = Math.Min(mono.Length - skip, listening.Sound.Length - listening.Filled);
+                mono.Slice(skip, count).CopyTo(listening.Sound.AsSpan(listening.Filled));
+                listening.Filled += count;
+                if (listening.Filled >= listening.Sound.Length)
+                {
+                    (ready ??= new()).Add(listening);
+                }
+            }
+
+            if (ready is null)
+            {
+                return;
+            }
+
+            foreach (var listening in ready)
+            {
+                _listening.Remove(listening);
+            }
+
+            // A stretch that ran into the next track's mark would be the wrong song.
+            ready.RemoveAll(l => _markers.Any(m => m.Frame > l.Marker && m.Frame < l.From + l.Sound.Length));
+        }
+
+        foreach (var listening in ready)
+        {
+            Ask(listening);
+        }
+    }
+
+    private void Ask(Listening listening)
+    {
+        if (_identifier is not { } identifier)
+        {
+            return;
+        }
+
+        var cancel = _lookupCancel.Token;
+        var task = Task.Run(async () =>
+        {
+            var lookup = await identifier.IdentifyAsync(listening.Sound, SampleRate, cancel).ConfigureAwait(false);
+            if (lookup.KeyProblem)
+            {
+                _identifyProblem = lookup.Problem;
+            }
+
+            TrackMarker? named = null;
+            lock (_markerLock)
+            {
+                var index = _markers.FindIndex(m => m.Frame == listening.Marker);
+                if (index < 0)
+                {
+                    return;
+                }
+
+                if (lookup.Song is { } song)
+                {
+                    _markers[index] = _markers[index] with { Song = song };
+                    Renumber();
+                    named = _markers.First(m => m.Frame == listening.Marker);
+                }
+                else if (listening.Attempt == 1 && !lookup.KeyProblem)
+                {
+                    ListenFor(listening.Marker, 2);
+                }
+            }
+
+            if (named is not null)
+            {
+                SongIdentified?.Invoke(this, named);
+            }
+        }, cancel);
+        lock (_lookups)
+        {
+            _lookups.RemoveAll(t => t.IsCompleted);
+            _lookups.Add(task);
+        }
+    }
+
+    // A file's last tracks are often still being looked up as it's stopped; they're given a few seconds.
+    private void WaitForLookups()
+    {
+        Task[] waiting;
+        lock (_lookups)
+        {
+            waiting = _lookups.Where(t => !t.IsCompleted).ToArray();
+            _lookups.Clear();
+        }
+
+        try
+        {
+            Task.WaitAll(waiting, TimeSpan.FromSeconds(6));
+        }
+        catch (AggregateException)
+        {
+            // A lookup that failed just leaves its track unnamed.
+        }
     }
 
     private void Open(RecordingTarget target)
@@ -534,7 +727,10 @@ public sealed class LiveRecorder : IDisposable
         lock (_markerLock)
         {
             _markers.Clear();
+            _listening.Clear();
             _markers.Add(new TrackMarker(0, "Track 1"));
+            ListenFor(0, 1);
+            Interlocked.Increment(ref _tracksVersion);
         }
     }
 
@@ -555,6 +751,12 @@ public sealed class LiveRecorder : IDisposable
             return null;
         }
 
+        lock (_markerLock)
+        {
+            _listening.Clear();
+        }
+
+        WaitForLookups();
         var tracks = Tracks;
         file.Finish(tracks, target.Title);
         dryFile?.Finish(tracks, target.Title);
@@ -564,7 +766,8 @@ public sealed class LiveRecorder : IDisposable
             sheet = Path.ChangeExtension(target.Path, ".cue");
             try
             {
-                CueSheet.Write(sheet, target.Path, tracks.Select(t => new TrackMark(TimeSpan.FromSeconds((double)t.Frame / SampleRate), t.Title)).ToList(), target.Title);
+                CueSheet.Write(sheet, target.Path, tracks.Select(t => new TrackMark(TimeSpan.FromSeconds((double)t.Frame / SampleRate),
+                    t.Song?.Title ?? t.Title, t.Song is { Artist.Length: > 0 } song ? song.Artist : null)).ToList(), target.Title);
             }
             catch (Exception)
             {
@@ -596,11 +799,13 @@ public sealed class LiveRecorder : IDisposable
                 }
 
                 _markers.Remove(near);
+                _listening.RemoveAll(l => l.Marker == near.Frame);
             }
 
             added = new TrackMarker(frame, string.Empty, automatic);
             _markers.Add(added);
             Renumber();
+            ListenFor(frame, 1);
             added = _markers.First(m => m.Frame == frame);
         }
 
@@ -610,13 +815,15 @@ public sealed class LiveRecorder : IDisposable
         }
     }
 
-    // Call while holding _markerLock: puts the marks in order and names them Track 1, Track 2…
+    // Call while holding _markerLock: puts the marks in order and names them Track 1, Track 2…, or by their song once it's known.
     private void Renumber()
     {
         _markers.Sort((a, b) => a.Frame.CompareTo(b.Frame));
         for (var i = 0; i < _markers.Count; i++)
         {
-            _markers[i] = _markers[i] with { Title = $"Track {i + 1}" };
+            _markers[i] = _markers[i] with { Title = _markers[i].Song?.ToString() ?? $"Track {i + 1}" };
         }
+
+        Interlocked.Increment(ref _tracksVersion);
     }
 }

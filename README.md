@@ -174,6 +174,8 @@ Choose **Record from an audio interface…** under the title bar's Edit button (
 
 Press **New track** (M) as each song starts, and Lucent also marks where it hears one song give way to the next. The marks go into the WAV as cue points (with a .cue sheet beside it), so Next and Previous in Lucent skip from song to song in the set, and DJ software and editors show them. **New file** (N) carries on in a new file without missing a sample.
 
+To have the marks named after their songs, paste your own [ACRCloud](https://www.acrcloud.com/) project's host, access key, and secret under **Name the songs with ACRCloud** (SET UP). About 25 seconds into each track, Lucent sends 12 seconds of it to ACRCloud, which was built for DJ mixes and broadcasts, and names the mark "Artist - Title" (in the WAV, the .cue sheet's TITLE and PERFORMER, and the window). A track it doesn't know is tried once more a minute later. Lookups count on your own ACRCloud account (it has a free trial), and the key is kept encrypted for your user account: with DPAPI on Windows and in the keychain on a Mac.
+
 ## The player
 
 A small player in the spirit of Winamp's, with the equalizer, queue, library, analyzer, artwork, and visuals each in their own window. Edges snap to each other and to the screen, docked windows travel together while you drag, and resizing one edge resizes its neighbours. Press **D** to tidy everything back into one neat rectangle, **G** to fill the screen, or **K** to shrink it all.

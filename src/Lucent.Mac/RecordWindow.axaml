@@ -146,6 +146,29 @@
                               Click="OnOptionSwitch" />
                     <CheckBox x:Name="CueSwitch" Theme="{StaticResource SwitchToggle}" Margin="0,8,0,0"
                               Content="Save a .cue sheet beside the recording" Click="OnOptionSwitch" />
+                    <DockPanel Margin="0,8,0,0">
+                        <Button x:Name="KeyButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="SET UP"
+                                Margin="10,0,0,0" VerticalAlignment="Center" Click="OnKeyButton"
+                                ToolTip.Tip="Enter your own ACRCloud key" />
+                        <CheckBox x:Name="IdentifySwitch" Theme="{StaticResource SwitchToggle}"
+                                  Content="Name the songs with ACRCloud" Click="OnOptionSwitch" />
+                    </DockPanel>
+                    <TextBlock x:Name="IdentifyHint" Theme="{StaticResource OptionHint}" />
+                    <StackPanel x:Name="KeyPanel" IsVisible="False">
+                        <TextBlock Theme="{StaticResource OptionHint}"
+                                   Text="In ACRCloud's console, make an Audio &amp; Video Recognition project with the ACRCloud Music bucket and Line-in audio, then copy its host, access key, and access secret here. Lookups count on your ACRCloud account, and the key stays on this Mac, in your keychain." />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Text="Host" />
+                        <TextBox x:Name="HostInput" Theme="{StaticResource TextInput}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Text="Access key" />
+                        <TextBox x:Name="AccessKeyInput" Theme="{StaticResource TextInput}" />
+                        <TextBlock Theme="{StaticResource OptionLabel}" Text="Access secret" />
+                        <TextBox x:Name="SecretInput" Theme="{StaticResource TextInput}" PasswordChar="•" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Theme="{StaticResource PillButton}" Content="SAVE KEY" Click="OnSaveKey" />
+                            <Button x:Name="RemoveKeyButton" Theme="{StaticResource PillButton}" Content="REMOVE" Margin="8,0,0,0" Click="OnRemoveKey" />
+                            <Button Theme="{StaticResource PillButton}" Content="ACRCLOUD CONSOLE" Margin="8,0,0,0" Click="OnOpenConsole" />
+                        </StackPanel>
+                    </StackPanel>
                     <TextBlock Theme="{StaticResource OptionHint}"
                                Text="Press New track (or M) as each song starts. The marks go into the WAV file as cue points, so Next and Previous in Lucent skip from song to song, and DJ software and editors show them. Lucent's own guesses are only made while recording, about 20 seconds after each change." />
                     <ScrollViewer Margin="0,8,0,0" MaxHeight="150" VerticalScrollBarVisibility="Auto">

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Net.Http;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -27,7 +28,8 @@ namespace Lucent.Mac;
 /// Records from an audio interface, DJ mixer or microphone into a WAV file: a DJ set played live, say, with
 /// the visuals reacting to it. The input, its channels, sample rate and bit depth; live VST3 plugins the
 /// sound goes through on its way to the file; how the file is named and where it's saved; and track marks,
-/// made by hand or by Lucent hearing the song change, so the set can be skipped through song by song.
+/// made by hand or by Lucent hearing the song change, so the set can be skipped through song by song, and
+/// named after their songs by ACRCloud with the DJ's own key.
 /// </summary>
 /// <remarks>
 /// The input is opened as soon as the window is, so the level can be set before recording, and the visuals
@@ -38,6 +40,8 @@ namespace Lucent.Mac;
 public partial class RecordWindow : Window
 {
     private static readonly IBrush ClipBrush = new SolidColorBrush(Color.FromRgb(0xE5, 0x48, 0x4D));
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private const string AcrCloudConsole = "https://console.acrcloud.com/";
 
     private readonly AudioPlayer _player;
     private readonly AppSettings _appSettings;
@@ -54,6 +58,8 @@ public partial class RecordWindow : Window
     private FinishedRecording? _finished;
     private int _pluginFormat;          // the rate × channels the open plugins were started at
     private int _shownTracks = -1;
+    // Read from the keychain as the input opens (not for a screenshot, where it could ask).
+    private AcrCloudKey? _key;
     private double _levelLeft;
     private double _levelRight;
     private (double Level, DateTime At) _holdLeft;
@@ -82,6 +88,8 @@ public partial class RecordWindow : Window
         DrySwitch.IsChecked = _settings.KeepDryCopy;
         DetectSwitch.IsChecked = _settings.DetectSongChanges;
         CueSwitch.IsChecked = _settings.WriteCueSheet;
+        IdentifySwitch.IsChecked = _settings.IdentifySongs;
+        ShowSongId();
         foreach (var (token, meaning) in RecordingNames.Tokens)
         {
             var button = new Button
@@ -130,10 +138,12 @@ public partial class RecordWindow : Window
         window.ShowRecording(true);
         window.TimeText.Text = "1:12:40";
         window.StatusText.Text = "Recording Friday at the Loft 2026-10-20 21-30.wav  ·  1.2 GB  ·  Track 4";
+        window._key = new AcrCloudKey("identify-eu-west-1.acrcloud.com", "preview-key-7f3a", "secret");
+        window.ShowSongId();
         window.ShowTracks(new[]
         {
-            new TrackMarker(0, "Track 1"),
-            new TrackMarker(48000L * 291, "Track 2"),
+            new TrackMarker(0, "Lumen Avenue - Slow Tide"),
+            new TrackMarker(48000L * 291, "Mara Velde - Afterhours (Club Mix)"),
             new TrackMarker(48000L * 1110, "Track 3", Automatic: true),
             new TrackMarker(48000L * 3874, "Track 4"),
         });
@@ -153,6 +163,8 @@ public partial class RecordWindow : Window
         }
 
         InputText.Text = "Looking for inputs…";
+        _key = await Task.Run(SongIdAccount.Load);
+        ShowSongId();
         _inputs = await Task.Run(LiveInputs.List);
         _input = LiveInputs.Find(_settings.InputId, _inputs);
         await OpenInputAsync();
@@ -205,6 +217,7 @@ public partial class RecordWindow : Window
             {
                 BitDepth = _settings.BitDepth,
                 DetectSongChanges = _settings.DetectSongChanges,
+                Identifier = MakeIdentifier(),
             };
             recorder.Failed += (_, ex) => Dispatcher.UIThread.Post(() => OnRecordingFailed(ex));
             _recorder = recorder;
@@ -887,11 +900,20 @@ public partial class RecordWindow : Window
         _settings.KeepDryCopy = DrySwitch.IsChecked == true;
         _settings.DetectSongChanges = DetectSwitch.IsChecked == true;
         _settings.WriteCueSheet = CueSwitch.IsChecked == true;
+        _settings.IdentifySongs = IdentifySwitch.IsChecked == true;
         _settings.Save();
         if (_recorder is { IsRecording: false } recorder)
         {
             recorder.DetectSongChanges = _settings.DetectSongChanges;
         }
+
+        // Song lookups can be turned on or off part way through a set.
+        if (_recorder is { } open)
+        {
+            open.Identifier = MakeIdentifier();
+        }
+
+        ShowSongId();
 
         ShowFormat();
     }
@@ -925,6 +947,7 @@ public partial class RecordWindow : Window
 
         recorder.BitDepth = _settings.BitDepth;
         recorder.DetectSongChanges = _settings.DetectSongChanges;
+        recorder.Identifier = MakeIdentifier();
         recorder.Start(NextTarget());
         _finished = null;
         _shownTracks = -1;
@@ -1064,12 +1087,12 @@ public partial class RecordWindow : Window
             var tracks = recorder.Tracks;
             if (!_stopping)
             {
-                StatusText.Text = $"Recording {Path.GetFileName(recorder.CurrentPath)}  ·  {Size(recorder.Bytes)}  ·  Track {tracks.Count}";
+                StatusText.Text = $"Recording {Path.GetFileName(recorder.CurrentPath)}  ·  {Size(recorder.Bytes)}  ·  {(tracks.Count > 0 ? tracks[^1].Title : "Track 1")}";
             }
 
-            if (tracks.Count != _shownTracks)
+            if (recorder.TracksVersion != _shownTracks)
             {
-                _shownTracks = tracks.Count;
+                _shownTracks = recorder.TracksVersion;
                 ShowTracks(tracks);
             }
 
@@ -1087,6 +1110,10 @@ public partial class RecordWindow : Window
         else if (recorder.PluginProblem is { } problem)
         {
             ShowProblem(problem);
+        }
+        else if (recorder.IdentifyProblem is { } lookupProblem)
+        {
+            ShowProblem($"Songs can't be named: {lookupProblem}");
         }
     }
 
@@ -1163,6 +1190,72 @@ public partial class RecordWindow : Window
             TrackList.Children.Add(row);
         }
     }
+
+    // ---- Naming the songs ----
+
+    private SongIdentifier? MakeIdentifier() =>
+        _settings.IdentifySongs && _key is { IsComplete: true } key ? new SongIdentifier(Http, key) : null;
+
+    private void ShowSongId()
+    {
+        KeyButton.Content = _key is null ? "SET UP" : "KEY";
+        RemoveKeyButton.IsEnabled = _key is not null;
+        IdentifyHint.Text = _key is null
+            ? "With your own ACRCloud key (SET UP), Lucent looks up each track's song about 25 seconds in and names its mark after it. ACRCloud has a free trial; after that lookups are paid on your account."
+            : $"Each track is looked up about 25 seconds in, and again a minute later if it isn't known, with your key ending {Tail(_key.AccessKey)} ({_key.CleanHost}).";
+    }
+
+    private void OnKeyButton(object? sender, RoutedEventArgs e)
+    {
+        KeyPanel.IsVisible = !KeyPanel.IsVisible;
+        if (KeyPanel.IsVisible)
+        {
+            HostInput.Text = _key?.CleanHost ?? string.Empty;
+            AccessKeyInput.Text = _key?.AccessKey ?? string.Empty;
+            // The secret isn't shown again; leaving it empty keeps the saved one.
+            SecretInput.Text = string.Empty;
+            HostInput.Focus();
+        }
+    }
+
+    private void OnSaveKey(object? sender, RoutedEventArgs e)
+    {
+        var secret = string.IsNullOrWhiteSpace(SecretInput.Text) ? _key?.AccessSecret ?? string.Empty : SecretInput.Text;
+        var key = new AcrCloudKey(HostInput.Text ?? string.Empty, (AccessKeyInput.Text ?? string.Empty).Trim(), secret.Trim());
+        if (!key.IsComplete || !key.CleanHost.Contains('.', StringComparison.Ordinal))
+        {
+            ShowProblem("Fill in the host (like identify-eu-west-1.acrcloud.com), the access key, and the access secret from your ACRCloud project.");
+            return;
+        }
+
+        if (!SongIdAccount.Save(key))
+        {
+            ShowProblem("The key couldn't be saved in the keychain. It's used until the window closes.");
+        }
+        else
+        {
+            ProblemText.IsVisible = false;
+        }
+
+        _key = key;
+        SecretInput.Text = string.Empty;
+        KeyPanel.IsVisible = false;
+        IdentifySwitch.IsChecked = true;
+        OnOptionSwitch(sender, e);
+    }
+
+    private void OnRemoveKey(object? sender, RoutedEventArgs e)
+    {
+        SongIdAccount.Clear();
+        _key = null;
+        HostInput.Text = AccessKeyInput.Text = SecretInput.Text = string.Empty;
+        KeyPanel.IsVisible = false;
+        OnOptionSwitch(sender, e);
+    }
+
+    private void OnOpenConsole(object? sender, RoutedEventArgs e) => OpenUrl(AcrCloudConsole);
+
+    private static string Tail(string text) => text.Length <= 4 ? text : text[^4..];
 
     private void ShowProblem(string text)
     {

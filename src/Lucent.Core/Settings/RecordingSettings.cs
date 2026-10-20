@@ -60,6 +60,12 @@ public sealed class RecordingSettings
     /// <summary>Lucent marks where it hears one song give way to the next, as well as the marks made by hand.</summary>
     public bool DetectSongChanges { get; set; } = true;
 
+    /// <summary>
+    /// Each track's song is looked up with ACRCloud, using the DJ's own key (each app's Audio/SongIdAccount.cs),
+    /// and the marks are named after them. Does nothing until a key has been entered.
+    /// </summary>
+    public bool IdentifySongs { get; set; } = true;
+
     /// <summary>A .cue sheet listing the tracks is saved beside each recording, for players and DJ software that read them.</summary>
     public bool WriteCueSheet { get; set; } = true;
 

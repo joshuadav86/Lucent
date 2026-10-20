@@ -1,4 +1,6 @@
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using NAudio.Wave;
 using WinampInspiredVisualizer.Audio;
 
@@ -10,7 +12,8 @@ namespace WinampInspiredVisualizer.Recording;
 /// third and fourth channels at 48 kHz, with a mark made by hand. The file has to read back as a WAV at the
 /// right rate and length, with the marks as cue points, a .cue sheet and a dry copy beside it, and the
 /// visuals have to have followed the input and gone back afterwards. Lucent hearing the song change is a
-/// guess, so missing it is only a warning.
+/// guess, so missing it is only a warning. Song identification is checked against a stand-in for
+/// ACRCloud that tells the two songs apart by their notes, and checks each request is signed properly.
 /// </summary>
 public static class RecordingSelfTest
 {
@@ -29,7 +32,10 @@ public static class RecordingSelfTest
             const int songSeconds = 100;
             var capture = new AudioCapture();
             capture.Reset(44100);
-            using (var recorder = new LiveRecorder(capture, 48000, 2) { BitDepth = 24 })
+            var acrCloud = new FakeAcrCloud();
+            var key = new AcrCloudKey("https://identify-test.acrcloud.com/", "test-key", "test-secret");
+            using var http = new HttpClient(acrCloud);
+            using (var recorder = new LiveRecorder(capture, 48000, 2) { BitDepth = 24, Identifier = new SongIdentifier(http, key) })
             {
                 if (!capture.IsLive || capture.SampleRate != 48000)
                 {
@@ -118,6 +124,19 @@ public static class RecordingSelfTest
                 log($"::error::Recording: the track marks read back as {string.Join(", ", marks.Select(m => $"{m.Title} at {m.Start.TotalSeconds:0.0} s"))}.");
             }
 
+            // The first song from 0 s, the second from the mark at 150 s (and from the heard change, if it was heard).
+            var named = marks.Where(m => m.Start == TimeSpan.Zero || Math.Abs(m.Start.TotalSeconds - 150) < 1).Select(m => m.Title).ToList();
+            if (acrCloud.Problem is { } badRequest)
+            {
+                problems++;
+                log($"::error::Recording: a song lookup was sent wrongly: {badRequest}");
+            }
+            else if (named.Count != 2 || named[0] != "Test Artist - Song A" || named[1] != "Test Artist - Song B")
+            {
+                problems++;
+                log($"::error::Recording: the songs weren't named from ACRCloud's answers ({acrCloud.Requests} lookups): {string.Join(", ", marks.Select(m => $"{m.Title} at {m.Start.TotalSeconds:0.0} s"))}.");
+            }
+
             if (!marks.Any(m => Math.Abs(m.Start.TotalSeconds - songSeconds) < 5))
             {
                 log($"::warning::Recording: Lucent didn't hear the song change at {songSeconds} s (marks: {string.Join(", ", marks.Select(m => $"{m.Start.TotalSeconds:0.0} s"))}).");
@@ -134,9 +153,11 @@ public static class RecordingSelfTest
                 problems++;
             }
 
+            problems += CheckAnswers(log);
+
             if (problems == 0)
             {
-                log($"Recording: saved {Path.GetFileName(file)} from a made-up input with {marks.Count} tracks marked: {string.Join(", ", marks.Select(m => $"{m.Start.TotalSeconds:0.0} s"))}.");
+                log($"Recording: saved {Path.GetFileName(file)} from a made-up input with {marks.Count} tracks marked: {string.Join(", ", marks.Select(m => $"{m.Title} at {m.Start.TotalSeconds:0.0} s"))} ({acrCloud.Requests} song lookups).");
             }
         }
         catch (Exception ex)
@@ -157,5 +178,86 @@ public static class RecordingSelfTest
         }
 
         return problems;
+    }
+
+    // ACRCloud's other answers: not known, a wrong key, and nonsense.
+    private static int CheckAnswers(Action<string> log)
+    {
+        var unknown = SongIdentifier.Read("""{"status":{"msg":"No result","code":1001,"version":"1.0"}}""");
+        var badKey = SongIdentifier.Read("""{"status":{"msg":"Invalid access key","code":3001,"version":"1.0"}}""");
+        var nonsense = SongIdentifier.Read("<html>Bad gateway</html>");
+        if (unknown.Song is not null || unknown.Problem is not null || !badKey.KeyProblem || nonsense.Problem is null)
+        {
+            log("::error::Recording: ACRCloud's 'no result', 'invalid key' or an unreadable answer was taken the wrong way.");
+            return 1;
+        }
+
+        var key = AcrCloudKey.FromText(new AcrCloudKey("identify-eu-west-1.acrcloud.com", "a", "b\"c").ToText());
+        if (key is null || key.AccessSecret != "b\"c" || AcrCloudKey.FromText("not a key") is not null)
+        {
+            log("::error::Recording: an ACRCloud key didn't survive being saved and read back.");
+            return 1;
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Stands in for ACRCloud: checks the request is put together as ACRCloud's protocol has it (signed with the
+    /// secret), then names the song by its notes: 220 Hz is Song A, 311 Hz is Song B.
+    /// </summary>
+    private sealed class FakeAcrCloud : HttpMessageHandler
+    {
+        private int _requests;
+
+        public int Requests => Volatile.Read(ref _requests);
+
+        public string? Problem { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancel)
+        {
+            Interlocked.Increment(ref _requests);
+            var fields = new Dictionary<string, byte[]>();
+            if (request.Content is MultipartFormDataContent form)
+            {
+                foreach (var part in form)
+                {
+                    fields[part.Headers.ContentDisposition?.Name?.Trim('"') ?? string.Empty] = await part.ReadAsByteArrayAsync(cancel);
+                }
+            }
+
+            string Text(string name) => fields.TryGetValue(name, out var value) ? System.Text.Encoding.UTF8.GetString(value) : string.Empty;
+            var expected = SongIdentifier.Sign(new AcrCloudKey("x", "test-key", "test-secret"), Text("timestamp"));
+            if (request.RequestUri?.ToString() != "https://identify-test.acrcloud.com/v1/identify" || Text("access_key") != "test-key"
+                || Text("signature") != expected || Text("data_type") != "audio" || Text("signature_version") != "1"
+                || !fields.TryGetValue("sample", out var wav) || Text("sample_bytes") != wav.Length.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            {
+                Problem = $"to {request.RequestUri} with fields {string.Join(", ", fields.Keys)}";
+                return Answer("""{"status":{"msg":"Invalid signature","code":3014,"version":"1.0"}}""");
+            }
+
+            using var reader = new WaveFileReader(new MemoryStream(wav));
+            var samples = new float[(int)(reader.SampleCount)];
+            reader.ToSampleProvider().Read(samples, 0, samples.Length);
+            var song = Strength(samples, reader.WaveFormat.SampleRate, 220) > Strength(samples, reader.WaveFormat.SampleRate, 311) ? "Song A" : "Song B";
+            return Answer($$$"""{"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"music":[{"title":"{{{song}}}","artists":[{"name":"Test Artist"}],"album":{"name":"Test Album"},"score":100}]}}""");
+        }
+
+        private static HttpResponseMessage Answer(string json) => new(HttpStatusCode.OK) { Content = new StringContent(json) };
+
+        // How much of one frequency there is (Goertzel).
+        private static double Strength(float[] samples, int rate, double hertz)
+        {
+            var coefficient = 2 * Math.Cos(2 * Math.PI * hertz / rate);
+            double previous = 0, before = 0;
+            foreach (var sample in samples)
+            {
+                var now = sample + coefficient * previous - before;
+                before = previous;
+                previous = now;
+            }
+
+            return previous * previous + before * before - coefficient * previous * before;
+        }
     }
 }
