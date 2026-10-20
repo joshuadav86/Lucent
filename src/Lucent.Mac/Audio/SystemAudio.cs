@@ -9,7 +9,8 @@ namespace Lucent.Mac.Audio;
 /// Listens to everything the Mac is playing (Spotify, Apple Music, a browser, a game) through a Core Audio
 /// process tap, and feeds it to an <see cref="AudioCapture"/>, so the visuals, meter, equalizer's spectrum
 /// and analyzer react to any app. It only listens: the sound itself is untouched. Lucent's own music is
-/// part of what the Mac plays, so it still shows too.
+/// part of what the Mac plays, so it still shows too. <see cref="StartForApp"/> listens to one app instead
+/// (the Spotify or browser Lucent controls), with a tap of just that app's processes.
 /// </summary>
 /// <remarks>
 /// macOS asks once whether Lucent may record the Mac's sound ("System Audio Recording Only" in Privacy &amp;
@@ -43,7 +44,22 @@ public sealed unsafe class SystemAudio : IDisposable
     public static bool IsSupported => AudioTap.IsSupported;
 
     /// <summary>Starts listening. Throws when macOS won't. Dispose to go back to the player's own sound.</summary>
-    public static SystemAudio Start(AudioCapture capture)
+    public static SystemAudio Start(AudioCapture capture) => Start(capture, null);
+
+    /// <summary>
+    /// Starts listening to just these processes (Core Audio's objects for them, from <see cref="FindApp"/>).
+    /// Throws when macOS won't.
+    /// </summary>
+    public static SystemAudio StartForApp(AudioCapture capture, IReadOnlyList<uint> processes) => Start(capture, processes);
+
+    /// <summary>
+    /// Core Audio's objects for the app whose bundle IDs start with <paramref name="bundlePrefixes"/> (with its helper
+    /// processes, which is where a browser's sound comes from), sorted. Empty when it isn't running or hasn't used sound yet.
+    /// </summary>
+    public static List<uint> FindApp(IReadOnlyList<string> bundlePrefixes) =>
+        IsSupported ? AudioTap.ProcessObjects(bundlePrefixes) : new List<uint>();
+
+    private static SystemAudio Start(AudioCapture capture, IReadOnlyList<uint>? processes)
     {
         if (!IsSupported)
         {
@@ -53,7 +69,7 @@ public sealed unsafe class SystemAudio : IDisposable
         var listener = new SystemAudio(capture);
         try
         {
-            listener.Open();
+            listener.Open(processes);
         }
         catch
         {
@@ -67,12 +83,13 @@ public sealed unsafe class SystemAudio : IDisposable
     /// <summary>The name of the output being listened to, for the menu's tooltip.</summary>
     public static string? DefaultOutputName() => OutputDevices.Open(null)?.Name;
 
-    private void Open()
+    private void Open(IReadOnlyList<uint>? processes)
     {
         using var pool = AutoreleasePool.Begin();
         var output = OutputDevices.Open(null) ?? throw new IOException("The Mac has no sound output to listen to.");
 
-        var (description, uuid) = AudioTap.DescribeGlobalTap("Lucent: every app's sound");
+        var name = processes is null ? "Lucent: every app's sound" : "Lucent: one app's sound";
+        var (description, uuid) = processes is null ? AudioTap.DescribeGlobalTap(name) : AudioTap.DescribeAppTap(name, processes);
         _description = description;
         Check(AudioTap.AudioHardwareCreateProcessTap(description, out _tap), "listen to the Mac's sound");
 
@@ -88,7 +105,7 @@ public sealed unsafe class SystemAudio : IDisposable
         _channels = (int)Math.Max(1, format.ChannelsPerFrame);
         _interleaved = (format.FormatFlags & AudioTap.NonInterleavedFlag) == 0;
 
-        var aggregate = AudioTap.DescribeAggregate($"net.lucentaudio.system-audio.{Guid.NewGuid():N}", "Lucent: every app's sound",
+        var aggregate = AudioTap.DescribeAggregate($"net.lucentaudio.system-audio.{Guid.NewGuid():N}", name,
             output.Id, uuid);
         Check(AudioTap.AudioHardwareCreateAggregateDevice(aggregate, out _device), "listen to the Mac's sound");
 

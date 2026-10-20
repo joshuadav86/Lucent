@@ -17,6 +17,8 @@ public sealed class AppleMusicRemote : MediaControlsRemote
 
     protected override string NotOpen => "Open the Apple Music app and play something";
 
+    public override IReadOnlyList<string> ProcessNames { get; } = ["AppleMusic", "iTunes"];
+
     protected override GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions) =>
         sessions.FirstOrDefault(session => IsAppleMusic(session.SourceAppUserModelId));
 

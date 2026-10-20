@@ -17,6 +17,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34" Background="{DynamicResource TitleBarBrush}">
@@ -33,15 +34,15 @@
                                   Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Add files"
+                    <Button Style="{StaticResource IconButton}" x:Name="AddFilesButton" Width="32" Height="32" ToolTip="Add files"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnAddFiles">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Add a folder"
+                    <Button Style="{StaticResource IconButton}" x:Name="AddFolderButton" Width="32" Height="32" ToolTip="Add a folder"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnAddFolder">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource FolderIcon}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Clear the queue"
+                    <Button Style="{StaticResource IconButton}" x:Name="ClearQueueButton" Width="32" Height="32" ToolTip="Clear the queue"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnClearQueue">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ClearIcon}" />
                     </Button>
@@ -51,7 +52,7 @@
                     </Button>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="QUEUE" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                    <TextBlock x:Name="QueueTitle" Text="QUEUE" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
                                Foreground="{DynamicResource MutedTextBrush}" />
                     <TextBlock x:Name="QueueCount" Text="Empty" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource FaintTextBrush}" />
@@ -99,6 +100,45 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+
+            <!-- Another app's playlist (Spotify's), in place of the queue while Lucent controls that app. -->
+            <ListBox x:Name="RemoteListView" Grid.Row="1" Background="Transparent" BorderThickness="0" Visibility="Collapsed"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     SelectionMode="Single"
+                     MouseDoubleClick="OnRemoteListDoubleClick"
+                     KeyDown="OnRemoteListKeyDown">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem x:Name="RemotePlayItem" Header="Play" Click="OnRemoteListPlay" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
+                                    Background="{DynamicResource AccentGradientBrush}"
+                                    Visibility="{Binding IsCurrent, Converter={StaticResource VisibleWhenTrue}}" />
+                            <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                                <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextBrush}" />
+                                <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock x:Name="RemoteListNote" Grid.Row="2" Visibility="Collapsed" Margin="10,6,8,0" FontSize="11"
+                       TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
 
             <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="1" IsHitTestVisible="False"
                         VerticalAlignment="Center" HorizontalAlignment="Center">

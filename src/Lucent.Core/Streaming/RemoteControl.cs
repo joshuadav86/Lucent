@@ -15,6 +15,10 @@ public sealed class RemoteControl : IDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly SemaphoreSlim _readNow = new(0);
     private string? _artworkFor;
+
+    // What the list was last read for: the list's ID, and the song for a list that follows the song.
+    private (string? List, string? Song)? _listFor;
+    private int _listReads;
     private bool _disposed;
 
     public RemoteControl(IRemotePlayer player)
@@ -37,6 +41,12 @@ public sealed class RemoteControl : IDisposable
     /// <summary>Why the app can't be shown or controlled right now, worded for the user, or null when it's fine.</summary>
     public string? Problem { get; private set; }
 
+    /// <summary>
+    /// The songs the app is playing through (its playlist, album or what's up next), or null when the app can't
+    /// say or it hasn't been read yet.
+    /// </summary>
+    public RemoteList? List { get; private set; }
+
     public bool IsPlaying => State is { IsPlaying: true };
 
     public Task PlayPauseAsync() => IsPlaying
@@ -48,6 +58,11 @@ public sealed class RemoteControl : IDisposable
     public Task NextAsync() => RunAsync(Player.NextAsync, null);
 
     public Task PreviousAsync() => RunAsync(Player.PreviousAsync, null);
+
+    /// <summary>Plays one of <see cref="List"/>'s songs.</summary>
+    public Task PlayFromListAsync(RemoteTrack track) => Player is IRemoteLists lists && List is { } list
+        ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
+        : Task.CompletedTask;
 
     public Task SeekAsync(TimeSpan position) =>
         RunAsync(cancel => Player.SeekAsync(position, cancel), state => state with { Position = position, ReadAt = DateTime.UtcNow });
@@ -125,6 +140,7 @@ public sealed class RemoteControl : IDisposable
         State = state;
         Problem = null;
         Changed?.Invoke(this, EventArgs.Empty);
+        ReadListIfChanged(state);
 
         var track = state?.Track;
         if (track?.Id == _artworkFor)
@@ -152,6 +168,49 @@ public sealed class RemoteControl : IDisposable
         {
             // No cover, then (or Lucent stopped controlling the app). The song still shows.
         }
+    }
+
+    // Reads the list again when the song moves to another playlist or album (or to the next song, for what's up
+    // next). It runs beside the once-a-second reads, as a long playlist takes a few requests.
+    private async void ReadListIfChanged(RemoteState? state)
+    {
+        if (Player is not IRemoteLists lists || state?.Track is null)
+        {
+            return;
+        }
+
+        var wanted = (state.ListId, List is { FollowsSong: true } || List is null ? state.Track.Id : null);
+        if (_listFor == wanted)
+        {
+            return;
+        }
+
+        _listFor = wanted;
+        var read = ++_listReads;
+        RemoteList? list;
+        try
+        {
+            list = await lists.ListAsync(state, _stop.Token);
+        }
+        catch (Exception)
+        {
+            // Nothing to show, then; the player still shows and controls the song. It's tried again with the next song.
+            list = null;
+        }
+
+        if (_disposed || read != _listReads)
+        {
+            return;
+        }
+
+        // A list that doesn't follow the song needs reading again only when the playlist changes.
+        if (list is { FollowsSong: false })
+        {
+            _listFor = (state.ListId, null);
+        }
+
+        List = list;
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private void Report(Exception ex)

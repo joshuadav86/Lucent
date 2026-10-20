@@ -23,8 +23,12 @@ public static class SpotifySignIn
     public const int Port = 43821;
     public const string RedirectUri = "http://127.0.0.1:43821/callback";
 
-    /// <summary>What Lucent asks to do: see what's playing, and play, pause, skip and seek.</summary>
-    private const string Scopes = "user-read-playback-state user-modify-playback-state user-read-currently-playing";
+    /// <summary>
+    /// What Lucent asks to do: see what's playing, play, pause, skip and seek, and read the playlists and Liked Songs
+    /// it plays from. Someone who signed in before Lucent read playlists has only the first three until they sign in again.
+    /// </summary>
+    private const string Scopes = "user-read-playback-state user-modify-playback-state user-read-currently-playing "
+        + "playlist-read-private playlist-read-collaborative user-library-read";
 
     private const string AuthorizeUrl = "https://accounts.spotify.com/authorize";
     internal const string TokenUrl = "https://accounts.spotify.com/api/token";
@@ -99,8 +103,11 @@ public static class SpotifySignIn
         }
     }
 
-    /// <summary>A short-lived access token, and the refresh token to use next time when Spotify hands out a new one.</summary>
-    internal sealed record Tokens(string AccessToken, DateTime ExpiresAt, string? RefreshToken);
+    /// <summary>
+    /// A short-lived access token, the refresh token to use next time when Spotify hands out a new one, and what the
+    /// sign-in allows (the scopes, space-separated), when Spotify says.
+    /// </summary>
+    internal sealed record Tokens(string AccessToken, DateTime ExpiresAt, string? RefreshToken, string? Scope = null);
 
     internal static async Task<Tokens> PostTokenAsync(HttpClient http, Dictionary<string, string> form, CancellationToken cancel)
     {
@@ -119,8 +126,9 @@ public static class SpotifySignIn
         var access = root.GetProperty("access_token").GetString() ?? string.Empty;
         var seconds = root.TryGetProperty("expires_in", out var expires) ? expires.GetInt32() : 3600;
         var refresh = root.TryGetProperty("refresh_token", out var token) ? token.GetString() : null;
+        var scope = root.TryGetProperty("scope", out var scopes) ? scopes.GetString() : null;
         // A minute early, so a request never goes out with a token that runs out on the way.
-        return new Tokens(access, DateTime.UtcNow.AddSeconds(seconds - 60), refresh);
+        return new Tokens(access, DateTime.UtcNow.AddSeconds(seconds - 60), refresh, scope);
     }
 
     // Takes connections until one is Spotify's redirect back, answers the browser, and returns the code.

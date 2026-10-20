@@ -2,6 +2,7 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               xmlns:w="using:Lucent.Mac.Windows"
               xmlns:pl="using:WinampInspiredVisualizer.Playlist"
+              xmlns:st="using:WinampInspiredVisualizer.Streaming"
               x:Class="Lucent.Mac.QueueWindow"
               Title="Lucent queue"
               Width="520" Height="320" MinWidth="300" MinHeight="160"
@@ -9,7 +10,7 @@
 
     <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}">
-        <Grid Margin="6,6,4,8" RowDefinitions="Auto,*">
+        <Grid Margin="6,6,4,8" RowDefinitions="Auto,*,Auto">
 
             <!-- The title bar: it moves the window, as WindowChrome's caption does on Windows. -->
             <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34" Background="{DynamicResource TitleBarBrush}"
@@ -27,13 +28,13 @@
                                   Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                         </StackPanel>
                     </Button>
-                    <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Add files" Click="OnAddFiles">
+                    <Button Theme="{StaticResource IconButton}" x:Name="AddFilesButton" Width="32" Height="32" ToolTip.Tip="Add files" Click="OnAddFiles">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" />
                     </Button>
-                    <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Add a folder" Click="OnAddFolder">
+                    <Button Theme="{StaticResource IconButton}" x:Name="AddFolderButton" Width="32" Height="32" ToolTip.Tip="Add a folder" Click="OnAddFolder">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource FolderIcon}" />
                     </Button>
-                    <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Clear the queue" Click="OnClearQueue">
+                    <Button Theme="{StaticResource IconButton}" x:Name="ClearQueueButton" Width="32" Height="32" ToolTip.Tip="Clear the queue" Click="OnClearQueue">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ClearIcon}" />
                     </Button>
                     <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Hide the queue (Q)" Click="OnHideWindow">
@@ -41,7 +42,7 @@
                     </Button>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="QUEUE" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                    <TextBlock x:Name="QueueTitle" Text="QUEUE" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
                                Foreground="{DynamicResource MutedTextBrush}" />
                     <TextBlock x:Name="QueueCount" Text="Empty" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource FaintTextBrush}" />
@@ -84,6 +85,41 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+
+            <!-- Another app's playlist (Spotify's or Music's), in place of the queue while Lucent controls that app. -->
+            <ListBox x:Name="RemoteListView" Grid.Row="1" Background="Transparent" BorderThickness="0" IsVisible="False"
+                     Focusable="True" FocusAdorner="{x:Null}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     SelectionMode="Single"
+                     DoubleTapped="OnRemoteListDoubleClick"
+                     KeyDown="OnRemoteListKeyDown">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem x:Name="RemotePlayItem" Header="Play" Click="OnRemoteListPlay" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="st:RemoteListEntry">
+                        <Grid ColumnDefinitions="3,*,Auto">
+                            <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
+                                    Background="{DynamicResource AccentGradientBrush}"
+                                    IsVisible="{Binding IsCurrent}" />
+                            <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                                <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextBrush}" />
+                                <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock x:Name="RemoteListNote" Grid.Row="2" IsVisible="False" Margin="10,6,8,0" FontSize="11"
+                       TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
 
             <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="1" IsHitTestVisible="False"
                         VerticalAlignment="Center" HorizontalAlignment="Center">

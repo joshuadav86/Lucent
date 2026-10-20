@@ -78,13 +78,7 @@ public partial class MainWindow : Window
         _queue.PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>
         {
-            _queue.EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            _queue.QueueCount.Text = _playlist.Count switch
-            {
-                0 => "Empty",
-                1 => "1 track",
-                var count => $"{count} tracks",
-            };
+            ShowQueueSize();
             _shuffleHistory.RemoveAll(entry => !_playlist.Contains(entry));
             ForgetUpNext();
             ShowNowPlaying(_current?.Track);
