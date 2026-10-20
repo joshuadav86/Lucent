@@ -36,6 +36,8 @@ public static class Screenshots
         ("Player-Glass", () => PreviewPlayer("Glass")),
         ("Player-Neon", () => PreviewPlayer("Neon")),
         ("Player-Studio", () => PreviewPlayer("Studio")),
+        ("Player-ClassicSkin", () => PreviewClassicPlayer(shaded: false)),
+        ("Player-ClassicSkin-Shade", () => PreviewClassicPlayer(shaded: true)),
         ("Player-Options", () => PreviewOptions("Graphics")),
         ("Player-Options-Visuals", () => PreviewOptions("Visuals")),
         ("Player-Options-Sound", () => PreviewOptions("Sound")),
@@ -131,6 +133,14 @@ public static class Screenshots
             SampleTrack("Aphex Twin", "Xtal", TimeSpan.FromSeconds(294), 1411, 44100, 2),
             SampleTrack("Burial", "Archangel", TimeSpan.FromSeconds(238), 256, 48000, 2),
         }, TimeSpan.FromSeconds(83));
+        return player;
+    }
+
+    /// <summary>The player drawn by Lucent Classic, the classic Winamp skin, part way through a song.</summary>
+    private static Window PreviewClassicPlayer(bool shaded)
+    {
+        var player = (MainWindow)PreviewPlayer("Lucent");
+        player.PreviewClassicSkin(TimeSpan.FromSeconds(83), shaded);
         return player;
     }
 

@@ -180,12 +180,24 @@ public sealed class AppSettings
 
     public EqualizerSettings Equalizer { get; set; } = new();
 
+    /// <summary>Left and right balance, -1 (left only) to 1 (right only). Set from the classic player's balance slider.</summary>
+    public double Balance { get; set; }
+
     // ---- Look ----
 
     public string Theme { get; set; } = "Midnight";
 
     /// <summary>The skin: shapes, type and finish, laid over the theme's colours.</summary>
     public string Skin { get; set; } = "Lucent";
+
+    /// <summary>
+    /// The classic Winamp skin (.wsz) the player is drawn with instead, by name (see ClassicSkinLibrary),
+    /// or null for Lucent's own player.
+    /// </summary>
+    public string? ClassicSkin { get; set; }
+
+    /// <summary>Draws the classic player at twice its size, like Winamp's "double size" (D).</summary>
+    public bool ClassicDoubleSize { get; set; } = true;
 
     // ---- Track info and artwork ----
 

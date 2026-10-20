@@ -28,6 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Lucent Classic, Lucent's own classic Winamp skin. Drawn by tools/ClassicSkin/make_lucent_classic.py. -->
+    <EmbeddedResource Include="ClassicSkins\LucentClassic.wsz" LogicalName="LucentClassic.wsz" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
       Lucent's Spotify app, for signing in to Spotify (see Streaming/SpotifySignIn.cs). CI passes the
       SPOTIFY_CLIENT_ID repository secret as -p:SpotifyClientId; a build without it just can't sign in.
