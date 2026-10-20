@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
 
 namespace WinampInspiredVisualizer.Radio;
@@ -45,6 +46,11 @@ public sealed class RadioDirectory
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
+    // The quality some listeners write into a station's name: "(256k MP3)", "128 kbps", "AAC+".
+    private static readonly Regex QualityInName = new(
+        @"\b\d+\s*(k|kb|kbps|kbit|kbit/s)\b|\b(mp3|aac\+?|aacp|he-aac|kbps|stereo)(?![\w+])",
+        RegexOptions.CultureInvariant);
+
     private readonly HttpClient _http;
     private readonly SemaphoreSlim _serverLock = new(1, 1);
     private List<string>? _servers;
@@ -73,7 +79,7 @@ public sealed class RadioDirectory
             ? SearchOnceAsync(query, name: null, tag: text.ToLowerInvariant(), cancel)
             : Task.FromResult<IReadOnlyList<RadioStation>>(Array.Empty<RadioStation>());
         var found = (await byName).Concat(await byTag).DistinctBy(station => station.Id).ToList();
-        return RadioGuide.Sort(found, query.Sort).Take(query.Limit).ToList();
+        return WithoutDuplicates(RadioGuide.Sort(found, query.Sort)).Take(query.Limit).ToList();
     }
 
     /// <summary>How many playable stations each genre has, by tag, for the counts beside the genres.</summary>
@@ -161,9 +167,10 @@ public sealed class RadioDirectory
         }
 
         var stations = await GetAsync<List<DirectoryStation>>("json/stations/search?" + string.Join("&", parts), cancel);
-        return stations.Where(listed => listed.Hls == 0)
+        var playable = stations.Where(listed => listed.Hls == 0)
             .Select(ToStation)
-            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec) && !IsHls(station.StreamUrl))
+            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec) && !IsHls(station.StreamUrl));
+        return WithoutDuplicates(playable)
             .Take(query.Limit)
             .ToList();
     }
@@ -174,6 +181,43 @@ public sealed class RadioDirectory
         "MP3" or "AAC" or "AAC+" or "AACP" or "HE-AAC" => true,
         _ => false,
     };
+
+    /// <summary>
+    /// Leaves out the stations listed more than once. Listeners add the same station again and again, so Groove Salad
+    /// shows up as "SomaFM Groove Salad (256k MP3)", "Soma FM Groove Salad 256K MP3", and so on. A station counts as
+    /// listed already when its stream is, or when its name (without the quality written in it) and its quality are.
+    /// The first of each is kept, so the order decides which: the most played, when sorted by Popular.
+    /// </summary>
+    public static IEnumerable<RadioStation> WithoutDuplicates(IEnumerable<RadioStation> stations)
+    {
+        var streams = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var station in stations)
+        {
+            var stream = StreamKey(station.StreamUrl);
+            var name = $"{NameKey(station.Name)}|{station.Codec.Trim().ToUpperInvariant()}|{station.Bitrate}";
+            // Both are noted either way, so a station that matches one copy by stream and another by name is one station.
+            var seen = !streams.Add(stream) | !names.Add(name);
+            if (!seen)
+            {
+                yield return station;
+            }
+        }
+    }
+
+    // "https://ice4.somafm.com/groovesalad-256-mp3/" and "http://ice4.somafm.com/groovesalad-256-mp3" are one stream.
+    private static string StreamKey(string address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri)
+            ? (uri.Host + uri.AbsolutePath.TrimEnd('/')).ToLowerInvariant()
+            : address.Trim().ToLowerInvariant();
+
+    // "SomaFM Groove Salad (256k MP3)" and "Soma FM Groove Salad 256K MP3" are both "somafmgroovesalad".
+    private static string NameKey(string name)
+    {
+        var plain = QualityInName.Replace(name.ToLowerInvariant(), " ");
+        var key = new string(plain.Where(char.IsLetterOrDigit).ToArray());
+        return key.Length > 0 ? key : name.Trim().ToLowerInvariant();
+    }
 
     // HLS streams come in segments, not as one stream, which Lucent doesn't play, so they're left out. The directory
     // marks most of them; the rest give themselves away by their address.
