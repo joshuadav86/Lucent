@@ -75,6 +75,7 @@ public partial class EqualizerWindow : Window
         Eq.Gains = Equalizer.SliderGains(Eq, _bands).ToList();
         // The spectrum fills the response box under the curve, whatever size the box is.
         _spectrum = new EqualizerSpectrum(player.Capture);
+        WinampInspiredVisualizer.Editor.AudioTools.EditorPlayingChanged += OnEditorPlayingChanged;
         CurveFrame.Child = null;
         var layers = new Grid();
         layers.Children.Add(_spectrum);
@@ -342,9 +343,23 @@ public partial class EqualizerWindow : Window
 
     private void ShowHint()
     {
+        var editorPlaying = WinampInspiredVisualizer.Editor.AudioTools.IsEditorPlaying;
+        _spectrum.Paused = editorPlaying;
+        if (editorPlaying)
+        {
+            // The spectrum would show the editor's sound (it listens to every app), but the EQ only shapes the
+            // player's music, so it goes quiet instead.
+            StatusText.Text = "The audio editor is playing: this EQ only shapes the player's music";
+            StatusText.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+            return;
+        }
+
         StatusText.Text = "Double-click a slider to put it back to 0";
         StatusText.SetResourceReference(TextBlock.ForegroundProperty, "FaintTextBrush");
     }
+
+    // Usually raised on the UI thread, but playback stopping by itself can come from the audio thread.
+    private void OnEditorPlayingChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(ShowHint);
 
     private void ShowBandStatus(int band)
     {
@@ -840,6 +855,7 @@ public partial class EqualizerWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        WinampInspiredVisualizer.Editor.AudioTools.EditorPlayingChanged -= OnEditorPlayingChanged;
         if (_gliding)
         {
             CompositionTarget.Rendering -= OnGlideFrame;

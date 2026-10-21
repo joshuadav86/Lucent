@@ -38,6 +38,17 @@ public static class AudioTools
 
     internal static void NotifyMainPlayerChanged() => MainPlayerChanged?.Invoke(null, EventArgs.Empty);
 
+    /// <summary>
+    /// Raised when an editor starts or stops playing, so the equalizer can say it isn't shaping that sound: the editor
+    /// plays through its own output, and its spectrum only reacts because it's listening to every app.
+    /// </summary>
+    public static event EventHandler? EditorPlayingChanged;
+
+    /// <summary>True while an audio editor is playing.</summary>
+    public static bool IsEditorPlaying => Editors.Any(editor => editor.IsPlaying);
+
+    internal static void NotifyEditorPlayingChanged() => EditorPlayingChanged?.Invoke(null, EventArgs.Empty);
+
     internal static void NotifyFilesReplaced(IReadOnlyList<string> paths)
     {
         if (paths.Count > 0)
@@ -47,11 +58,13 @@ public static class AudioTools
     }
 
     /// <summary>
-    /// Opens a song in the editor, or brings its editor to the front if it's already open.
+    /// Opens a song in the editor, or brings its editor to the front if it's already open. The editor that's open
+    /// takes the song in place of its own when that loses nothing (it's empty, or has no unsaved edits), so one
+    /// editor can be left docked to the player; otherwise the song opens in another editor.
     /// <paramref name="player"/> is the main player: the editor pauses it while it plays, and has it let go of
     /// the song for a moment when saving over it.
     /// </summary>
-    public static void OpenEditor(Window owner, AudioPlayer player, string path)
+    public static async void OpenEditor(Window owner, AudioPlayer player, string path)
     {
         if (!File.Exists(path))
         {
@@ -60,22 +73,63 @@ public static class AudioTools
             return;
         }
 
-        var existing = Editors.FirstOrDefault(editor => SamePath(editor.FilePath, path));
+        var existing = Editors.FirstOrDefault(editor => !editor.IsEmpty && SamePath(editor.FilePath, path));
         if (existing is not null)
         {
-            if (existing.WindowState == WindowState.Minimized)
-            {
-                existing.WindowState = WindowState.Normal;
-            }
-
-            existing.Activate();
+            BringForward(existing);
             return;
         }
 
+        if ((Editors.FirstOrDefault(editor => editor.IsEmpty && editor.CanOpenAnother) ?? Editors.FirstOrDefault(editor => editor.CanOpenAnother)) is { } reusable)
+        {
+            BringForward(reusable);
+            await reusable.OpenAsync(path);
+            return;
+        }
+
+        NewEditor(owner, player, path);
+    }
+
+    /// <summary>
+    /// The title bar's "Open the audio editor": brings an open editor to the front, or opens an empty one docked to
+    /// the player, to drop sounds into.
+    /// </summary>
+    public static void ShowEditor(Window owner, AudioPlayer player)
+    {
+        if (Editors.LastOrDefault() is { } open)
+        {
+            BringForward(open);
+            return;
+        }
+
+        NewEditor(owner, player, null);
+    }
+
+    /// <summary>Opens the empty editor again with the player if it was open when Lucent last quit.</summary>
+    public static void ReopenEditor(Window owner, AudioPlayer player)
+    {
+        if (Editors.Count == 0 && EditorSettings.Load().OpenAtStart)
+        {
+            NewEditor(owner, player, null);
+        }
+    }
+
+    private static void BringForward(Window window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+        {
+            window.WindowState = WindowState.Normal;
+        }
+
+        window.Activate();
+    }
+
+    private static void NewEditor(Window owner, AudioPlayer player, string? path)
+    {
         Watch(owner);
         var window = new EditorWindow(path, player) { Owner = owner };
         Editors.Add(window);
-        (Application.Current.MainWindow as MainWindow)?.AddToSnapping(window);
+        Dock(window);
         window.Closing += (_, e) =>
         {
             // This runs after the editor's own check. Refused while idle means the user chose to keep
@@ -88,9 +142,57 @@ public static class AudioTools
         window.Closed += (_, _) =>
         {
             Editors.Remove(window);
+            NotifyEditorPlayingChanged();
             QuitIfIdle();
         };
         window.Show();
+    }
+
+    /// <summary>
+    /// Puts a new editor where the last one was left, from the player's corner, so it's docked in the same place
+    /// wherever the player is now; the first time (or if that's off the screen), in a free spot docked to the
+    /// player's group. Either way it snaps to and moves with the player like the other windows.
+    /// </summary>
+    private static void Dock(EditorWindow window)
+    {
+        if (Application.Current.MainWindow is not MainWindow main)
+        {
+            return;
+        }
+
+        var settings = EditorSettings.Load();
+        if (Editors.Count == 1 && main.WindowState == WindowState.Normal
+            && settings is { WindowOffsetX: { } x, WindowOffsetY: { } y, WindowWidth: { } width, WindowHeight: { } height }
+            && width >= window.MinWidth && height >= window.MinHeight
+            && IsOnScreen(new Rect(main.Left + x, main.Top + y, width, height)))
+        {
+            main.AddToSnapping(window);
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = main.Left + x;
+            window.Top = main.Top + y;
+            window.Width = width;
+            window.Height = height;
+            return;
+        }
+
+        if (Editors.Count == 1)
+        {
+            main.DockNewWindow(window);
+        }
+        else
+        {
+            // A second editor, for a song opened while the first has unsaved edits: over the player, as before.
+            main.AddToSnapping(window);
+        }
+    }
+
+    /// <summary>True when enough of the window's title bar is on a screen to grab it.</summary>
+    private static bool IsOnScreen(Rect bounds)
+    {
+        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+            SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+        var titleBar = Rect.Intersect(screen, new Rect(bounds.Left, bounds.Top, bounds.Width, 40));
+        return !titleBar.IsEmpty && titleBar.Width >= 100 && titleBar.Height >= 20;
     }
 
     /// <summary>Asks for a song and opens it in the editor.</summary>
@@ -186,6 +288,7 @@ public static class AudioTools
         var menu = new ContextMenu { PlacementTarget = target, Placement = PlacementMode.Bottom };
         menu.Items.Add(Item("Record from an audio interface…", true, () => OpenRecorder(owner, player, settings)));
         menu.Items.Add(new Separator());
+        menu.Items.Add(Item("Open the audio editor", true, () => ShowEditor(owner, player)));
         menu.Items.Add(Item($"Edit the sound that's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
         menu.Items.Add(Item("Convert the sound that's playing…", playing, () => Convert(owner, settings, new[] { currentPath! })));
         menu.Items.Add(new Separator());
@@ -213,7 +316,7 @@ public static class AudioTools
         string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
 
     private static bool SamePath(string a, string b) =>
-        string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+        a.Length > 0 && b.Length > 0 && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 
     // ---- Closing Lucent ----
 
