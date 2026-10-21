@@ -117,7 +117,7 @@ kbd {
 .hero .wrap { padding-block: clamp(56px, 8vw, 104px) 56px; display: grid; gap: clamp(36px, 5vw, 56px); }
 .hero-copy { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px 56px; align-items: end; }
 .hero-copy .eyebrow { grid-column: 1 / -1; }
-.hero h1 { font-size: clamp(40px, 6.4vw, 86px); line-height: 1; }
+.hero h1 { font-size: clamp(38px, 5.2vw, 72px); line-height: 1.02; }
 .hero-side { display: grid; gap: 22px; min-width: 0; }
 @media (max-width: 900px) { .hero-copy { grid-template-columns: 1fr; } }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
@@ -130,22 +130,7 @@ kbd {
 #heroBars { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 26%; z-index: -1; display: block; opacity: .4; }
 
 /* ---------- audio editor ---------- */
-.editor { border-radius: var(--r); background: var(--bg); border: 1px solid var(--line); box-shadow: 0 40px 80px -50px rgba(0,0,0,.8), var(--glow); overflow: hidden; }
-.ed-top { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-.ed-top .label { font: 500 11px/1 var(--font-mono); letter-spacing: .14em; color: var(--muted); }
-.ed-file { font: 400 13px var(--font-mono); margin-right: auto; min-width: 0; font-variant-numeric: tabular-nums; }
-.seg button:disabled { opacity: .35; cursor: default; }
-#wave { display: block; width: 100%; height: 300px; touch-action: none; cursor: text; }
-.ed-tools { display: flex; flex-wrap: wrap; gap: 12px 26px; padding: 14px; border-top: 1px solid var(--line); align-items: center; }
-.tool-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.tool-group label { font: 500 12px var(--font-mono); color: var(--muted); margin-right: 4px; }
-.tool-group button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 11px; font-size: 13px; font-weight: 500; cursor: pointer; transition: border-color .15s; }
-.tool-group button:hover { border-color: var(--a1); }
-.tool-group input[type="range"] { width: 130px; accent-color: var(--a1); }
-.tool-group output { font: 400 12px var(--font-mono); min-width: 58px; font-variant-numeric: tabular-nums; }
-.ed-foot { display: flex; justify-content: space-between; gap: 6px 16px; padding: 10px 14px; border-top: 1px solid var(--line); font: 400 12px/1.4 var(--font-mono); color: var(--muted); flex-wrap: wrap; font-variant-numeric: tabular-nums; }
-#edMsg { color: var(--a2); }
-.editor + .analyzer-notes, .analyzer + .analyzer-notes { margin-top: 32px; }
+#editor .screen + .analyzer-notes, .analyzer + .analyzer-notes { margin-top: 32px; }
 
 /* ---------- analyzer, expanded ---------- */
 .an-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
@@ -204,6 +189,7 @@ section.band { padding-block: clamp(72px, 9vw, 120px); }
 
 /* ---------- player / snapping ---------- */
 .alt { background: var(--surface); transition: background-color .4s; }
+.classic-shot { max-width: 550px; image-rendering: pixelated; }
 .screen { border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); box-shadow: 0 40px 80px -40px rgba(0,0,0,.7), var(--glow); background: #000; }
 .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
 .split > div { min-width: 0; }
@@ -345,6 +331,7 @@ footer a:hover { color: var(--fg); }
       <a href="#analyzer">Analyzer</a>
       <a href="#equalizer">Equalizer</a>
       <a href="#skins">Skins</a>
+      <a href="#radio">Radio</a>
     </nav>
     <a class="nav-coffee" href="https://buymeacoffee.com/joshuadav86" target="_blank" rel="noopener" aria-label="Buy me a coffee">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3c0 1.5 1 1.5 1 3M12 3c0 1.5 1 1.5 1 3"/></svg>
@@ -360,9 +347,9 @@ footer a:hover { color: var(--fg); }
     <div class="wrap">
       <div class="hero-copy">
         <p class="eyebrow">Built for audio nerds · Windows and Mac</p>
-        <h1 id="hero-title">Play it. Shape it. <span class="grad">Watch&nbsp;it.</span></h1>
+        <h1 id="hero-title">The Media Player <span class="grad">You Didn't Know You Needed</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a modern take on Winamp built for audio nerds. A real audio editor, a studio analyzer, and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 456 visuals: 202 of its own, 220 MilkDrop presets, and 34 of Winamp's AVS presets. Free for Windows and Mac.</p>
+          <p class="lede">Lucent is a modern take on Winamp built for audio nerds. A real audio editor, a studio analyzer, and a 32-band equalizer are built in, and it paints every sound live on your graphics card with 456 visuals: 202 of its own, 220 MilkDrop presets, and 34 of Winamp's AVS presets. Tune in to online radio, record live sets, and wear a classic Winamp skin. Free for Windows and Mac.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -395,6 +382,22 @@ footer a:hover { color: var(--fg); }
       <span><b>4–32</b>EQ bands</span>
     </div>
   </div>
+
+  <section class="band" id="streaming" aria-labelledby="both-title">
+    <div class="wrap split">
+      <div class="stack">
+        <p class="eyebrow">For streaming listeners</p>
+        <h2 id="both-title">The Best of Both Worlds</h2>
+        <p class="lede">Love your streaming library but can't stand looking at the app? Keep Spotify, Apple Music, TIDAL, SoundCloud, or YouTube for the music, and let Lucent be the thing on your screen. Start a song there, tuck the app out of sight, and watch it play through Lucent's visuals instead.</p>
+      </div>
+      <ul class="ticks">
+        <li><b>Your library stays where it is.</b> Playlists, likes, and recommendations stay in your streaming service. Nothing to move or sync.</li>
+        <li><b>Control it from Lucent.</b> Play, pause, skip, and change the volume from Lucent's player. With Spotify, the queue window shows the playlist it's playing from, and a double-click plays any song in it.</li>
+        <li><b>Visuals that hear only the music.</b> 456 visuals, MilkDrop and Winamp AVS included, follow that one app, so a video or a call in the background won't move them. The meters and analyzer follow along too.</li>
+        <li><b>A player you actually like looking at.</b> Pick any skin and theme, or go full Winamp with Lucent Classic, while the streaming app stays hidden.</li>
+      </ul>
+    </div>
+  </section>
 
   <section class="band alt" id="player" aria-labelledby="player-title">
     <div class="wrap split">
@@ -458,45 +461,7 @@ footer a:hover { color: var(--fg); }
         <h2 id="ed-title">Edit, repair, and measure without leaving your player.</h2>
         <p class="lede">Right-click any sound and choose Open in editor. Cut it, clean it up, split it into stems, find its tempo and key, make loops, check its loudness, and master it with studio meters and a chain of your own VST3 effects. Every change has undo, and nothing is saved over the original until you say so.</p>
       </div>
-      <div class="editor">
-        <div class="ed-top">
-          <span class="label">EDITOR</span>
-          <span class="ed-file">Night Swim.flac · 44.1 kHz · 24-bit · <span id="edDur">3:12.00</span></span>
-          <div class="seg" role="group" aria-label="History">
-            <button type="button" id="edUndo" aria-label="Undo">↶ Undo</button><button type="button" id="edRedo" aria-label="Redo">Redo ↷</button>
-          </div>
-        </div>
-        <canvas id="wave" aria-label="Waveform of both channels. Drag to select part of the sound."></canvas>
-        <div class="ed-tools">
-          <div class="tool-group" role="group" aria-label="Edit the selection">
-            <button type="button" data-op="trim">Trim</button>
-            <button type="button" data-op="delete">Delete</button>
-            <button type="button" data-op="silence">Silence</button>
-            <button type="button" data-op="fadein">Fade in</button>
-            <button type="button" data-op="fadeout">Fade out</button>
-            <button type="button" data-op="gainup">Gain +3 dB</button>
-            <button type="button" data-op="gaindown">Gain −3 dB</button>
-            <button type="button" data-op="reverse">Reverse</button>
-            <button type="button" data-op="mono">To mono</button>
-          </div>
-          <div class="tool-group" role="group" aria-label="Normalize">
-            <label for="normSel">Normalize</label>
-            <select id="normSel">
-              <option value="p-0.1">Peak −0.1 dB</option><option value="p-1" selected>Peak −1 dB</option><option value="p-3">Peak −3 dB</option>
-              <option value="l-14">−14 LUFS</option><option value="l-16">−16 LUFS</option><option value="l-23">−23 LUFS</option>
-            </select>
-            <button type="button" data-op="normalize">Apply</button>
-          </div>
-          <div class="tool-group" role="group" aria-label="Pitch">
-            <label for="pitch">Pitch</label>
-            <input type="range" id="pitch" min="-12" max="12" step="0.1" value="0">
-            <output id="pitchOut" for="pitch">0.0 st</output>
-            <select id="pitchMode" aria-label="Pitch mode"><option value="keep">Keep speed</option><option value="record">Like a record</option></select>
-            <button type="button" data-op="pitch">Apply</button>
-          </div>
-        </div>
-        <div class="ed-foot"><span id="edSel">No selection: edits apply to the whole sound</span><span id="edPeak">Peak −0.8 dB</span><span id="edMsg">Drag across the waveform to select</span></div>
-      </div>
+      <div class="screen"><img src="img/editor.png" width="1240" height="700" alt="The Lucent audio editor with three clips, fades, a crossfade where two clips overlap, markers, and the Inserts strip for VST3 plugins" loading="lazy"></div>
       <div class="analyzer-notes ed-features">
         <div><h3>Split into stems</h3><p>Pull any song apart into vocals, drums, bass, and everything else with an AI model on your graphics card. Listen in the stems window with mute and solo on each, then keep them in the editor or save all four as files.</p></div>
         <div><h3>Tempo, key, and loops</h3><p>Lucent finds each sound's BPM and key, with its Camelot number. Turn on Beats for a bar grid that snaps, and the loop maker finds the most seamless loops and saves them as WAV files named by bars, tempo, and key.</p></div>
@@ -600,6 +565,8 @@ footer a:hover { color: var(--fg); }
         <p class="eyebrow">Skins and themes</p>
         <h2 id="skins-title">Five skins. Eight themes. Any combination.</h2>
         <p class="lede">Skins decide the shape, type, and finish of every window. Themes decide the colors. Pick one here and this page changes with it.</p>
+        <p class="lede">Or go all the way back: the player can wear a real Winamp 2 skin. Lucent Classic, drawn fresh in Lucent's colors, comes built in, and any .wsz skin imports when you drop it on a window, with window shade mode and double size working as they did in 1999.</p>
+        <div class="screen classic-shot"><img src="img/classic-skin.png" width="550" height="232" alt="The Lucent player wearing Lucent Classic, a Winamp 2 style skin with a pixel display, sliders, and transport buttons"></div>
         <div class="skins" role="group" aria-label="Skins" id="skinList"></div>
       </div>
       <div class="stack">
@@ -611,7 +578,24 @@ footer a:hover { color: var(--fg); }
     </div>
   </section>
 
-  <section class="band alt" aria-labelledby="extras-title">
+  <section class="band alt" id="radio" aria-labelledby="radio-title">
+    <div class="wrap split">
+      <div class="stack">
+        <p class="eyebrow">Radio and recording</p>
+        <h2 id="radio-title">Tune in to the world. Record your own sets.</h2>
+        <p class="lede">Online radio plays through Lucent's own player, so the equalizer, meters, analyzer, and visuals all follow the station. And when the music is yours, Lucent records it straight from your audio interface.</p>
+        <ul class="ticks">
+          <li><b>Thousands of stations.</b> Start with SomaFM, FRISKY, Radio Paradise, and Nightride FM, or search the free Radio Browser directory across 31 genres. Sort by popularity, votes, or bitrate, filter by quality and country, and star your favorites.</li>
+          <li><b>MP3, AAC, and AAC+ streams.</b> The song that's on shows in the player, .pls and .m3u links open straight away, and a dropped station reconnects by itself.</li>
+          <li><b>Record live.</b> Pick any input on your interface, through WASAPI or ASIO on Windows or Core Audio on a Mac, at up to 192 kHz and 32-bit float, with VST3 effects on the way in.</li>
+          <li><b>Track marks for DJ sets.</b> Press <kbd>M</kbd> as each song starts, or let Lucent hear the changes. Marks are saved in the WAV and a .cue sheet, so Next and Previous skip through a long recording.</li>
+        </ul>
+      </div>
+      <div class="screen"><img src="img/radio.png" width="820" height="600" alt="Lucent's Online radio window, with SomaFM's channels under Featured and a list of genres down the side" loading="lazy"></div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="extras-title">
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow">For people who care how it sounds</p>
@@ -619,13 +603,13 @@ footer a:hover { color: var(--fg); }
       </div>
       <div class="extras">
         <div><h3>Gapless and bit-perfect</h3><p>Albums play straight through with no gap between tracks. Turn on exclusive mode, on Windows or a Mac, and each track reaches your DAC untouched, at its own format.</p></div>
-        <div><h3>Library</h3><p>Link a folder or drag music in, like Winamp, and every sound shows up, searchable as you type. Heart your favorites and make .m3u8 playlists right there.</p></div>
+        <div><h3>Library</h3><p>Link a folder or drag music in, like Winamp, and every sound shows up, searchable as you type. Click folders to pick them, heart your favorites, and make .m3u8 playlists right there.</p></div>
         <div><h3>Artwork window</h3><p>The playing sound's cover, as big as you like, pinned on top if you want it.</p></div>
         <div><h3>Keyboard first</h3><p>One key for every window and visual. Media keys work even when Lucent isn't in front, and the song shows in Windows' media controls or the Mac's Now Playing.</p></div>
         <div><h3>Tag editor</h3><p>Titles, artists, lyrics, and cover art, saved to a checked copy first.</p></div>
         <div><h3>Bandcamp and Beatport</h3><p>Downloads from either store file themselves into your library, and your Bandcamp collection can sync on its own (experimental).</p></div>
         <div><h3>Visuals for any app</h3><p>Point the visuals, meter, spectrum, and analyzer at everything your computer plays, from a browser to a game. On a Mac this needs macOS 14.2 or later.</p></div>
-        <div><h3>Apple Music, TIDAL, SoundCloud, and YouTube</h3><p>See and control what's playing in Apple Music, TIDAL, or SoundCloud and YouTube in your browser, right from the player, while the sound stays in that app.</p></div>
+        <div><h3>Spotify, Apple Music, TIDAL, SoundCloud, and YouTube</h3><p>Control what's playing in any of them right from the player, volume included, with Spotify's playlist in the queue window and the visuals listening to that app alone.</p></div>
         <div><h3>Your default player</h3><p>One button in Options makes Lucent the player for your music files, and songs opened from Explorer or the Finder play straight away.</p></div>
         <div><h3>Import from another player</h3><p>Bring playlists, play counts, and ratings over from Apple Music, MusicBee, foobar2000, Plex, or YouTube Music.</p></div>
         <div><h3>Converter</h3><p>Make MP3, FLAC, or WAV, stereo or mono, with tags and artwork carried across a whole batch.</p></div>
@@ -1067,151 +1051,6 @@ footer a:hover { color: var(--fg); }
     return corr;
   }
 
-  /* ---------- audio editor ---------- */
-  const wv = document.getElementById("wave"), wctx = wv.getContext("2d");
-  wv.tabIndex = 0;
-  const SR = 20; // envelope points per second of audio
-  function makeSong() {
-    const D = 192, M = D * SR, L = new Float32Array(M), R = new Float32Array(M);
-    for (let i = 0; i < M; i++) {
-      const t = i / SR;
-      const lvl = t < 12 ? .22 + t / 12 * .2 : t < 44 ? .5 : t < 52 ? .3 : t < 108 ? .8 : t < 124 ? .38 : t < 176 ? .86 : .86 * Math.max(0, 1 - (t - 176) / 16);
-      const kick = t < 12 || (t >= 44 && t < 52) ? 0 : Math.exp(-((t * 2) % 1) * 5);
-      L[i] = Math.min(1, lvl * (.62 + .38 * kick) * (.74 + .26 * hash(i * 1.37)) * 1.06);
-      R[i] = Math.min(1, lvl * (.62 + .38 * kick) * (.74 + .26 * hash(i * 2.71 + 9)) * 1.02);
-    }
-    return { L, R };
-  }
-  let ed = makeSong(), sel = null, undoS = [], redoS = [], playing = false, playFrom = 0, playStart = 0, playhead = -1;
-  const durOf = () => ed.L.length / SR;
-  const fmtT = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, "0")}`;
-  const dB = a => a <= 1e-4 ? "−∞ dB" : (20 * Math.log10(a) >= 0 ? "0.0" : "−" + Math.abs(20 * Math.log10(a)).toFixed(1)) + " dB";
-  function drawEd() {
-    fit(wv);
-    const W = wv.width, H = wv.height, d = W / wv.clientWidth || 1, M = ed.L.length;
-    const ruler = 24 * d, lane = (H - ruler) / 2, D = durOf();
-    wctx.clearRect(0, 0, W, H);
-    const xOf = i => i / M * W;
-    // ruler
-    wctx.font = `${10 * d}px ${css("--font-mono")}`; wctx.fillStyle = css("--muted"); wctx.strokeStyle = css("--line"); wctx.lineWidth = d;
-    const stepS = wv.clientWidth < 600 ? 60 : wv.clientWidth < 900 ? 30 : 15;
-    wctx.textAlign = "left"; wctx.textBaseline = "middle";
-    for (let s = 0; s < D; s += stepS) {
-      const x = s / D * W;
-      wctx.beginPath(); wctx.moveTo(x, ruler - 6 * d); wctx.lineTo(x, H); wctx.stroke();
-      wctx.fillText(`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`, x + 4 * d, ruler / 2);
-    }
-    wctx.beginPath(); wctx.moveTo(0, ruler); wctx.lineTo(W, ruler); wctx.moveTo(0, ruler + lane); wctx.lineTo(W, ruler + lane); wctx.stroke();
-    // selection
-    if (sel) {
-      const a = xOf(sel[0]), b = xOf(sel[1]);
-      wctx.fillStyle = css("--a1") + "33"; wctx.fillRect(a, ruler, b - a, H - ruler);
-      wctx.fillStyle = css("--a2"); wctx.fillRect(a, ruler, d, H - ruler); wctx.fillRect(b - d, ruler, d, H - ruler);
-    }
-    // both channels
-    const g = wctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, css("--a1")); g.addColorStop(1, css("--a2"));
-    [ed.L, ed.R].forEach((ch, k) => {
-      const mid = ruler + lane * k + lane / 2, amp = lane * .44;
-      wctx.fillStyle = g;
-      for (let x = 0; x < W; x++) {
-        const i0 = Math.floor(x / W * M), i1 = Math.max(i0 + 1, Math.floor((x + 1) / W * M));
-        let a = 0; for (let i = i0; i < i1 && i < M; i++) a = Math.max(a, ch[i]);
-        const h = Math.max(.5 * d, a * amp);
-        wctx.fillRect(x, mid - h, 1, h * 2);
-      }
-      wctx.fillStyle = css("--muted"); wctx.textAlign = "left";
-      wctx.fillText(k ? "R" : "L", 6 * d, ruler + lane * k + 12 * d);
-    });
-    if (playhead >= 0) { wctx.fillStyle = css("--fg"); wctx.fillRect(xOf(playhead), ruler, 2 * d, H - ruler); }
-  }
-  const msgEl = document.getElementById("edMsg");
-  function edUI(msg) {
-    let p = 0; for (let i = 0; i < ed.L.length; i++) p = Math.max(p, ed.L[i], ed.R[i]);
-    document.getElementById("edPeak").textContent = "Peak " + dB(p);
-    document.getElementById("edDur").textContent = fmtT(durOf());
-    document.getElementById("edSel").textContent = sel
-      ? `Selection ${fmtT(sel[0] / SR)} – ${fmtT(sel[1] / SR)} · ${((sel[1] - sel[0]) / SR).toFixed(2)} s`
-      : "No selection: edits apply to the whole sound";
-    document.getElementById("edUndo").disabled = !undoS.length;
-    document.getElementById("edRedo").disabled = !redoS.length;
-    if (msg !== undefined) msgEl.textContent = msg;
-    drawEd();
-  }
-  const snap = () => ({ L: ed.L.slice(), R: ed.R.slice(), sel: sel && sel.slice() });
-  const sampleAt = e => { const r = wv.getBoundingClientRect(); return Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * ed.L.length); };
-  let anchor = -1;
-  wv.addEventListener("pointerdown", e => { wv.setPointerCapture(e.pointerId); anchor = sampleAt(e); sel = null; edUI(); });
-  wv.addEventListener("pointermove", e => {
-    if (anchor < 0) return;
-    const s = sampleAt(e); sel = [Math.min(anchor, s), Math.max(anchor, s)]; edUI();
-  });
-  const endSel = () => { if (anchor < 0) return; anchor = -1; if (sel && sel[1] - sel[0] < SR * .2) sel = null; edUI(sel ? "Now pick an edit below" : "Drag across the waveform to select"); };
-  wv.addEventListener("pointerup", endSel); wv.addEventListener("pointercancel", endSel);
-  wv.addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); togglePlay(); } });
-  function togglePlay() {
-    playing = !playing;
-    if (playing) { playFrom = sel ? sel[0] : Math.max(0, playhead); playStart = performance.now(); }
-    else { playhead = -1; drawEd(); }
-  }
-  function tickPlay(now) {
-    if (!playing) return;
-    playhead = playFrom + (now - playStart) / 1000 * SR;
-    const end = sel ? sel[1] : ed.L.length;
-    if (playhead >= end) { playing = false; playhead = -1; }
-    drawEd();
-  }
-  const pitchIn = document.getElementById("pitch"), pitchOut = document.getElementById("pitchOut");
-  pitchIn.oninput = () => pitchOut.textContent = (pitchIn.value > 0 ? "+" : "") + (+pitchIn.value).toFixed(1) + " st";
-  function op(name) {
-    const M = ed.L.length, [a, b] = sel || [0, M], where = sel ? "the selection" : "the whole sound";
-    const prev = snap();
-    let msg = "";
-    const each = fn => { for (const ch of [ed.L, ed.R]) for (let i = a; i < b; i++) ch[i] = fn(ch[i], i); };
-    const splice = (fnArr) => { ed = { L: fnArr(ed.L), R: fnArr(ed.R) }; };
-    switch (name) {
-      case "trim": if (!sel) { msgEl.textContent = "Select the part to keep first"; return; }
-        splice(c => c.slice(a, b)); sel = null; msg = "Trimmed to the selection"; break;
-      case "delete": if (!sel) { msgEl.textContent = "Select the part to delete first"; return; }
-        splice(c => { const o = new Float32Array(c.length - (b - a)); o.set(c.subarray(0, a)); o.set(c.subarray(b), a); return o; }); sel = null; msg = "Deleted the selection"; break;
-      case "silence": each(() => 0); msg = `Silenced ${where}`; break;
-      case "fadein": each((v, i) => v * (i - a) / (b - a)); msg = `Faded in ${where}`; break;
-      case "fadeout": each((v, i) => v * (1 - (i - a) / (b - a))); msg = `Faded out ${where}`; break;
-      case "gainup": { let clip = false; each(v => { v *= 1.4125; if (v > 1) clip = true; return Math.min(1, v); }); msg = clip ? "Gain +3 dB. Some peaks now touch 0 dB" : `Gain +3 dB on ${where}`; break; }
-      case "gaindown": each(v => v * .7079); msg = `Gain −3 dB on ${where}`; break;
-      case "mono": each((v, i) => (ed.L[i] + ed.R[i]) / 2); msg = `Converted ${where} to mono`; break;
-      case "reverse": for (const ch of [ed.L, ed.R]) ch.subarray(a, b).reverse(); msg = `Reversed ${where}`; break;
-      case "normalize": {
-        const [kind, val] = [document.getElementById("normSel").value[0], +document.getElementById("normSel").value.slice(2)];
-        let peak = 0, sq = 0; for (const ch of [ed.L, ed.R]) for (let i = a; i < b; i++) { peak = Math.max(peak, ch[i]); sq += ch[i] * ch[i]; }
-        if (peak < 1e-4) { msgEl.textContent = "Nothing to normalize: it's silent"; return; }
-        const loud = 20 * Math.log10(Math.sqrt(sq / (2 * (b - a)))) - 8;
-        const gain = kind === "p" ? Math.pow(10, val / 20) / peak : Math.pow(10, (val - loud) / 20);
-        let lim = false; each(v => { v *= gain; if (v > .989) { lim = true; v = .989; } return v; });
-        msg = kind === "p" ? `Normalized ${where} to a peak of ${val} dB` : `Normalized ${where} to ${val} LUFS` + (lim ? ", peaks limited to −0.1 dB" : "");
-        break;
-      }
-      case "pitch": {
-        const st = +pitchIn.value, mode = document.getElementById("pitchMode").value;
-        if (!st) { msgEl.textContent = "Move the pitch slider first"; return; }
-        const label = (st > 0 ? "+" : "") + st.toFixed(1) + " semitones";
-        if (mode === "record") {
-          const ratio = Math.pow(2, st / 12), n = Math.max(1, Math.round((b - a) / ratio));
-          splice(c => { const o = new Float32Array(c.length - (b - a) + n); o.set(c.subarray(0, a)); for (let i = 0; i < n; i++) o[a + i] = c[Math.min(b - 1, a + Math.floor(i * ratio))]; o.set(c.subarray(b), a + n); return o; });
-          if (sel) sel = [a, a + n];
-          msg = `Pitch ${label} like a record: ${where} is now ${ratio > 1 ? "shorter" : "longer"}`;
-        } else msg = `Pitch ${label}, same length`;
-        break;
-      }
-    }
-    undoS.push(prev); if (undoS.length > 50) undoS.shift(); redoS = [];
-    edUI(msg);
-  }
-  document.querySelectorAll(".ed-tools button[data-op]").forEach(b => b.onclick = () => op(b.dataset.op));
-  document.getElementById("edUndo").onclick = () => { if (!undoS.length) return; redoS.push(snap()); const s = undoS.pop(); ed = { L: s.L, R: s.R }; sel = s.sel; edUI("Undone"); };
-  document.getElementById("edRedo").onclick = () => { if (!redoS.length) return; undoS.push(snap()); const s = redoS.pop(); ed = { L: s.L, R: s.R }; sel = s.sel; edUI("Redone"); };
-  sel = [41 * SR, 63 * SR];
-  edUI("Drag across the waveform to select, then pick an edit");
-
   /* ---------- skins and themes ---------- */
   const THEMES = {
     "Midnight":    { bg: "#09090C", surface: "#16161D", fg: "#ECECF1", muted: "#9C9CAD", a1: "#8B5CF6", a2: "#22D3EE" },
@@ -1254,7 +1093,7 @@ footer a:hover { color: var(--fg); }
     root.style.colorScheme = t.light ? "light" : "dark";
     themeList.querySelectorAll(".swatch").forEach(s => s.setAttribute("aria-pressed", s.dataset.t === name));
     if (mapName === "theme") cmap = MAPS.theme();
-    drawEd(); hint(); save();
+    hint(); save();
   }
   function applySkin(name) {
     const s = SKINS.find(x => x[0] === name); cur.skin = name;
@@ -1283,13 +1122,11 @@ footer a:hover { color: var(--fg); }
       if (visible.get(sb)) drawBars(anT);
       if (visible.get(sc)) { const c = drawScope(anT); if (Math.floor(now / 250) !== frame.k) { frame.k = Math.floor(now / 250); corrEl.textContent = (c >= 0 ? "+" : "−") + Math.abs(c).toFixed(2); } }
     }
-    tickPlay(now);
     if (!reduce) requestAnimationFrame(frame);
   }
   if (reduce) { drawHero(102); drawEq(102); }
   else requestAnimationFrame(frame);
   addEventListener("resize", () => {
-    drawEd();
     if (reduce) { drawHero(102); drawEq(102); prefillAn(anT); drawScope(anT); drawBars(anT); }
     else prefillAn(anT);
   });
