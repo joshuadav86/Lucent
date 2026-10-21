@@ -1162,6 +1162,14 @@ public sealed partial class WaveformView : Control
             return;
         }
 
+        if (IsOnLengthTag(position))
+        {
+            // The selection's length tag: a click switches it between bars and beats and minutes and seconds.
+            ToggleLengthUnits();
+            e.Handled = true;
+            return;
+        }
+
         var frame = FrameAt(position.X);
         Capture(e.Pointer);
         _leftDown = true;
@@ -1246,7 +1254,8 @@ public sealed partial class WaveformView : Control
         if (!IsMouseCaptured && _panFrom is null)
         {
             HoverClip(position);
-            Cursor = MarkerAt(position) is not null ? SideToSideCursor
+            Cursor = IsOnLengthTag(position) ? HandCursor
+                : MarkerAt(position) is not null ? SideToSideCursor
                 : EdgeAt(position, _modifiers.HasFlag(KeyModifiers.Shift)) is { } edge ? EdgeCursor(edge)
                 : (IsOnClipBar(position) || MovesClipAt(position)) && _peaks is not null ? HandCursor
                 : IBeamCursor;

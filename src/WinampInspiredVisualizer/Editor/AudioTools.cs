@@ -38,6 +38,17 @@ public static class AudioTools
 
     internal static void NotifyMainPlayerChanged() => MainPlayerChanged?.Invoke(null, EventArgs.Empty);
 
+    /// <summary>
+    /// Raised when an editor starts or stops playing, so the equalizer can say it isn't shaping that sound: the editor
+    /// plays through its own output, and its spectrum only reacts because it's listening to every app.
+    /// </summary>
+    public static event EventHandler? EditorPlayingChanged;
+
+    /// <summary>True while an audio editor is playing.</summary>
+    public static bool IsEditorPlaying => Editors.Any(editor => editor.IsPlaying);
+
+    internal static void NotifyEditorPlayingChanged() => EditorPlayingChanged?.Invoke(null, EventArgs.Empty);
+
     internal static void NotifyFilesReplaced(IReadOnlyList<string> paths)
     {
         if (paths.Count > 0)
@@ -131,6 +142,7 @@ public static class AudioTools
         window.Closed += (_, _) =>
         {
             Editors.Remove(window);
+            NotifyEditorPlayingChanged();
             QuitIfIdle();
         };
         window.Show();

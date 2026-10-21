@@ -153,6 +153,9 @@ public partial class EditorWindow : Window
     /// </summary>
     public bool CanOpenAnother => !IsBusy && (IsEmpty || _session is { IsModified: false });
 
+    /// <summary>True while the editor is playing (or previewing).</summary>
+    public bool IsPlaying => _player.IsPlaying;
+
     /// <summary>True when there are edits that haven't been saved.</summary>
     public bool HasUnsavedChanges => _session?.IsModified == true;
 
@@ -1028,6 +1031,7 @@ public partial class EditorWindow : Window
         try
         {
             _player.Play(_session.Audio, from, to, through, _settings.Loop);
+            AudioTools.NotifyEditorPlayingChanged();
             _playTo = to;
             _previewThrough = through;
             Meter.Reset();
@@ -1063,6 +1067,7 @@ public partial class EditorWindow : Window
 
     private void ShowStopped()
     {
+        AudioTools.NotifyEditorPlayingChanged();
         _playheadTimer.Stop();
         Waveform.PlayheadFrame = null;
         PlayIcon.Data = (Geometry)FindResource("PlayIcon");

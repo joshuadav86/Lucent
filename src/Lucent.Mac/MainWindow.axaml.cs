@@ -322,6 +322,7 @@ public partial class MainWindow : Window
         _openingWindows = false;
         UpdateWindowToggles();
         AlignBesidePlayerSoon();
+        ReopenEditor();
         Activate();
         RequestAnimationFrame(OnFrame);
         LayoutCheck.RunIfAsked(this, _visuals);

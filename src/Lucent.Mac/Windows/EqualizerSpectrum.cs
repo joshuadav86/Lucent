@@ -61,6 +61,12 @@ public sealed class EqualizerSpectrum : Control
         }
     }
 
+    /// <summary>
+    /// Shows nothing, as if the music were silent: set while the audio editor plays, which the spectrum would
+    /// otherwise show (it hears every app) although the EQ isn't shaping it.
+    /// </summary>
+    public bool Paused { get; set; }
+
     /// <summary>Lines the spectrum up with the curve: the frequency at the left edge and how many octaves fit across.</summary>
     public void SetScale(double lowestHz, double octaves)
     {
@@ -149,7 +155,7 @@ public sealed class EqualizerSpectrum : Control
             _points = new Point[columns];
         }
 
-        if (_capture.IsSilent)
+        if (_capture.IsSilent || Paused)
         {
             // Nothing playing: let what's showing sink away, then stop redrawing.
             if (Array.TrueForAll(_levels, level => level <= 0.001f))
