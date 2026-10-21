@@ -3,16 +3,16 @@ using Windows.Media.Control;
 namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>
-/// YouTube (or YouTube Music) playing in a web browser, through Windows' media controls. Chrome, Edge,
-/// Firefox and the other big browsers tell Windows what a page is playing, with YouTube giving the
-/// video's title, channel and thumbnail, and take its play, pause, skip and seek buttons. Nothing to
-/// sign in to and nothing to turn on in the browser.
+/// Whatever a web browser is playing (YouTube or YouTube Music, SoundCloud, TIDAL's web player, any site),
+/// through Windows' media controls. Chrome, Edge, Firefox and the other big browsers tell Windows what a
+/// page is playing, with the site giving the song's or video's title, artist or channel and cover, and
+/// take its play, pause, skip and seek buttons. Nothing to sign in to and nothing to turn on in the browser.
 /// </summary>
 /// <remarks>
 /// Windows only says which browser is playing, not which site, so this is whatever the browser's media
-/// controls show: YouTube while YouTube plays. A browser shows the tab that played last. The Mac has no
-/// media controls for other apps to press, so it reaches the YouTube tab itself (see the Mac's
-/// Streaming/YouTubeRemote.cs).
+/// controls show. A browser shows the tab that played last. The Mac has no media controls for other apps
+/// to press, so it reaches the site's tab itself, with a menu item for each site it knows (see the Mac's
+/// Streaming/YouTubeRemote.cs, Streaming/SoundCloudRemote.cs and Streaming/TidalRemote.cs).
 /// </remarks>
 public sealed class YouTubeRemote : MediaControlsRemote
 {
@@ -20,9 +20,20 @@ public sealed class YouTubeRemote : MediaControlsRemote
     // Music app), "MSEdge", "Brave…", "Opera…", "Vivaldi…", and Firefox by its install hash.
     private static readonly string[] Browsers = ["Chrome", "MSEdge", "Edge", "Brave", "Opera", "Vivaldi", "Firefox", "308046B0AF4A39CB", "Chromium"];
 
-    public override string Name => "YouTube";
+    // The browser playing, once one has been read.
+    public override string Name => ProcessNames switch
+    {
+        ["msedge"] => "Edge",
+        ["chrome"] => "Chrome",
+        ["brave"] => "Brave",
+        ["opera"] => "Opera",
+        ["vivaldi"] => "Vivaldi",
+        ["firefox"] => "Firefox",
+        ["chromium"] => "Chromium",
+        _ => "your browser",
+    };
 
-    protected override string NotOpen => "Play a YouTube video in your web browser";
+    protected override string NotOpen => "Play YouTube, SoundCloud or another site in your web browser";
 
     // The browser playing, as its process is named; every browser Lucent knows until one has been read.
     public override IReadOnlyList<string> ProcessNames => SourceAppId switch

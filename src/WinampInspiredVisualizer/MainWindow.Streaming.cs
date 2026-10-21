@@ -88,16 +88,28 @@ public partial class MainWindow
         appleMusic.Click += (_, _) => ToggleRemote(RemoteApp.AppleMusic);
         menu.Items.Add(appleMusic);
 
-        var youTube = new MenuItem
+        var tidal = new MenuItem
         {
-            Header = "Control YouTube",
+            Header = "Control TIDAL",
+            IsCheckable = true,
+            IsChecked = _settings.RemoteApp == RemoteApp.Tidal,
+            IsEnabled = TidalRemote.IsSupported,
+            ToolTip = "Show what the TIDAL app is playing and use the player's buttons for it. The sound stays in TIDAL. For TIDAL's web player, use the browser item below.",
+        };
+        tidal.Click += (_, _) => ToggleRemote(RemoteApp.Tidal);
+        menu.Items.Add(tidal);
+
+        // YouTube, SoundCloud and every other site: Windows says which browser is playing, not which site.
+        var browser = new MenuItem
+        {
+            Header = "Control your web browser (YouTube, SoundCloud)",
             IsCheckable = true,
             IsChecked = _settings.RemoteApp == RemoteApp.YouTube,
             IsEnabled = YouTubeRemote.IsSupported,
-            ToolTip = "Show the YouTube video playing in your web browser and use the player's buttons for it. The sound stays in the browser.",
+            ToolTip = "Show what's playing in your web browser (YouTube, SoundCloud, TIDAL's web player, or any site) and use the player's buttons for it. The sound stays in the browser.",
         };
-        youTube.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
-        menu.Items.Add(youTube);
+        browser.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
+        menu.Items.Add(browser);
 
         if (spotifySaved)
         {
@@ -167,6 +179,9 @@ public partial class MainWindow
                 case RemoteApp.YouTube when YouTubeRemote.IsSupported:
                     player = new YouTubeRemote();
                     break;
+                case RemoteApp.Tidal when TidalRemote.IsSupported:
+                    player = new TidalRemote();
+                    break;
                 default:
                     return;
             }
@@ -222,6 +237,7 @@ public partial class MainWindow
         _settings.Save();
         _shownRemoteTrack = null;
         _shownRemoteArtwork = null;
+        ShowVolume();
         ShowRemoteList();
         UpdateListening();
         ShowNowPlaying(_current?.Track);
@@ -322,15 +338,58 @@ public partial class MainWindow
 
         Title = name is null ? "Lucent" : $"{name} - Lucent";
 
+        // Spotify says which of the account's devices it's playing on, which may not be this computer.
+        var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
         TrackDetails.Text = remote.Problem
-            ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {remote.Player.Name}" : $"{track.Album} · in {remote.Player.Name}");
-        TrackDetails.ToolTip = remote.Problem ?? $"The sound comes from {remote.Player.Name}. Lucent shows it and presses its buttons.";
+            ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {where}" : $"{track.Album} · in {where}");
+        TrackDetails.ToolTip = remote.Problem ?? $"The sound comes from {where}. Lucent shows it and presses its buttons.";
+        ShowVolume();
 
         if (track?.Id != _shownRemoteTrack || !ReferenceEquals(remote.Artwork, _shownRemoteArtwork))
         {
             _shownRemoteTrack = track?.Id;
             _shownRemoteArtwork = remote.Artwork;
             ArtworkWindow.ShowRemote(track, remote.Artwork);
+        }
+    }
+
+    // Set while the volume bar is being moved to show a volume, so that isn't taken as the user changing it.
+    private bool _showingVolume;
+
+    /// <summary>
+    /// Shows the controlled app's volume on the volume bar, on the device it's playing on, or hides the bar when Lucent
+    /// can't change the volume there. Lucent's own volume comes back when it stops controlling the app.
+    /// </summary>
+    private void ShowVolume()
+    {
+        _showingVolume = true;
+        try
+        {
+            var visible = true;
+            if (_remote is { } remote)
+            {
+                var volume = remote.HasVolume ? remote.State?.Volume : null;
+                visible = volume is not null;
+                if (volume is { } level)
+                {
+                    var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
+                    VolumeSlider.Value = level;
+                    VolumeText.Text = $"{level * 100:0}%";
+                    VolumeSlider.ToolTip = $"{where}'s volume (mouse wheel over the player changes it too)";
+                }
+            }
+            else
+            {
+                VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
+                VolumeText.Text = $"{VolumeSlider.Value * 100:0}%";
+                VolumeSlider.ToolTip = "Volume (mouse wheel over the player changes it too)";
+            }
+
+            ((UIElement)VolumeSlider.Parent).Visibility = visible ? Visibility.Visible : Visibility.Hidden;
+        }
+        finally
+        {
+            _showingVolume = false;
         }
     }
 
@@ -443,7 +502,13 @@ public partial class MainWindow
         _ => [],
     };
 
-    private static string RemoteName(RemoteApp app) => app == RemoteApp.AppleMusic ? "Apple Music" : app.ToString();
+    private static string RemoteName(RemoteApp app) => app switch
+    {
+        RemoteApp.AppleMusic => "Apple Music",
+        RemoteApp.Tidal => "TIDAL",
+        RemoteApp.YouTube => "your browser",
+        _ => app.ToString(),
+    };
 
     private static void OpenInBrowser(string url)
     {
