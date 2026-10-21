@@ -33,6 +33,12 @@ public static class VideoEngine
     /// <summary>libVLC's version, such as "3.0.24 Vetinari", once it has loaded; otherwise null.</summary>
     public static string? Version { get; private set; }
 
+    /// <summary>
+    /// For the self-test on a slow virtual machine: libVLC shows every picture, however late, rather than dropping
+    /// the ones that come too late (as it should for someone watching). Read when libVLC loads.
+    /// </summary>
+    internal static bool KeepLatePictures { get; set; }
+
     /// <summary>Loads libVLC if it isn't yet. Throws <see cref="NotSupportedException"/> when it can't be loaded.</summary>
     public static LibVLC Get()
     {
@@ -51,7 +57,8 @@ public static class VideoEngine
             try
             {
                 Core.Initialize();
-                _libVlc = new LibVLC(
+                var options = new List<string>
+                {
                     // No file name written over the picture as it starts, and nothing said in the terminal.
                     "--no-video-title-show",
                     "--quiet",
@@ -61,7 +68,15 @@ public static class VideoEngine
                     "--avcodec-hw=none",
                     "--codec=avcodec,any",
                     // Never Xlib, on the Linux machines this is tested on: frames go to Lucent, not a window.
-                    "--no-xlib");
+                    "--no-xlib",
+                };
+                if (KeepLatePictures)
+                {
+                    options.Add("--no-drop-late-frames");
+                    options.Add("--no-skip-frames");
+                }
+
+                _libVlc = new LibVLC(options.ToArray());
                 Version = _libVlc.Version;
                 return _libVlc;
             }

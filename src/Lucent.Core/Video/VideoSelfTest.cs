@@ -40,8 +40,11 @@ public static class VideoSelfTest
 
         try
         {
+            // GitHub's virtual Macs stall now and then for longer than a flash lasts, and libVLC drops pictures that
+            // come too late, so a whole flash could go unseen. There, every picture is shown, late or not.
+            VideoEngine.KeepLatePictures = virtualMachine;
             VideoEngine.Get();
-            log($"Video: libVLC {VideoEngine.Version} loaded.");
+            log($"Video: libVLC {VideoEngine.Version} loaded{(virtualMachine ? ", showing every picture however late (a virtual machine)" : string.Empty)}.");
         }
         catch (Exception ex)
         {
