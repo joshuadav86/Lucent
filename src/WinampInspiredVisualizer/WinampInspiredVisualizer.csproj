@@ -39,6 +39,20 @@
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
     <PackageReference Include="Vortice.MediaFoundation" Version="3.8.3" />
+    <!-- libVLC, VLC's engine, for playing videos (Lucent.Core's Video/VideoStream.cs). 64-bit only, like Lucent. -->
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
+  </ItemGroup>
+
+  <!--
+    libVLC's plugins that Lucent never uses, left out to keep the download smaller: streaming out, saving to files,
+    and VLC's own visualizations and multi-screen video.
+  -->
+  <PropertyGroup>
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+    <VlcWindowsArm64Enabled>false</VlcWindowsArm64Enabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <VlcWindowsX64ExcludeFiles Include="plugins\stream_out\%2A%2A;plugins\access_output\%2A%2A;plugins\mux\%2A%2A;plugins\visualization\%2A%2A;plugins\video_splitter\%2A%2A;lua\http\%2A%2A;libvlc.lib;libvlccore.lib" />
   </ItemGroup>
 
   <ItemGroup>
@@ -61,6 +75,12 @@
     <EmbeddedResource Include="Presets\MilkDrop\*.milk" LogicalName="Presets/MilkDrop/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Presets\AVS\*.avs" LogicalName="Presets/AVS/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Shaders\*.hlsl*" LogicalName="Shaders/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- libVLC's and LibVLCSharp's licence (LGPL 2.1), and where their source is, beside Lucent.exe. -->
+  <ItemGroup>
+    <None Include="..\..\assets\licenses\LICENSE-libVLC.txt" Link="Licenses\LICENSE-libVLC.txt"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <!-- The song a first start puts in the library (see StarterMusic), beside Lucent.exe so it can be copied out. -->
@@ -102,6 +122,13 @@
       </ResolvedFileToPublish>
       <!-- ONNX Runtime looks for DirectML.dll beside itself, so both ship beside Lucent.exe too. -->
       <ResolvedFileToPublish Condition="'%(ResolvedFileToPublish.Filename)' == 'onnxruntime' Or '%(ResolvedFileToPublish.Filename)' == 'onnxruntime_providers_shared' Or '%(ResolvedFileToPublish.Filename)' == 'DirectML'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+      <!--
+        libVLC loads its plugins from its own folder (libvlc\win-x64), so it ships beside Lucent.exe as it is. Its
+        .NET side, LibVLCSharp.dll, ships beside it too: both are LGPL, so they must be replaceable.
+      -->
+      <ResolvedFileToPublish Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').StartsWith('libvlc')) Or '%(ResolvedFileToPublish.Filename)' == 'LibVLCSharp'">
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </ResolvedFileToPublish>
       <!-- Their debugging builds, symbols and link libraries aren't needed to run. -->

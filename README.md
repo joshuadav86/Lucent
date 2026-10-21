@@ -421,4 +421,6 @@ The starter song (`StarterMusic/Kepler North - Self Actualize.mp3`) is © Kepler
 
 MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucent.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
 
+Videos play with [libVLC](https://www.videolan.org/vlc/libvlc.html), VLC's engine (LGPL 2.1 or later), through [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) (LGPL 2.1 or later). libVLC ships unchanged in the `libvlc` folder next to Lucent and can be swapped for your own build; its licence and where to get its source are in `Licenses/LICENSE-libVLC.txt`. VLC is a trademark of VideoLAN, which doesn't make or endorse Lucent.
+
 The plugin helper (`LucentPluginHost.exe`) is built with the [VST 3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT). VST is a registered trademark of Steinberg Media Technologies GmbH.

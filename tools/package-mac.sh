@@ -49,7 +49,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>NSMicrophoneUsageDescription</key><string>Lucent records from your audio interface, mixer or microphone when you use its Record window, and its visuals react to what you're recording. Recordings are saved only where you choose.</string>
   <key>NSAudioCaptureUsageDescription</key><string>Lucent listens to what other apps are playing so its visuals and analyzer can react to it. Nothing is recorded or sent anywhere.</string>
   <!-- The music Lucent opens from the Finder (Open With, or as the default player). The same list is in
-       src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg or Opus, so they're declared below. -->
+       src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg, Opus, MKV or WebM, so they're declared below. -->
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>
@@ -69,6 +69,18 @@ cat > "$app/Contents/Info.plist" <<PLIST
         <string>public.aifc-audio</string>
         <string>org.xiph.ogg-audio</string>
         <string>org.xiph.opus</string>
+      </array>
+    </dict>
+    <dict>
+      <!-- Videos, played with libVLC: everything macOS calls a movie (MP4, MOV, MKV, AVI, WebM and the rest). -->
+      <key>CFBundleTypeName</key><string>Video file</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>LSHandlerRank</key><string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>public.movie</string>
+        <string>org.matroska.mkv</string>
+        <string>org.webmproject.webm</string>
       </array>
     </dict>
   </array>
@@ -92,6 +104,26 @@ cat > "$app/Contents/Info.plist" <<PLIST
       <dict>
         <key>public.filename-extension</key><array><string>opus</string></array>
         <key>public.mime-type</key><array><string>audio/opus</string></array>
+      </dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key><string>org.matroska.mkv</string>
+      <key>UTTypeDescription</key><string>Matroska video</string>
+      <key>UTTypeConformsTo</key><array><string>public.movie</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>mkv</string></array>
+        <key>public.mime-type</key><array><string>video/x-matroska</string></array>
+      </dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key><string>org.webmproject.webm</string>
+      <key>UTTypeDescription</key><string>WebM video</string>
+      <key>UTTypeConformsTo</key><array><string>public.movie</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>webm</string></array>
+        <key>public.mime-type</key><array><string>video/webm</string></array>
       </dict>
     </dict>
   </array>

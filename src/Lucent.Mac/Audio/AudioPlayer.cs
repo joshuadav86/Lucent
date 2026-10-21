@@ -2,6 +2,7 @@ using Avalonia.Threading;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Video;
 
 namespace Lucent.Mac.Audio;
 
@@ -40,6 +41,7 @@ public sealed class AudioPlayer : IDisposable
     private float _volume = 0.8f;
     private bool _stopRequested;
     private bool _disposed;
+    private VideoStream? _shownVideo;
 
     // Counts every Load and Close, so a file reopened after being released doesn't replace one the user chose meanwhile.
     private int _generation;
@@ -83,6 +85,15 @@ public sealed class AudioPlayer : IDisposable
         && _volume >= 1f && Equalizer.Design.IsBypass;
 
     public bool HasTrack => _chain is not null;
+
+    /// <summary>The video playing, or null when what's playing isn't one.</summary>
+    public VideoStream? Video => _chain?.Current.Reader as VideoStream;
+
+    /// <summary>Raised on the UI thread when a video starts or stops being the track, so its pictures can be shown.</summary>
+    public event EventHandler? VideoChanged;
+
+    // The track's own clock, for a stream that keeps time by itself (a video).
+    private IPlayerControlled? Controlled => _chain?.Current.Reader as IPlayerControlled;
 
     /// <summary>The file that's playing, or null when nothing is.</summary>
     public string? CurrentPath => _chain?.Current.Path;
@@ -130,16 +141,23 @@ public sealed class AudioPlayer : IDisposable
         CloseTrack();
         _generation++;
 
-        var reader = AudioReaderFactory.Open(path);
         try
         {
-            Open(path, reader);
+            var reader = AudioReaderFactory.OpenForPlaying(path);
+            try
+            {
+                Open(path, reader);
+            }
+            catch
+            {
+                reader.Dispose();
+                Close();
+                throw;
+            }
         }
-        catch
+        finally
         {
-            reader.Dispose();
-            Close();
-            throw;
+            NotifyVideo();
         }
     }
 
@@ -161,6 +179,10 @@ public sealed class AudioPlayer : IDisposable
             Close();
             throw;
         }
+        finally
+        {
+            NotifyVideo();
+        }
     }
 
     /// <summary>
@@ -176,7 +198,8 @@ public sealed class AudioPlayer : IDisposable
             return false;
         }
 
-        if (path is null || !Gapless)
+        // A video plays to its own clock, so nothing runs on into one or out of one without a gap.
+        if (path is null || !Gapless || Video is not null || VideoFiles.IsVideo(path))
         {
             _chain.SetNext(null)?.Dispose();
             return false;
@@ -215,9 +238,14 @@ public sealed class AudioPlayer : IDisposable
 
         _stopRequested = false;
         _output.Play();
+        Controlled?.Playing();
     }
 
-    public void Pause() => _output?.Pause();
+    public void Pause()
+    {
+        _output?.Pause();
+        Controlled?.Paused();
+    }
 
     public void Stop()
     {
@@ -228,7 +256,14 @@ public sealed class AudioPlayer : IDisposable
 
         _stopRequested = true;
         _output.Stop();
-        _chain.Current.Reader.Position = 0;
+        if (Controlled is { } controlled)
+        {
+            controlled.Stopped();
+        }
+        else
+        {
+            _chain.Current.Reader.Position = 0;
+        }
     }
 
     /// <summary>Closes the track, and gives back an output Lucent had to itself.</summary>
@@ -236,6 +271,7 @@ public sealed class AudioPlayer : IDisposable
     {
         CloseTrack();
         ReleaseExclusive();
+        NotifyVideo();
     }
 
     public void Dispose()
@@ -284,6 +320,16 @@ public sealed class AudioPlayer : IDisposable
             {
                 Reopen(reopenPath, position, wasPlaying);
             }
+        }
+    }
+
+    // Says when the video playing has changed: one started, ended or made way for a song.
+    private void NotifyVideo()
+    {
+        if (!ReferenceEquals(_shownVideo, Video))
+        {
+            _shownVideo = Video;
+            VideoChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
