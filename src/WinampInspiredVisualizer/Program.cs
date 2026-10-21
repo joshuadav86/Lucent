@@ -24,6 +24,8 @@ public static class Program
         // WAV and AIFF, Media Foundation handles the rest, and MP3 is written with LAME.
         AudioReaderFactory.OpenWithSystemDecoder = path => new AudioFileReader(path);
         AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
+        // A video's frames saved as JPEG, by WPF's encoder.
+        Editor.VideoExport.EncodeJpeg = Library.CoverArt.EncodeJpeg;
 
         // Checks decoding and every visual without opening a window, for CI (see SelfTest.cs).
         if (args.Length > 0 && args[0] == "--self-test")

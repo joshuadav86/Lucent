@@ -469,6 +469,13 @@
                             ToolTip.Tip="Keep only the selected part" />
                     <Button x:Name="DeleteButton" Theme="{StaticResource ToolButton}" Content="Delete" Click="OnDelete"
                             ToolTip.Tip="Cut out the selected part (Delete)" />
+                    <Button x:Name="SavePicturesButton" Theme="{StaticResource ToolButton}" Click="OnSavePicturesMenu" IsVisible="False"
+                            ToolTip.Tip="Save the selection's frames as images, or as an animated GIF (the whole video when nothing's selected)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Export" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="EditMenuButton" Theme="{StaticResource ToolButton}" Click="OnEditMenu"
                             ToolTip.Tip="Cut, copy, and paste (⌘X, C, V), and how joins are crossfaded">
                         <StackPanel Orientation="Horizontal">

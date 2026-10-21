@@ -97,6 +97,22 @@ public static class Mp4Cutter
     }
 
     /// <summary>
+    /// Writes just the pictures of <paramref name="movie"/> from the keyframe at or before <paramref name="from"/> to
+    /// the first place after <paramref name="to"/> a cut can end, copied as they are, into <paramref name="target"/>:
+    /// a new video that starts at that keyframe. Returns where that is in <paramref name="movie"/>.
+    /// </summary>
+    internal static double WritePictures(Mp4Movie movie, double from, double to, string target, CancellationToken cancellation)
+    {
+        var video = movie.Tracks.First(track => track.IsVideo && track.Samples.Length > 0);
+        var start = movie.SnapStart(from);
+        var end = video.CleanPoints.FirstOrDefault(point => point.Time >= to - 0.0005, video.CleanPoints[^1]).Time;
+        using var source = File.OpenRead(movie.Path);
+        using var output = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20);
+        movie.WriteCut(source, output, new[] { new VideoRange(start, end) }, video, null, cancellation);
+        return start;
+    }
+
+    /// <summary>
     /// Writes the stretches of <paramref name="movie"/> in <paramref name="keep"/> (snapped as
     /// <see cref="Mp4Movie.Snap"/> does) one after another into <paramref name="target"/>, a new file.
     /// Throws <see cref="VideoCutException"/>.
@@ -182,6 +198,10 @@ public sealed class Mp4Movie
         {
             Keyframes = Array.Empty<double>();
         }
+
+        PictureTimes = _video is { } pictures
+            ? Enumerable.Range(0, pictures.Samples.Length).Select(pictures.Shown).Order().ToArray()
+            : Array.Empty<double>();
     }
 
     public string Path { get; }
@@ -198,6 +218,9 @@ public sealed class Mp4Movie
 
     /// <summary>Where a cut can start, in seconds, in order: the keyframes. Empty for a file without pictures.</summary>
     public IReadOnlyList<double> Keyframes { get; }
+
+    /// <summary>When each picture is shown, in seconds, in order. Empty for a file without pictures.</summary>
+    public IReadOnlyList<double> PictureTimes { get; }
 
     /// <summary>The place a cut starting at <paramref name="time"/> really starts: the keyframe at or before it.</summary>
     public double SnapStart(double time)
@@ -314,7 +337,7 @@ public sealed class Mp4Movie
 
     // ---- Writing ----
 
-    // With `only`, writes just that track (as an .m4a file).
+    // With `only`, writes just that track (a sound track as an .m4a file).
     internal void WriteCut(Stream source, Stream output, IReadOnlyList<VideoRange> ranges, Mp4Track? only, IProgress<double>? progress,
         CancellationToken cancellation)
     {
@@ -376,7 +399,7 @@ public sealed class Mp4Movie
 
         // The index is the same size whatever the offsets in it, so it's built once to measure it, then again.
         // Sound alone is marked as an .m4a file, whatever the video was (a QuickTime movie, say).
-        var ftypBytes = only is not null ? SoundType().ToBytes() : _ftyp is null ? Array.Empty<byte>() : _ftyp.ToBytes();
+        var ftypBytes = only is { IsSound: true } ? SoundType().ToBytes() : _ftyp is null ? Array.Empty<byte>() : _ftyp.ToBytes();
         var otherBytes = only is not null ? Array.Empty<byte>() : _otherTopLevel.SelectMany(box => box.ToBytes()).ToArray();
         var probe = BuildMoov(plans, chunks, new long[chunks.Count], total, wide: false);
         var useCo64 = ftypBytes.Length + probe.Length + otherBytes.Length + mdatHeader + dataBytes > uint.MaxValue;

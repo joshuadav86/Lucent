@@ -1,0 +1,129 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.FrameExportWindow"
+        Title="Save frames - Lucent"
+        Width="460" SizeToContent="Height" CanResize="False"
+        Background="{DynamicResource SurfaceBrush}"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <Window.Resources>
+        <!-- The same look as Record video's (VideoExportWindow.axaml). -->
+        <ControlTheme x:Key="DialogButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.4" />
+            </Style>
+        </ControlTheme>
+    </Window.Resources>
+
+    <!-- Saves a stretch of a video in the editor as images, or as an animated GIF (EditorWindow.Video.cs). The Mac version of the Windows app's FrameExportWindow.. -->
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <StackPanel>
+            <!-- Title bar -->
+            <Grid Height="40" Background="Transparent" w:Chrome.IsCaption="True">
+                <TextBlock x:Name="Heading" Text="SAVE FRAMES" Margin="20,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <Button Theme="{StaticResource CloseCaptionButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip.Tip="Close" Click="OnCancel">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <StackPanel x:Name="OptionsArea" Margin="20,0,20,0">
+                <TextBlock x:Name="RangeText" FontSize="13" TextWrapping="Wrap" Margin="2,4,0,0"
+                           Foreground="{DynamicResource TextBrush}" />
+
+                <!-- Images -->
+                <StackPanel x:Name="FramesPanel">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Frames" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Rate" Tag="0" Content="Every frame" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Rate" Tag="10" Content="10 a second" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Rate" Tag="5" Content="5 a second" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Rate" Tag="1" Content="1 a second" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Format" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Format" Tag="Png" Content="PNG" Click="OnOptionChosen" />
+                            <RadioButton x:Name="JpegChoice" Theme="{StaticResource SegmentButton}" GroupName="Format" Tag="Jpeg" Content="JPEG" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock x:Name="FramesHint" Theme="{StaticResource OptionHint}" />
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Save in" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="CHANGE" Margin="10,0,0,0"
+                                Click="OnChooseFolder" />
+                        <TextBlock x:Name="FolderText" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource TextBrush}" />
+                    </DockPanel>
+                    <TextBlock x:Name="FolderHint" Theme="{StaticResource OptionHint}" />
+                </StackPanel>
+
+                <!-- GIF -->
+                <StackPanel x:Name="GifPanel">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Width" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Width" Tag="320" Content="320" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Width" Tag="480" Content="480" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Width" Tag="640" Content="640" Click="OnOptionChosen" />
+                            <RadioButton x:Name="FullWidthChoice" Theme="{StaticResource SegmentButton}" GroupName="Width" Tag="0" Content="Full" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Frame rate" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="GifRate" Tag="10" Content="10 fps" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="GifRate" Tag="15" Content="15 fps" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="GifRate" Tag="24" Content="24 fps" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Plays" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Loop" Tag="True" Content="Over and over" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Loop" Tag="False" Content="Once" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Dithering" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Dither" Tag="True" Content="On" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Dither" Tag="False" Content="Off" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock x:Name="GifHint" Theme="{StaticResource OptionHint}" />
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Save as" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Content="CHANGE" Margin="10,0,0,0"
+                                Click="OnChooseFile" />
+                        <TextBlock x:Name="FileText" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource TextBrush}" />
+                    </DockPanel>
+                </StackPanel>
+            </StackPanel>
+
+            <DockPanel Margin="20,18,20,18" LastChildFill="False">
+                <Button x:Name="SaveButton" DockPanel.Dock="Right" Theme="{StaticResource DialogButton}" Margin="8,0,0,0"
+                        Foreground="{DynamicResource AccentBrush}" Click="OnSave">
+                    <TextBlock Text="Save" FontWeight="SemiBold" />
+                </Button>
+                <Button DockPanel.Dock="Right" Theme="{StaticResource DialogButton}" Content="Cancel" Click="OnCancel" />
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</Window>
