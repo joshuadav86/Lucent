@@ -4,11 +4,14 @@ namespace WinampInspiredVisualizer.Visualizer;
 
 /// <summary>
 /// Follows the song that's playing for the visuals, frame by frame: where it is in its beats, bars and
-/// sections, how intense it is, and whether a drop is building or has just hit. Runs on the render thread;
-/// <see cref="Update"/> once a frame, before the audio analyzer.
+/// sections, how intense it is, and whether a drop is building or has just hit. A song mapped ahead of time
+/// (see <see cref="BeatMap"/>) is followed from its map; anything else (radio, streams, other apps' sound) is
+/// followed live, by ear (see <see cref="LiveBeatTracker"/>). Runs on the render thread; <see cref="Update"/>
+/// once a frame, after the audio analyzer.
 /// </summary>
 public sealed class SongFollower
 {
+    private readonly LiveBeatTracker _live = new();
     private BeatMap? _song;
     private int _beatsBefore;
     private double _position;
@@ -17,27 +20,41 @@ public sealed class SongFollower
     /// <summary>True while the playing song's beats and sections are known.</summary>
     public bool Mapped { get; private set; }
 
-    /// <summary>Where the song is now, with its intensity smoothed. Zeros (and a guessed intensity) while it isn't mapped.</summary>
+    /// <summary>True while there's no map but a steady beat is being followed live.</summary>
+    public bool Live { get; private set; }
+
+    /// <summary>Where the song is now, with its intensity smoothed. Live, the phases are predicted and there are no sections.</summary>
     public SongMoment Moment { get; private set; }
 
-    /// <summary>True when one of the song's beats went by since the last frame.</summary>
+    /// <summary>True when one of the song's beats went by since the last frame (mapped, or predicted live).</summary>
     public bool BeatNow { get; private set; }
+
+    /// <summary>True on the frame a drop is heard live. Mapped drops are known ahead, so Auto plans for them instead.</summary>
+    public bool DropNow { get; private set; }
 
     /// <summary>
     /// Moves on to this frame. <paramref name="song"/> is the playing song's map and position, if known;
-    /// <paramref name="level"/> is the live loudness, which stands in for intensity when it isn't.
+    /// otherwise the music is followed live from <paramref name="analyzer"/>, already updated this frame.
     /// </summary>
-    public void Update((BeatMap Beats, double Position)? song, float deltaTime, float level)
+    public void Update((BeatMap Beats, double Position)? song, float deltaTime, AudioAnalyzer analyzer)
     {
+        // Kept listening even while a map is followed, so it's ready the moment there's none.
+        _live.Update(analyzer.BassNow, analyzer.PunchNow, analyzer.LoudnessNow, deltaTime);
+        DropNow = false;
         if (song is not { } playing)
         {
             Mapped = false;
-            BeatNow = false;
             _song = null;
-            Ease(Math.Clamp(level * 1.5f, 0f, 1f), deltaTime, rise: 1f, fall: 0.5f);
-            Moment = new SongMoment(0, 0, _intensity, 0, 0, 0);
+            Live = _live.Locked;
+            BeatNow = _live.BeatNow;
+            DropNow = _live.DropNow;
+            var heard = _live.Moment;
+            Ease(heard.Intensity, deltaTime, rise: 4f, fall: 1f);
+            Moment = heard with { Intensity = _intensity };
             return;
         }
+
+        Live = false;
 
         var beatsBefore = playing.Beats.BeatsBefore(playing.Position);
 
@@ -93,5 +110,28 @@ public static class AutoLanding
         }
 
         return beats.LandingAfter(position + lead, preferPhraseWithin: 8) is { } landing ? (landing, false) : null;
+    }
+
+    /// <summary>
+    /// For music followed live, with no map: whether Auto should change visual this frame, and if so whether it's
+    /// a cut onto a drop (true) or an ordinary change (false); null to wait. A drop heard after the visual has been
+    /// up for at least 40% of <paramref name="interval"/> gets a cut at once. Through a build-up Auto holds on (up to
+    /// one and a half intervals) for the drop. Otherwise, once the interval is up, it changes on a downbeat when the
+    /// beat is followed, or on a strong <paramref name="beat"/> pulse when it isn't, and regardless 8 seconds later.
+    /// </summary>
+    public static bool? Heard(SongFollower follower, double waited, double interval, float beat)
+    {
+        if (follower.DropNow && waited >= interval * 0.4)
+        {
+            return true;
+        }
+
+        if (follower.Moment.BuildUp > 0.3f && waited < interval * 1.5)
+        {
+            return null;
+        }
+
+        var onTheBeat = follower.Live ? follower.BeatNow && follower.Moment.BarPhase < 0.2f : beat > 0.9f;
+        return (waited > interval && onTheBeat) || waited > interval + 8 ? false : null;
     }
 }

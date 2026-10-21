@@ -91,6 +91,101 @@ public static class SongMapSelfTest
             log($"Song map: {map.Sections.Count} sections, drops at {Times(found)}, as arranged.");
         }
 
+        return failures + CheckLive(log, audio[0], lead, expected);
+    }
+
+    /// <summary>
+    /// The same song followed live, as radio would be: played into the analyzer 60 frames a second with no map.
+    /// The tempo and beats should be picked up, the drops heard as they hit, and the build-ups felt coming.
+    /// </summary>
+    private static int CheckLive(Action<string> log, float[] samples, double lead, double[] drops)
+    {
+        const int frameRate = 60;
+        var analyzer = new AudioAnalyzer();
+        var follower = new SongFollower();
+        var perBeat = 60.0 / Tempo;
+        var heardDrops = new List<double>();
+        var beatErrors = new List<double>();
+        var buildUps = new double[drops.Length];
+        int downbeats = 0, downbeatsFound = 0;
+        for (var frame = 0; ; frame++)
+        {
+            var time = (double)frame / frameRate;
+            var end = (int)(time * SampleRate);
+            if (end >= samples.Length)
+            {
+                break;
+            }
+
+            var window = samples.AsSpan(Math.Max(0, end - AudioAnalyzer.WindowSamples), Math.Min(end, AudioAnalyzer.WindowSamples));
+            analyzer.Update(1f / frameRate, window, SampleRate);
+            follower.Update(null, 1f / frameRate, analyzer);
+            if (follower.DropNow)
+            {
+                heardDrops.Add(time);
+            }
+
+            for (var d = 0; d < drops.Length; d++)
+            {
+                if (time > drops[d] - 2 * 4 * perBeat && time < drops[d])
+                {
+                    buildUps[d] = Math.Max(buildUps[d], follower.Moment.BuildUp);
+                }
+            }
+
+            // Later in each drop, once the drop has shown where bars start: the bar starts on the one.
+            if (follower.BeatNow && drops.Any(d => time > d + 8 && time < d + 28))
+            {
+                var played = (long)Math.Round((time - lead) / perBeat);
+                if (played % 4 == 0)
+                {
+                    downbeats++;
+                    downbeatsFound += follower.Moment.BarPhase < 0.1 ? 1 : 0;
+                }
+            }
+
+            // Through the first drop: how far each predicted beat is from where one was played.
+            if (time > drops[0] + 4 && time < drops[0] + 28)
+            {
+                if (follower.BeatNow)
+                {
+                    var off = (time - lead) / perBeat;
+                    beatErrors.Add(Math.Abs(off - Math.Round(off)) * perBeat);
+                }
+            }
+        }
+
+        var failures = 0;
+        var missed = drops.Where(d => !heardDrops.Any(h => h >= d && h <= d + 0.5)).ToArray();
+        if (missed.Length > 0 || heardDrops.Count != drops.Length)
+        {
+            log($"Song map live: drops heard at {Times(heardDrops)}, not just after {Times(drops)}.");
+            failures++;
+        }
+
+        if (beatErrors.Count < 40 || beatErrors.Average() > 0.04)
+        {
+            log($"Song map live: {beatErrors.Count} beats predicted through a drop, {(beatErrors.Count == 0 ? 0 : beatErrors.Average() * 1000):0} ms off on average.");
+            failures++;
+        }
+
+        if (downbeats < 15 || downbeatsFound < 0.8 * downbeats)
+        {
+            log($"Song map live: the bar started on {downbeatsFound} of {downbeats} downbeats in the drops.");
+            failures++;
+        }
+
+        if (buildUps.Any(b => b < 0.3))
+        {
+            log($"Song map live: build-ups felt only up to {string.Join(" and ", buildUps.Select(b => b.ToString("0.00")))}.");
+            failures++;
+        }
+
+        if (failures == 0)
+        {
+            log($"Song map live: drops heard at {Times(heardDrops)}, beats {beatErrors.Average() * 1000:0} ms off, build-ups up to {string.Join(" and ", buildUps.Select(b => b.ToString("0.00")))}.");
+        }
+
         return failures;
     }
 
