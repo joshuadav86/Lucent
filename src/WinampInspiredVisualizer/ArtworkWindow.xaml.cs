@@ -150,7 +150,7 @@ public partial class ArtworkWindow : Window
             ArtImage.Visibility = Visibility.Collapsed;
             Placeholder.Visibility = Visibility.Visible;
             PlaceholderTitle.Text = _track is null && _remote is null ? "Nothing playing" : "No artwork";
-            PlaceholderText.Text = _remote is not null ? "The app playing this song didn't give a cover for it."
+            PlaceholderText.Text = _remote is not null ? "No cover came with this song, from the app or station playing it."
                 : _track is null ? "Artwork appears here when music plays."
                 : "Add a cover with Edit info (right-click here), or put a cover.jpg in the sound's folder.";
             return;
@@ -158,7 +158,7 @@ public partial class ArtworkWindow : Window
 
         ArtImage.Source = cover.Image;
         ArtImage.ToolTip = $"{cover.SizeText} · {ImageFormats.Name(cover.MimeType)}"
-            + (_remote is not null ? " · from the app playing it" : cover.FilePath is null ? " · stored in the music file" : $" · {Path.GetFileName(cover.FilePath)} in the sound's folder");
+            + (_remote is not null ? " · from the app or station playing it" : cover.FilePath is null ? " · stored in the music file" : $" · {Path.GetFileName(cover.FilePath)} in the sound's folder");
         ArtImage.Visibility = Visibility.Visible;
         Placeholder.Visibility = Visibility.Collapsed;
         if (changed)

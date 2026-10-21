@@ -20,6 +20,10 @@ public partial class MainWindow
     private IReadOnlyList<RadioStation> _radioList = Array.Empty<RadioStation>();
     private string? _radioProblem;
     private byte[]? _radioLogo;
+    private StationArt? _stationArt;
+    private string? _songCoverFor;
+    private byte[]? _songCover;
+    private CancellationTokenSource? _songCoverLookup;
     private string? _shownStationArtwork;
     private Track? _stationTrack;
 
@@ -258,6 +262,9 @@ public partial class MainWindow
         _radioProblem = null;
         _radioLogo = null;
         _shownStationArtwork = null;
+        _songCoverLookup?.Cancel();
+        _songCoverFor = null;
+        _songCover = null;
         _stationTrack = null;
         StationChanged?.Invoke(this, EventArgs.Empty);
         UpdateTrackFavoriteButton();
@@ -318,13 +325,18 @@ public partial class MainWindow
         TrackDetails.Text = StationDetails(station);
         TrackDetails.ToolTip = _radioProblem ?? $"{station.Name}, live: {station.StreamUrl}";
 
-        var artwork = $"{station.Id}\n{song}\n{_radioLogo?.Length}";
+        if (song != _songCoverFor)
+        {
+            LookUpSongCover(station, song);
+        }
+
+        var artwork = $"{station.Id}\n{song}\n{_radioLogo?.Length}\n{_songCover?.Length}";
         if (artwork != _shownStationArtwork)
         {
             _shownStationArtwork = artwork;
             var (artist, title) = SplitSong(song);
             ArtworkWindow.ShowRemote(new RemoteTrack(station.Id, title ?? station.Name, artist ?? string.Empty, station.Name, TimeSpan.Zero),
-                _radioLogo);
+                _songCover ?? _radioLogo);
         }
     }
 
@@ -384,17 +396,28 @@ public partial class MainWindow
         return dash > 0 ? (song[..dash].Trim(), song[(dash + 3)..].Trim()) : (null, song);
     }
 
+    /// <summary>Song covers and station logos, for the artwork window.</summary>
+    private StationArt StationArt => _stationArt ??= new StationArt(StreamingHttp);
+
+    /// <summary>
+    /// Shows the station again in the artwork window, for when it opens while a station is on (it opens showing
+    /// the queue's song otherwise).
+    /// </summary>
+    private void ShowStationArtwork()
+    {
+        if (_station is not null)
+        {
+            _shownStationArtwork = null;
+            ShowStation();
+        }
+    }
+
     private async void LoadStationLogo(RadioStation station)
     {
-        if (station.Logo is not { } logo || !RadioGuide.IsStreamAddress(logo))
-        {
-            return;
-        }
-
         try
         {
-            var bytes = await StreamingHttp.GetByteArrayAsync(logo);
-            if (_station?.Id == station.Id && bytes.Length is > 0 and < 4_000_000)
+            var bytes = await StationArt.LogoAsync(station, CancellationToken.None);
+            if (_station?.Id == station.Id && bytes is not null)
             {
                 _radioLogo = bytes;
                 ShowStation();
@@ -403,6 +426,34 @@ public partial class MainWindow
         catch (Exception)
         {
             // No logo, that's all.
+        }
+    }
+
+    /// <summary>Looks for the cover of the song the station says is on; the station's logo shows meanwhile, and if none is found.</summary>
+    private async void LookUpSongCover(RadioStation station, string? song)
+    {
+        _songCoverLookup?.Cancel();
+        _songCoverFor = song;
+        _songCover = null;
+        if (song is null)
+        {
+            return;
+        }
+
+        var lookup = _songCoverLookup = new CancellationTokenSource();
+        var (artist, title) = SplitSong(song);
+        try
+        {
+            var cover = await StationArt.SongCoverAsync(artist ?? string.Empty, title ?? song, lookup.Token);
+            if (!lookup.IsCancellationRequested && _station?.Id == station.Id && _songCoverFor == song && cover is not null)
+            {
+                _songCover = cover;
+                ShowStation();
+            }
+        }
+        catch (Exception)
+        {
+            // No cover: the logo stays.
         }
     }
 

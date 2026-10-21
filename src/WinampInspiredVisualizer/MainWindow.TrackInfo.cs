@@ -17,6 +17,10 @@ public partial class MainWindow
         {
             ArtworkWindow.ShowRemote(_remote.State?.Track, _remote.Artwork);
         }
+        else
+        {
+            ShowStationArtwork();
+        }
     }
 
     private void OnArtworkOpenChanged(object? sender, EventArgs e)
