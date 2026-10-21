@@ -47,6 +47,15 @@
                     <Button x:Name="UpdateButton" Style="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
                             Content="UPDATE" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"
                             Click="OnShowUpdate" WindowChrome.IsHitTestVisibleInChrome="True" />
+                    <!-- Every way to bring sound in: files, radio, and the music apps Lucent can show and control. -->
+                    <ToggleButton x:Name="SourcesButton" Style="{StaticResource PanelToggle}" Padding="7,0,9,0" Margin="0,0,4,0" FontSize="11"
+                                  ToolTip="Sources: add music, tune in to online radio, or connect a music app such as Spotify, Apple Music, or TIDAL (M)"
+                                  Click="OnToggleSources" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource SourcesIcon}" />
+                            <TextBlock Text="Sources" Margin="5,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ToggleButton>
                     <Button Style="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
                             ToolTip="Buy me a coffee: support Lucent" Click="OnBuyMeACoffee"
                             WindowChrome.IsHitTestVisibleInChrome="True">
@@ -299,6 +308,59 @@
                             </StackPanel>
                         </Border>
                     </Popup>
+
+                    <!-- Opened by the Sources button or the eject button; placed under whichever was clicked. -->
+                    <Popup x:Name="SourcesPopup" PlacementTarget="{Binding ElementName=SourcesButton}" Placement="Bottom"
+                           VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                           Opened="OnSourcesOpened" Closed="OnSourcesClosed">
+                        <Border Margin="16" Width="320" Padding="14,0,14,16" CornerRadius="{DynamicResource CardCorner}"
+                                Background="{DynamicResource SurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.6" />
+                            </Border.Effect>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource OptionLabel}" Text="Your music" />
+                                <WrapPanel Margin="0,0,-8,-8">
+                                    <Button Style="{StaticResource PillButton}" Content="Add files…" Margin="0,0,8,8"
+                                            ToolTip="Add songs to the queue" Click="OnSourcesAddFiles" />
+                                    <Button Style="{StaticResource PillButton}" Content="Add a folder…" Margin="0,0,8,8"
+                                            ToolTip="Add everything in a folder to the queue" Click="OnSourcesAddFolder" />
+                                    <Button Style="{StaticResource PillButton}" Content="Import from another player…" Margin="0,0,8,8"
+                                            ToolTip="Bring playlists, play counts and ratings over from Apple Music, MusicBee, foobar2000, Plex or YouTube Music"
+                                            Click="OnSourcesImport" />
+                                    <Button Style="{StaticResource PillButton}" Content="Bandcamp and Beatport…" Margin="0,0,8,8"
+                                            ToolTip="Add the music you buy on Bandcamp and Beatport to the library" Click="OnSourcesStores" />
+                                </WrapPanel>
+                                <TextBlock Style="{StaticResource OptionHint}" Text="Or drop music on any Lucent window." />
+
+                                <TextBlock Style="{StaticResource OptionLabel}" Text="Online radio" Margin="2,18,0,6" />
+                                <Button Style="{StaticResource PillButton}" Content="Browse stations…" HorizontalAlignment="Left"
+                                        Click="OnSourcesRadio" />
+                                <TextBlock Style="{StaticResource OptionHint}"
+                                           Text="SomaFM, FRISKY, and thousands of other stations, by genre. The visuals play along." />
+
+                                <TextBlock Style="{StaticResource OptionLabel}" Text="Music apps" Margin="2,18,0,0" />
+                                <TextBlock Style="{StaticResource OptionHint}" Margin="2,4,0,0"
+                                           Text="Lucent shows what the app is playing and its buttons work the app. The sound stays in the app." />
+                                <CheckBox x:Name="SpotifySwitch" Style="{StaticResource SwitchToggle}" Content="Spotify" Tag="Spotify"
+                                          Margin="0,12,0,0" Click="OnSourcesRemoteSwitched" />
+                                <CheckBox x:Name="AppleMusicSwitch" Style="{StaticResource SwitchToggle}" Content="Apple Music" Tag="AppleMusic"
+                                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                                <CheckBox x:Name="TidalSwitch" Style="{StaticResource SwitchToggle}" Content="TIDAL" Tag="Tidal"
+                                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                                <!-- YouTube, SoundCloud and every other site: Windows says which browser is playing, not which site. -->
+                                <CheckBox x:Name="YouTubeSwitch" Style="{StaticResource SwitchToggle}" Content="Web browser (YouTube, SoundCloud)" Tag="YouTube"
+                                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                                <Button x:Name="SpotifySignOutButton" Style="{StaticResource PillButton}" Content="Sign out of Spotify"
+                                        HorizontalAlignment="Left" Margin="0,12,0,0" Click="OnSignOutOfSpotify" />
+
+                                <CheckBox x:Name="ListenSwitch" Style="{StaticResource SwitchToggle}" Content="Visuals for every app's sound"
+                                          Margin="0,18,0,0" Click="OnListenSwitched" />
+                                <TextBlock x:Name="ListenHint" Style="{StaticResource OptionHint}" />
+                            </StackPanel>
+                        </Border>
+                    </Popup>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                     <Button Style="{StaticResource CaptionButton}" Height="34" Width="40" ToolTip="Minimize"
@@ -375,7 +437,7 @@
                                 </StackPanel>
                             </Canvas>
                         </DockPanel>
-                        <TextBlock x:Name="TrackDetails" Text="Drop music on any Lucent window to begin" FontSize="11" Margin="0,3,0,0"
+                        <TextBlock x:Name="TrackDetails" Text="Drop music here, or open Sources to begin" FontSize="11" Margin="0,3,0,0"
                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                         <DockPanel Margin="0,10,0,0">
                             <Grid DockPanel.Dock="Left" VerticalAlignment="Center">
@@ -418,7 +480,7 @@
                         <Path Style="{StaticResource SolidIcon}" Data="{StaticResource NextTrackIcon}" />
                     </Button>
                     <Button x:Name="OpenButton" Style="{StaticResource TransportButton}" Width="32" Height="32" Margin="2,0,0,0"
-                            ToolTip="Add music" Click="OnOpenMenu">
+                            ToolTip="Sources: add music, tune in to online radio, or connect a music app (M)" Click="OnOpenMenu">
                         <Path Style="{StaticResource SolidIcon}" Data="{StaticResource EjectIcon}" />
                     </Button>
                     <ToggleButton x:Name="ShuffleButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="6,0,0,0"
