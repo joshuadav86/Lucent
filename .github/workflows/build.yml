@@ -407,6 +407,15 @@ jobs:
       - name: Check Windows and Mac have the same features
         run: dotnet run --project tools/ParityCheck -c Release
 
+      - name: Check the Mac styles have no selector through two templates
+        # Avalonia only rejects "/template/ … /template/" when the style first loads, which can be long
+        # after launch (it crashed 1.0.480 as the Library opened), so it's caught here instead.
+        run: |
+          if grep -rnE 'Selector="[^"]*/template/[^"]*/template/' --include='*.axaml' src/Lucent.Mac; then
+            echo "::error::A style selector goes through two templates. Avalonia throws as it loads; reach the inner part another way (a TemplateBinding, say)."
+            exit 1
+          fi
+
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
   # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
   metal-shaders:
