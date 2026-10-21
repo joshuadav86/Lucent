@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
@@ -161,6 +163,7 @@ public static class AudioTools
             return;
         }
 
+        KeepInFrontOfPlayer(main);
         var settings = EditorSettings.Load();
         if (Editors.Count == 1 && main.WindowState == WindowState.Normal
             && settings is { WindowOffsetX: { } x, WindowOffsetY: { } y, WindowWidth: { } width, WindowHeight: { } height }
@@ -186,6 +189,43 @@ public static class AudioTools
             main.AddToSnapping(window);
         }
     }
+
+    private static bool _keptInFront;
+
+    /// <summary>
+    /// Brings the open editors back in front of the player's other windows (the visuals, queue, library and the
+    /// rest) whenever the player comes to the front, such as when it's clicked or dragged. Where there's no free
+    /// room beside the player's windows (a small or zoomed-in screen), the editor sits over them instead of docked,
+    /// and without this the visuals and the rest drew over it as the player was moved under it.
+    /// </summary>
+    private static void KeepInFrontOfPlayer(Window main)
+    {
+        if (_keptInFront)
+        {
+            return;
+        }
+
+        _keptInFront = true;
+        main.Activated += (_, _) =>
+        {
+            foreach (var editor in Editors.Where(editor => editor.IsVisible && editor.WindowState != WindowState.Minimized))
+            {
+                var handle = new WindowInteropHelper(editor).Handle;
+                if (handle != IntPtr.Zero)
+                {
+                    SetWindowPos(handle, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+                }
+            }
+        };
+    }
+
+    private static readonly IntPtr HWND_TOP = IntPtr.Zero;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOACTIVATE = 0x0010;
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
 
     /// <summary>True when enough of the window's title bar is on a screen to grab it.</summary>
     private static bool IsOnScreen(Rect bounds)
