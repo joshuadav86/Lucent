@@ -241,6 +241,7 @@ public partial class MainWindow : Window
         _openingWindows = false;
         UpdateWindowToggles();
         AlignBesidePlayerSoon();
+        ReopenEditor();
         Activate();
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>

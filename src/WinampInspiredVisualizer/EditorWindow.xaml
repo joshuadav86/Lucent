@@ -467,6 +467,19 @@
                            Foreground="{DynamicResource MutedTextBrush}" />
                 <ProgressBar x:Name="LoadingProgress" Style="{StaticResource ThinProgress}" Margin="0,12,0,0" />
             </StackPanel>
+            <!-- With no sound open: waiting for one to be dropped in -->
+            <Border x:Name="EmptyPanel" Visibility="Collapsed" Margin="0" CornerRadius="10"
+                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
+                    <TextBlock Text="Drop a sound here to edit it" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" />
+                    <TextBlock Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{DynamicResource MutedTextBrush}"
+                               Text="Then drop more onto the waveform to add them where you let go, or anywhere else in the window to open another. The editor stays docked with the player, so you can leave it open." />
+                    <Button Style="{StaticResource ToolButton}" Content="Choose a sound…" Margin="0,16,0,0"
+                            HorizontalAlignment="Center" Click="OnChooseSound" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Processing -->

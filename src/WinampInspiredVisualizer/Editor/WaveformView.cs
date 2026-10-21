@@ -1084,6 +1084,14 @@ public sealed partial class WaveformView : FrameworkElement
         }
 
         var position = e.GetPosition(this);
+        if (IsOnLengthTag(position))
+        {
+            // The selection's length tag: a click switches it between bars and beats and minutes and seconds.
+            ToggleLengthUnits();
+            e.Handled = true;
+            return;
+        }
+
         var frame = FrameAt(position.X);
         CaptureMouse();
         _pressedAt = position;
@@ -1165,7 +1173,8 @@ public sealed partial class WaveformView : FrameworkElement
         if (!IsMouseCaptured && _panFrom is null)
         {
             HoverClip(position);
-            Cursor = MarkerAt(position) is not null ? Cursors.SizeWE
+            Cursor = IsOnLengthTag(position) ? Cursors.Hand
+                : MarkerAt(position) is not null ? Cursors.SizeWE
                 : EdgeAt(position, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) is { } edge ? EdgeCursor(edge)
                 : (IsOnClipBar(position) || MovesClipAt(position)) && _peaks is not null ? Cursors.Hand
                 : Cursors.IBeam;
