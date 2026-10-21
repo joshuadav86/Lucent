@@ -80,7 +80,7 @@ public static partial class SelfTest
             failures += TestDecoding(path) ? 0 : 1;
         }
 
-        failures += WinampInspiredVisualizer.Video.VideoSelfTest.Run(Console.WriteLine, videos);
+        failures += WinampInspiredVisualizer.Video.VideoSelfTest.Run(Console.WriteLine, videos, IsVirtualMachine());
 
         failures += TestOutputDevices();
         failures += TestGapless();
