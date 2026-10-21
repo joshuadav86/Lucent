@@ -1,6 +1,6 @@
 # MilkDrop preset credits
 
-These 216 presets come from projectM's "Cream of the Crop" collection:
+These 215 presets come from projectM's "Cream of the Crop" collection:
 https://github.com/projectM-visualizer/presets-cream-of-the-crop (commit 0180df2, 2025-10-08).
 
 License note from that pack (LICENSE.md): MilkDrop presets were, in almost all cases, not released under any specific
@@ -16,8 +16,8 @@ Two file names don't follow the pack's pattern, so Lucent credits them by hand (
 "phat_RippleNebula9" by Phat, and "Unchained-liquardoblitz [shifter's esc shader]" by Unchained, with shifter's
 shader. "i made hexcollies day!" doesn't say who made it, so it shows without a name; if it's yours, open an issue.
 
-The first table was picked in October 2026 (one, "PieturP - stripes-goingSlowMix", was dropped later because it
-flashes about ten times a second). The 71 in the second table were added later: they're presets that
+The first table was picked in October 2026 (two were dropped later: "PieturP - stripes-goingSlowMix", because it
+flashes about ten times a second, and "EVET - Pentacyanide", which mostly shows a flat dark brown). The 71 in the second table were added later: they're presets that
 first shipped with MilkDrop 2 itself (projectM's "Milkdrop Original" pack,
 https://github.com/projectM-visualizer/presets-milkdrop-original) and are in Cream of the Crop too, where these
 copies come from, picked the same way: they run without notes in Lucent, need no image textures, their shaders
@@ -60,7 +60,6 @@ white field and stays that way.
 | Tripgnosis - Chaotica Strobes.milk | Fractal/Core Mirror |
 | beta106i - Songflower (Ice Flower).milk | Fractal/Core |
 | Zylot - Crystal Ball.milk | Fractal/Core |
-| EVET - Pentacyanide.milk | Fractal/Lattice Mirror |
 | fiShbRaiN - molecule mind.milk | Fractal/Lattice |
 | Phat & Emale - best halfbaked reversed (Remix).milk | Fractal/Lattice |
 | phat_RippleNebula9.milk | Fractal/Loops |
