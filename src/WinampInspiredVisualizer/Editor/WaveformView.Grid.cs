@@ -7,7 +7,8 @@ namespace WinampInspiredVisualizer.Editor;
 /// <summary>
 /// The beat grid: a faint line on every beat and a stronger one, numbered, at the start of every bar, drawn
 /// when <see cref="ShowBeatGrid"/> is on. Whenever the beats are known, a selection shows its length in bars and
-/// beats in a tag at its top, so a loop can be stretched to a length while watching it.
+/// beats in a tag at its top, so a loop can be stretched to a length while watching it. Clicking the tag switches it
+/// to minutes and seconds and back (<see cref="LengthInTime"/>).
 /// </summary>
 public sealed partial class WaveformView
 {
@@ -17,6 +18,24 @@ public sealed partial class WaveformView
 
     private BeatGrid? _grid;
     private bool _showBeatGrid;
+    private bool _lengthInTime;
+
+    // Where the length tag was last drawn, so a click on it can switch its units; empty while it isn't shown.
+    private Rect _lengthTag = Rect.Empty;
+
+    /// <summary>Raised when a click on the length tag switches it between bars and beats and minutes and seconds.</summary>
+    public event EventHandler? LengthUnitsChanged;
+
+    /// <summary>The selection's length tag shows minutes and seconds instead of bars and beats.</summary>
+    public bool LengthInTime
+    {
+        get => _lengthInTime;
+        set
+        {
+            _lengthInTime = value;
+            InvalidateVisual();
+        }
+    }
 
     /// <summary>The beats and bars of the sound, or null if they aren't known (yet, or there's no steady beat).</summary>
     public BeatGrid? Grid
@@ -96,9 +115,13 @@ public sealed partial class WaveformView
         }
     }
 
-    /// <summary>The selection's length in bars and beats, in a tag at its top (beside it, if the selection is narrow).</summary>
+    /// <summary>
+    /// The selection's length in bars and beats (or minutes and seconds), in a tag at its top (beside it, if the
+    /// selection is narrow).
+    /// </summary>
     private void DrawLoopLength(DrawingContext dc, double width, double lanesTop)
     {
+        _lengthTag = Rect.Empty;
         if (_grid is not { } grid || _selection.IsEmpty || grid.SampleRate != (int)SampleRate)
         {
             return;
@@ -111,7 +134,8 @@ public sealed partial class WaveformView
             return;
         }
 
-        var text = Text(grid.Measure(_selection).Text, 11, SelectedWaveBrush ?? Brushes.White);
+        var length = _lengthInTime ? FormatTime(_selection.Length / (double)SampleRate, 0.01) : grid.Measure(_selection).Text;
+        var text = Text(length, 11, SelectedWaveBrush ?? Brushes.White);
         var tagWidth = text.Width + 12;
         var tagHeight = text.Height + 4;
         var left = x1 - x0 >= tagWidth + 8 ? Math.Clamp((x0 + x1 - tagWidth) / 2, Math.Max(4, x0 + 4), Math.Min(width - tagWidth - 4, x1 - tagWidth - 4))
@@ -119,6 +143,16 @@ public sealed partial class WaveformView
         var tag = new Rect(left, lanesTop + 6, tagWidth, tagHeight);
         dc.DrawRoundedRectangle(LaneBrush, new Pen(SelectedWaveBrush ?? Brushes.White, 1), tag, 6, 6);
         dc.DrawText(text, new Point(tag.X + 6, tag.Y + 2));
+        _lengthTag = tag;
+    }
+
+    private bool IsOnLengthTag(Point position) => _lengthTag.Contains(position);
+
+    /// <summary>Switches the length tag between bars and beats and minutes and seconds, for a click on it.</summary>
+    private void ToggleLengthUnits()
+    {
+        LengthInTime = !_lengthInTime;
+        LengthUnitsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private static Brush WithOpacity(Brush? brush, double opacity)

@@ -29,6 +29,18 @@ public sealed class EditorPlayer : IDisposable
         set => _volume = Math.Clamp(value, 0f, 1f);
     }
 
+    private volatile bool[] _heard = { true, true };
+
+    /// <summary>
+    /// Which channels are heard, left then right (the lanes' solo and mute). Like the volume, it only changes what's
+    /// heard (after the meters), never the audio itself, and a change is heard straight away.
+    /// </summary>
+    public IReadOnlyList<bool> HeardChannels
+    {
+        get => _heard;
+        set => _heard = value.ToArray();
+    }
+
     public bool IsPlaying => _output?.PlaybackState == PlaybackState.Playing;
 
     /// <summary>Levels and loudness of what's playing, measured before the listening volume; null when stopped.</summary>
@@ -189,6 +201,21 @@ public sealed class EditorPlayer : IDisposable
             }
 
             _volume = to;
+
+            // Channels muted or left out of a solo are silenced.
+            var heard = _player._heard;
+            if (heard.Contains(false))
+            {
+                var channels = WaveFormat.Channels;
+                for (var i = 0; i < read; i++)
+                {
+                    var channel = i % channels;
+                    if (channel < heard.Length && !heard[channel])
+                    {
+                        buffer[offset + i] = 0;
+                    }
+                }
+            }
 
             return read;
         }

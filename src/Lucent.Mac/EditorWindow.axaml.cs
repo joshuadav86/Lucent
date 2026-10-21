@@ -16,16 +16,18 @@ using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Editor.Effects;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Video;
 
 namespace Lucent.Mac;
 
 /// <summary>
 /// A stereo (or mono) audio editor: shows a song's waveform or spectrogram, plays it with meters, selects part
 /// of it (or of one channel), cuts, copies and pastes with crossfaded joins, processes it with built-in tools
-/// and VST3 plugins, and saves it back or as a new file. Open it with <see cref="AudioTools.OpenEditor"/>.
+/// and VST3 plugins, and saves it back or as a new file. Open it with <see cref="AudioTools.OpenEditor"/>, or open an
+/// empty one with <see cref="AudioTools.ShowEditor"/> and drop sounds into it.
 /// </summary>
 /// <remarks>
-/// The rest of the window lives in partial files: EditorWindow.Clipboard.cs (cut, copy, paste),
+/// The rest of the window lives in partial files: EditorWindow.Drop.cs (dropped files), EditorWindow.Clipboard.cs (cut, copy, paste),
 /// EditorWindow.Tools.cs (the tool cards and menus), EditorWindow.Markers.cs (markers and analysis),
 /// EditorWindow.History.cs (the history panel) and EditorWindow.Plugins.cs (VST3 effects and chains).
 /// </remarks>
@@ -49,15 +51,18 @@ public partial class EditorWindow : Window
     private bool _closeWhenIdle;
     private bool _closeConfirmed;
     private bool _askingToClose;
+    // Opened with no sound, so a sound that can't be opened leaves it empty rather than closing it.
+    private bool _startedEmpty;
     private string? _lastSavedPath;
     private readonly FullScreen _fullScreen;
 
-    /// <summary>For the XAML previewer only; Lucent opens editors with a file.</summary>
+    /// <summary>For the XAML previewer only.</summary>
     public EditorWindow()
         : this(string.Empty, new AudioPlayer())
     {
     }
 
+    /// <summary>Opens <paramref name="path"/>, or with an empty path an empty editor waiting for a sound to be dropped in.</summary>
     public EditorWindow(string path, AudioPlayer mainPlayer)
     {
         InitializeComponent();
@@ -65,8 +70,7 @@ public partial class EditorWindow : Window
         LoadTitleIcon();
         _path = path;
         _mainPlayer = mainPlayer;
-        FileTitle.Text = Path.GetFileName(path);
-        Title = $"{Path.GetFileName(path)} - Audio editor - Lucent";
+        ShowFileName();
         _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
         _fullScreen.Changed += (_, _) => UpdateMaximizeButton();
 
@@ -102,6 +106,16 @@ public partial class EditorWindow : Window
         Waveform.RightClicked += (_, position) => OnWaveformRightClick(position);
         Overview.NavigateRequested += (_, frame) => Waveform.ScrollTo(frame);
         Overview.ZoomRequested += (_, notches) => Waveform.Zoom(Math.Pow(0.8, notches));
+        Waveform.HeardChannelsChanged += (_, _) => OnHeardChannelsChanged();
+        Waveform.LengthInTime = _settings.LengthInTime;
+        Waveform.LengthUnitsChanged += (_, _) =>
+        {
+            _settings.LengthInTime = Waveform.LengthInTime;
+            _settings.Save();
+            ShowStatus(Waveform.LengthInTime
+                ? "The selection's length shows in minutes and seconds. Click it to go back to bars and beats."
+                : "The selection's length shows in bars and beats. Click it for minutes and seconds.");
+        };
 
         // Like WPF's PreviewKeyDown: the editor's keys work wherever the focus is, unless typing.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
@@ -137,14 +151,31 @@ public partial class EditorWindow : Window
         UpdateSnap();
         InitTools();
         SetEditingEnabled(false);
+        InitDrop();
         if (path.Length > 0)
         {
-            Opened += async (_, _) => await LoadAsync();
+            Opened += async (_, _) => await LoadAsync(path);
+        }
+        else
+        {
+            ShowEmpty();
         }
     }
 
-    /// <summary>The file being edited (it changes after "Save as new version").</summary>
+    /// <summary>The file being edited (it changes after "Save as new version"); empty while no sound is open.</summary>
     public string FilePath => _path;
+
+    /// <summary>True while no sound is open (or opening): the editor is waiting for one to be dropped in.</summary>
+    public bool IsEmpty => _path.Length == 0;
+
+    /// <summary>
+    /// True when another sound can open here without losing anything: nothing is open, or what's open has no unsaved
+    /// edits and nothing is working on it.
+    /// </summary>
+    public bool CanOpenAnother => !IsBusy && (IsEmpty || _session is { IsModified: false });
+
+    /// <summary>True while the editor is playing (or previewing).</summary>
+    public bool IsPlaying => _player.IsPlaying;
 
     /// <summary>True when there are edits that haven't been saved.</summary>
     public bool HasUnsavedChanges => _session?.IsModified == true;
@@ -214,28 +245,76 @@ public partial class EditorWindow : Window
 
     // ---- Opening ----
 
-    private Task LoadAsync() => Loading = LoadCoreAsync();
+    private Task LoadAsync(string path) => Loading = LoadCoreAsync(path);
 
-    private async Task LoadCoreAsync()
+    /// <summary>
+    /// Opens <paramref name="path"/> in this window. A sound that's already open stays until the new one has loaded,
+    /// and stays if it can't be opened.
+    /// </summary>
+    private async Task LoadCoreAsync(string path)
     {
+        var replacing = _session is not null;
+        var oldFormat = _session is { } old ? (old.Audio.SampleRate, old.Audio.ChannelCount) : default;
+        var swapped = false;
         _busy = new CancellationTokenSource();
+        SetEditingEnabled(false);
+        EmptyPanel.IsVisible = false;
+        LoadingText.Text = "Opening the sound…";
+        LoadingProgress.Value = 0;
+        LoadingPanel.IsVisible = true;
         var progress = new Progress<double>(value => LoadingProgress.Value = value);
         string? problem = null;
         var cancelled = false;
         try
         {
             var token = _busy.Token;
-            var path = _path;
-            var (audio, info, mixedDown) = await Task.Run(() => AudioFileLoader.Load(path, progress, token));
+            // A video's sound is what's edited; its pictures are cut along with it (EditorWindow.Video.cs).
+            VideoEdit? video = null;
+            var (audio, info, mixedDown) = await Task.Run(() =>
+            {
+                if (VideoEdit.IsEditableVideo(path))
+                {
+                    var loaded = VideoEdit.Load(path, progress, token);
+                    video = loaded.Video;
+                    return (loaded.Audio, loaded.Info, loaded.MixedDown);
+                }
+
+                if (VideoFiles.IsVideo(path))
+                {
+                    throw new AudioFileException("The editor cuts MP4, M4V and MOV videos. Other kinds of video can't be edited yet.");
+                }
+
+                return AudioFileLoader.Load(path, progress, token);
+            });
             LoadingText.Text = "Drawing the waveform…";
             var session = await Task.Run(() => new EditSession(audio));
             session.JoinFrames = JoinFrames(audio.SampleRate);
+            if (replacing)
+            {
+                ForgetSound();
+            }
+
+            _path = path;
+            ShowFileName();
             _session = session;
             _info = info;
+            if (video is not null)
+            {
+                OpenVideo(video);
+            }
+
+            if (replacing)
+            {
+                swapped = true;
+                ShowAudio();
+            }
+
             Waveform.Peaks = session.Peaks;
             Overview.Peaks = session.Peaks;
             LoadingPanel.IsVisible = false;
-            ShowStatus(mixedDown
+            ShowStatus(video is not null
+                ? "Select part of the video, then Delete cuts it out or Trim keeps only it. Saving copies the pictures and sound as they are, without re-encoding."
+                : mixedDown
                 ? $"This file has {info.Channels} channels; the editor mixes them down to stereo, so saving makes a stereo file."
                 : "Drag across the waveform to select part of it, or right-click it for what you can do. Scrolling zooms, Shift+scroll moves along.");
         }
@@ -261,16 +340,108 @@ public partial class EditorWindow : Window
             await MessageWindow.ShowAsync(this, problem, "Audio editor");
         }
 
-        if (problem is not null || cancelled || _closeWhenIdle)
+        if (_closeWhenIdle || ((problem is not null || cancelled) && _session is null && !_startedEmpty))
         {
             Close();
+            return;
+        }
+
+        LoadingPanel.IsVisible = false;
+        if (_session is null)
+        {
+            // Nothing could be opened into an empty editor: it waits for another sound.
+            ShowEmpty();
             return;
         }
 
         SetEditingEnabled(true);
         UpdateSelectionInfo();
         UpdateHistory();
+        if (swapped)
+        {
+            await FitChainToSoundAsync(oldFormat.SampleRate, oldFormat.ChannelCount);
+        }
     }
+
+    /// <summary>
+    /// Opens another sound in this window in place of the one that's open, asking first if it has unsaved edits.
+    /// Returns false if the user chose to keep their edits, or the editor is busy.
+    /// </summary>
+    public async Task<bool> OpenAsync(string path)
+    {
+        if (IsBusy)
+        {
+            ShowStatus("Wait for the editor to finish, then drop the sound in again.");
+            return false;
+        }
+
+        if (HasUnsavedChanges)
+        {
+            Activate();
+            var answer = await MessageWindow.ShowAsync(this,
+                $"Your edits to \"{Path.GetFileName(_path)}\" haven't been saved. Open \"{Path.GetFileName(path)}\" without saving them?",
+                "Audio editor", MessageButtons.YesNo, MessageResult.No);
+            if (answer != MessageResult.Yes)
+            {
+                return false;
+            }
+        }
+
+        StopPlayback();
+        await LoadAsync(path);
+        return SamePath(_path, path);
+    }
+
+    private static bool SamePath(string a, string b) =>
+        a.Length > 0 && b.Length > 0 && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Lets go of everything that belonged to the sound that was open, before another one takes its place.</summary>
+    private void ForgetSound()
+    {
+        CloseVideo();
+        _stemsWindow?.Close();
+        _closeConfirmed = false;
+        _lastSavedPath = null;
+        ShowFileButton.IsVisible = false;
+        Waveform.Selection = default;
+        Waveform.SelectedChannel = null;
+        Waveform.CursorFrame = 0;
+        Waveform.ResetListening();
+        // Cleared first, so the new sound starts zoomed to fit.
+        Waveform.Peaks = null;
+        Overview.Peaks = null;
+    }
+
+    /// <summary>A lane's solo or mute changed: what's heard follows straight away, even while playing.</summary>
+    private void OnHeardChannelsChanged()
+    {
+        var heard = Waveform.HeardChannels;
+        _player.HeardChannels = heard;
+        ShowStatus(heard.All(on => on) ? "Both channels are heard."
+            : heard.Any(on => on) ? $"Only the {(heard[0] ? "left" : "right")} channel is heard. Solo and mute change what you hear, not the sound itself."
+            : "Both channels are muted. Solo and mute change what you hear, not the sound itself.");
+    }
+
+    private void ShowFileName()
+    {
+        var name = Path.GetFileName(_path);
+        FileTitle.Text = IsEmpty ? "Drop a sound here" : name;
+        Title = IsEmpty ? "Audio editor - Lucent" : $"{name} - Audio editor - Lucent";
+    }
+
+    /// <summary>Shows the editor with no sound in it, waiting for one to be dropped in or chosen.</summary>
+    private void ShowEmpty()
+    {
+        _startedEmpty = true;
+        _path = string.Empty;
+        ShowFileName();
+        LoadingPanel.IsVisible = false;
+        EmptyPanel.IsVisible = true;
+        SetEditingEnabled(false);
+        ShowStatus("Drop a sound here to edit it. Once one is open, drop more onto the waveform to add them where you let go.");
+    }
+
+    private void OnChooseSound(object? sender, RoutedEventArgs e) => AudioTools.ChooseFileToEdit(this, _mainPlayer);
 
     // ---- Busy work ----
 
@@ -360,7 +531,7 @@ public partial class EditorWindow : Window
     /// </remarks>
     private async Task ApplyAsync(IAudioEffect effect, FrameRange? range = null, FrameRange? selectAfter = null, bool bothChannels = false)
     {
-        if (_session is not { } session)
+        if (_session is not { } session || VideoRefuses(effect.Description))
         {
             return;
         }
@@ -390,10 +561,10 @@ public partial class EditorWindow : Window
         }
     }
 
-    /// <summary>Runs a cut (delete or trim) as one undoable step.</summary>
-    private async Task EditAsync(string description, Action<EditSession> edit, Func<FrameRange> selectionAfter)
+    /// <summary>Runs a cut (delete or trim) as one undoable step. On a video, only its own cuts run (<paramref name="video"/>).</summary>
+    private async Task EditAsync(string description, Action<EditSession> edit, Func<FrameRange> selectionAfter, bool video = false)
     {
-        if (_session is not { } session)
+        if (_session is not { } session || (!video && VideoRefuses(description)))
         {
             return;
         }
@@ -414,6 +585,8 @@ public partial class EditorWindow : Window
             return;
         }
 
+        // A video's cut follows the sound's history (an undo brings its pictures back too).
+        _videoEdit?.Follow(_session.StateId);
         Waveform.Peaks = _session.Peaks;
         Waveform.Splits = _session.Splits;
         Waveform.ClipEdgeDetails = _session.ClipEdgeDetails;
@@ -509,7 +682,11 @@ public partial class EditorWindow : Window
     private async void OnTrim(object? sender, RoutedEventArgs e)
     {
         var selection = Selection;
-        if (!selection.IsEmpty)
+        if (!selection.IsEmpty && IsVideo)
+        {
+            await CutVideoAsync(selection, trim: true);
+        }
+        else if (!selection.IsEmpty)
         {
             await EditAsync("Trim", session => session.TrimTo(selection), () => new FrameRange(0, 0));
         }
@@ -522,6 +699,12 @@ public partial class EditorWindow : Window
         var selection = Selection;
         if (selection.IsEmpty)
         {
+            return;
+        }
+
+        if (IsVideo)
+        {
+            await CutVideoAsync(selection, trim: false);
             return;
         }
 
@@ -554,7 +737,7 @@ public partial class EditorWindow : Window
 
     private void Split(int[] frames)
     {
-        if (_session is not { } session || IsBusy)
+        if (_session is not { } session || IsBusy || VideoRefuses("Splitting"))
         {
             return;
         }
@@ -696,7 +879,7 @@ public partial class EditorWindow : Window
     /// <summary>Moves the split between two touching clips, so one grows as the other shrinks.</summary>
     private void MoveSplit(int split, int frame)
     {
-        if (_session is not { } session || IsBusy)
+        if (_session is not { } session || IsBusy || VideoRefuses("Moving a split"))
         {
             return;
         }
@@ -1014,6 +1197,7 @@ public partial class EditorWindow : Window
         try
         {
             _player.Play(_session.Audio, from, to, through, _settings.Loop);
+            AudioTools.NotifyEditorPlayingChanged();
             _playTo = to;
             _previewThrough = through;
             Meter.Reset();
@@ -1052,6 +1236,7 @@ public partial class EditorWindow : Window
 
     private void ShowStopped()
     {
+        AudioTools.NotifyEditorPlayingChanged();
         _playheadTimer.Stop();
         Waveform.PlayheadFrame = null;
         PlayIcon.Data = ThemeIcon("PlayIcon");
@@ -1132,6 +1317,19 @@ public partial class EditorWindow : Window
             return false;
         }
 
+        if (IsVideo)
+        {
+            var playingVideo = _mainPlayer.IsCurrentFile(_path) ? "\n\nIt's open in the player, which will pause for a moment while it's replaced." : string.Empty;
+            if (await MessageWindow.ShowAsync(this,
+                    $"Replace \"{Path.GetFileName(_path)}\" with your cut version?\n\nNothing is re-encoded, so no quality is lost, but what was cut out can't be brought back afterwards.{playingVideo}",
+                    "Save", MessageButtons.YesNo, MessageResult.No) != MessageResult.Yes)
+            {
+                return false;
+            }
+
+            return await SaveVideoAsync(_path, replaceExisting: true);
+        }
+
         if (ExportOptions.WritableFormat(_path) is not { } format)
         {
             var kind = Path.GetExtension(_path).TrimStart('.').ToUpperInvariant();
@@ -1161,6 +1359,11 @@ public partial class EditorWindow : Window
         if (_session is null || _info is not { } info)
         {
             return false;
+        }
+
+        if (IsVideo)
+        {
+            return await SaveVideoAsNewAsync();
         }
 
         var format = ExportOptions.WritableFormat(_path) ?? ExportFormat.Flac;
@@ -1567,13 +1770,36 @@ public partial class EditorWindow : Window
         }
     }
 
+    /// <summary>
+    /// Remembers where the window is, from the player's corner, so the next editor opens docked in the same place,
+    /// and whether it was open when Lucent quit, so it opens again with the player.
+    /// </summary>
+    private void RememberPlacement()
+    {
+        if (AudioTools.MainWindow is not { } player)
+        {
+            return;
+        }
+
+        _settings.OpenAtStart = player.IsShuttingDown;
+        if (WindowState == WindowState.Normal && !_fullScreen.IsOn && player.WindowState == WindowState.Normal && Bounds.Width > 0)
+        {
+            _settings.WindowOffsetX = this.Left() - player.Left();
+            _settings.WindowOffsetY = this.Top() - player.Top();
+            _settings.WindowWidth = this.ActualWidth();
+            _settings.WindowHeight = this.ActualHeight();
+        }
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
+        RememberPlacement();
         // Saves the listening volume, which isn't saved on every move of the fader.
         _settings.Save();
         _playheadTimer.Stop();
         _player.Dispose();
+        CloseVideo();
         ClosePluginInBackground();
         // The last split's stems can take hundreds of megabytes.
         _stemsWindow?.Close();

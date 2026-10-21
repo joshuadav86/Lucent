@@ -796,6 +796,43 @@ public partial class EditorWindow
         }
     }
 
+    /// <summary>
+    /// After another sound opens in the editor: the plugins were opened for the old sound's sample rate and channels,
+    /// so for a different kind of sound they reopen, with the settings they have now.
+    /// </summary>
+    private async Task FitChainToSoundAsync(int oldRate, int oldChannels)
+    {
+        if (_chain.Count == 0 || _session is not { } session
+            || (session.Audio.SampleRate == oldRate && session.Audio.ChannelCount == oldChannels))
+        {
+            return;
+        }
+
+        var slots = _chain.Slots.ToList();
+        var path = Path.Combine(Path.GetTempPath(), $"Lucent plugins {Guid.NewGuid():N}{ChainPreset.Extension}");
+        try
+        {
+            await Task.Run(() => PluginChain.ToPreset("the plugins", slots).Save(path));
+            await OpenChainAsync(path);
+        }
+        catch (Exception ex) when (ex is PluginException or IOException or UnauthorizedAccessException)
+        {
+            ShowStatus("The plugins couldn't be moved over to this sound (it has a different sample rate or channels). Add them again from the strip.");
+            await ClosePluginAsync();
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception)
+            {
+                // A leftover temporary file does no harm.
+            }
+        }
+    }
+
     private static string Named(ChainPresetPlugin plugin) =>
         string.IsNullOrWhiteSpace(plugin.Vendor) ? plugin.Name : $"{plugin.Name} ({plugin.Vendor})";
 

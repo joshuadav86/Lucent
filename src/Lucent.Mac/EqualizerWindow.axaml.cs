@@ -133,6 +133,7 @@ public partial class EqualizerWindow : Window
         PositionChanged += (_, _) => RememberPosition();
         Loaded += (_, _) => RedrawCurve();
         Closed += OnClosed;
+        Lucent.Mac.Editor.AudioTools.EditorPlayingChanged += OnEditorPlayingChanged;
 
         FitHeader();
         BuildBands();
@@ -407,9 +408,23 @@ public partial class EqualizerWindow : Window
 
     private void ShowHint()
     {
+        var editorPlaying = Lucent.Mac.Editor.AudioTools.IsEditorPlaying;
+        _spectrum.Paused = editorPlaying;
+        if (editorPlaying)
+        {
+            // The spectrum would show the editor's sound (it listens to every app), but the EQ only shapes the
+            // player's music, so it goes quiet instead.
+            StatusText.Text = "The audio editor is playing: this EQ only shapes the player's music";
+            StatusText.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+            return;
+        }
+
         StatusText.Text = "Double-click a slider to put it back to 0";
         StatusText.SetResourceReference(TextBlock.ForegroundProperty, "FaintTextBrush");
     }
+
+    // Usually raised on the UI thread, but playback stopping by itself can come from the audio thread.
+    private void OnEditorPlayingChanged(object? sender, EventArgs e) => Dispatcher.UIThread.Post(ShowHint);
 
     private void ShowBandStatus(int band)
     {
@@ -958,6 +973,7 @@ public partial class EqualizerWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        Lucent.Mac.Editor.AudioTools.EditorPlayingChanged -= OnEditorPlayingChanged;
         _gliding = false;
         if (_open == this)
         {

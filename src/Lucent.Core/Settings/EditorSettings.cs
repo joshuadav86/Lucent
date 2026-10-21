@@ -59,6 +59,24 @@ public sealed class EditorSettings
     /// <summary>The history list is open beside the waveform.</summary>
     public bool ShowHistory { get; set; }
 
+    /// <summary>The selection's length tag shows minutes and seconds instead of bars and beats.</summary>
+    public bool LengthInTime { get; set; }
+
+    /// <summary>
+    /// Where the editor window was left, from the player window's top-left corner (so it opens docked where it was,
+    /// wherever the player has moved to since), and its size. Null until an editor has been closed.
+    /// </summary>
+    public double? WindowOffsetX { get; set; }
+
+    public double? WindowOffsetY { get; set; }
+
+    public double? WindowWidth { get; set; }
+
+    public double? WindowHeight { get; set; }
+
+    /// <summary>An editor was open when Lucent last quit, so one opens again with the player, ready for a sound to be dropped in.</summary>
+    public bool OpenAtStart { get; set; }
+
     /// <summary>The listening volume while editing (0 to 1); null until it's first set, when the main player's is used.</summary>
     public double? Volume { get; set; }
 

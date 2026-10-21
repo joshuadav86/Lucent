@@ -63,6 +63,9 @@ public partial class AnalyzerWindow : Window
 
     public static bool IsOpen => _instance is not null;
 
+    /// <summary>The open analyzer, if there is one.</summary>
+    public static Window? Current => _instance;
+
     /// <summary>Opens the analyzer docked beside the player's windows, or closes it if it's open. Returns whether it's now open.</summary>
     public static bool Toggle(Window owner, AudioPlayer player, AppSettings settings)
     {

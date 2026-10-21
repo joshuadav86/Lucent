@@ -74,6 +74,9 @@ public partial class AnalyzerWindow : Window
 
     public static bool IsOpen => _instance is not null;
 
+    /// <summary>The open analyzer, if there is one.</summary>
+    public static Window? Current => _instance;
+
     /// <summary>The spectrogram inside, for the screenshots to feed.</summary>
     internal Spectrogram Picture => _spectrogram;
 

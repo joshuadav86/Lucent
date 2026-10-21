@@ -27,6 +27,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
     private SpotifySignIn.Tokens? _tokens;
     private DateTime _waitUntil;
 
+    // The last song a device was playing (or paused on), shown paused while no device is playing for the account.
+    private RemoteState? _last;
+
     /// <param name="refreshToken">From <see cref="SpotifySignIn.SignInAsync"/>, or saved from before.</param>
     /// <param name="saveRefreshToken">Called when Spotify hands out a new refresh token, which replaces the saved one.</param>
     public SpotifyRemote(HttpClient http, string refreshToken, Action<string> saveRefreshToken)
@@ -44,16 +47,38 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         using var response = await SendAsync(HttpMethod.Get, Api, cancel);
         if (response.StatusCode == HttpStatusCode.NoContent)
         {
-            // Nothing playing on any of the account's devices.
-            return null;
+            // No device is playing for the account: Spotify was just opened, was quit and opened again, or has sat
+            // paused long enough to let go. The song read last stays, paused, as Spotify's own app still shows it,
+            // and Play picks it up again (see PlayOnSomeDeviceAsync).
+            return _last is { } last ? last with { IsPlaying = false, ReadAt = DateTime.UtcNow, Device = null, Volume = null } : null;
         }
 
         await ThrowIfFailedAsync(response, cancel);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancel));
-        return ParseState(json.RootElement, DateTime.UtcNow);
+        var state = ParseState(json.RootElement, DateTime.UtcNow);
+        if (state?.Track is not null)
+        {
+            _last = state;
+        }
+
+        return state;
     }
 
-    public Task PlayAsync(CancellationToken cancel) => CommandAsync(HttpMethod.Put, "/play", cancel);
+    // Spotify limits how often an app may ask, over each 30 seconds, and a reading a second (with the playlist and
+    // queue reads beside it) ran into that. Every 3 seconds while playing, or as the song ends if that's sooner,
+    // so the next song shows on time; every 5 while paused.
+    public TimeSpan ReadAgainAfter(RemoteState? state)
+    {
+        if (state is not { IsPlaying: true })
+        {
+            return TimeSpan.FromSeconds(5);
+        }
+
+        var left = state.Track is { Duration.Ticks: > 0 } track ? track.Duration - state.PositionNow + TimeSpan.FromSeconds(0.5) : TimeSpan.MaxValue;
+        return left < TimeSpan.FromSeconds(3) ? TimeSpan.FromSeconds(Math.Max(1, left.TotalSeconds)) : TimeSpan.FromSeconds(3);
+    }
+
+    public Task PlayAsync(CancellationToken cancel) => PlayOnSomeDeviceAsync(null, cancel);
 
     public Task PauseAsync(CancellationToken cancel) => CommandAsync(HttpMethod.Put, "/pause", cancel);
 
@@ -178,7 +203,68 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
                 ["offset"] = new Dictionary<string, string> { ["uri"] = song },
             })
             : JsonSerializer.Serialize(new Dictionary<string, object> { ["uris"] = new[] { song } });
-        return CommandAsync(HttpMethod.Put, "/play", cancel, body);
+        return PlayOnSomeDeviceAsync(body, cancel);
+    }
+
+    /// <summary>
+    /// Plays (what's loaded, or <paramref name="json"/>'s songs). With no device playing for the account, Spotify
+    /// refuses that (404, NO_ACTIVE_DEVICE), so the play goes to one of the account's devices that's on: this
+    /// computer's Spotify first, then the only one there is, then any computer. Spotify carries on there from
+    /// where the account left off.
+    /// </summary>
+    private async Task PlayOnSomeDeviceAsync(string? json, CancellationToken cancel)
+    {
+        using (var response = await SendAsync(HttpMethod.Put, Api + "/play", cancel, json))
+        {
+            if (response.StatusCode != HttpStatusCode.NotFound)
+            {
+                await ThrowIfFailedAsync(response, cancel);
+                return;
+            }
+        }
+
+        string? device;
+        using (var devices = await GetJsonAsync(Api + "/devices", null, cancel))
+        {
+            device = PickDevice(devices.RootElement, Environment.MachineName);
+        }
+
+        if (device is null)
+        {
+            throw new RemoteProblem("Spotify isn't open anywhere. Open Spotify on this computer (or a phone or speaker), then press play.");
+        }
+
+        if (json is null)
+        {
+            // Moving the account's playback to the device, playing, carries on where it left off.
+            await CommandAsync(HttpMethod.Put, string.Empty, cancel,
+                JsonSerializer.Serialize(new Dictionary<string, object> { ["device_ids"] = new[] { device }, ["play"] = true }));
+        }
+        else
+        {
+            await CommandAsync(HttpMethod.Put, $"/play?device_id={Uri.EscapeDataString(device)}", cancel, json);
+        }
+    }
+
+    /// <summary>The ID of the device to play on, from GET /me/player/devices, or null when none is on.</summary>
+    internal static string? PickDevice(JsonElement root, string machineName)
+    {
+        if (!root.TryGetProperty("devices", out var list) || list.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var devices = list.EnumerateArray()
+            .Where(device => Text(device, "id").Length > 0
+                && !(device.TryGetProperty("is_restricted", out var restricted) && restricted.ValueKind == JsonValueKind.True))
+            .ToList();
+        // Spotify names a computer's device after the computer, which macOS and Windows write with spaces and
+        // apostrophes ("Joshua's MacBook Pro") where the machine name has hyphens ("Joshuas-MacBook-Pro").
+        static string Plain(string text) => new(text.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        var computers = devices.Where(device => Text(device, "type").Equals("Computer", StringComparison.OrdinalIgnoreCase)).ToList();
+        var mine = computers.Where(device => Plain(Text(device, "name")) == Plain(machineName)).ToList();
+        var pick = mine.Count > 0 ? mine[0] : devices.Count == 1 ? devices[0] : computers.Count > 0 ? computers[0] : devices.FirstOrDefault();
+        return pick.ValueKind == JsonValueKind.Object ? Text(pick, "id") : null;
     }
 
     // Spotify only lists the songs of playlists the account made or collaborates on (GET /playlists/{id}/items).
@@ -320,7 +406,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
     {
         if (DateTime.UtcNow < _waitUntil)
         {
-            throw new RemoteProblem("Spotify asked Lucent to slow down. It'll carry on in a moment.");
+            throw new RemoteProblem(SlowDown());
         }
 
         for (var attempt = 0; ; attempt++)
@@ -355,6 +441,15 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         }
     }
 
+    // Spotify says how long to wait, which is usually seconds but can be much longer after a lot of asking.
+    private string SlowDown()
+    {
+        var left = _waitUntil - DateTime.UtcNow;
+        return left > TimeSpan.FromMinutes(1.5)
+            ? $"Spotify asked Lucent to wait {(left > TimeSpan.FromHours(1.5) ? $"about {left.TotalHours:0} hours" : $"about {left.TotalMinutes:0} minutes")} before asking again. Spotify itself still plays."
+            : "Spotify asked Lucent to slow down. It'll carry on in a moment.";
+    }
+
     private async Task ThrowIfFailedAsync(HttpResponseMessage response, CancellationToken cancel)
     {
         if (response.IsSuccessStatusCode)
@@ -367,12 +462,14 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         {
             HttpStatusCode.Forbidden when body.Contains("PREMIUM_REQUIRED", StringComparison.Ordinal) =>
                 new RemoteProblem("Spotify only lets other apps play, pause and skip with a Premium account."),
+            // The device or what's playing doesn't allow it just now (some speakers and TVs, an advert).
+            HttpStatusCode.Forbidden when body.Contains("Restriction violated", StringComparison.OrdinalIgnoreCase) =>
+                new RemoteProblem("Spotify won't let other apps do that on the device it's playing on right now."),
             HttpStatusCode.Forbidden =>
                 new RemoteProblem("Spotify wouldn't let Lucent do that. If this Spotify app is still in development mode, your account needs adding to it on developer.spotify.com."),
             HttpStatusCode.NotFound =>
                 new RemoteProblem("Start playing something in Spotify first, then Lucent can control it."),
-            HttpStatusCode.TooManyRequests =>
-                new RemoteProblem("Spotify asked Lucent to slow down. It'll carry on in a moment."),
+            HttpStatusCode.TooManyRequests => new RemoteProblem(SlowDown()),
             HttpStatusCode.Unauthorized =>
                 new RemoteProblem("Spotify signed Lucent out. Sign in again from the Add music menu."),
             _ => new RemoteProblem($"Spotify had a problem ({(int)response.StatusCode})."),

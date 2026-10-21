@@ -307,6 +307,9 @@ public sealed class AppSettings
     /// <summary>The country filter: a two-letter country code, or null for anywhere.</summary>
     public string? RadioCountry { get; set; }
 
+    /// <summary>The video filter: only stations with a picture (the ones with the camera beside them).</summary>
+    public bool RadioVideoOnly { get; set; }
+
     private static string FilePath => Path.Combine(AppDataFolder.Path, "settings.json");
 
     public static AppSettings Load()

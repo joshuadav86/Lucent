@@ -511,6 +511,13 @@ public sealed partial class WaveformView : FrameworkElement
         {
             var top = LaneTop(c, laneHeight);
             var lane = new Rect(0, top, width, laneHeight);
+            // A lane muted (or left out of a solo) is dimmed: it isn't heard.
+            var heard = IsHeard(c);
+            if (!heard)
+            {
+                dc.PushOpacity(0.35);
+            }
+
             if (spectrogram)
             {
                 DrawSpectrogram(dc, c, lane);
@@ -539,7 +546,13 @@ public sealed partial class WaveformView : FrameworkElement
                 label += "   " + AmplitudeZoomText(_amplitudeZoom);
             }
 
+            if (!heard)
+            {
+                dc.Pop();
+            }
+
             dc.DrawText(Text(label, 10, spectrogram ? SelectedWaveBrush : LabelBrush), new Point(8, top + 4));
+            DrawListenButtons(dc, c, top);
         }
 
         if (spectrogram)
@@ -566,8 +579,20 @@ public sealed partial class WaveformView : FrameworkElement
             var x = Math.Round(FrameToX(_cursor)) + 0.5;
             if (x >= 0 && x <= width)
             {
-                var pen = new Pen(CursorBrush ?? Brushes.White, 1);
-                dc.DrawLine(pen, new Point(x, lanesTop), new Point(x, height));
+                // Top to bottom, through the ruler with a small flag at the top like the playhead's, in its own
+                // colour (not the waves'), so it's easy to find.
+                var brush = CursorBrush ?? Brushes.White;
+                dc.DrawLine(new Pen(brush, 1.5), new Point(x, 0), new Point(x, height));
+                var flag = new StreamGeometry();
+                using (var g = flag.Open())
+                {
+                    g.BeginFigure(new Point(x - 5, 0), true, true);
+                    g.LineTo(new Point(x + 5, 0), true, false);
+                    g.LineTo(new Point(x, 7), true, false);
+                }
+
+                flag.Freeze();
+                dc.DrawGeometry(brush, null, flag);
             }
         }
         else
@@ -1084,6 +1109,22 @@ public sealed partial class WaveformView : FrameworkElement
         }
 
         var position = e.GetPosition(this);
+        if (ListenButtonAt(position) is { } button)
+        {
+            // A lane's mute or solo button.
+            ToggleListen(button.Channel, button.Solo);
+            e.Handled = true;
+            return;
+        }
+
+        if (IsOnLengthTag(position))
+        {
+            // The selection's length tag: a click switches it between bars and beats and minutes and seconds.
+            ToggleLengthUnits();
+            e.Handled = true;
+            return;
+        }
+
         var frame = FrameAt(position.X);
         CaptureMouse();
         _pressedAt = position;
@@ -1165,7 +1206,8 @@ public sealed partial class WaveformView : FrameworkElement
         if (!IsMouseCaptured && _panFrom is null)
         {
             HoverClip(position);
-            Cursor = MarkerAt(position) is not null ? Cursors.SizeWE
+            Cursor = IsOnLengthTag(position) || ListenButtonAt(position) is not null ? Cursors.Hand
+                : MarkerAt(position) is not null ? Cursors.SizeWE
                 : EdgeAt(position, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) is { } edge ? EdgeCursor(edge)
                 : (IsOnClipBar(position) || MovesClipAt(position)) && _peaks is not null ? Cursors.Hand
                 : Cursors.IBeam;

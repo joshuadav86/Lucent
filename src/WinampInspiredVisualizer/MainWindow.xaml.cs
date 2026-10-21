@@ -25,6 +25,7 @@ using WinampInspiredVisualizer.Visualizer;
 using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
 using WinampInspiredVisualizer.Windows;
+using WinampInspiredVisualizer.Video;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace WinampInspiredVisualizer;
@@ -95,6 +96,7 @@ public partial class MainWindow : Window
         _player.Equalizer.Balance = _settings.Balance;
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
+        _player.VideoChanged += (_, _) => OnVideoChanged();
         ApplySoundSettings();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
@@ -246,6 +248,7 @@ public partial class MainWindow : Window
         _openingWindows = false;
         UpdateWindowToggles();
         AlignBesidePlayerSoon();
+        ReopenEditor();
         Activate();
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
@@ -553,17 +556,24 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Opens a small window (the artwork or the equalizer) docked to the outside of the player and
-    /// the windows docked to it, in the first spot where it fits on the screen without covering
+    /// Opens a small window (the artwork, the equalizer or the analyzer) docked to the outside of the
+    /// player and the windows docked to it, in the first spot where it fits on the screen without covering
     /// anything, shrinking it a little if it has to. It then snaps and moves with them like the rest.
     /// </summary>
     public void DockNewWindow(Window window)
     {
         _snapper.Add(window);
+        DockToGroup(window, Array.Empty<Window>());
+    }
+
+    // Finds the window a free spot against the player's group. The windows in `moving` are about to be
+    // docked too, so where they are now doesn't count as taken.
+    private void DockToGroup(Window window, IReadOnlyCollection<Window> moving)
+    {
         window.WindowStartupLocation = WindowStartupLocation.Manual;
         var area = ScreenArea.Of(this);
         var shown = Application.Current.Windows.Cast<Window>()
-            .Where(other => other != window && other.IsVisible && other.WindowState == WindowState.Normal
+            .Where(other => other != window && !moving.Contains(other) && other.IsVisible && other.WindowState == WindowState.Normal
                 && (other == this || other.Owner == this) && !(other == _visuals && _visuals.IsFullscreen))
             .Select(other => new Rect(other.Left, other.Top, other.ActualWidth, other.ActualHeight))
             .ToList();
@@ -666,6 +676,21 @@ public partial class MainWindow : Window
         RestoreAllWindows();
         ArrangeFirstTime();
         SavePlacements();
+        // Once the arranged windows have their new sizes, so the spots beside them are worked out from where they are now.
+        Dispatcher.InvokeAsync(RedockSmallWindows, DispatcherPriority.Background);
+    }
+
+    /// <summary>Docks the analyzer and the artwork back against the player's group, wherever they'd been moved to.</summary>
+    private void RedockSmallWindows()
+    {
+        var moving = new[] { AnalyzerWindow.Current, ArtworkWindow.Current }
+            .OfType<Window>()
+            .Where(window => window.IsVisible && window.WindowState == WindowState.Normal)
+            .ToList();
+        for (var i = 0; i < moving.Count; i++)
+        {
+            DockToGroup(moving[i], moving.Skip(i + 1).ToList());
+        }
     }
 
     private void OnFillScreen(object sender, RoutedEventArgs e) => FillScreen();
@@ -1380,12 +1405,13 @@ public partial class MainWindow : Window
 
     public async void AddFilesFromDialog(Window owner)
     {
-        var patterns = string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
+        var music = string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
+        var videos = string.Join(";", VideoFiles.Extensions.Select(ext => "*" + ext));
         var dialog = new OpenFileDialog
         {
-            Title = "Add music",
+            Title = "Add music and videos",
             Multiselect = true,
-            Filter = $"Music files|{patterns}|All files|*.*",
+            Filter = $"Music and videos|{music};{videos}|Music files|{music}|Videos|{videos}|All files|*.*",
         };
 
         if (dialog.ShowDialog(owner) == true)
@@ -1478,7 +1504,7 @@ public partial class MainWindow : Window
                 try
                 {
                     files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
-                        .Where(AudioReaderFactory.IsSupported)
+                        .Where(VideoFiles.IsPlayable)
                         .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
                         .ToList();
                 }
@@ -1493,7 +1519,7 @@ public partial class MainWindow : Window
                     yield return file;
                 }
             }
-            else if (File.Exists(path) && AudioReaderFactory.IsSupported(path))
+            else if (File.Exists(path) && VideoFiles.IsPlayable(path))
             {
                 yield return path;
             }
@@ -1775,7 +1801,7 @@ public partial class MainWindow : Window
 
     private void StopPlayback()
     {
-        if (RemoteTakes(remote => remote.PauseAsync()))
+        if (RemoteTakes(remote => remote.StopAsync()))
         {
             return;
         }
