@@ -280,13 +280,16 @@ Shortcuts work from any Lucent window. Your keyboard's media keys work even when
 | `R` | Repeat off, all, or one | `C` | Artwork | `F` | Star the visual |
 | `H` | Favorite the sound | `D` / `G` / `K` | Dock, fill, shrink | `F11` / `Esc` | Fullscreen, leave it |
 | `Enter` / `Delete` | Play or remove selected | `O` / `M` | Options, Sources | `Ctrl+I` | Edit sound info |
+| | | `J` | Link every window to the player | | |
 
 <details>
 <summary><b>The full feature list</b></summary>
 
 - A small player window like Winamp's, with a big time display, a spectrum meter (click it for a waveform, or to hide it), a scrolling title, and the bitrate and sample rate
 - The visuals, queue, library, equalizer, analyzer, and artwork each have their own window. Edges snap to each other and to the screen (keep dragging to pull a window free). A window dropped beside others with one corner lined up stretches a little to line up its other corner too. Dragging the player carries every window docked to it, even ones that are switched off, and docked windows stay together throughout the drag. Windows never end up overlapping by accident
-- The equalizer opens docked under the player, with the queue below it. The visuals and library line up with the bottom of the column, so the windows form one neat rectangle whichever are open. Lucent remembers where you left them
+- The equalizer opens docked under the player, with the queue below it. The visuals and library line up with the bottom of the column, so the windows form one neat rectangle whichever are open. Lucent remembers where you left every window and how big, and opens them there next time, analyzer and artwork included. A window you left docked docks to the player again; one you left on its own goes back to its spot
+- The lock in each window's title bar locks it in place: it can't be moved or resized, it stays put when the player moves, and docking or laying out the windows (D, G, K) leaves it where it is
+- The link button in the player's title bar (or J) links every window to the player, so dragging the player moves them all, docked or not. Locked windows still stay put
 - Resizing a window resizes the windows docked to it: drag the edge between two windows to move both, or an outside edge they share to stretch them together; hold Ctrl to resize just one
 - On a first start, just the player, equalizer, and visuals open, and Lucent plays a song to show them off: "Self Actualize" from Kepler North's *Pseudo Profound* EP. It sits in its own Starter Music folder in the library, so take it out like any other folder when you're done with it
 - **Sources** (the button at the top of the player, the eject button, or M) gathers every way to bring sound in on one panel: add files or folders, import from another player, Bandcamp and Beatport, online radio, and switches for Spotify, Apple Music, TIDAL, YouTube and SoundCloud, and visuals for every app's sound. On a Mac it's also under **File → Sources…**

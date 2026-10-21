@@ -4,14 +4,11 @@ using Lucent.Mac.Editor;
 
 namespace Lucent.Mac;
 
-/// <summary>The audio editor and converter: the title bar's Record and waveform buttons and the song menus. Kept in its own file.</summary>
+/// <summary>The audio editor and converter: the title bar's waveform button and the song menus. Kept in its own file.</summary>
 public partial class MainWindow
 {
     private void OnAudioTools(object? sender, RoutedEventArgs e) =>
         AudioTools.ShowMenu(AudioToolsButton, this, _player, _settings);
-
-    // The title bar's red Record button.
-    private void OnRecord(object? sender, RoutedEventArgs e) => AudioTools.OpenRecorder(this, _player, _settings);
 
     // The editor opens again with the player if it was left open, docked where it was.
     private void ReopenEditor() => AudioTools.ReopenEditor(this, _player);

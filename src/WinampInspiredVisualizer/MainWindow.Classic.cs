@@ -12,13 +12,15 @@ using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer;
 
-// Classic skins: the player drawn by a Winamp 2 skin (.wsz) instead of Lucent's own layout. The other windows
+// Classic skins: the player drawn by a Winamp 2 skin (.wsz) instead of Lucent's own layout, with Lucent's buttons in a strip below it. The other windows
 // keep Lucent's look. Lucent.Core's ClassicPlayer draws it; this feeds it the player's state and acts on its buttons.
 public partial class MainWindow
 {
     private const double CaptionHeight = 34;
 
     private ClassicPlayerView? _classicView;
+    private StackPanel? _classicPanel;
+    private Border? _classicToolbar;
     private readonly Dictionary<string, ImageSource> _classicPreviews = new(StringComparer.OrdinalIgnoreCase);
 
     private bool IsClassic => _settings.ClassicSkin is not null && _classicView is not null;
@@ -28,15 +30,15 @@ public partial class MainWindow
     {
         if (_settings.ClassicSkin is not { } name)
         {
-            if (_classicView is not null)
+            if (_classicPanel is not null)
             {
-                _classicView.Visibility = Visibility.Collapsed;
+                _classicPanel.Visibility = Visibility.Collapsed;
+                MoveLucentButtons(toClassic: false);
             }
 
             LucentPlayer.Visibility = Visibility.Visible;
             SetCaptionHeight(CaptionHeight);
             ApplyPlayerSize();
-            OptionsPopup.PlacementTarget = OptionsButton;
             Topmost = false;
             return;
         }
@@ -50,19 +52,64 @@ public partial class MainWindow
             _classicView.Player.BalanceChanged += SetBalance;
             _classicView.ContextMenu = new ContextMenu();
             _classicView.ContextMenuOpening += (_, _) => BuildClassicMenu(_classicView.ContextMenu);
-            PlayerRoot.Children.Add(_classicView);
+            _classicToolbar = new Border
+            {
+                BorderThickness = new Thickness(1, 0, 1, 1),
+                Padding = new Thickness(4, 3, 4, 3),
+                Child = new WrapPanel(),
+            };
+            // In the theme's colours, following it when it changes.
+            _classicToolbar.SetResourceReference(Border.BackgroundProperty, "TitleBarBrush");
+            _classicToolbar.SetResourceReference(Border.BorderBrushProperty, "WindowFrameBrush");
+            _classicPanel = new StackPanel { Children = { _classicView, _classicToolbar } };
+            PlayerRoot.Children.Add(_classicPanel);
         }
 
         _classicView.Player.Skin = ClassicSkinLibrary.Load(name);
-        _classicView.Zoom = _settings.ClassicDoubleSize ? 2 : 1;
-        _classicView.Visibility = Visibility.Visible;
+        SetClassicZoom();
+        _classicPanel!.Visibility = Visibility.Visible;
+        MoveLucentButtons(toClassic: true);
         LucentPlayer.Visibility = Visibility.Collapsed;
         // The skin's own title bar moves the window, so Windows' caption area is turned off.
         SetCaptionHeight(0);
         ApplyPlayerSize();
         SizeToContent = SizeToContent.WidthAndHeight;
-        OptionsPopup.PlacementTarget = _classicView;
         SyncClassicPlayer();
+    }
+
+    private void SetClassicZoom()
+    {
+        var zoom = _settings.ClassicDoubleSize ? 2 : 1;
+        _classicView!.Zoom = zoom;
+        // The buttons wrap onto a second row rather than make the window wider than the skin.
+        _classicToolbar!.Width = ClassicSprites.WindowWidth * zoom;
+    }
+
+    /// <summary>
+    /// Lucent's own buttons (Sources, audio tools, Options, and the Visuals, Library, Art and other window
+    /// toggles) move into a strip under the classic player, so a skin never takes them away; and back again.
+    /// </summary>
+    private void MoveLucentButtons(bool toClassic)
+    {
+        var tools = (WrapPanel)_classicToolbar!.Child;
+        if (toClassic == (TitleButtons.Parent == tools))
+        {
+            return;
+        }
+
+        if (toClassic)
+        {
+            WindowTogglesHome.Children.Remove(WindowToggles);
+            TitleBar.Children.Remove(TitleButtons);
+            tools.Children.Add(WindowToggles);
+            tools.Children.Add(TitleButtons);
+        }
+        else
+        {
+            tools.Children.Clear();
+            WindowTogglesHome.Children.Add(WindowToggles);
+            TitleBar.Children.Add(TitleButtons);
+        }
     }
 
     private void SetCaptionHeight(double height) => WindowChrome.SetWindowChrome(this, new WindowChrome
@@ -179,6 +226,8 @@ public partial class MainWindow
                 break;
             case ClassicCommand.Shade:
                 _classicView!.Player.IsShaded = !_classicView.Player.IsShaded;
+                // Rolled up, the player is just its title strip.
+                _classicToolbar!.Visibility = _classicView.Player.IsShaded ? Visibility.Collapsed : Visibility.Visible;
                 break;
             case ClassicCommand.Close:
                 SystemCommands.CloseWindow(this);
@@ -213,7 +262,7 @@ public partial class MainWindow
         _settings.Save();
         if (_classicView is not null)
         {
-            _classicView.Zoom = _settings.ClassicDoubleSize ? 2 : 1;
+            SetClassicZoom();
         }
     }
 

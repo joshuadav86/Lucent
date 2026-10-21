@@ -51,6 +51,7 @@
                             ToolTip.Tip="Choose which folders are in the library" Click="OnLibraryFolders">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource FolderIcon}" />
                     </Button>
+                    <w:LockButton Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,0,2,0" />
                     <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Hide the library (L)" Click="OnHideWindow">
                         <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
                     </Button>

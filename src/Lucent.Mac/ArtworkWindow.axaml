@@ -12,6 +12,7 @@
         <!-- Title bar: what's playing, keep on top, close. Same custom frame as the main window. -->
         <DockPanel Grid.Row="0" Background="Transparent" w:Chrome.IsCaption="True">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <w:LockButton Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,4,2,0" />
                 <ToggleButton x:Name="OnTopToggle" Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,4,2,0"
                               ToolTip.Tip="Keep this window on top of other apps" Click="OnToggleOnTop">
                     <Path Theme="{StaticResource LineIcon}" Data="{StaticResource PinIcon}" />

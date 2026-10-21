@@ -32,31 +32,26 @@
                             Content="UPDATE" Foreground="{DynamicResource AccentBrush}" IsVisible="False"
                             Click="OnShowUpdate" />
                     <!-- Every way to bring sound in: files, radio, and the music apps Lucent can show and control. -->
-                    <ToggleButton x:Name="SourcesButton" Theme="{StaticResource PanelToggle}" Padding="7,0,9,0" Margin="0,0,4,0" FontSize="11"
+                    <ToggleButton x:Name="SourcesButton" Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,4,0"
                                   ToolTip.Tip="Sources: add music, tune in to online radio, or connect a music app such as Spotify, Apple Music, or TIDAL (M)"
                                   Click="OnToggleSources">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SourcesIcon}" />
-                            <TextBlock Text="Sources" Margin="5,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SourcesIcon}" />
                     </ToggleButton>
                     <Button Theme="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
                             ToolTip.Tip="Buy me a coffee: support Lucent" Click="OnBuyMeACoffee">
                         <Path Theme="{StaticResource LineIcon}"
                               Data="M2.5,6.5 H11 V10 A3.5,3.5 0 0 1 7.5,13.5 H6 A3.5,3.5 0 0 1 2.5,10 Z M11,7.5 H12 A1.75,1.75 0 0 1 12,11 H10.8 M5.5,4.5 C4.8,3.7 6.2,2.8 5.5,1.5 M8.5,4.5 C7.8,3.7 9.2,2.8 8.5,1.5" />
                     </Button>
-                    <!-- Record from an audio interface: a DJ set, a mixer, a microphone. Also in the waveform menu beside it. -->
-                    <Button x:Name="RecordButton" Theme="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
-                            ToolTip.Tip="Record from an audio interface: a DJ set, a mixer, or a microphone" Click="OnRecord">
-                        <Grid Width="16" Height="16">
-                            <Ellipse Width="14" Height="14" Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.3" />
-                            <Ellipse Width="7" Height="7" Fill="#E5484D" />
-                        </Grid>
-                    </Button>
                     <ToggleButton x:Name="AudioToolsButton" Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
                                   ToolTip.Tip="Record, edit, or convert sounds" Click="OnAudioTools">
                         <Path Theme="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
                     </ToggleButton>
+                    <!-- Link: every window moves with the player when it's dragged, docked or not. Then the player's own lock. -->
+                    <ToggleButton x:Name="LinkToggle" Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
+                                  ToolTip.Tip="Link the windows: every window moves with the player when you drag it, docked or not (J)" Click="OnToggleLink">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource LinkIcon}" />
+                    </ToggleButton>
+                    <w:LockButton Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0" />
                     <ToggleButton x:Name="OptionsButton" Theme="{StaticResource PanelToggle}" Padding="7,0"
                                   ToolTip.Tip="Options: graphics, visual changes, skins, and themes (O)" Click="OnToggleOptions">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource OptionsIcon}" StrokeThickness="1.3" />
@@ -156,7 +151,7 @@
                     ValueChanged="OnSeekValueChanged" />
 
             <!-- Transport, shuffle and repeat, and the switches for the other windows -->
-            <DockPanel Grid.Row="3" Margin="10,2,10,10">
+            <DockPanel x:Name="WindowTogglesHome" Grid.Row="3" Margin="10,2,10,10">
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Theme="{StaticResource TransportButton}" Width="32" Height="32" ToolTip.Tip="Previous track (Z)" Click="OnPrevious">
                         <Path Theme="{StaticResource SolidIcon}" Data="{StaticResource PreviousTrackIcon}" />
@@ -199,6 +194,8 @@
                             <MenuItem Header="Dock all windows to the player" InputGesture="D" Click="OnArrangeWindows" />
                             <MenuItem Header="Fill the screen" InputGesture="G" Click="OnFillScreen" />
                             <MenuItem Header="Shrink everything" InputGesture="K" Click="OnShrinkWindows" />
+                            <Separator />
+                            <MenuItem x:Name="LinkMenuItem" Header="Move every window with the player" InputGesture="J" ToggleType="CheckBox" Click="OnToggleLink" />
                         </ContextMenu>
                     </StackPanel.ContextMenu>
                     <ToggleButton x:Name="VisualsToggle" Theme="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
