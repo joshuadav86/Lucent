@@ -94,7 +94,7 @@ public partial class MainWindow
         file.Add(editInfo);
         file.Add(Item("Save the Queue as a Playlist…", () => SaveQueueAsPlaylist(this)));
         file.Add(Item("Record from an Audio Interface…", () => Editor.AudioTools.OpenRecorder(this, _player, _settings)));
-        file.Add(Item("Open the Audio Editor", () => Editor.AudioTools.ShowEditor(this, _player)));
+        file.Add(Item("Open the Video and Audio Editor", () => Editor.AudioTools.ShowEditor(this, _player)));
         file.Add(new NativeMenuItemSeparator());
         file.Add(Item("Online Radio…", ShowRadio));
         file.Add(Item("Bandcamp and Beatport…", ShowStores));

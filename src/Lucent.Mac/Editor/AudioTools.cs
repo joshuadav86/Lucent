@@ -79,7 +79,7 @@ public static class AudioTools
         if (!File.Exists(path))
         {
             _ = MessageWindow.ShowAsync(owner, $"\"{Path.GetFileName(path)}\" can't be found. It may have been moved or deleted.",
-                "Audio editor");
+                "Video and audio editor");
             return;
         }
 
@@ -101,7 +101,7 @@ public static class AudioTools
     }
 
     /// <summary>
-    /// The Edit menu's "Open the audio editor": brings an open editor to the front, or opens an empty one docked to
+    /// The Edit menu's "Open the video and audio editor": brings an open editor to the front, or opens an empty one docked to
     /// the player, to drop sounds into.
     /// </summary>
     public static void ShowEditor(Window owner, AudioPlayer player)
@@ -227,7 +227,7 @@ public static class AudioTools
     {
         var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Choose a sound to edit",
+            Title = "Choose a sound or video to edit",
             FileTypeFilter = FileTypes(videos: true),
         });
         if (files.Count > 0 && files[0].TryGetLocalPath() is { } path)
@@ -288,11 +288,11 @@ public static class AudioTools
         var menu = new ContextMenu { Placement = PlacementMode.BottomEdgeAlignedLeft };
         menu.Items.Add(Item("Record from an audio interface…", true, () => OpenRecorder(owner, player, settings)));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Open the audio editor", true, () => ShowEditor(owner, player)));
-        menu.Items.Add(Item($"Edit the sound that's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
+        menu.Items.Add(Item("Open the video and audio editor", true, () => ShowEditor(owner, player)));
+        menu.Items.Add(Item($"Edit what's playing{name}", playing, () => OpenEditor(owner, player, currentPath!)));
         menu.Items.Add(Item("Convert the sound that's playing…", playing, () => Convert(owner, settings, new[] { currentPath! })));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Choose a sound to edit…", true, () => ChooseFileToEdit(owner, player)));
+        menu.Items.Add(Item("Choose a sound or video to edit…", true, () => ChooseFileToEdit(owner, player)));
         menu.Items.Add(Item("Choose sounds to convert…", true, () => ChooseFilesToConvert(owner, settings)));
         menu.Closed += (_, _) =>
         {
@@ -397,7 +397,7 @@ public static class AudioTools
             return;
         }
 
-        var what = recording ? "still recording" : busyConverters.Count > 0 ? "still converting" : "still working in the audio editor";
+        var what = recording ? "still recording" : busyConverters.Count > 0 ? "still converting" : "still working in the editor";
         var answer = await MessageWindow.ShowAsync(owner, $"Lucent is {what}. Stop and close Lucent?", "Lucent",
             MessageButtons.YesNo, MessageResult.No);
         if (answer != MessageResult.Yes)

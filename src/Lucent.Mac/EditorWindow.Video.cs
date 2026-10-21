@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
@@ -44,8 +45,9 @@ public partial class EditorWindow
         }
 
         VideoPanel.IsVisible = true;
-        // The effects and plugins change only the sound, which a video's save doesn't use.
-        ProcessBar.IsVisible = false;
+        // The effects, plugins and the rest change only the sound, which a video's save doesn't use: only Trim and
+        // Delete stay, which cut the pictures too.
+        ShowVideoTools(true);
         PluginBar.IsVisible = false;
         _previewAsked = -1;
         _previewTimer ??= new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(30) };
@@ -66,8 +68,38 @@ public partial class EditorWindow
         _previewBitmap = null;
         _previewFrameShown = -1;
         VideoPanel.IsVisible = false;
-        ProcessBar.IsVisible = true;
+        ShowVideoTools(false);
         PluginBar.IsVisible = _settings.ShowInserts;
+    }
+
+    // The tools under the waveform: for a video, only the ones that cut its pictures. What was hidden for a video is
+    // put back as it was.
+    private readonly Dictionary<Control, bool> _hiddenForVideo = new();
+
+    private void ShowVideoTools(bool video)
+    {
+        if (video)
+        {
+            foreach (var tool in ToolsPanel.Children)
+            {
+                if (tool != TrimButton && tool != DeleteButton && !_hiddenForVideo.ContainsKey(tool))
+                {
+                    _hiddenForVideo[tool] = tool.IsVisible;
+                    tool.IsVisible = false;
+                }
+            }
+
+            ScopeHint.IsVisible = false;
+            return;
+        }
+
+        foreach (var (tool, visible) in _hiddenForVideo)
+        {
+            tool.IsVisible = visible;
+        }
+
+        _hiddenForVideo.Clear();
+        ScopeHint.IsVisible = true;
     }
 
     /// <summary>

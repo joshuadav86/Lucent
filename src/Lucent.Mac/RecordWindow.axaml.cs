@@ -672,7 +672,7 @@ public partial class RecordWindow : Window
         var saved = ChainPreset.Saved();
         if (saved.Count == 0)
         {
-            menu.Items.Add(new MenuItem { Header = "No chains saved yet: save one in the audio editor's Inserts", IsEnabled = false });
+            menu.Items.Add(new MenuItem { Header = "No chains saved yet: save one in the editor's Inserts", IsEnabled = false });
         }
 
         foreach (var (name, path) in saved)

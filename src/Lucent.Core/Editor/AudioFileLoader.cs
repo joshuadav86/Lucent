@@ -101,7 +101,7 @@ public static class AudioFileLoader
     }
 
     /// <summary>De-interleaves samples, mixing extra channels (centre, surrounds) into left and right.</summary>
-    private static void CopyFrames(float[] chunk, int frames, int sourceChannels, float[][] output, int at)
+    internal static void CopyFrames(float[] chunk, int frames, int sourceChannels, float[][] output, int at)
     {
         if (sourceChannels <= 2)
         {

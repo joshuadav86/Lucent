@@ -812,6 +812,15 @@ public sealed class Mp4Track
     /// <summary>For a video track, every place it can be cut, in order.</summary>
     public IReadOnlyList<Mp4CutPoint> CleanPoints { get; }
 
+    /// <summary>
+    /// The track's first sample description (its format, as the "stsd" box gives it: size, type such as "avc1" or
+    /// "mp4a", then the type's own fields and boxes), or null when there isn't one.
+    /// </summary>
+    public byte[]? SampleEntry { get; private init; }
+
+    /// <summary>The track's format, such as "avc1", "hvc1", "mp4a" or "lpcm", or empty when it doesn't say.</summary>
+    public string Format => SampleEntry is { Length: >= 8 } entry ? Encoding.ASCII.GetString(entry, 4, 4) : string.Empty;
+
     /// <summary>When sample <paramref name="i"/> is shown, in seconds.</summary>
     public double Shown(int i) => (Samples[i].Dts + Samples[i].CompositionOffset - Shift) / (double)Timescale + Delay;
 
@@ -861,7 +870,18 @@ public sealed class Mp4Track
             end = Math.Max(end, (sample.Dts + sample.CompositionOffset + sample.Duration - shift) / (double)timescale + delay);
         }
 
-        return new Mp4Track(handler, timescale, samples, shift, delay, end);
+        return new Mp4Track(handler, timescale, samples, shift, delay, end) { SampleEntry = FirstSampleEntry(stbl.Find("stsd")) };
+    }
+
+    private static byte[]? FirstSampleEntry(Box? stsd)
+    {
+        if (stsd is not { Data.Length: >= 16 } box || BinaryPrimitives.ReadUInt32BigEndian(box.Data.AsSpan(4)) == 0)
+        {
+            return null;
+        }
+
+        var size = BinaryPrimitives.ReadUInt32BigEndian(box.Data.AsSpan(8));
+        return size >= 8 && 8 + size <= box.Data.Length ? box.Data.AsSpan(8, (int)size).ToArray() : null;
     }
 
     private static Mp4Sample[] ReadSamples(Box stbl)

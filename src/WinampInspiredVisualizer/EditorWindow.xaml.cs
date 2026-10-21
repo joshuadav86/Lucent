@@ -255,7 +255,7 @@ public partial class EditorWindow : Window
 
         if (problem is not null)
         {
-            MessageBox.Show(this, problem, "Audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, problem, "Video and audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         if (_closeWhenIdle || ((problem is not null || cancelled) && _session is null && !_startedEmpty))
@@ -298,7 +298,7 @@ public partial class EditorWindow : Window
             Activate();
             var answer = MessageBox.Show(this,
                 $"Your edits to \"{Path.GetFileName(_path)}\" haven't been saved. Open \"{Path.GetFileName(path)}\" without saving them?",
-                "Audio editor", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+                "Video and audio editor", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
             if (answer != MessageBoxResult.Yes)
             {
                 return false;
@@ -343,8 +343,8 @@ public partial class EditorWindow : Window
     private void ShowFileName()
     {
         var name = Path.GetFileName(_path);
-        FileTitle.Text = IsEmpty ? "Drop a sound here" : name;
-        Title = IsEmpty ? "Audio editor - Lucent" : $"{name} - Audio editor - Lucent";
+        FileTitle.Text = IsEmpty ? "Drop a sound or video here" : name;
+        Title = IsEmpty ? "Video and audio editor - Lucent" : $"{name} - Video and audio editor - Lucent";
     }
 
     /// <summary>Shows the editor with no sound in it, waiting for one to be dropped in or chosen.</summary>
@@ -356,7 +356,7 @@ public partial class EditorWindow : Window
         LoadingPanel.Visibility = Visibility.Collapsed;
         EmptyPanel.Visibility = Visibility.Visible;
         SetEditingEnabled(false);
-        ShowStatus("Drop a sound here to edit it. Once one is open, drop more onto the waveform to add them where you let go.");
+        ShowStatus("Drop a sound or video here to edit it. Once one is open, drop more onto the waveform to add them where you let go.");
     }
 
     private void OnChooseSound(object sender, RoutedEventArgs e) => AudioTools.ChooseFileToEdit(this, _mainPlayer);
@@ -403,7 +403,7 @@ public partial class EditorWindow : Window
                 EditException => ex.Message,
                 _ => FileConverter.FriendlyError(ex),
             };
-            MessageBox.Show(this, text, "Audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, text, "Video and audio editor", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         finally
@@ -1277,7 +1277,7 @@ public partial class EditorWindow : Window
         // From now on the editor works on the new file, so Save updates it rather than the original.
         _path = target;
         _info = info with { Path = target, BitsPerSample = options.Format == ExportFormat.Flac ? options.FlacBitDepth : info.BitsPerSample };
-        Title = $"{Path.GetFileName(target)} - Audio editor - Lucent";
+        Title = $"{Path.GetFileName(target)} - Video and audio editor - Lucent";
         UpdateHistory();
         return true;
     }
@@ -1591,7 +1591,7 @@ public partial class EditorWindow : Window
         Activate();
         var answer = MessageBox.Show(this,
             $"Your edits to \"{Path.GetFileName(_path)}\" haven't been saved. Close without saving?",
-            "Audio editor", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            "Video and audio editor", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         _closeConfirmed = answer == MessageBoxResult.Yes;
         return _closeConfirmed;
     }
