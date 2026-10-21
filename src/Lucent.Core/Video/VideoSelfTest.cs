@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Editor;
 
 namespace WinampInspiredVisualizer.Video;
 
@@ -143,6 +145,8 @@ public static class VideoSelfTest
             }
 
             problems += Check(log, $"{name} cut without re-encoding", Play(video, pauseAt: null), 2, virtualMachine);
+            problems += TestEditorSound(log, path);
+            problems += TestPreview(log, path);
         }
         catch (Exception ex)
         {
@@ -161,6 +165,96 @@ public static class VideoSelfTest
         }
 
         return problems;
+    }
+
+    // The editor opens a video by its sound, copied out of it as an .m4a file for the system's music decoders: it has
+    // to decode, the whole 4 seconds, with the beeps where they are in the video.
+    private static int TestEditorSound(Action<string> log, string path)
+    {
+        if (AudioReaderFactory.OpenWithSystemDecoder is null)
+        {
+            return 0;
+        }
+
+        var name = Path.GetFileName(path);
+        var (_, audio, _, _) = VideoEdit.Load(path, null, CancellationToken.None);
+        var seconds = audio.Frames / (double)audio.SampleRate;
+        var beeps = new List<double>();
+        var quiet = 0;
+        var samples = audio.Channels[0];
+        for (var i = 0; i < samples.Length; i++)
+        {
+            if (Math.Abs(samples[i]) > 0.2f)
+            {
+                if (quiet > audio.SampleRate / 4)
+                {
+                    beeps.Add(i / (double)audio.SampleRate);
+                }
+
+                quiet = 0;
+            }
+            else
+            {
+                quiet++;
+            }
+        }
+
+        var heard = string.Join(", ", beeps.Select(beep => $"{beep:0.000} s"));
+        if (Math.Abs(seconds - 4) > 0.1 || beeps.Count != 3 || beeps.Select((beep, i) => Math.Abs(beep - (i + 1))).Max() > 0.03)
+        {
+            log($"::error::Video: the editor read {name}'s sound as {seconds:0.000} s with beeps at {heard}, not 4 s with beeps at 1, 2 and 3 s.");
+            return 1;
+        }
+
+        log($"Video: the editor reads {name}'s sound ({seconds:0.000} s, beeps at {heard}).");
+        return 0;
+    }
+
+    // The editor's picture: asked for the moment of the first flash, it shows the flash (to a picture either side),
+    // and asked for a moment between flashes, it doesn't.
+    private static int TestPreview(Action<string> log, string path)
+    {
+        var name = Path.GetFileName(path);
+        using var preview = new VideoPreview(path);
+        string? Shows(double seconds)
+        {
+            var before = preview.Frames.Count;
+            preview.Show(seconds);
+            var waited = Stopwatch.StartNew();
+            while (waited.Elapsed < TimeSpan.FromSeconds(5) && (preview.Frames.Count == before || preview.Frames.Count == 0))
+            {
+                Thread.Sleep(10);
+            }
+
+            // A moment more, in case pictures on the way to pausing were shown.
+            Thread.Sleep(200);
+            string? colour = null;
+            preview.Frames.CopyLatest((pixels, width, height, stride) =>
+            {
+                var middle = new byte[4];
+                Marshal.Copy(pixels + height / 2 * stride + width / 2 * 4, middle, 0, 4);
+                colour = (middle[2] > 200, middle[1] > 200, middle[0] > 200) switch
+                {
+                    (true, true, true) => "white",
+                    (true, true, false) => "yellow",
+                    (false, true, true) => "cyan",
+                    _ => "dark",
+                };
+            });
+            return colour;
+        }
+
+        var flash = Shows(1.0);
+        var between = Shows(1.5);
+        var again = Shows(2.0);
+        if (flash is not ("white" or "yellow") || between != "dark" || again is not ("white" or "yellow"))
+        {
+            log($"::error::Video: the editor's picture of {name} at 1 s, 1.5 s and 2 s was {flash ?? "nothing"}, {between ?? "nothing"} and {again ?? "nothing"}, not the flash, the dimmed pattern, then the flash.");
+            return 1;
+        }
+
+        log($"Video: the editor shows {name}'s pictures where asked ({flash} at 1 s, {between} at 1.5 s, {again} at 2 s).");
+        return 0;
     }
 
     private static int Check(Action<string> log, string what, Playthrough run, int expected, bool virtualMachine)

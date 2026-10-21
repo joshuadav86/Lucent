@@ -71,6 +71,32 @@ public static class Mp4Cutter
     }
 
     /// <summary>
+    /// Writes just the sound of <paramref name="movie"/> (its first sound track, copied as it is) into
+    /// <paramref name="target"/>, a new .m4a file, for decoders that read music files but not videos. Returns false
+    /// when the video has no sound. Throws <see cref="VideoCutException"/>.
+    /// </summary>
+    public static bool WriteSound(Mp4Movie movie, string target, CancellationToken cancellation = default)
+    {
+        var sound = movie.Tracks.FirstOrDefault(track => track.IsSound && track.Samples.Length > 0);
+        if (sound is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var source = File.OpenRead(movie.Path);
+            using var output = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20);
+            movie.WriteCut(source, output, new[] { new VideoRange(0, movie.Duration) }, sound, null, cancellation);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new VideoCutException("The video's sound couldn't be read: " + ex.Message, ex);
+        }
+    }
+
+    /// <summary>
     /// Writes the stretches of <paramref name="movie"/> in <paramref name="keep"/> (snapped as
     /// <see cref="Mp4Movie.Snap"/> does) one after another into <paramref name="target"/>, a new file.
     /// Throws <see cref="VideoCutException"/>.
@@ -90,7 +116,7 @@ public static class Mp4Cutter
             using var source = File.OpenRead(movie.Path);
             using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1 << 20);
             created = true;
-            movie.WriteCut(source, output, ranges, progress, cancellation);
+            movie.WriteCut(source, output, ranges, null, progress, cancellation);
         }
         catch (Exception ex)
         {
@@ -288,7 +314,9 @@ public sealed class Mp4Movie
 
     // ---- Writing ----
 
-    internal void WriteCut(Stream source, Stream output, IReadOnlyList<VideoRange> ranges, IProgress<double>? progress, CancellationToken cancellation)
+    // With `only`, writes just that track (as an .m4a file).
+    internal void WriteCut(Stream source, Stream output, IReadOnlyList<VideoRange> ranges, Mp4Track? only, IProgress<double>? progress,
+        CancellationToken cancellation)
     {
         // Where each stretch goes in the new file. With pictures, the stretches' lengths are counted in the
         // picture track's own ticks, so they add up exactly.
@@ -300,16 +328,20 @@ public sealed class Mp4Movie
             total += ranges[i].Length;
         }
 
-        var plans = Tracks.Select(track => track.Plan(ranges, starts, track == _video)).ToList();
+        var plans = Tracks.Select(track => only is null || track == only ? track.Plan(ranges, starts) : null).ToList();
 
         // Interleaves the tracks in half-second chunks, as players read them.
         var chunks = new List<(int Track, int First, int Count)>();
         var next = new int[plans.Count];
-        for (var window = 0.5; next.Select((n, t) => n < plans[t].Samples.Count).Any(left => left); window += 0.5)
+        for (var window = 0.5; next.Select((n, t) => n < (plans[t]?.Samples.Count ?? 0)).Any(left => left); window += 0.5)
         {
             for (var t = 0; t < plans.Count; t++)
             {
-                var plan = plans[t];
+                if (plans[t] is not { } plan)
+                {
+                    continue;
+                }
+
                 var first = next[t];
                 while (next[t] < plan.Samples.Count && (plan.Samples[next[t]].Dts - plan.Shift) / (double)Tracks[t].Timescale < window)
                 {
@@ -333,7 +365,7 @@ public sealed class Mp4Movie
         long dataBytes = 0;
         foreach (var plan in plans)
         {
-            foreach (var sample in plan.Samples)
+            foreach (var sample in plan?.Samples ?? new List<Mp4Sample>())
             {
                 dataBytes += sample.Size;
             }
@@ -343,8 +375,9 @@ public sealed class Mp4Movie
         var mdatHeader = bigMdat ? 16 : 8;
 
         // The index is the same size whatever the offsets in it, so it's built once to measure it, then again.
-        var ftypBytes = _ftyp is null ? Array.Empty<byte>() : _ftyp.ToBytes();
-        var otherBytes = _otherTopLevel.SelectMany(box => box.ToBytes()).ToArray();
+        // Sound alone is marked as an .m4a file, whatever the video was (a QuickTime movie, say).
+        var ftypBytes = only is not null ? SoundType().ToBytes() : _ftyp is null ? Array.Empty<byte>() : _ftyp.ToBytes();
+        var otherBytes = only is not null ? Array.Empty<byte>() : _otherTopLevel.SelectMany(box => box.ToBytes()).ToArray();
         var probe = BuildMoov(plans, chunks, new long[chunks.Count], total, wide: false);
         var useCo64 = ftypBytes.Length + probe.Length + otherBytes.Length + mdatHeader + dataBytes > uint.MaxValue;
         var moovSize = BuildMoov(plans, chunks, new long[chunks.Count], total, useCo64).Length;
@@ -356,7 +389,7 @@ public sealed class Mp4Movie
             var (t, first, count) = chunks[c];
             for (var s = first; s < first + count; s++)
             {
-                at += plans[t].Samples[s].Size;
+                at += plans[t]!.Samples[s].Size;
             }
         }
 
@@ -386,7 +419,7 @@ public sealed class Mp4Movie
             cancellation.ThrowIfCancellationRequested();
             for (var s = first; s < first + count; s++)
             {
-                var sample = plans[t].Samples[s];
+                var sample = plans[t]!.Samples[s];
                 source.Position = sample.Offset;
                 var left = sample.Size;
                 while (left > 0)
@@ -408,7 +441,10 @@ public sealed class Mp4Movie
         }
     }
 
-    private byte[] BuildMoov(List<TrackPlan> plans, List<(int Track, int First, int Count)> chunks, long[] offsets, double total, bool wide)
+    private static Box SoundType() =>
+        new("ftyp", new BoxData().U32(0x4D344120).U32(0).U32(0x4D344120).U32(0x6D703432).U32(0x69736F6D).ToArray());
+
+    private byte[] BuildMoov(List<TrackPlan?> plans, List<(int Track, int First, int Count)> chunks, long[] offsets, double total, bool wide)
     {
         var children = new List<Box>();
         var t = 0;
@@ -421,9 +457,14 @@ public sealed class Mp4Movie
             else if (child.Type == "trak")
             {
                 var index = t++;
+                if (plans[index] is null)
+                {
+                    continue;
+                }
+
                 var trackChunks = chunks.Select((chunk, c) => (chunk, offset: offsets[c])).Where(pair => pair.chunk.Track == index)
                     .Select(pair => (pair.chunk.First, pair.chunk.Count, pair.offset)).ToList();
-                children.Add(BuildTrak(child, Tracks[index], plans[index], trackChunks, wide));
+                children.Add(BuildTrak(child, Tracks[index], plans[index]!, trackChunks, wide));
             }
             else
             {
@@ -1014,7 +1055,7 @@ public sealed class Mp4Track
     // ---- Planning a cut ----
 
     /// <summary>The samples this track keeps of each stretch, timed one stretch after another.</summary>
-    internal TrackPlan Plan(IReadOnlyList<VideoRange> ranges, double[] starts, bool leads)
+    internal TrackPlan Plan(IReadOnlyList<VideoRange> ranges, double[] starts)
     {
         var kept = new List<Mp4Sample>();
         var total = ranges.Count == 0 ? 0 : starts[^1] + ranges[^1].Length;

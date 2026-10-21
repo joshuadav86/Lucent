@@ -59,7 +59,7 @@ public partial class EditorWindow
         var dropped = e.DataTransfer.TryGetFiles() is { } files
             ? files.Select(file => file.TryGetLocalPath()).OfType<string>().ToList()
             : new List<string>();
-        var sounds = dropped.Where(path => File.Exists(path) && AudioReaderFactory.IsSupported(path)).ToList();
+        var sounds = dropped.Where(path => File.Exists(path) && (AudioReaderFactory.IsSupported(path) || VideoEdit.IsEditableVideo(path))).ToList();
         var frame = DropFrame(e);
         EndDragHint();
         if (dropped.Count > 0)
@@ -91,9 +91,13 @@ public partial class EditorWindow
                 await InsertSoundsAsync(sounds.Skip(1).ToList(), opened.Audio.Frames);
             }
         }
-        else if (frame is { } at)
+        else if (frame is { } at && !IsVideo && !VideoEdit.IsEditableVideo(sounds[0]))
         {
             await InsertSoundsAsync(sounds, at);
+        }
+        else if (frame is not null && IsVideo && !VideoEdit.IsEditableVideo(sounds[0]))
+        {
+            VideoRefuses("Adding a sound");
         }
         else
         {
