@@ -8,6 +8,8 @@ public enum RemoteApp
     Spotify,
     AppleMusic,
     YouTube,
+    Tidal,
+    SoundCloud,
 }
 
 /// <summary>A song playing in another app, as that app describes it.</summary>
@@ -22,7 +24,10 @@ public sealed record RemoteTrack(string Id, string Title, string Artist, string 
 
 /// <summary>What another app is playing and where it's up to, as read at <paramref name="ReadAt"/>.</summary>
 /// <param name="ListId">The playlist or album the song is playing from, as the app names it, or null when it doesn't say.</param>
-public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Position, DateTime ReadAt, string? ListId = null)
+/// <param name="Device">The speaker, TV or computer the app is playing on (Spotify Connect's device), or null when the app doesn't say.</param>
+/// <param name="Volume">The app's volume there, from 0 to 1, or null when Lucent can't read or change it.</param>
+public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Position, DateTime ReadAt, string? ListId = null,
+    string? Device = null, double? Volume = null)
 {
     /// <summary>Where the song is now: the position it was read at, moved on by the time since while it plays.</summary>
     public TimeSpan PositionNow
@@ -40,6 +45,13 @@ public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Po
 /// <param name="Note">Why it isn't the whole playlist, worded for the user, or null when it is.</param>
 /// <param name="FollowsSong">True for a list that changes with every song (what's up next), so it's read again when the song changes.</param>
 public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTrack> Tracks, string? Note = null, bool FollowsSong = false);
+
+/// <summary>An app whose volume Lucent can change, on the device it's playing on (<see cref="RemoteState.Volume"/>).</summary>
+public interface IRemoteVolume
+{
+    /// <param name="volume">From 0 to 1.</param>
+    Task SetVolumeAsync(double volume, CancellationToken cancel);
+}
 
 /// <summary>A problem the user can do something about, worded for them (sign in again, open the app, and so on).</summary>
 public sealed class RemoteProblem : Exception

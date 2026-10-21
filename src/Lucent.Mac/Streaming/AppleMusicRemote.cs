@@ -15,12 +15,12 @@ namespace Lucent.Mac.Streaming;
 /// than controlling the Music app, so Lucent talks to the Music app the way Mac apps always have. Windows
 /// uses Windows' media controls to reach the Apple Music app (see Windows' Streaming/AppleMusicRemote.cs).
 /// </remarks>
-public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists
+public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
 {
     private const string Osascript = "/usr/bin/osascript";
 
     // Fields between tabs: state, then the song's ID, name, artist, album, length and the position, in seconds, and
-    // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station).
+    // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station), and Music's volume (0 to 100).
     // "is running" doesn't open Music, so Lucent never starts it by itself.
     private const string ReadScript = """
         if application "Music" is not running then return "closed"
@@ -33,7 +33,7 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists
                 try
                     set playlistId to persistent ID of current playlist
                 end try
-                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId
+                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId & tab & sound volume
             on error
                 return playerState
             end try
@@ -98,11 +98,18 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists
 
         var track = new RemoteTrack(fields[1], fields[2], fields[3], fields[4], Seconds(fields[5]));
         var playlist = fields.Length > 7 && fields[7].Length > 0 ? fields[7] : null;
-        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist);
+        double? volume = fields.Length > 8 && int.TryParse(fields[8], NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent)
+            ? Math.Clamp(percent / 100.0, 0, 1)
+            : null;
+        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist, Volume: volume);
     }
 
     public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel) =>
         state.ListId is null ? null : ParseList(state.ListId, await RunAsync(ListScript, cancel));
+
+    // Music's own volume, which it plays at on this Mac or an AirPlay speaker alike.
+    public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
+        TellAsync($"set sound volume to {(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
 
     public Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel) =>
         // Played from its playlist, Music carries on through the playlist after it.
