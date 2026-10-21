@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.IO;
+using NAudio.CoreAudioApi;
 using Windows.Media.Control;
 using Windows.Storage.Streams;
 
@@ -10,7 +12,7 @@ namespace WinampInspiredVisualizer.Streaming;
 /// and Windows lets other apps read and press those. <see cref="AppleMusicRemote"/> and
 /// <see cref="YouTubeRemote"/> say which of those players is theirs.
 /// </summary>
-public abstract class MediaControlsRemote : IRemotePlayer
+public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume
 {
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private (string Id, IRandomAccessStreamReference Thumbnail)? _cover;
@@ -22,6 +24,15 @@ public abstract class MediaControlsRemote : IRemotePlayer
 
     /// <summary>What to tell the user when the app isn't playing anything Windows can see.</summary>
     protected abstract string NotOpen { get; }
+
+    /// <summary>
+    /// The processes the app's sound comes from, as Task Manager names them (without .exe), so the visuals can
+    /// listen to just that app.
+    /// </summary>
+    public abstract IReadOnlyList<string> ProcessNames { get; }
+
+    /// <summary>How Windows names the app last read (its AppUserModelID), or null before then.</summary>
+    protected string? SourceAppId { get; private set; }
 
     /// <summary>The app's player among everything Windows' media controls know about, or null.</summary>
     protected abstract GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions);
@@ -55,7 +66,8 @@ public abstract class MediaControlsRemote : IRemotePlayer
 
         var track = new RemoteTrack(id, properties.Title, properties.Artist ?? string.Empty, properties.AlbumTitle ?? string.Empty,
             duration > TimeSpan.Zero ? duration : TimeSpan.Zero);
-        return new RemoteState(track, playing, timeline.Position - timeline.StartTime, readAt);
+        var volume = await Task.Run(() => AppVolume(null), cancel);
+        return new RemoteState(track, playing, timeline.Position - timeline.StartTime, readAt, Volume: volume);
     }
 
     public Task PlayAsync(CancellationToken cancel) => PressAsync(session => session.TryPlayAsync().AsTask(cancel));
@@ -68,6 +80,67 @@ public abstract class MediaControlsRemote : IRemotePlayer
 
     public Task SeekAsync(TimeSpan position, CancellationToken cancel) =>
         PressAsync(session => session.TryChangePlaybackPositionAsync(position.Ticks).AsTask(cancel));
+
+    public Task SetVolumeAsync(double volume, CancellationToken cancel) => Task.Run(() => AppVolume((float)Math.Clamp(volume, 0, 1)), cancel);
+
+    /// <summary>
+    /// The app's volume in Windows' volume mixer (its share of the speakers' volume), or null when it has no sound
+    /// there; set to <paramref name="set"/> first, unless that's null. A browser's sound can come from a helper
+    /// process, which has the browser's name too.
+    /// </summary>
+    private double? AppVolume(float? set)
+    {
+        try
+        {
+            using var devices = new MMDeviceEnumerator();
+            using var speakers = devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            var sessions = speakers.AudioSessionManager.Sessions;
+            double? volume = null;
+            for (var i = 0; i < sessions.Count; i++)
+            {
+                using var session = sessions[i];
+                if (!IsApp((int)session.GetProcessID))
+                {
+                    continue;
+                }
+
+                var mixer = session.SimpleAudioVolume;
+                if (set is { } level)
+                {
+                    mixer.Volume = level;
+                    mixer.Mute = false;
+                }
+
+                volume ??= mixer.Mute ? 0 : mixer.Volume;
+            }
+
+            return volume;
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"Couldn't reach {Name}'s volume: {ex.Message}");
+            return null;
+        }
+    }
+
+    private bool IsApp(int processId)
+    {
+        if (processId == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            return ProcessNames.Contains(process.ProcessName, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            // Gone already.
+            return false;
+        }
+    }
 
     public async Task<byte[]?> ArtworkAsync(RemoteTrack track, CancellationToken cancel)
     {
@@ -96,7 +169,13 @@ public abstract class MediaControlsRemote : IRemotePlayer
     private async Task<GlobalSystemMediaTransportControlsSession?> SessionAsync()
     {
         _manager ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-        return Pick(_manager.GetSessions());
+        var session = Pick(_manager.GetSessions());
+        if (session is not null)
+        {
+            SourceAppId = session.SourceAppUserModelId;
+        }
+
+        return session;
     }
 
     public void Dispose()

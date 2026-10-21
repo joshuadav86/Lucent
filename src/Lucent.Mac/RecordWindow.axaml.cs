@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Net.Http;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -27,7 +28,8 @@ namespace Lucent.Mac;
 /// Records from an audio interface, DJ mixer or microphone into a WAV file: a DJ set played live, say, with
 /// the visuals reacting to it. The input, its channels, sample rate and bit depth; live VST3 plugins the
 /// sound goes through on its way to the file; how the file is named and where it's saved; and track marks,
-/// made by hand or by Lucent hearing the song change, so the set can be skipped through song by song.
+/// made by hand or by Lucent hearing the song change, so the set can be skipped through song by song, and
+/// named after their songs by ACRCloud with the DJ's own key.
 /// </summary>
 /// <remarks>
 /// The input is opened as soon as the window is, so the level can be set before recording, and the visuals
@@ -38,6 +40,8 @@ namespace Lucent.Mac;
 public partial class RecordWindow : Window
 {
     private static readonly IBrush ClipBrush = new SolidColorBrush(Color.FromRgb(0xE5, 0x48, 0x4D));
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private const string AcrCloudConsole = "https://console.acrcloud.com/";
 
     private readonly AudioPlayer _player;
     private readonly AppSettings _appSettings;
@@ -54,6 +58,11 @@ public partial class RecordWindow : Window
     private FinishedRecording? _finished;
     private int _pluginFormat;          // the rate × channels the open plugins were started at
     private int _shownTracks = -1;
+    // Stereo with sound on one side only (a mono mic in input 1, say): which side is silent, and since when.
+    private int? _silentSide;
+    private DateTime _lopsidedSince;
+    // Read from the keychain as the input opens (not for a screenshot, where it could ask).
+    private AcrCloudKey? _key;
     private double _levelLeft;
     private double _levelRight;
     private (double Level, DateTime At) _holdLeft;
@@ -82,6 +91,9 @@ public partial class RecordWindow : Window
         DrySwitch.IsChecked = _settings.KeepDryCopy;
         DetectSwitch.IsChecked = _settings.DetectSongChanges;
         CueSwitch.IsChecked = _settings.WriteCueSheet;
+        LibrarySwitch.IsChecked = _settings.AddToLibrary;
+        IdentifySwitch.IsChecked = _settings.IdentifySongs;
+        ShowSongId();
         foreach (var (token, meaning) in RecordingNames.Tokens)
         {
             var button = new Button
@@ -130,10 +142,12 @@ public partial class RecordWindow : Window
         window.ShowRecording(true);
         window.TimeText.Text = "1:12:40";
         window.StatusText.Text = "Recording Friday at the Loft 2026-10-20 21-30.wav  ·  1.2 GB  ·  Track 4";
+        window._key = new AcrCloudKey("identify-eu-west-1.acrcloud.com", "preview-key-7f3a", "secret");
+        window.ShowSongId();
         window.ShowTracks(new[]
         {
-            new TrackMarker(0, "Track 1"),
-            new TrackMarker(48000L * 291, "Track 2"),
+            new TrackMarker(0, "Lumen Avenue - Slow Tide"),
+            new TrackMarker(48000L * 291, "Mara Velde - Afterhours (Club Mix)"),
             new TrackMarker(48000L * 1110, "Track 3", Automatic: true),
             new TrackMarker(48000L * 3874, "Track 4"),
         });
@@ -153,6 +167,8 @@ public partial class RecordWindow : Window
         }
 
         InputText.Text = "Looking for inputs…";
+        _key = await Task.Run(SongIdAccount.Load);
+        ShowSongId();
         _inputs = await Task.Run(LiveInputs.List);
         _input = LiveInputs.Find(_settings.InputId, _inputs);
         await OpenInputAsync();
@@ -205,6 +221,8 @@ public partial class RecordWindow : Window
             {
                 BitDepth = _settings.BitDepth,
                 DetectSongChanges = _settings.DetectSongChanges,
+                Identifier = MakeIdentifier(),
+                SumPair = _settings.SumToMono,
             };
             recorder.Failed += (_, ex) => Dispatcher.UIThread.Post(() => OnRecordingFailed(ex));
             _recorder = recorder;
@@ -240,10 +258,11 @@ public partial class RecordWindow : Window
             return;
         }
 
-        if (_settings.FirstChannel + _settings.Channels > details.Channels)
+        if (_settings.FirstChannel + InputsTaken(_settings.Channels, _settings.SumToMono) > details.Channels)
         {
             _settings.FirstChannel = 0;
             _settings.Channels = Math.Min(2, details.Channels);
+            _settings.SumToMono = false;
         }
 
     }
@@ -260,6 +279,7 @@ public partial class RecordWindow : Window
                 _settings.InputId = input.Id;
                 _settings.FirstChannel = 0;
                 _settings.Channels = 2;
+                _settings.SumToMono = false;
                 _settings.Save();
                 await OpenInputAsync();
             };
@@ -285,20 +305,17 @@ public partial class RecordWindow : Window
     {
         var count = _details?.Channels ?? 2;
         var menu = new ContextMenu { Placement = PlacementMode.BottomEdgeAlignedLeft };
-        foreach (var (first, channels) in ChannelChoices(count))
+        foreach (var (first, channels, summed) in ChannelChoices(count))
         {
             var item = new MenuItem
             {
-                Header = ChannelName(first, channels),
+                Header = ChannelName(first, channels, summed),
                 ToggleType = MenuItemToggleType.CheckBox,
-                IsChecked = first == _settings.FirstChannel && channels == _settings.Channels,
+                IsChecked = first == _settings.FirstChannel && channels == _settings.Channels && summed == _settings.SumToMono,
             };
             item.Click += async (_, _) =>
             {
-                _settings.FirstChannel = first;
-                _settings.Channels = channels;
-                _settings.Save();
-                await OpenInputAsync();
+                await UseChannelsAsync(first, channels, summed);
             };
             menu.Items.Add(item);
         }
@@ -306,26 +323,49 @@ public partial class RecordWindow : Window
         menu.Open(ChannelsButton);
     }
 
-    /// <summary>Stereo pairs first (1 + 2, 3 + 4…), then each channel on its own.</summary>
-    private static IEnumerable<(int First, int Channels)> ChannelChoices(int count)
+    /// <summary>Stereo pairs first (1 + 2, 3 + 4…), then each channel on its own, then each pair mixed to mono.</summary>
+    private static IEnumerable<(int First, int Channels, bool Summed)> ChannelChoices(int count)
     {
         for (var first = 0; first + 1 < count; first += 2)
         {
-            yield return (first, 2);
+            yield return (first, 2, false);
         }
 
         for (var channel = 0; channel < count; channel++)
         {
-            yield return (channel, 1);
+            yield return (channel, 1, false);
+        }
+
+        // A mono mic or mixer out on both sides of a pair, or a stereo source folded down to one channel.
+        for (var first = 0; first + 1 < count; first += 2)
+        {
+            yield return (first, 1, true);
         }
     }
 
-    private static string ChannelName(int first, int channels) =>
-        channels == 2 ? $"Inputs {first + 1} + {first + 2} (stereo)" : $"Input {first + 1} (mono)";
+    private static string ChannelName(int first, int channels, bool summed) => (channels, summed) switch
+    {
+        (2, _) => $"Inputs {first + 1} + {first + 2} (stereo)",
+        (_, true) => $"Inputs {first + 1} + {first + 2} mixed to mono",
+        _ => $"Input {first + 1} (mono)",
+    };
+
+    // How many of the input's channels a choice takes.
+    private static int InputsTaken(int channels, bool summed) => summed ? 2 : channels;
+
+    private async Task UseChannelsAsync(int first, int channels, bool summed)
+    {
+        _settings.FirstChannel = first;
+        _settings.Channels = channels;
+        _settings.SumToMono = channels == 1 && summed;
+        _settings.Save();
+        _silentSide = null;
+        await OpenInputAsync();
+    }
 
     private void ShowFormat()
     {
-        ChannelsText.Text = ChannelName(_settings.FirstChannel, _settings.Channels);
+        ChannelsText.Text = ChannelName(_settings.FirstChannel, _settings.Channels, _settings.SumToMono);
         RatePanel.Children.Clear();
         foreach (var rate in RecordingSettings.SampleRates)
         {
@@ -887,11 +927,21 @@ public partial class RecordWindow : Window
         _settings.KeepDryCopy = DrySwitch.IsChecked == true;
         _settings.DetectSongChanges = DetectSwitch.IsChecked == true;
         _settings.WriteCueSheet = CueSwitch.IsChecked == true;
+        _settings.AddToLibrary = LibrarySwitch.IsChecked == true;
+        _settings.IdentifySongs = IdentifySwitch.IsChecked == true;
         _settings.Save();
         if (_recorder is { IsRecording: false } recorder)
         {
             recorder.DetectSongChanges = _settings.DetectSongChanges;
         }
+
+        // Song lookups can be turned on or off part way through a set.
+        if (_recorder is { } open)
+        {
+            open.Identifier = MakeIdentifier();
+        }
+
+        ShowSongId();
 
         ShowFormat();
     }
@@ -925,6 +975,7 @@ public partial class RecordWindow : Window
 
         recorder.BitDepth = _settings.BitDepth;
         recorder.DetectSongChanges = _settings.DetectSongChanges;
+        recorder.Identifier = MakeIdentifier();
         recorder.Start(NextTarget());
         _finished = null;
         _shownTracks = -1;
@@ -935,7 +986,7 @@ public partial class RecordWindow : Window
     private RecordingTarget NextTarget()
     {
         var path = RecordingNames.NextPath(Folder, TemplateInput.Text ?? string.Empty, NameParts(DateTime.Now));
-        return new RecordingTarget(path, (NameInput.Text ?? string.Empty).Trim(), _settings.KeepDryCopy ? RecordingNames.DryPath(path) : null, _settings.WriteCueSheet);
+        return new RecordingTarget(path, Path.GetFileNameWithoutExtension(path), _settings.KeepDryCopy ? RecordingNames.DryPath(path) : null, _settings.WriteCueSheet);
     }
 
     private async Task StopRecordingAsync()
@@ -971,6 +1022,7 @@ public partial class RecordWindow : Window
         _shownTracks = -1;
         if (finished is not null)
         {
+            AddToLibrary(finished);
             StatusText.Text = $"Saved {Path.GetFileName(finished.Path)}; carrying on in a new file.";
         }
     }
@@ -1005,11 +1057,21 @@ public partial class RecordWindow : Window
             return;
         }
 
+        AddToLibrary(finished);
         var tracks = finished.Tracks.Count;
         StatusText.Text = $"Saved {Path.GetFileName(finished.Path)}: {TimeFormat.Format(finished.Duration)}" +
                           (tracks > 1 ? $", {tracks} tracks." : ".");
         ShowFileButton.IsVisible = true;
         QueueButton.IsVisible = true;
+    }
+
+    // Finished recordings show up in the library (and the folder is watched for the next ones), under the folder's own heading.
+    private void AddToLibrary(FinishedRecording finished)
+    {
+        if (_settings.AddToLibrary && (Editor.AudioTools.MainWindow) is { } main)
+        {
+            main.AddRecordingToLibrary(finished.Path);
+        }
     }
 
     private void OnRecordingFailed(Exception ex)
@@ -1058,18 +1120,19 @@ public partial class RecordWindow : Window
 
         var (left, right, clipped) = recorder.ReadMeters();
         ShowMeters(left, right, clipped);
+        WatchForMono(left, right);
         if (recorder.IsRecording)
         {
             TimeText.Text = Clock(recorder.Elapsed);
             var tracks = recorder.Tracks;
             if (!_stopping)
             {
-                StatusText.Text = $"Recording {Path.GetFileName(recorder.CurrentPath)}  ·  {Size(recorder.Bytes)}  ·  Track {tracks.Count}";
+                StatusText.Text = $"Recording {Path.GetFileName(recorder.CurrentPath)}  ·  {Size(recorder.Bytes)}  ·  {(tracks.Count > 0 ? tracks[^1].Title : "Track 1")}";
             }
 
-            if (tracks.Count != _shownTracks)
+            if (recorder.TracksVersion != _shownTracks)
             {
-                _shownTracks = tracks.Count;
+                _shownTracks = recorder.TracksVersion;
                 ShowTracks(tracks);
             }
 
@@ -1087,6 +1150,10 @@ public partial class RecordWindow : Window
         else if (recorder.PluginProblem is { } problem)
         {
             ShowProblem(problem);
+        }
+        else if (recorder.IdentifyProblem is { } lookupProblem)
+        {
+            ShowProblem($"Songs can't be named: {lookupProblem}");
         }
     }
 
@@ -1163,6 +1230,126 @@ public partial class RecordWindow : Window
             TrackList.Children.Add(row);
         }
     }
+
+    // A stereo recording with sound on one side only is most likely a mono mic or instrument in one input,
+    // which would play in one ear: after a few seconds of that, the window offers to record that input in mono.
+    private void WatchForMono(float left, float right)
+    {
+        int? silent = null;
+        if (_settings.Channels == 2)
+        {
+            if (left > 0.003f && right < 0.0003f)
+            {
+                silent = 1;
+            }
+            else if (right > 0.003f && left < 0.0003f)
+            {
+                silent = 0;
+            }
+        }
+
+        // Quiet moments say nothing either way; sound on both sides, or a mono choice, ends it.
+        var quiet = left <= 0.003f && right <= 0.003f;
+        if (silent is null && quiet && _settings.Channels == 2)
+        {
+            return;
+        }
+
+        if (silent != _silentSide)
+        {
+            _silentSide = silent;
+            _lopsidedSince = DateTime.UtcNow;
+            MonoHint.IsVisible = false;
+            return;
+        }
+
+        if (silent is { } side && DateTime.UtcNow - _lopsidedSince > TimeSpan.FromSeconds(3))
+        {
+            var heard = _settings.FirstChannel + 1 + (1 - side);
+            var other = _settings.FirstChannel + 1 + side;
+            MonoHintText.Text = $"Only input {heard} has sound; input {other} is silent. A mono mic or instrument recorded in stereo plays in one ear.";
+            MonoButton.Content = $"RECORD INPUT {heard} IN MONO";
+            MonoButton.IsEnabled = _recorder?.IsRecording != true;
+            MonoHint.IsVisible = true;
+        }
+    }
+
+    private async void OnUseMono(object? sender, RoutedEventArgs e)
+    {
+        if (_silentSide is not { } side || _recorder?.IsRecording == true)
+        {
+            return;
+        }
+
+        MonoHint.IsVisible = false;
+        await UseChannelsAsync(_settings.FirstChannel + (1 - side), 1, summed: false);
+    }
+
+    // ---- Naming the songs ----
+
+    private SongIdentifier? MakeIdentifier() =>
+        _settings.IdentifySongs && _key is { IsComplete: true } key ? new SongIdentifier(Http, key) : null;
+
+    private void ShowSongId()
+    {
+        KeyButton.Content = _key is null ? "SET UP" : "KEY";
+        RemoveKeyButton.IsEnabled = _key is not null;
+        IdentifyHint.Text = _key is null
+            ? "With your own ACRCloud key (SET UP), Lucent looks up each track's song about 25 seconds in and names its mark after it. ACRCloud has a free trial; after that lookups are paid on your account."
+            : $"Each track is looked up about 25 seconds in, and again a minute later if it isn't known, with your key ending {Tail(_key.AccessKey)} ({_key.CleanHost}).";
+    }
+
+    private void OnKeyButton(object? sender, RoutedEventArgs e)
+    {
+        KeyPanel.IsVisible = !KeyPanel.IsVisible;
+        if (KeyPanel.IsVisible)
+        {
+            HostInput.Text = _key?.CleanHost ?? string.Empty;
+            AccessKeyInput.Text = _key?.AccessKey ?? string.Empty;
+            // The secret isn't shown again; leaving it empty keeps the saved one.
+            SecretInput.Text = string.Empty;
+            HostInput.Focus();
+        }
+    }
+
+    private void OnSaveKey(object? sender, RoutedEventArgs e)
+    {
+        var secret = string.IsNullOrWhiteSpace(SecretInput.Text) ? _key?.AccessSecret ?? string.Empty : SecretInput.Text;
+        var key = new AcrCloudKey(HostInput.Text ?? string.Empty, (AccessKeyInput.Text ?? string.Empty).Trim(), secret.Trim());
+        if (!key.IsComplete || !key.CleanHost.Contains('.', StringComparison.Ordinal))
+        {
+            ShowProblem("Fill in the host (like identify-eu-west-1.acrcloud.com), the access key, and the access secret from your ACRCloud project.");
+            return;
+        }
+
+        if (!SongIdAccount.Save(key))
+        {
+            ShowProblem("The key couldn't be saved in the keychain. It's used until the window closes.");
+        }
+        else
+        {
+            ProblemText.IsVisible = false;
+        }
+
+        _key = key;
+        SecretInput.Text = string.Empty;
+        KeyPanel.IsVisible = false;
+        IdentifySwitch.IsChecked = true;
+        OnOptionSwitch(sender, e);
+    }
+
+    private void OnRemoveKey(object? sender, RoutedEventArgs e)
+    {
+        SongIdAccount.Clear();
+        _key = null;
+        HostInput.Text = AccessKeyInput.Text = SecretInput.Text = string.Empty;
+        KeyPanel.IsVisible = false;
+        OnOptionSwitch(sender, e);
+    }
+
+    private void OnOpenConsole(object? sender, RoutedEventArgs e) => OpenUrl(AcrCloudConsole);
+
+    private static string Tail(string text) => text.Length <= 4 ? text : text[^4..];
 
     private void ShowProblem(string text)
     {

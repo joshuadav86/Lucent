@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
+using WinampInspiredVisualizer.Visualizer;
 
 namespace WinampInspiredVisualizer;
 
@@ -43,7 +44,11 @@ public partial class VisualizerWindow
         }
 
         menu.Items.Add(Item("Next visual", "N", () => ChangePreset(+1)));
-        menu.Items.Add(Item("Previous visual", "B", () => ChangePreset(-1)));
+        menu.Items.Add(Item("Previous visual", "B", PreviousPreset));
+        // Whichever way B doesn't go (Options > Visuals picks), so both are a click away.
+        menu.Items.Add(_settings.PreviousVisual == PreviousVisualMode.LastShown
+            ? Item("Visual above in the list", null, () => PreviousPreset(PreviousVisualMode.UpInList))
+            : Item("Last visual shown", null, () => PreviousPreset(PreviousVisualMode.LastShown)));
         if (!_isFullscreen)
         {
             // The picker opens from the bar under the visuals, which fullscreen hides.
@@ -153,7 +158,7 @@ public partial class VisualizerWindow
     [DllImport("user32.dll")]
     private static extern uint GetDoubleClickTime();
 
-    private static MenuItem Item(string header, string keys, Action action)
+    private static MenuItem Item(string header, string? keys, Action action)
     {
         var item = new MenuItem { Header = header, InputGestureText = keys };
         item.Click += (_, _) => action();

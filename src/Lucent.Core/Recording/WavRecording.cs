@@ -7,9 +7,10 @@ namespace WinampInspiredVisualizer.Recording;
 
 /// <summary>A place in a recording where a new song starts.</summary>
 /// <param name="Frame">How far in, in sample frames.</param>
-/// <param name="Title">What the track is called ("Track 3" until it's named).</param>
+/// <param name="Title">What the track is called: "Track 3", or "Artist - Title" once the song is recognised.</param>
 /// <param name="Automatic">Lucent heard the song change, rather than the button being pressed.</param>
-public sealed record TrackMarker(long Frame, string Title, bool Automatic = false);
+/// <param name="Song">The song ACRCloud recognised there, if it did.</param>
+public sealed record TrackMarker(long Frame, string Title, bool Automatic = false, SongMatch? Song = null);
 
 /// <summary>
 /// A WAV file written as the sound arrives, for a live recording that may run for hours. The header is

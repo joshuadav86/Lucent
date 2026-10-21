@@ -56,7 +56,7 @@
             <Border x:Name="VisualizerFrame" Grid.Row="1" Background="Black" />
 
             <!-- Visuals bar -->
-            <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6">
+            <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6" SizeChanged="OnBottomBarSizeChanged">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -69,8 +69,8 @@
                            Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed"
                            ToolTip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Previous visual (B)" Click="OnPreviousPreset">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button x:Name="PreviousButton" Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Previous visual (B)" Click="OnPreviousPreset">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ArrowLeftIcon}" />
                     </Button>
                     <Button x:Name="PresetPickerButton" Style="{StaticResource PickerButton}" Width="220" Margin="4,0"
@@ -371,17 +371,23 @@
                     </Popup>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <StackPanel x:Name="BarRightControls" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <ToggleButton x:Name="FavoriteButton" Style="{StaticResource PanelToggle}" Padding="8,0"
                                   ToolTip="Make this visual a favorite (F)" Click="OnToggleFavorite">
                         <Path x:Name="FavoriteIcon" Data="{StaticResource StarIcon}" StrokeThickness="1.3" StrokeLineJoin="Round"
                               Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
                               Fill="Transparent" Width="14" Height="14" Stretch="Uniform" />
                     </ToggleButton>
-                    <!-- Auto mode: the pill turns it on or off (right-click it, or use the arrow, to choose how often it changes). -->
-                    <Button x:Name="AutoCycleButton" Style="{StaticResource PillButton}" Content="AUTO · 25s"
+                    <!-- Auto mode: the pill turns it on or off (right-click it, or use the arrow, to choose how often it changes).
+                         The circling arrow says "the visuals change by themselves"; in a narrow window only the arrow shows. -->
+                    <Button x:Name="AutoCycleButton" Style="{StaticResource PillButton}"
                             Margin="6,0,0,0" Foreground="{DynamicResource AccentBrush}"
-                            Click="OnToggleAutoCycle" MouseRightButtonUp="OnAutoCycleRightClick" />
+                            Click="OnToggleAutoCycle" MouseRightButtonUp="OnAutoCycleRightClick">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource AutoChangeIcon}" StrokeThickness="1.4" />
+                            <TextBlock x:Name="AutoCycleText" Text="AUTO · 25s" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="AutoCycleIntervalButton" Style="{StaticResource IconButton}" Width="22" Height="26"
                             Margin="1,0,6,0" ToolTip="How often Auto changes the visual" Click="OnAutoCycleIntervalMenu">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronUpIcon}" />

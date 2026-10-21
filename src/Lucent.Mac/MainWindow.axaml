@@ -9,7 +9,9 @@
     <!-- The player: a small window like Winamp's main window. The visuals, queue and library
          open in their own windows, which snap to this one and move with it. -->
 
-    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+    <!-- Lucent's own player, or (with a classic skin on) the skin's player, added by MainWindow.Classic.cs. -->
+    <Grid x:Name="PlayerRoot">
+    <Border x:Name="LucentPlayer" BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}">
         <Grid x:Name="WindowRoot" RowDefinitions="Auto,Auto,Auto,Auto">
 
@@ -27,13 +29,30 @@
                     <Button x:Name="UpdateButton" Theme="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
                             Content="UPDATE" Foreground="{DynamicResource AccentBrush}" IsVisible="False"
                             Click="OnShowUpdate" />
+                    <!-- Every way to bring sound in: files, radio, and the music apps Lucent can show and control. -->
+                    <ToggleButton x:Name="SourcesButton" Theme="{StaticResource PanelToggle}" Padding="7,0,9,0" Margin="0,0,4,0" FontSize="11"
+                                  ToolTip.Tip="Sources: add music, tune in to online radio, or connect a music app such as Spotify, Apple Music, or TIDAL (M)"
+                                  Click="OnToggleSources">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SourcesIcon}" />
+                            <TextBlock Text="Sources" Margin="5,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ToggleButton>
                     <Button Theme="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
                             ToolTip.Tip="Buy me a coffee: support Lucent" Click="OnBuyMeACoffee">
                         <Path Theme="{StaticResource LineIcon}"
                               Data="M2.5,6.5 H11 V10 A3.5,3.5 0 0 1 7.5,13.5 H6 A3.5,3.5 0 0 1 2.5,10 Z M11,7.5 H12 A1.75,1.75 0 0 1 12,11 H10.8 M5.5,4.5 C4.8,3.7 6.2,2.8 5.5,1.5 M8.5,4.5 C7.8,3.7 9.2,2.8 8.5,1.5" />
                     </Button>
+                    <!-- Record from an audio interface: a DJ set, a mixer, a microphone. Also in the waveform menu beside it. -->
+                    <Button x:Name="RecordButton" Theme="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
+                            ToolTip.Tip="Record from an audio interface: a DJ set, a mixer, or a microphone" Click="OnRecord">
+                        <Grid Width="16" Height="16">
+                            <Ellipse Width="14" Height="14" Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.3" />
+                            <Ellipse Width="7" Height="7" Fill="#E5484D" />
+                        </Grid>
+                    </Button>
                     <ToggleButton x:Name="AudioToolsButton" Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
-                                  ToolTip.Tip="Edit or convert sounds" Click="OnAudioTools">
+                                  ToolTip.Tip="Record, edit, or convert sounds" Click="OnAudioTools">
                         <Path Theme="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
                     </ToggleButton>
                     <ToggleButton x:Name="OptionsButton" Theme="{StaticResource PanelToggle}" Padding="7,0"
@@ -135,6 +154,16 @@
                                         </UniformGrid>
                                     </Border>
 
+                                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Previous visual goes to" />
+                                    <Border Theme="{StaticResource SegmentBar}">
+                                        <UniformGrid Rows="1">
+                                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="LastShown" Content="Last one shown" Click="OnOptionChosen" />
+                                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="UpInList" Content="Up the list" Click="OnOptionChosen" />
+                                        </UniformGrid>
+                                    </Border>
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Last one shown steps back through the visuals you've seen, Auto's picks too. Up the list goes to the one above in the picker." />
+
                                     <CheckBox x:Name="MorphsOnlySwitch" Theme="{StaticResource SwitchToggle}"
                                               Content="Morphing transitions only" Margin="0,18,0,0" Click="OnOptionSwitched" />
                                     <TextBlock Theme="{StaticResource OptionHint}"
@@ -188,6 +217,19 @@
                                                Text="Each skin comes with a theme it was made for. Pick another theme below to mix and match." />
                                     <TextBlock Theme="{StaticResource OptionLabel}" Text="Theme: colours for everything around the visuals" />
                                     <UniformGrid x:Name="ThemeSwatches" Columns="2" Margin="-2,0,-8,-6" />
+
+                                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Classic skins: the player as a Winamp 2 skin" />
+                                    <UniformGrid x:Name="ClassicSkinSwatches" Columns="2" Margin="-2,0,-8,-6" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Button Theme="{StaticResource PillButton}" Content="Import a skin…" Margin="0,0,8,0"
+                                                ToolTip.Tip="Adds a Winamp skin (.wsz). Dropping one on any Lucent window does the same."
+                                                Click="OnImportClassicSkin" />
+                                        <Button Theme="{StaticResource PillButton}" Content="Find skins"
+                                                ToolTip.Tip="Opens the Winamp Skin Museum, where thousands of classic skins can be downloaded"
+                                                Click="OnFindClassicSkins" />
+                                    </StackPanel>
+                                    <TextBlock Theme="{StaticResource OptionHint}"
+                                               Text="Load any classic Winamp skin and the player wears it, with the other windows in the skin and theme above. Pick a skin above to go back to Lucent's own player. Right-click the classic player for more." />
                                 </StackPanel>
 
                                 <StackPanel x:Name="UpdatesTab" IsVisible="False">
@@ -245,6 +287,58 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+
+                    <!-- Opened by the Sources button or the eject button; placed under whichever was clicked. -->
+                    <Popup x:Name="SourcesPopup" PlacementTarget="{Binding #SourcesButton}" Placement="BottomEdgeAlignedRight"
+                           HorizontalOffset="16" VerticalOffset="-8" IsLightDismissEnabled="True"
+                           Opened="OnSourcesOpened" Closed="OnSourcesClosed">
+                        <Border Margin="16" Width="320" Padding="14,0,14,16" CornerRadius="{DynamicResource CardCorner}"
+                                Background="{DynamicResource SurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                                BoxShadow="0 0 24 0 #99000000">
+                            <StackPanel>
+                                <TextBlock Theme="{StaticResource OptionLabel}" Text="Your music" />
+                                <WrapPanel Margin="0,0,-8,-8">
+                                    <Button Theme="{StaticResource PillButton}" Content="Add files…" Margin="0,0,8,8"
+                                            ToolTip.Tip="Add songs to the queue (Cmd+O)" Click="OnSourcesAddFiles" />
+                                    <Button Theme="{StaticResource PillButton}" Content="Add a folder…" Margin="0,0,8,8"
+                                            ToolTip.Tip="Add everything in a folder to the queue (Shift+Cmd+O)" Click="OnSourcesAddFolder" />
+                                    <Button Theme="{StaticResource PillButton}" Content="Import from another player…" Margin="0,0,8,8"
+                                            ToolTip.Tip="Bring playlists, play counts and ratings over from Apple Music, MusicBee, foobar2000, Plex or YouTube Music"
+                                            Click="OnSourcesImport" />
+                                    <Button Theme="{StaticResource PillButton}" Content="Bandcamp and Beatport…" Margin="0,0,8,8"
+                                            ToolTip.Tip="Add the music you buy on Bandcamp and Beatport to the library" Click="OnSourcesStores" />
+                                </WrapPanel>
+                                <TextBlock Theme="{StaticResource OptionHint}" Text="Or drop music on any Lucent window." />
+
+                                <TextBlock Theme="{StaticResource OptionLabel}" Text="Online radio" Margin="2,18,0,6" />
+                                <Button Theme="{StaticResource PillButton}" Content="Browse stations…" HorizontalAlignment="Left"
+                                        Click="OnSourcesRadio" />
+                                <TextBlock Theme="{StaticResource OptionHint}"
+                                           Text="SomaFM, FRISKY, and thousands of other stations, by genre. The visuals play along." />
+
+                                <TextBlock Theme="{StaticResource OptionLabel}" Text="Music apps" Margin="2,18,0,0" />
+                                <TextBlock Theme="{StaticResource OptionHint}" Margin="2,4,0,0"
+                                           Text="Lucent shows what the app is playing and its buttons work the app. The sound stays in the app." />
+                                <CheckBox x:Name="SpotifySwitch" Theme="{StaticResource SwitchToggle}" Content="Spotify" Tag="Spotify"
+                                          Margin="0,12,0,0" Click="OnSourcesRemoteSwitched" />
+                                <CheckBox x:Name="AppleMusicSwitch" Theme="{StaticResource SwitchToggle}" Content="Apple Music" Tag="AppleMusic"
+                                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                                <CheckBox x:Name="YouTubeSwitch" Theme="{StaticResource SwitchToggle}" Content="YouTube" Tag="YouTube"
+                                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                                <CheckBox x:Name="TidalSwitch" Theme="{StaticResource SwitchToggle}" Content="TIDAL" Tag="Tidal"
+                                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                                <CheckBox x:Name="SoundCloudSwitch" Theme="{StaticResource SwitchToggle}" Content="SoundCloud" Tag="SoundCloud"
+                                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                                <Button x:Name="SpotifySignOutButton" Theme="{StaticResource PillButton}" Content="Sign out of Spotify"
+                                        HorizontalAlignment="Left" Margin="0,12,0,0" Click="OnSignOutOfSpotify" />
+
+                                <CheckBox x:Name="ListenSwitch" Theme="{StaticResource SwitchToggle}" Content="Visuals for every app's sound"
+                                          Margin="0,18,0,0" Click="OnListenSwitched" />
+                                <TextBlock x:Name="ListenHint" Theme="{StaticResource OptionHint}" />
                             </StackPanel>
                         </Border>
                     </Popup>
@@ -319,7 +413,7 @@
                                 </StackPanel>
                             </Canvas>
                         </DockPanel>
-                        <TextBlock x:Name="TrackDetails" Text="Drop music on any Lucent window to begin" FontSize="11" Margin="0,3,0,0"
+                        <TextBlock x:Name="TrackDetails" Text="Drop music here, or open Sources to begin" FontSize="11" Margin="0,3,0,0"
                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                         <DockPanel Margin="0,10,0,0">
                             <Grid DockPanel.Dock="Left" VerticalAlignment="Center">
@@ -360,7 +454,7 @@
                         <Path Theme="{StaticResource SolidIcon}" Data="{StaticResource NextTrackIcon}" />
                     </Button>
                     <Button x:Name="OpenButton" Theme="{StaticResource TransportButton}" Width="32" Height="32" Margin="2,0,0,0"
-                            ToolTip.Tip="Add music" Click="OnOpenMenu">
+                            ToolTip.Tip="Sources: add music, tune in to online radio, or connect a music app (M)" Click="OnOpenMenu">
                         <Path Theme="{StaticResource SolidIcon}" Data="{StaticResource EjectIcon}" />
                     </Button>
                     <ToggleButton x:Name="ShuffleButton" Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="6,0,0,0"
@@ -407,4 +501,5 @@
             </DockPanel>
         </Grid>
     </Border>
+    </Grid>
 </Window>

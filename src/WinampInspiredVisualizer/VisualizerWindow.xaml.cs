@@ -32,6 +32,7 @@ public partial class VisualizerWindow : ToolWindow
     private bool _isFullscreen;
     private WindowState _stateBeforeFullscreen;
     private Rect _boundsBeforeFullscreen;
+    private readonly VisualHistory _history = new();
 
     public VisualizerWindow()
     {
@@ -66,6 +67,7 @@ public partial class VisualizerWindow : ToolWindow
             FrameRateText.Text = $"{stats.FramesPerSecond:0} fps · {stats.Width} × {stats.Height}" + (stats.Hdr ? " · HDR" : string.Empty);
         VisualizerFrame.Child = WithVideoLayer(host);
         UpdateAutoCycleButton();
+        UpdatePreviousButton();
         UpdateGroupFamiliesButton();
         SortLabel.Text = VisualSorts.Label(settings.VisualSort);
     }
@@ -77,7 +79,37 @@ public partial class VisualizerWindow : ToolWindow
 
     private void OnNextPreset(object sender, RoutedEventArgs e) => ChangePreset(+1);
 
-    private void OnPreviousPreset(object sender, RoutedEventArgs e) => ChangePreset(-1);
+    private void OnPreviousPreset(object sender, RoutedEventArgs e) => PreviousPreset();
+
+    /// <summary>Previous visual (B): back to the one shown before, or up the list, as picked in Options.</summary>
+    public void PreviousPreset() => PreviousPreset(_settings.PreviousVisual);
+
+    public void PreviousPreset(PreviousVisualMode mode)
+    {
+        if (_host is null || _presetNames.Count == 0)
+        {
+            return;
+        }
+
+        // With nothing further back to go to, it steps up the list instead.
+        if (mode == PreviousVisualMode.LastShown && _history.Back(name => FindChoice(name) is not null) is { } name)
+        {
+            _host.PresetIndex = FindChoice(name)!.Index;
+            ShowPreset();
+            return;
+        }
+
+        ChangePreset(-1);
+    }
+
+    private VisualChoice? FindChoice(string name) =>
+        _choices.Find(choice => string.Equals(choice.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Says on the ← button which way it goes.</summary>
+    public void UpdatePreviousButton() =>
+        PreviousButton.ToolTip = _settings.PreviousVisual == PreviousVisualMode.LastShown
+            ? "Back to the visual shown before this one (B). Options > Visuals can make it go up the list instead"
+            : "Previous visual in the list (B). Options > Visuals can make it go back to the one shown before instead";
 
     /// <summary>Steps to the next or previous visual in the list the picker is showing.</summary>
     public void ChangePreset(int step)
@@ -109,6 +141,7 @@ public partial class VisualizerWindow : ToolWindow
         PresetName.Text = current.Label;
         PresetList.SelectedItem = _shown.Contains(current) ? current : null;
         _settings.LastVisual = current.Name;
+        _history.Shown(current.Name);
         UpdateFavoriteButton();
     }
 
@@ -824,11 +857,53 @@ public partial class VisualizerWindow : ToolWindow
     public void UpdateAutoCycleButton()
     {
         var seconds = _settings.AutoCycleSeconds;
-        AutoCycleButton.Content = $"AUTO · {ShortIntervalText(seconds)}";
+        AutoCycleText.Text = $"AUTO · {ShortIntervalText(seconds)}";
         AutoCycleButton.SetResourceReference(ForegroundProperty, _settings.AutoCycle ? "AccentBrush" : "FaintTextBrush");
         AutoCycleButton.ToolTip = _settings.AutoCycle
-            ? $"Moving to a new visual on the beat every {IntervalText(seconds)} or so. Click to stop (A), right-click to change how often"
-            : $"Auto is off. Click to move to a new visual on the beat every {IntervalText(seconds)} or so (A), right-click to change how often";
+            ? $"Auto is on: a new visual comes on by itself every {IntervalText(seconds)} or so, on the beat. Click to keep this one (A), right-click to change how often"
+            : $"Auto is off: this visual stays until you change it. Click to get a new one every {IntervalText(seconds)} or so, on the beat (A), right-click to change how often";
+        FitBottomBar();
+    }
+
+    // ---- Fitting the visuals bar ----
+
+    private const double PickerWidest = 220;
+
+    private void OnBottomBarSizeChanged(object sender, SizeChangedEventArgs e) => FitBottomBar();
+
+    /// <summary>
+    /// Keeps everything in the visuals bar in sight however narrow the window. The picker stays centered
+    /// while there's room; then the AUTO pill drops its words (leaving its circling arrow), the picker
+    /// narrows, and at the narrowest the picker moves left of centre to make room for the buttons on the right.
+    /// </summary>
+    private void FitBottomBar()
+    {
+        var width = BottomBar.ActualWidth;
+        if (width <= 0)
+        {
+            return;
+        }
+
+        const double arrows = 2 * 32 + 8;
+        var compact = width - 2 * RightControlsWidth(compact: false) - arrows < PickerWidest;
+        var right = RightControlsWidth(compact);
+        var centered = width - 2 * right - arrows;
+        var star = new GridLength(1, GridUnitType.Star);
+        var fits = centered >= 150;
+        BottomBar.ColumnDefinitions[0].Width = fits ? star : new GridLength(0);
+        BottomBar.ColumnDefinitions[1].Width = fits ? GridLength.Auto : star;
+        BottomBar.ColumnDefinitions[2].Width = fits ? star : GridLength.Auto;
+        var picker = fits ? Math.Min(PickerWidest, centered) : Math.Clamp(width - right - arrows - 8, 90, PickerWidest);
+        PresetPickerButton.Width = picker;
+        // The picker opens centred over its button.
+        PresetPopup.HorizontalOffset = -156 - (PickerWidest - picker) / 2;
+    }
+
+    private double RightControlsWidth(bool compact)
+    {
+        AutoCycleText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        BarRightControls.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        return BarRightControls.DesiredSize.Width;
     }
 
     // "25 seconds" / "3 minutes" for menus and tooltips, "25s" / "3m" for the pill.

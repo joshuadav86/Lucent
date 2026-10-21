@@ -408,6 +408,15 @@ jobs:
       - name: Check Windows and Mac have the same features
         run: dotnet run --project tools/ParityCheck -c Release
 
+      - name: Check the Mac styles have no selector through two templates
+        # Avalonia only rejects "/template/ … /template/" when the style first loads, which can be long
+        # after launch (it crashed 1.0.480 as the Library opened), so it's caught here instead.
+        run: |
+          if grep -rnE 'Selector="[^"]*/template/[^"]*/template/' --include='*.axaml' src/Lucent.Mac; then
+            echo "::error::A style selector goes through two templates. Avalonia throws as it loads; reach the inner part another way (a TemplateBinding, say)."
+            exit 1
+          fi
+
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
   # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
   metal-shaders:
@@ -488,8 +497,9 @@ jobs:
           name: dxc-mac
           path: dxc-mac
 
-  # The Mac app, for Apple silicon (arm64) and Intel (x64) Macs, each built and tested on its own kind of
-  # Mac. Each is packaged twice: Lucent.app zipped as it is (runs from anywhere, doesn't update itself),
+  # The Mac app, for Apple silicon (arm64) and Intel (x64) Macs, both built on an Intel runner: GitHub's
+  # Apple silicon runners are often too scarce to get one at all, and the download mustn't wait on them.
+  # The Intel build is tested here; the Apple silicon one is tested by mac-arm64-check below. Each is packaged twice: Lucent.app zipped as it is (runs from anywhere, doesn't update itself),
   # and with Velopack, which makes an installer (.pkg) and the update feed installed copies check, in its
   # own channel (osx-arm64, osx-x64) so each Mac only ever updates to the build for its chip.
   #
@@ -511,15 +521,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # cpu is the runner's chip. The arm64 build is cross-compiled (LAME, the plugin helper and
+          # DXC are universal already), so it can't run here and skips the steps that run Lucent.
           - arch: arm64
-            runner: macos-latest
-            cpu: arm64
+            runner: macos-15-intel
+            cpu: x86_64
           - arch: x64
             runner: macos-15-intel
             cpu: x86_64
     runs-on: ${{ matrix.runner }}
-    # Builds of main queue up per chip rather than cancelling each other: a Mac build (the Intel one
-    # especially) takes longer than the gap between merges, so cancelling would mean none ever finished
+    # Builds of main queue up per chip rather than cancelling each other: a Mac build takes longer than the gap between merges, so cancelling would mean none ever finished
     # and published. GitHub keeps only the newest waiting build, so the queue never grows past one.
     concurrency:
       group: ${{ github.event_name == 'push' && format('publish-latest-mac-{0}', matrix.arch) || format('mac-{0}-{1}', github.run_id, matrix.arch) }}
@@ -586,29 +597,17 @@ jobs:
           -o publish-mac
 
       - name: Make test music
-        run: |
-          # A few seconds of tones as WAV, then the formats people's music comes in, made with macOS's own encoder.
-          python3 - << 'PY'
-          import math, struct, wave
-          with wave.open("test.wav", "wb") as f:
-              f.setnchannels(2); f.setsampwidth(2); f.setframerate(44100)
-              frames = bytearray()
-              for i in range(44100 * 3):
-                  v = int(12000 * math.sin(2 * math.pi * 220 * i / 44100) * (1 if (i // 11025) % 2 == 0 else 0.3))
-                  frames += struct.pack("<hh", v, v)
-              f.writeframes(bytes(frames))
-          PY
-          afconvert -f m4af -d aac test.wav test.m4a
-          afconvert -f m4af -d alac test.wav test-alac.m4a
-          afconvert -f flac -d flac test.wav test.flac
-          afconvert -f AIFF -d BEI16 test.wav test.aiff
+        if: matrix.arch == 'x64'
+        run: tools/mac/make-test-music.sh
 
       - uses: actions/download-artifact@v4
+        if: matrix.arch == 'x64'
         with:
           name: stem-model
           path: stem-model
 
       - name: Self-test (decoding, videos, every visual, recording a video, and the stem splitter)
+        if: matrix.arch == 'x64'
         # A hang fails the build instead of holding the runner for GitHub's six-hour limit.
         timeout-minutes: 40
         env:
@@ -715,53 +714,18 @@ jobs:
           .vpk/vpk "${args[@]}"
           ls -l releases-mac
 
-          # Check the installable app is signed and still runs, and gather what the release needs.
+          # Check the installable app is signed, and gather what the release needs.
           mkdir -p check mac-release
           ditto -x -k "releases-mac/Lucent-$RID-Portable.zip" check
           codesign --verify --deep --strict --verbose=2 check/Lucent.app
           test -x check/Lucent.app/Contents/MacOS/UpdateMac
-          # Open it the way people do and make sure the player is still up after a while: the self-test
-          # above never starts the app's window loop, so a crash at launch would otherwise ship.
-          export LUCENT_DATA_FOLDER="$RUNNER_TEMP/launch-check"
-          check/Lucent.app/Contents/MacOS/Lucent > "$RUNNER_TEMP/launch.log" 2>&1 &
-          app=$!
-          for _ in $(seq 1 20); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
-          if ! kill -0 "$app" 2> /dev/null; then
-            echo "::error::Lucent quit at launch."
-            cat "$RUNNER_TEMP/launch.log"
-            exit 1
-          fi
-          kill "$app"
-          echo "Lucent launched and was still running after 20 seconds."
-          # Open it again and resize the visuals window a few times: the Metal view has to fill the
-          # space the layout gives it, or the visuals show squashed into part of the window. The
-          # check then minimizes the player (the other windows go with it) and quits. Then it opens
-          # once more on the same settings: the windows have to come back open, where they were left.
-          export LUCENT_DATA_FOLDER="$RUNNER_TEMP/layout-check"
-          for run in first reopened; do
-            export LUCENT_LAYOUT_CHECK="$RUNNER_TEMP/layout-check-$run.txt"
-            if [ "$run" = reopened ]; then export LUCENT_LAYOUT_CHECK_REOPENED=1; fi
-            cp "$RUNNER_TEMP/layout-check-first.txt.visuals" "$LUCENT_LAYOUT_CHECK.visuals" 2> /dev/null || true
-            check/Lucent.app/Contents/MacOS/Lucent > "$RUNNER_TEMP/layout-$run.log" 2>&1 &
-            app=$!
-            for _ in $(seq 1 90); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
-            if kill -0 "$app" 2> /dev/null; then
-              kill "$app"
-              echo "::error::Lucent didn't quit when its player was closed ($run run)."
-              cat "$LUCENT_LAYOUT_CHECK" 2> /dev/null
-              exit 1
-            fi
-            cat "$LUCENT_LAYOUT_CHECK" 2> /dev/null || { echo "::error::The layout check wrote nothing ($run run)."; cat "$RUNNER_TEMP/layout-$run.log"; exit 1; }
-            if ! grep -qx PASSED "$LUCENT_LAYOUT_CHECK"; then
-              echo "::error::The window layout check failed ($run run): see the MISMATCH lines above."
-              exit 1
-            fi
-          done
-          unset LUCENT_LAYOUT_CHECK LUCENT_LAYOUT_CHECK_REOPENED
-          unset LUCENT_DATA_FOLDER
           cp "releases-mac/Lucent-$RID-Setup.pkg" "mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg"
           cp "Lucent-mac-${{ matrix.arch }}.zip" mac-release/
           cp releases-mac/*.nupkg "releases-mac/releases.$RID.json" "releases-mac/assets.$RID.json" "releases-mac/RELEASES-$RID" mac-release/
+
+      - name: Check Lucent.app opens and lays out its windows
+        if: matrix.arch == 'x64'
+        run: tools/mac/launch-check.sh check/Lucent.app
 
       - uses: actions/upload-artifact@v4
         with:
@@ -814,3 +778,58 @@ jobs:
       - name: Remove the signing keychain
         if: always() && steps.signing.outputs.keychain != ''
         run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
+
+  # The Apple silicon build from the mac job, tested on an Apple silicon Mac: the self-test, then the
+  # launch and window layout checks. Not a required check, and it publishes nothing, so a wait for one of
+  # GitHub's scarce Apple silicon runners never holds up a merge or the "latest" download.
+  mac-arm64-check:
+    needs: [mac, stem-model]
+    runs-on: macos-latest
+    # As with the mac job, builds of main queue up here, keeping only the newest waiting one.
+    concurrency:
+      group: ${{ github.event_name == 'push' && 'mac-arm64-check-main' || format('mac-arm64-check-{0}', github.run_id) }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Lucent-mac-arm64
+          path: built
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: stem-model
+          path: stem-model
+
+      - name: Unpack Lucent.app
+        run: |
+          ditto -x -k built/Lucent-mac-arm64.zip built
+          codesign --verify --deep --strict --verbose=2 built/Lucent.app
+          file built/Lucent.app/Contents/MacOS/Lucent
+
+      - name: Make test music
+        run: tools/mac/make-test-music.sh
+
+      - name: Self-test (decoding, videos, every visual, recording a video, and the stem splitter)
+        timeout-minutes: 40
+        env:
+          LUCENT_STEM_MODEL: ${{ github.workspace }}/stem-model/htdemucs.onnx
+        run: |
+          # libVLC (videos) ships inside the app for this chip, with its plugins.
+          test -f built/Lucent.app/Contents/MacOS/libvlc/osx-arm64/lib/libvlc.dylib \
+            && test -f built/Lucent.app/Contents/MacOS/libvlc/osx-arm64/lib/vlc/plugins/libavcodec_plugin.dylib \
+            || { echo "::error::libVLC is missing from Lucent.app"; exit 1; }
+          built/Lucent.app/Contents/MacOS/Lucent --self-test --sheet mac-visuals-arm64.png \
+            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mkv \
+            test.wav test.m4a test-alac.m4a test.flac test.aiff
+
+      - name: Check Lucent.app opens and lays out its windows
+        run: tools/mac/launch-check.sh built/Lucent.app
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mac-visuals-arm64
+          path: mac-visuals-arm64.png
+          if-no-files-found: ignore

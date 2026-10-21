@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Threading;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Playlist;
+using WinampInspiredVisualizer.Recording;
 
 namespace WinampInspiredVisualizer.Library;
 
@@ -231,7 +232,7 @@ public sealed class MusicLibrary : IDisposable
                 {
                     token.ThrowIfCancellationRequested();
                     if (!AudioReaderFactory.IsSupported(path) || results.ContainsKey(path)
-                        || LibraryFolderList.IsInsideAny(path, hiddenHere))
+                        || LibraryFolderList.IsInsideAny(path, hiddenHere) || RecordingsInProgress.Contains(path))
                     {
                         continue;
                     }
@@ -312,7 +313,14 @@ public sealed class MusicLibrary : IDisposable
         }
     }
 
-    private void OnFolderChanged(object sender, FileSystemEventArgs e) => ScheduleRescan();
+    private void OnFolderChanged(object sender, FileSystemEventArgs e)
+    {
+        // A recording being made rewrites its header every couple of seconds; it's listed once it's finished.
+        if (!RecordingsInProgress.Contains(e.FullPath))
+        {
+            ScheduleRescan();
+        }
+    }
 
     private void ScheduleRescan() => _dispatcher.InvokeAsync(() =>
     {

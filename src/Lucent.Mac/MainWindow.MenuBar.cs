@@ -98,6 +98,8 @@ public partial class MainWindow
         file.Add(Item("Online Radio…", ShowRadio));
         file.Add(Item("Bandcamp and Beatport…", ShowStores));
         file.Add(Item("Import from Another Player…", ShowImport));
+        file.Add(new NativeMenuItemSeparator());
+        file.Add(Item("Sources…", () => ToggleSources(SourcesButton)));
         bar.Add(new NativeMenuItem("File") { Menu = file });
 
         var playback = new NativeMenu();
@@ -133,7 +135,7 @@ public partial class MainWindow
 
         var visuals = new NativeMenu();
         visuals.Add(Item("Next Visual", () => _visuals.ChangePreset(+1)));
-        visuals.Add(Item("Previous Visual", () => _visuals.ChangePreset(-1)));
+        visuals.Add(Item("Previous Visual", _visuals.PreviousPreset));
         visuals.Add(Item("Choose a Visual…", _visuals.TogglePresetPicker));
         var auto = Check("Change on the Beat", () =>
         {

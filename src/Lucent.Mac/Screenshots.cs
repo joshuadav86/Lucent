@@ -36,11 +36,14 @@ public static class Screenshots
         ("Player-Glass", () => PreviewPlayer("Glass")),
         ("Player-Neon", () => PreviewPlayer("Neon")),
         ("Player-Studio", () => PreviewPlayer("Studio")),
+        ("Player-ClassicSkin", () => PreviewClassicPlayer(shaded: false)),
+        ("Player-ClassicSkin-Shade", () => PreviewClassicPlayer(shaded: true)),
         ("Player-Options", () => PreviewOptions("Graphics")),
         ("Player-Options-Visuals", () => PreviewOptions("Visuals")),
         ("Player-Options-Sound", () => PreviewOptions("Sound")),
         ("Player-Options-Look", () => PreviewOptions("Theme")),
         ("Player-Options-Updates", () => PreviewOptions("Updates")),
+        ("Player-Sources", () => PreviewSources()),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
@@ -138,7 +141,28 @@ public static class Screenshots
         return player;
     }
 
+    /// <summary>The player drawn by Lucent Classic, the classic Winamp skin, part way through a song.</summary>
+    private static Window PreviewClassicPlayer(bool shaded)
+    {
+        var player = (MainWindow)PreviewPlayer("Lucent");
+        player.PreviewClassicSkin(TimeSpan.FromSeconds(83), shaded);
+        return player;
+    }
+
     /// <summary>The player's options panel (normally a pop-up under its button), on one of its tabs.</summary>
+    private static Window PreviewSources()
+    {
+        var player = new MainWindow();
+        player.PreviewSkin("Lucent");
+        return new Window
+        {
+            Width = 352,
+            SizeToContent = SizeToContent.Height,
+            Background = Avalonia.Media.Brushes.Transparent,
+            Content = player.TakeSourcesPanel(),
+        };
+    }
+
     private static Window PreviewOptions(string tab)
     {
         var player = new MainWindow();

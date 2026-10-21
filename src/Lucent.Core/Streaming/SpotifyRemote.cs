@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 
 namespace WinampInspiredVisualizer.Streaming;
@@ -8,10 +9,15 @@ namespace WinampInspiredVisualizer.Streaming;
 /// Spotify, through its Web API: what's playing on whichever device the account is playing on (the
 /// Spotify app on this computer, a phone, a speaker), and its play, pause, skip and seek. Spotify only
 /// takes those buttons from Premium accounts; on a free account Lucent can still show what's playing.
+/// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
 {
-    private const string Api = "https://api.spotify.com/v1/me/player";
+    private const string Root = "https://api.spotify.com/v1";
+    private const string Api = Root + "/me/player";
+
+    // Enough for any playlist someone plays through, without hundreds of requests for a huge Liked Songs.
+    private const int MostSongs = 1000;
 
     private readonly HttpClient _http;
     private readonly string _clientId;
@@ -35,7 +41,7 @@ public sealed class SpotifyRemote : IRemotePlayer
 
     public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
-        using var response = await SendAsync(HttpMethod.Get, string.Empty, cancel);
+        using var response = await SendAsync(HttpMethod.Get, Api, cancel);
         if (response.StatusCode == HttpStatusCode.NoContent)
         {
             // Nothing playing on any of the account's devices.
@@ -61,6 +67,10 @@ public sealed class SpotifyRemote : IRemotePlayer
     public async Task<byte[]?> ArtworkAsync(RemoteTrack track, CancellationToken cancel) =>
         track.ArtworkUrl is { } url ? await _http.GetByteArrayAsync(url, cancel) : null;
 
+    // Like the other buttons, this needs Premium.
+    public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
+        CommandAsync(HttpMethod.Put, $"/volume?volume_percent={(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
+
     // The Web API's playback state (GET /me/player).
     private static RemoteState? ParseState(JsonElement root, DateTime readAt)
     {
@@ -68,10 +78,36 @@ public sealed class SpotifyRemote : IRemotePlayer
         var position = root.TryGetProperty("progress_ms", out var progress) && progress.ValueKind == JsonValueKind.Number
             ? TimeSpan.FromMilliseconds(progress.GetInt64())
             : TimeSpan.Zero;
-        if (!root.TryGetProperty("item", out var item) || item.ValueKind != JsonValueKind.Object)
+        // The playlist, album, artist or Liked Songs it's playing from, as a spotify: URI.
+        var context = root.TryGetProperty("context", out var contextJson) && contextJson.ValueKind == JsonValueKind.Object
+            && Text(contextJson, "uri") is { Length: > 0 } uri
+                ? uri
+                : null;
+        // No item: an advert, or a device that's on but has nothing loaded.
+        var track = root.TryGetProperty("item", out var item) ? ParseTrack(item, null) : null;
+        // The Spotify Connect device it's playing on: this computer, a phone, a speaker or a TV. Some can't have
+        // their volume changed from elsewhere (supports_volume false).
+        string? device = null;
+        double? volume = null;
+        if (root.TryGetProperty("device", out var deviceJson) && deviceJson.ValueKind == JsonValueKind.Object)
         {
-            // An advert, or a device that's on but has nothing loaded.
-            return new RemoteState(null, playing, position, readAt);
+            device = Text(deviceJson, "name") is { Length: > 0 } name ? name : null;
+            var canSet = !deviceJson.TryGetProperty("supports_volume", out var supports) || supports.ValueKind != JsonValueKind.False;
+            if (canSet && deviceJson.TryGetProperty("volume_percent", out var percent) && percent.ValueKind == JsonValueKind.Number)
+            {
+                volume = Math.Clamp(percent.GetDouble() / 100, 0, 1);
+            }
+        }
+
+        return new RemoteState(track, playing, position, readAt, context, device, volume);
+    }
+
+    // A track or podcast episode. An album's own list of tracks leaves the album out, so it's passed in.
+    private static RemoteTrack? ParseTrack(JsonElement item, JsonElement? fromAlbum)
+    {
+        if (item.ValueKind != JsonValueKind.Object)
+        {
+            return null;
         }
 
         var title = Text(item, "name");
@@ -86,10 +122,11 @@ public sealed class SpotifyRemote : IRemotePlayer
             artist = string.Join(", ", artists.EnumerateArray().Select(entry => Text(entry, "name")).Where(name => name.Length > 0));
         }
 
-        if (item.TryGetProperty("album", out var albumJson) && albumJson.ValueKind == JsonValueKind.Object)
+        var albumObject = fromAlbum ?? (item.TryGetProperty("album", out var albumJson) ? albumJson : default);
+        if (albumObject.ValueKind == JsonValueKind.Object)
         {
-            album = Text(albumJson, "name");
-            artwork = LargestImage(albumJson);
+            album = Text(albumObject, "name");
+            artwork = LargestImage(albumObject);
         }
         else if (item.TryGetProperty("show", out var show) && show.ValueKind == JsonValueKind.Object)
         {
@@ -99,8 +136,159 @@ public sealed class SpotifyRemote : IRemotePlayer
             artwork = LargestImage(show);
         }
 
-        var id = item.TryGetProperty("id", out var idJson) && idJson.GetString() is { Length: > 0 } value ? value : $"{artist}|{title}";
-        return new RemoteState(new RemoteTrack(id, title, artist, album, duration, artwork), playing, position, readAt);
+        var id = Text(item, "id") is { Length: > 0 } value ? value : $"{artist}|{title}";
+        var uri = Text(item, "uri") is { Length: > 0 } itemUri ? itemUri : null;
+        return new RemoteTrack(id, title, artist, album, duration, artwork, uri);
+    }
+
+    public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel)
+    {
+        string? note = null;
+        try
+        {
+            var list = state.ListId?.Split(':') switch
+            {
+                ["spotify", "playlist", var id] => await PlaylistAsync(state.ListId, id, cancel),
+                ["spotify", "album", var id] => await AlbumAsync(state.ListId, id, cancel),
+                [.., "collection"] => await LikedSongsAsync(state.ListId, cancel),
+                _ => null,
+            };
+            if (list is not null)
+            {
+                return list;
+            }
+        }
+        catch (Refused refused)
+        {
+            note = refused.Note;
+        }
+
+        // An artist, a radio station, a mix Spotify doesn't share: show what's up next instead.
+        return await UpNextAsync(note, cancel);
+    }
+
+    public Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel)
+    {
+        var song = track.Uri ?? $"spotify:track:{track.Id}";
+        // From a playlist or album, Spotify carries on through it; from what's up next, it plays just that song.
+        var body = list.Id is { } context && !list.FollowsSong
+            ? JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["context_uri"] = context,
+                ["offset"] = new Dictionary<string, string> { ["uri"] = song },
+            })
+            : JsonSerializer.Serialize(new Dictionary<string, object> { ["uris"] = new[] { song } });
+        return CommandAsync(HttpMethod.Put, "/play", cancel, body);
+    }
+
+    // Spotify only lists the songs of playlists the account made or collaborates on (GET /playlists/{id}/items).
+    private async Task<RemoteList> PlaylistAsync(string context, string id, CancellationToken cancel)
+    {
+        await RequireScopeAsync("playlist-read-private", PlaylistSignInNote, cancel);
+        string name;
+        using (var playlist = await GetJsonAsync($"{Root}/playlists/{id}?fields=name", PlaylistNote, cancel))
+        {
+            name = Text(playlist.RootElement, "name");
+        }
+
+        var tracks = await PagesAsync($"{Root}/playlists/{id}/items?limit=50&additional_types=track,episode", PlaylistNote,
+            // Each entry holds its song as "item" (as "track" before February 2026's changes).
+            entry => ParseTrack(entry.TryGetProperty("item", out var item) ? item : entry.TryGetProperty("track", out var track) ? track : default, null),
+            cancel);
+        return new RemoteList(context, name, tracks);
+    }
+
+    private async Task<RemoteList> AlbumAsync(string context, string id, CancellationToken cancel)
+    {
+        using var album = await GetJsonAsync($"{Root}/albums/{id}", null, cancel);
+        var root = album.RootElement.Clone();
+        var tracks = await PagesAsync($"{Root}/albums/{id}/tracks?limit=50", null, entry => ParseTrack(entry, root), cancel);
+        var artist = root.TryGetProperty("artists", out var artists) && artists.ValueKind == JsonValueKind.Array
+            ? string.Join(", ", artists.EnumerateArray().Select(entry => Text(entry, "name")).Where(name => name.Length > 0))
+            : string.Empty;
+        var name = Text(root, "name");
+        return new RemoteList(context, artist.Length > 0 ? $"{artist} – {name}" : name, tracks);
+    }
+
+    private async Task<RemoteList> LikedSongsAsync(string context, CancellationToken cancel)
+    {
+        await RequireScopeAsync("user-library-read", SignInAgainNote, cancel);
+        var tracks = await PagesAsync($"{Root}/me/tracks?limit=50", SignInAgainNote,
+            entry => ParseTrack(entry.TryGetProperty("track", out var track) ? track : default, null), cancel);
+        return new RemoteList(context, "Liked Songs", tracks);
+    }
+
+    // What Spotify plays next: the song now, then its queue (GET /me/player/queue).
+    private async Task<RemoteList> UpNextAsync(string? note, CancellationToken cancel)
+    {
+        using var queue = await GetJsonAsync($"{Api}/queue", null, cancel);
+        var tracks = new List<RemoteTrack>();
+        if (queue.RootElement.TryGetProperty("currently_playing", out var now) && ParseTrack(now, null) is { } playing)
+        {
+            tracks.Add(playing);
+        }
+
+        if (queue.RootElement.TryGetProperty("queue", out var next) && next.ValueKind == JsonValueKind.Array)
+        {
+            tracks.AddRange(next.EnumerateArray().Select(item => ParseTrack(item, null)).OfType<RemoteTrack>());
+        }
+
+        return new RemoteList(null, "Up next", tracks, note, FollowsSong: true);
+    }
+
+    private const string PlaylistNote = "Spotify only shares the songs of playlists you made or collaborate on, so this is what's up next.";
+
+    private const string PlaylistSignInNote =
+        "To show your playlists here, sign out of Spotify and back in from the Add music menu. Until then, this is what's up next.";
+
+    private const string SignInAgainNote =
+        "To show your Liked Songs here, sign out of Spotify and back in from the Add music menu. Until then, this is what's up next.";
+
+    // A sign-in from before Lucent read playlists doesn't allow it, and Spotify would only refuse.
+    private async Task RequireScopeAsync(string scope, string note, CancellationToken cancel)
+    {
+        await AccessTokenAsync(forceRefresh: false, cancel);
+        if (_tokens?.Scope is { } granted && !granted.Split(' ').Contains(scope))
+        {
+            throw new Refused(note);
+        }
+    }
+
+    // Follows a list's "next" links, up to MostSongs songs.
+    private async Task<List<RemoteTrack>> PagesAsync(string url, string? refusedNote, Func<JsonElement, RemoteTrack?> parse, CancellationToken cancel)
+    {
+        var tracks = new List<RemoteTrack>();
+        for (string? page = url; page is not null && tracks.Count < MostSongs;)
+        {
+            using var json = await GetJsonAsync(page, refusedNote, cancel);
+            if (json.RootElement.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
+            {
+                // Songs no longer on Spotify come back empty, and are left out.
+                tracks.AddRange(items.EnumerateArray().Select(parse).OfType<RemoteTrack>());
+            }
+
+            page = Text(json.RootElement, "next") is { Length: > 0 } next ? next : null;
+        }
+
+        return tracks;
+    }
+
+    // Spotify saying no (403) or that it doesn't know the list (404, as for its own mixes) means showing what's up next instead.
+    private async Task<JsonDocument> GetJsonAsync(string url, string? refusedNote, CancellationToken cancel)
+    {
+        using var response = await SendAsync(HttpMethod.Get, url, cancel);
+        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound && refusedNote is not null)
+        {
+            throw new Refused(refusedNote);
+        }
+
+        await ThrowIfFailedAsync(response, cancel);
+        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancel));
+    }
+
+    private sealed class Refused(string note) : Exception(note)
+    {
+        public string Note { get; } = note;
     }
 
     private static string Text(JsonElement element, string name) =>
@@ -122,13 +310,13 @@ public sealed class SpotifyRemote : IRemotePlayer
             .FirstOrDefault();
     }
 
-    private async Task CommandAsync(HttpMethod method, string path, CancellationToken cancel)
+    private async Task CommandAsync(HttpMethod method, string path, CancellationToken cancel, string? json = null)
     {
-        using var response = await SendAsync(method, path, cancel);
+        using var response = await SendAsync(method, Api + path, cancel, json);
         await ThrowIfFailedAsync(response, cancel);
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, CancellationToken cancel)
+    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, CancellationToken cancel, string? json = null)
     {
         if (DateTime.UtcNow < _waitUntil)
         {
@@ -138,9 +326,13 @@ public sealed class SpotifyRemote : IRemotePlayer
         for (var attempt = 0; ; attempt++)
         {
             var token = await AccessTokenAsync(forceRefresh: attempt > 0, cancel);
-            using var request = new HttpRequestMessage(method, Api + path);
+            using var request = new HttpRequestMessage(method, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            if (method != HttpMethod.Get)
+            if (json is not null)
+            {
+                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            }
+            else if (method != HttpMethod.Get)
             {
                 request.Content = new ByteArrayContent(Array.Empty<byte>());
             }

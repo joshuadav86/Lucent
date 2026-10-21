@@ -1174,6 +1174,8 @@ public sealed class MilkPresetRunner
 
         private double Read(double[] values, int variable) => Safe(values[_slots[variable]], _base[variable]);
 
+        private static bool IsOn(double value) => Math.Abs(value) >= 1;
+
         private void DrawOne(double[] values)
         {
             var x = Read(values, 0) * 2 - 1;
@@ -1183,9 +1185,11 @@ public sealed class MilkPresetRunner
             var textureAngle = Read(values, 4);
             var textureZoom = Read(values, 5);
             var sides = (int)Math.Clamp(Read(values, 6), 3, 100);
-            var textured = Read(values, 7) != 0;
-            var additive = Read(values, 8) != 0;
-            var thick = Read(values, 9) != 0;
+            // MilkDrop reads these switches as whole numbers, so 0.8 is off: FractalDrop's darkening triangle sets
+            // additive = 0.5 + 0.15 * (bass + bass_att) and is meant to stay blended, not added on.
+            var textured = IsOn(Read(values, 7));
+            var additive = IsOn(Read(values, 8));
+            var thick = IsOn(Read(values, 9));
             var centre = MilkColor.From(Read(values, 10), Read(values, 11), Read(values, 12), Read(values, 13));
             var edge = MilkColor.From(Read(values, 14), Read(values, 15), Read(values, 16), Read(values, 17));
             var border = MilkColor.From(Read(values, 18), Read(values, 19), Read(values, 20), Read(values, 21));

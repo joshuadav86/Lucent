@@ -40,81 +40,6 @@ public partial class MainWindow
         UpdateListening();
     }
 
-    /// <summary>Adds the other-apps items to the Add music menu.</summary>
-    private void AddStreamingItems(MenuFlyout menu)
-    {
-        menu.Items.Add(new Separator());
-
-        var listen = new MenuItem
-        {
-            Header = "Visuals for every app's sound",
-            ToggleType = MenuItemToggleType.CheckBox,
-            IsChecked = _settings.ListenToOtherApps || _remote is not null,
-            IsEnabled = _remote is null && SystemAudio.IsSupported,
-        };
-        ToolTip.SetTip(listen, !SystemAudio.IsSupported ? "Listening to other apps needs macOS 14.2 or later."
-            : _remote is not null ? $"Always on while Lucent controls {_remote.Player.Name}."
-            : $"The visuals, meter and analyzer react to whatever is playing on {SystemAudio.DefaultOutputName() ?? "this Mac"}: Spotify, a browser, a game. macOS asks once whether Lucent may record the Mac's sound.");
-        listen.Click += (_, _) =>
-        {
-            _settings.ListenToOtherApps = !_settings.ListenToOtherApps;
-            _settings.Save();
-            UpdateListening();
-        };
-        menu.Items.Add(listen);
-
-        var hasClientId = SpotifySignIn.ClientId is not null;
-        var spotifySaved = SpotifyAccount.Load() is not null;
-        var spotify = new MenuItem
-        {
-            Header = _signingIn is not null ? "Signing in to Spotify…" : spotifySaved ? "Control Spotify" : "Sign in to Spotify…",
-            ToggleType = MenuItemToggleType.CheckBox,
-            IsChecked = _settings.RemoteApp == RemoteApp.Spotify,
-            IsEnabled = hasClientId && _signingIn is null,
-        };
-        ToolTip.SetTip(spotify, hasClientId
-            ? "Show what Spotify is playing and use the player's buttons for it. The sound stays in Spotify. Playing, pausing and skipping need Premium."
-            : "This copy of Lucent wasn't built with a Spotify app to sign in with.");
-        spotify.Click += (_, _) => ToggleRemote(RemoteApp.Spotify);
-        menu.Items.Add(spotify);
-
-        var appleMusic = new MenuItem
-        {
-            Header = "Control Apple Music",
-            ToggleType = MenuItemToggleType.CheckBox,
-            IsChecked = _settings.RemoteApp == RemoteApp.AppleMusic,
-        };
-        ToolTip.SetTip(appleMusic, "Show what the Music app is playing and use the player's buttons for it. The sound stays in Music. macOS asks once whether Lucent may control Music.");
-        appleMusic.Click += (_, _) => ToggleRemote(RemoteApp.AppleMusic);
-        menu.Items.Add(appleMusic);
-
-        var youTube = new MenuItem
-        {
-            Header = "Control YouTube",
-            ToggleType = MenuItemToggleType.CheckBox,
-            IsChecked = _settings.RemoteApp == RemoteApp.YouTube,
-        };
-        ToolTip.SetTip(youTube, "Show the YouTube video playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. The sound stays in the browser. "
-            + "The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
-        youTube.Click += (_, _) => ToggleRemote(RemoteApp.YouTube);
-        menu.Items.Add(youTube);
-
-        if (spotifySaved)
-        {
-            var signOut = new MenuItem { Header = "Sign out of Spotify" };
-            signOut.Click += (_, _) =>
-            {
-                if (_settings.RemoteApp == RemoteApp.Spotify)
-                {
-                    StopControllingRemote(pause: false);
-                }
-
-                SpotifyAccount.Clear();
-            };
-            menu.Items.Add(signOut);
-        }
-    }
-
     private void ToggleRemote(RemoteApp app)
     {
         if (_settings.RemoteApp == app)
@@ -166,6 +91,12 @@ public partial class MainWindow
                     break;
                 case RemoteApp.YouTube:
                     player = new YouTubeRemote(StreamingHttp);
+                    break;
+                case RemoteApp.Tidal:
+                    player = new TidalRemote(StreamingHttp);
+                    break;
+                case RemoteApp.SoundCloud:
+                    player = new SoundCloudRemote(StreamingHttp);
                     break;
                 default:
                     return;
@@ -222,6 +153,8 @@ public partial class MainWindow
         _settings.Save();
         _shownRemoteTrack = null;
         _shownRemoteArtwork = null;
+        ShowVolume();
+        ShowRemoteList();
         UpdateListening();
         ShowNowPlaying(_current?.Track);
         UpdatePlayPauseButton();
@@ -254,6 +187,37 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>How long the queue is, in its window's title bar, unless another app's playlist is showing there instead.</summary>
+    private void ShowQueueSize()
+    {
+        if (_queue.ShowingRemoteList)
+        {
+            return;
+        }
+
+        _queue.EmptyPlaylistHint.IsVisible = _playlist.Count == 0;
+        _queue.QueueCount.Text = _playlist.Count switch
+        {
+            0 => "Empty",
+            1 => "1 track",
+            var count => $"{count} tracks",
+        };
+    }
+
+    /// <summary>Shows the playlist the other app is playing through in the queue window, or the queue again.</summary>
+    private void ShowRemoteList()
+    {
+        var showing = _queue.ShowingRemoteList;
+        _queue.ShowRemoteList(_remote?.Player.Name ?? string.Empty, _remote?.List, _remote?.State?.Track?.Id);
+        if (showing && !_queue.ShowingRemoteList)
+        {
+            ShowQueueSize();
+        }
+    }
+
+    /// <summary>Plays one of the songs from the other app's playlist, in that app.</summary>
+    public void PlayFromRemoteList(RemoteTrack track) => RemoteTakes(remote => remote.PlayFromListAsync(track));
+
     private void OnRemoteChanged(object? sender, EventArgs e)
     {
         if (sender != _remote)
@@ -262,6 +226,8 @@ public partial class MainWindow
         }
 
         ShowRemote();
+        ShowRemoteList();
+        UpdateListening();
         UpdatePlayPauseButton();
         UpdatePosition();
     }
@@ -288,9 +254,12 @@ public partial class MainWindow
 
         Title = name is null ? "Lucent" : $"{name} - Lucent";
 
+        // Spotify says which of the account's devices it's playing on, which may not be this computer.
+        var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
         TrackDetails.Text = remote.Problem
-            ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {remote.Player.Name}" : $"{track.Album} · in {remote.Player.Name}");
-        ToolTip.SetTip(TrackDetails, remote.Problem ?? $"The sound comes from {remote.Player.Name}. Lucent shows it and presses its buttons.");
+            ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {where}" : $"{track.Album} · in {where}");
+        ToolTip.SetTip(TrackDetails, remote.Problem ?? $"The sound comes from {where}. Lucent shows it and presses its buttons.");
+        ShowVolume();
 
         if (track?.Id != _shownRemoteTrack || !ReferenceEquals(remote.Artwork, _shownRemoteArtwork))
         {
@@ -300,25 +269,104 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Has the visuals listen to every app's sound when asked to, or while another app is being controlled.</summary>
+    // Set while the volume bar is being moved to show a volume, so that isn't taken as the user changing it.
+    private bool _showingVolume;
+
+    /// <summary>
+    /// Shows the controlled app's volume on the volume bar, on the device it's playing on, or hides the bar when Lucent
+    /// can't change the volume there. Lucent's own volume comes back when it stops controlling the app.
+    /// </summary>
+    private void ShowVolume()
+    {
+        _showingVolume = true;
+        try
+        {
+            var visible = true;
+            if (_remote is { } remote)
+            {
+                var volume = remote.HasVolume ? remote.State?.Volume : null;
+                visible = volume is not null;
+                if (volume is { } level)
+                {
+                    var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
+                    VolumeSlider.Value = level;
+                    VolumeText.Text = $"{level * 100:0}%";
+                    ToolTip.SetTip(VolumeSlider, $"{where}'s volume (scrolling over the player changes it too)");
+                }
+            }
+            else
+            {
+                VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
+                VolumeText.Text = $"{VolumeSlider.Value * 100:0}%";
+                ToolTip.SetTip(VolumeSlider, "Volume (scrolling over the player changes it too)");
+            }
+
+            if (VolumeSlider.Parent is Control bar)
+            {
+                // Hidden but still taking its room, so the player doesn't change shape.
+                bar.Opacity = visible ? 1 : 0;
+                bar.IsHitTestVisible = visible;
+            }
+        }
+        finally
+        {
+            _showingVolume = false;
+        }
+    }
+
+    // What the visuals are listening to: null for nothing (Lucent's own music), EveryApp for every app's sound,
+    // or the controlled app's processes (Core Audio's objects for them, joined with commas).
+    private const string EveryApp = "*";
+    private string? _listeningTo;
+
+    // Set when macOS couldn't listen to just one app, so every app's sound is listened to instead.
+    private bool _oneAppFailed;
+
+    /// <summary>
+    /// Has the visuals listen to every app's sound when asked to, and otherwise, while another app is being
+    /// controlled, to just that app, so a video or a call playing alongside doesn't move them. Called again
+    /// with each read of the app, to follow it when it starts, quits or moves to another browser.
+    /// </summary>
     private void UpdateListening()
     {
-        var wanted = _settings.ListenToOtherApps || _remote is not null;
-        if (wanted == (_systemAudio is not null))
+        List<uint>? processes = null;
+        string? wanted;
+        if (!SystemAudio.IsSupported)
         {
             return;
         }
 
-        if (!wanted)
+        if (_settings.ListenToOtherApps || (_remote is not null && _oneAppFailed))
         {
-            _systemAudio?.Dispose();
-            _systemAudio = null;
+            wanted = EveryApp;
+        }
+        else if (_remote is null)
+        {
+            wanted = null;
+        }
+        else
+        {
+            // Only processes that use sound have an object, so the app is looked for again until it plays.
+            processes = SystemAudio.FindApp(RemoteBundles());
+            wanted = processes.Count == 0 ? null : string.Join(",", processes);
+        }
+
+        if (wanted == (_systemAudio is null ? null : _listeningTo))
+        {
+            return;
+        }
+
+        _systemAudio?.Dispose();
+        _systemAudio = null;
+        _listeningTo = null;
+        if (wanted is null)
+        {
             return;
         }
 
         try
         {
-            var listening = SystemAudio.Start(_player.Capture);
+            var listening = processes is null ? SystemAudio.Start(_player.Capture) : SystemAudio.StartForApp(_player.Capture, processes);
             listening.Stopped += (_, _) => Dispatcher.UIThread.Post(() =>
             {
                 // The output went away (unplugged headphones, say): listen to whichever one the Mac uses now.
@@ -326,18 +374,40 @@ public partial class MainWindow
                 {
                     listening.Dispose();
                     _systemAudio = null;
+                    _listeningTo = null;
                     UpdateListening();
                 }
             });
             _systemAudio = listening;
+            _listeningTo = wanted;
         }
         catch (Exception ex)
         {
             Trace.WriteLine($"Couldn't listen to other apps: {ex}");
+            if (processes is not null)
+            {
+                // macOS wouldn't tap just the one app, so the visuals hear every app's sound.
+                _oneAppFailed = true;
+                UpdateListening();
+            }
         }
     }
 
-    private static string RemoteName(RemoteApp app) => app == RemoteApp.AppleMusic ? "Apple Music" : app.ToString();
+    // The bundle IDs the controlled app's sound comes from.
+    private IReadOnlyList<string> RemoteBundles() => _remote?.Player switch
+    {
+        SpotifyRemote => ["com.spotify.client"],
+        AppleMusicRemote => ["com.apple.Music"],
+        BrowserTabRemote browser => browser.BundlePrefixes,
+        _ => [],
+    };
+
+    private static string RemoteName(RemoteApp app) => app switch
+    {
+        RemoteApp.AppleMusic => "Apple Music",
+        RemoteApp.Tidal => "TIDAL",
+        _ => app.ToString(),
+    };
 
     private static void OpenInBrowser(string url)
     {

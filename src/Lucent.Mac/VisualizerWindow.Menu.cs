@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using WinampInspiredVisualizer.Visualizer;
 
 namespace Lucent.Mac;
 
@@ -43,7 +44,11 @@ public partial class VisualizerWindow
         }
 
         menu.Items.Add(Item("Next visual", new KeyGesture(Key.N), () => ChangePreset(+1)));
-        menu.Items.Add(Item("Previous visual", new KeyGesture(Key.B), () => ChangePreset(-1)));
+        menu.Items.Add(Item("Previous visual", new KeyGesture(Key.B), PreviousPreset));
+        // Whichever way B doesn't go (Options > Visuals picks), so both are a click away.
+        menu.Items.Add(_settings.PreviousVisual == PreviousVisualMode.LastShown
+            ? Item("Visual above in the list", null, () => PreviousPreset(PreviousVisualMode.UpInList))
+            : Item("Last visual shown", null, () => PreviousPreset(PreviousVisualMode.LastShown)));
         if (!_isFullscreen)
         {
             // The picker opens from the bar under the visuals, which fullscreen hides.

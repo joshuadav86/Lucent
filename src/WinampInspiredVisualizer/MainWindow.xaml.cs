@@ -79,13 +79,7 @@ public partial class MainWindow : Window
         _queue.PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>
         {
-            _queue.EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            _queue.QueueCount.Text = _playlist.Count switch
-            {
-                0 => "Empty",
-                1 => "1 track",
-                var count => $"{count} tracks",
-            };
+            ShowQueueSize();
             _shuffleHistory.RemoveAll(entry => !_playlist.Contains(entry));
             ForgetUpNext();
             ShowNowPlaying(_current?.Track);
@@ -94,6 +88,7 @@ public partial class MainWindow : Window
         VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
         _player.Volume = (float)VolumeSlider.Value;
         _player.Equalizer.Apply(_settings.Equalizer);
+        _player.Equalizer.Balance = _settings.Balance;
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
         _player.VideoChanged += (_, _) => OnVideoChanged();
@@ -128,6 +123,7 @@ public partial class MainWindow : Window
 
         ApplyLook();
         BuildThemeSwatches();
+        ApplyClassicSkin();
 
         _libraryWindow.Attach(_library, _settings);
         _stores = new StoreService(_settings, LinkLibraryFolder);
@@ -172,6 +168,8 @@ public partial class MainWindow : Window
         {
             _meter.Tick();
         }
+
+        TickClassicPlayer();
     }
 
     /// <summary>True once the player is closing, so the other windows close for real instead of hiding.</summary>
@@ -552,17 +550,24 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Opens a small window (the artwork or the equalizer) docked to the outside of the player and
-    /// the windows docked to it, in the first spot where it fits on the screen without covering
+    /// Opens a small window (the artwork, the equalizer or the analyzer) docked to the outside of the
+    /// player and the windows docked to it, in the first spot where it fits on the screen without covering
     /// anything, shrinking it a little if it has to. It then snaps and moves with them like the rest.
     /// </summary>
     public void DockNewWindow(Window window)
     {
         _snapper.Add(window);
+        DockToGroup(window, Array.Empty<Window>());
+    }
+
+    // Finds the window a free spot against the player's group. The windows in `moving` are about to be
+    // docked too, so where they are now doesn't count as taken.
+    private void DockToGroup(Window window, IReadOnlyCollection<Window> moving)
+    {
         window.WindowStartupLocation = WindowStartupLocation.Manual;
         var area = ScreenArea.Of(this);
         var shown = Application.Current.Windows.Cast<Window>()
-            .Where(other => other != window && other.IsVisible && other.WindowState == WindowState.Normal
+            .Where(other => other != window && !moving.Contains(other) && other.IsVisible && other.WindowState == WindowState.Normal
                 && (other == this || other.Owner == this) && !(other == _visuals && _visuals.IsFullscreen))
             .Select(other => new Rect(other.Left, other.Top, other.ActualWidth, other.ActualHeight))
             .ToList();
@@ -665,6 +670,21 @@ public partial class MainWindow : Window
         RestoreAllWindows();
         ArrangeFirstTime();
         SavePlacements();
+        // Once the arranged windows have their new sizes, so the spots beside them are worked out from where they are now.
+        Dispatcher.InvokeAsync(RedockSmallWindows, DispatcherPriority.Background);
+    }
+
+    /// <summary>Docks the analyzer and the artwork back against the player's group, wherever they'd been moved to.</summary>
+    private void RedockSmallWindows()
+    {
+        var moving = new[] { AnalyzerWindow.Current, ArtworkWindow.Current }
+            .OfType<Window>()
+            .Where(window => window.IsVisible && window.WindowState == WindowState.Normal)
+            .ToList();
+        for (var i = 0; i < moving.Count; i++)
+        {
+            DockToGroup(moving[i], moving.Skip(i + 1).ToList());
+        }
     }
 
     private void OnFillScreen(object sender, RoutedEventArgs e) => FillScreen();
@@ -1101,6 +1121,7 @@ public partial class MainWindow : Window
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
         _visuals.ShowFrameRate(_settings.ShowFrameRate);
         _visuals.UpdateAutoCycleButton();
+        _visuals.UpdatePreviousButton();
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
     }
 
@@ -1129,8 +1150,11 @@ public partial class MainWindow : Window
         ShowOptionValues();
         UpdateHdrHint();
 
-        // Line the panel's right edge up with the button's (the panel has a 16px margin for its shadow).
-        OptionsPopup.HorizontalOffset = OptionsButton.ActualWidth - 356;
+        BuildClassicSkinSwatches();
+
+        // Line the panel's right edge up with the button's (the panel has a 16px margin for its shadow), or
+        // with the classic player's.
+        OptionsPopup.HorizontalOffset = ((FrameworkElement)OptionsPopup.PlacementTarget).ActualWidth - 356;
         OptionsPopup.IsOpen = true;
     }
 
@@ -1177,13 +1201,20 @@ public partial class MainWindow : Window
             case "TransitionSpeed" when Enum.TryParse<TransitionSpeed>(value, out var speed):
                 _settings.TransitionSpeed = speed;
                 break;
+            case "PreviousVisual" when Enum.TryParse<PreviousVisualMode>(value, out var previous):
+                _settings.PreviousVisual = previous;
+                break;
             case "Theme":
                 _settings.Theme = value;
                 ApplyLook();
                 break;
             case "Skin":
-                // A skin brings the theme it was made for; another theme can be picked after it.
+                // A skin brings the theme it was made for; another theme can be picked after it. Picking one
+                // also brings back Lucent's own player if a classic skin was drawing it.
                 _settings.Skin = value;
+                _settings.ClassicSkin = null;
+                ApplyClassicSkin();
+                BuildClassicSkinSwatches();
                 _settings.Theme = SkinManager.Find(value).Theme;
                 ApplyLook();
                 ShowOptionValues();
@@ -1267,6 +1298,7 @@ public partial class MainWindow : Window
                 "Glow" => _settings.Glow.ToString(),
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
+                "PreviousVisual" => _settings.PreviousVisual.ToString(),
                 "Theme" => ThemeManager.Find(_settings.Theme).Name,
                 "Skin" => SkinManager.Find(_settings.Skin).Name,
                 "Updates" => _settings.EveryBuild ? "EveryBuild" : "Stable",
@@ -1365,22 +1397,6 @@ public partial class MainWindow : Window
 
     // ---- Adding music ----
 
-    private void OnOpenMenu(object sender, RoutedEventArgs e)
-    {
-        var menu = new ContextMenu { PlacementTarget = OpenButton, Placement = PlacementMode.Bottom };
-        var files = new MenuItem { Header = "Add files…" };
-        files.Click += (_, _) => AddFilesFromDialog(this);
-        var folder = new MenuItem { Header = "Add a folder…" };
-        folder.Click += (_, _) => AddFolderFromDialog(this);
-        menu.Items.Add(files);
-        menu.Items.Add(folder);
-        var radio = new MenuItem { Header = "Online radio…", ToolTip = "SomaFM, FRISKY and thousands of other stations, by genre. The visuals play along." };
-        radio.Click += (_, _) => ShowRadio();
-        menu.Items.Add(radio);
-        AddStreamingItems(menu);
-        menu.IsOpen = true;
-    }
-
     public async void AddFilesFromDialog(Window owner)
     {
         var music = string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
@@ -1408,12 +1424,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Music dropped on the queue: added to the end of it.</summary>
-    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(paths);
+    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(TakeDroppedSkins(paths));
 
     /// <summary>Music dropped on the player (or the visuals): it replaces the queue and plays now, as in Winamp.</summary>
     public async void PlayDroppedPaths(IEnumerable<string> paths)
     {
-        var input = paths.ToList();
+        // A Winamp skin dropped with (or instead of) the music is put on, not played.
+        var input = TakeDroppedSkins(paths);
+        if (input.Count == 0)
+        {
+            return;
+        }
+
         var tracks = await Task.Run(() => ExpandPaths(input).Select(Track.FromFile).ToList());
         ReplaceQueue(tracks, 0);
     }
@@ -1885,7 +1907,7 @@ public partial class MainWindow : Window
                 _visuals.ChangePreset(+1);
                 break;
             case Key.B:
-                _visuals.ChangePreset(-1);
+                _visuals.PreviousPreset();
                 break;
             case Key.V:
                 _visuals.TogglePresetPicker();
@@ -1937,6 +1959,10 @@ public partial class MainWindow : Window
                 Activate();
                 ToggleOptions();
                 break;
+            case Key.M:
+                Activate();
+                ToggleSources(SourcesButton);
+                break;
             default:
                 return;
         }
@@ -1958,6 +1984,27 @@ public partial class MainWindow : Window
 
     private void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_showingVolume)
+        {
+            return;
+        }
+
+        // While Lucent controls another app, the bar is that app's volume (or does nothing, when it can't be changed).
+        if (_remote is { } remote)
+        {
+            if (remote.HasVolume)
+            {
+                remote.SetVolume(e.NewValue);
+                VolumeText.Text = $"{e.NewValue * 100:0}%";
+            }
+            else
+            {
+                ShowVolume();
+            }
+
+            return;
+        }
+
         _player.Volume = (float)e.NewValue;
         _settings.Volume = e.NewValue;
         if (VolumeText is not null)
@@ -1993,14 +2040,19 @@ public partial class MainWindow : Window
 
     // ---- Display ----
 
-    private void OnTimeClick(object sender, MouseButtonEventArgs e)
+    private void OnTimeClick(object sender, MouseButtonEventArgs e) => ToggleRemainingTime();
+
+    private void ToggleRemainingTime()
     {
         _settings.ShowRemainingTime = !_settings.ShowRemainingTime;
         _settings.Save();
         UpdatePosition();
     }
 
-    private void OnMeterClick(object sender, MouseButtonEventArgs e)
+    private void OnMeterClick(object sender, MouseButtonEventArgs e) => CycleMeter();
+
+    /// <summary>The meter's (and the classic player's visualizer's) next mode: bars, a scope line, or off.</summary>
+    private void CycleMeter()
     {
         _settings.Meter = _settings.Meter switch
         {
@@ -2078,7 +2130,7 @@ public partial class MainWindow : Window
         if (track is null)
         {
             SetMarquee("Nothing playing");
-            TrackDetails.Text = _playlist.Count == 0 ? "Drop music on any Lucent window to begin" : $"{_playlist.Count} in the queue";
+            TrackDetails.Text = _playlist.Count == 0 ? "Drop music here, or open Sources to begin" : $"{_playlist.Count} in the queue";
             Title = "Lucent";
             return;
         }
@@ -2139,6 +2191,25 @@ public partial class MainWindow : Window
 
     /// <summary>Opens the Bandcamp and Beatport window: importing downloads, and syncing a Bandcamp collection.</summary>
     public void ShowStores() => StoreWindow.Open(this, _stores, _settings);
+
+    /// <summary>
+    /// Puts a finished recording's folder into the library (from the Record window), listed under its one
+    /// heading the first time, so the recording and the ones after it show up there.
+    /// </summary>
+    public void AddRecordingToLibrary(string path)
+    {
+        if (Path.GetDirectoryName(path) is not { Length: > 0 } folder)
+        {
+            return;
+        }
+
+        if (LibraryFolderList.LinkedFolderOf(_settings.LibraryFolders, folder) is null)
+        {
+            LibraryFolderList.SetTogether(_settings.LibraryFoldersTogether, folder, on: true);
+        }
+
+        LinkLibraryFolder(folder);
+    }
 
     /// <summary>Puts a folder into the library, if it isn't in it already (the Bandcamp folder, say).</summary>
     private void LinkLibraryFolder(string folder)

@@ -381,10 +381,44 @@ public partial class RadioWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = ThemeBrush("FaintTextBrush"),
         };
+        // The station's website, a click away; kept in its place when there's none, so the rows line up.
+        var hasWebsite = station.Homepage is { } homepage && RadioGuide.IsStreamAddress(homepage);
+        var website = new Button
+        {
+            Theme = FindTheme("IconButton"),
+            Width = 24,
+            Height = 24,
+            Margin = new Thickness(6, -4, 0, -4),
+            Focusable = false,
+            Opacity = hasWebsite ? 1 : 0,
+            IsHitTestVisible = hasWebsite,
+            Content = new Avalonia.Controls.Shapes.Path
+            {
+                Data = ThemeIcon("WebsiteIcon"),
+                Stroke = ThemeBrush("FaintTextBrush"),
+                StrokeThickness = 1.2,
+                Width = 12,
+                Height = 12,
+                Stretch = Stretch.Uniform,
+            },
+        };
+        if (hasWebsite)
+        {
+            ToolTip.SetTip(website, $"Open the station's website ({station.Homepage})");
+        }
+
+        website.Click += (_, e) =>
+        {
+            e.Handled = true;
+            _player.OpenStationWebsite(station);
+        };
+
         DockPanel.SetDock(star, Dock.Right);
+        DockPanel.SetDock(website, Dock.Right);
         DockPanel.SetDock(detail, Dock.Right);
         var content = new DockPanel();
         content.Children.Add(star);
+        content.Children.Add(website);
         content.Children.Add(detail);
         if (playing)
         {
