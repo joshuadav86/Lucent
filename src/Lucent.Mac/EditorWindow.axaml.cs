@@ -16,6 +16,7 @@ using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Editor.Effects;
 using WinampInspiredVisualizer.Export;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Video;
 
 namespace Lucent.Mac;
 
@@ -267,7 +268,24 @@ public partial class EditorWindow : Window
         try
         {
             var token = _busy.Token;
-            var (audio, info, mixedDown) = await Task.Run(() => AudioFileLoader.Load(path, progress, token));
+            // A video's sound is what's edited; its pictures are cut along with it (EditorWindow.Video.cs).
+            VideoEdit? video = null;
+            var (audio, info, mixedDown) = await Task.Run(() =>
+            {
+                if (VideoEdit.IsEditableVideo(path))
+                {
+                    var loaded = VideoEdit.Load(path, progress, token);
+                    video = loaded.Video;
+                    return (loaded.Audio, loaded.Info, loaded.MixedDown);
+                }
+
+                if (VideoFiles.IsVideo(path))
+                {
+                    throw new AudioFileException("The editor cuts MP4, M4V and MOV videos. Other kinds of video can't be edited yet.");
+                }
+
+                return AudioFileLoader.Load(path, progress, token);
+            });
             LoadingText.Text = "Drawing the waveform…";
             var session = await Task.Run(() => new EditSession(audio));
             session.JoinFrames = JoinFrames(audio.SampleRate);
@@ -280,6 +298,11 @@ public partial class EditorWindow : Window
             ShowFileName();
             _session = session;
             _info = info;
+            if (video is not null)
+            {
+                OpenVideo(video);
+            }
+
             if (replacing)
             {
                 swapped = true;
@@ -289,7 +312,9 @@ public partial class EditorWindow : Window
             Waveform.Peaks = session.Peaks;
             Overview.Peaks = session.Peaks;
             LoadingPanel.IsVisible = false;
-            ShowStatus(mixedDown
+            ShowStatus(video is not null
+                ? "Select part of the video, then Delete cuts it out or Trim keeps only it. Saving copies the pictures and sound as they are, without re-encoding."
+                : mixedDown
                 ? $"This file has {info.Channels} channels; the editor mixes them down to stereo, so saving makes a stereo file."
                 : "Drag across the waveform to select part of it, or right-click it for what you can do. Scrolling zooms, Shift+scroll moves along.");
         }
@@ -373,6 +398,7 @@ public partial class EditorWindow : Window
     /// <summary>Lets go of everything that belonged to the sound that was open, before another one takes its place.</summary>
     private void ForgetSound()
     {
+        CloseVideo();
         _stemsWindow?.Close();
         _closeConfirmed = false;
         _lastSavedPath = null;
@@ -505,7 +531,7 @@ public partial class EditorWindow : Window
     /// </remarks>
     private async Task ApplyAsync(IAudioEffect effect, FrameRange? range = null, FrameRange? selectAfter = null, bool bothChannels = false)
     {
-        if (_session is not { } session)
+        if (_session is not { } session || VideoRefuses(effect.Description))
         {
             return;
         }
@@ -535,10 +561,10 @@ public partial class EditorWindow : Window
         }
     }
 
-    /// <summary>Runs a cut (delete or trim) as one undoable step.</summary>
-    private async Task EditAsync(string description, Action<EditSession> edit, Func<FrameRange> selectionAfter)
+    /// <summary>Runs a cut (delete or trim) as one undoable step. On a video, only its own cuts run (<paramref name="video"/>).</summary>
+    private async Task EditAsync(string description, Action<EditSession> edit, Func<FrameRange> selectionAfter, bool video = false)
     {
-        if (_session is not { } session)
+        if (_session is not { } session || (!video && VideoRefuses(description)))
         {
             return;
         }
@@ -559,6 +585,8 @@ public partial class EditorWindow : Window
             return;
         }
 
+        // A video's cut follows the sound's history (an undo brings its pictures back too).
+        _videoEdit?.Follow(_session.StateId);
         Waveform.Peaks = _session.Peaks;
         Waveform.Splits = _session.Splits;
         Waveform.ClipEdgeDetails = _session.ClipEdgeDetails;
@@ -654,7 +682,11 @@ public partial class EditorWindow : Window
     private async void OnTrim(object? sender, RoutedEventArgs e)
     {
         var selection = Selection;
-        if (!selection.IsEmpty)
+        if (!selection.IsEmpty && IsVideo)
+        {
+            await CutVideoAsync(selection, trim: true);
+        }
+        else if (!selection.IsEmpty)
         {
             await EditAsync("Trim", session => session.TrimTo(selection), () => new FrameRange(0, 0));
         }
@@ -667,6 +699,12 @@ public partial class EditorWindow : Window
         var selection = Selection;
         if (selection.IsEmpty)
         {
+            return;
+        }
+
+        if (IsVideo)
+        {
+            await CutVideoAsync(selection, trim: false);
             return;
         }
 
@@ -699,7 +737,7 @@ public partial class EditorWindow : Window
 
     private void Split(int[] frames)
     {
-        if (_session is not { } session || IsBusy)
+        if (_session is not { } session || IsBusy || VideoRefuses("Splitting"))
         {
             return;
         }
@@ -841,7 +879,7 @@ public partial class EditorWindow : Window
     /// <summary>Moves the split between two touching clips, so one grows as the other shrinks.</summary>
     private void MoveSplit(int split, int frame)
     {
-        if (_session is not { } session || IsBusy)
+        if (_session is not { } session || IsBusy || VideoRefuses("Moving a split"))
         {
             return;
         }
@@ -1279,6 +1317,19 @@ public partial class EditorWindow : Window
             return false;
         }
 
+        if (IsVideo)
+        {
+            var playingVideo = _mainPlayer.IsCurrentFile(_path) ? "\n\nIt's open in the player, which will pause for a moment while it's replaced." : string.Empty;
+            if (await MessageWindow.ShowAsync(this,
+                    $"Replace \"{Path.GetFileName(_path)}\" with your cut version?\n\nNothing is re-encoded, so no quality is lost, but what was cut out can't be brought back afterwards.{playingVideo}",
+                    "Save", MessageButtons.YesNo, MessageResult.No) != MessageResult.Yes)
+            {
+                return false;
+            }
+
+            return await SaveVideoAsync(_path, replaceExisting: true);
+        }
+
         if (ExportOptions.WritableFormat(_path) is not { } format)
         {
             var kind = Path.GetExtension(_path).TrimStart('.').ToUpperInvariant();
@@ -1308,6 +1359,11 @@ public partial class EditorWindow : Window
         if (_session is null || _info is not { } info)
         {
             return false;
+        }
+
+        if (IsVideo)
+        {
+            return await SaveVideoAsNewAsync();
         }
 
         var format = ExportOptions.WritableFormat(_path) ?? ExportFormat.Flac;
@@ -1743,6 +1799,7 @@ public partial class EditorWindow : Window
         _settings.Save();
         _playheadTimer.Stop();
         _player.Dispose();
+        CloseVideo();
         ClosePluginInBackground();
         // The last split's stems can take hundreds of megabytes.
         _stemsWindow?.Close();

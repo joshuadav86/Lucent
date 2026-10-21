@@ -163,6 +163,12 @@ public sealed partial class EditSession
 
     private long CurrentStepId => _undo.Count > 0 ? _undo[^1].Id : _baseStepId;
 
+    /// <summary>
+    /// Names the state the audio is in now: it changes with every step, and comes back when an undo, redo or jump in
+    /// the history returns to a state. 0 is the file as opened. A video's cuts are kept by it (VideoEdit).
+    /// </summary>
+    public long StateId => CurrentStepId;
+
     /// <summary>Remembers the current state as saved, so <see cref="IsModified"/> turns false.</summary>
     public void MarkSaved() => _savedStepId = CurrentStepId;
 

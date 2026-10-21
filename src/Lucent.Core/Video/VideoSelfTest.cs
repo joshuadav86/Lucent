@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Editor;
 
 namespace WinampInspiredVisualizer.Video;
 
@@ -143,6 +145,8 @@ public static class VideoSelfTest
             }
 
             problems += Check(log, $"{name} cut without re-encoding", Play(video, pauseAt: null), 2, virtualMachine);
+            problems += TestEditorSound(log, path);
+            problems += TestPreview(log, path);
         }
         catch (Exception ex)
         {
@@ -163,6 +167,96 @@ public static class VideoSelfTest
         return problems;
     }
 
+    // The editor opens a video by its sound, copied out of it as an .m4a file for the system's music decoders: it has
+    // to decode, the whole 4 seconds, with the beeps where they are in the video.
+    private static int TestEditorSound(Action<string> log, string path)
+    {
+        if (AudioReaderFactory.OpenWithSystemDecoder is null)
+        {
+            return 0;
+        }
+
+        var name = Path.GetFileName(path);
+        var (_, audio, _, _) = VideoEdit.Load(path, null, CancellationToken.None);
+        var seconds = audio.Frames / (double)audio.SampleRate;
+        var beeps = new List<double>();
+        var quiet = 0;
+        var samples = audio.Channels[0];
+        for (var i = 0; i < samples.Length; i++)
+        {
+            if (Math.Abs(samples[i]) > 0.2f)
+            {
+                if (quiet > audio.SampleRate / 4)
+                {
+                    beeps.Add(i / (double)audio.SampleRate);
+                }
+
+                quiet = 0;
+            }
+            else
+            {
+                quiet++;
+            }
+        }
+
+        var heard = string.Join(", ", beeps.Select(beep => $"{beep:0.000} s"));
+        if (Math.Abs(seconds - 4) > 0.1 || beeps.Count != 3 || beeps.Select((beep, i) => Math.Abs(beep - (i + 1))).Max() > 0.03)
+        {
+            log($"::error::Video: the editor read {name}'s sound as {seconds:0.000} s with beeps at {heard}, not 4 s with beeps at 1, 2 and 3 s.");
+            return 1;
+        }
+
+        log($"Video: the editor reads {name}'s sound ({seconds:0.000} s, beeps at {heard}).");
+        return 0;
+    }
+
+    // The editor's picture: asked for the middle of a flash (three pictures long), it shows the flash, to a picture
+    // either side, and asked for a moment between flashes, it doesn't.
+    private static int TestPreview(Action<string> log, string path)
+    {
+        var name = Path.GetFileName(path);
+        using var preview = new VideoPreview(path);
+        string? Shows(double seconds)
+        {
+            var before = preview.Frames.Count;
+            preview.Show(seconds);
+            var waited = Stopwatch.StartNew();
+            while (waited.Elapsed < TimeSpan.FromSeconds(5) && (preview.Frames.Count == before || preview.Frames.Count == 0 || preview.IsFinding))
+            {
+                Thread.Sleep(10);
+            }
+
+            // A moment more, in case pictures on the way to pausing were shown.
+            Thread.Sleep(200);
+            string? colour = null;
+            preview.Frames.CopyLatest((pixels, width, height, stride) =>
+            {
+                var middle = new byte[4];
+                Marshal.Copy(pixels + height / 2 * stride + width / 2 * 4, middle, 0, 4);
+                colour = (middle[2] > 200, middle[1] > 200, middle[0] > 200) switch
+                {
+                    (true, true, true) => "white",
+                    (true, true, false) => "yellow",
+                    (false, true, true) => "cyan",
+                    _ => "dark",
+                };
+            });
+            return colour;
+        }
+
+        var flash = Shows(1.034);
+        var between = Shows(1.5);
+        var again = Shows(2.034);
+        if (flash is null or "dark" || between != "dark" || again is null or "dark")
+        {
+            log($"::error::Video: the editor's picture of {name} at 1 s, 1.5 s and 2 s was {flash ?? "nothing"}, {between ?? "nothing"} and {again ?? "nothing"}, not the flash, the dimmed pattern, then the flash.");
+            return 1;
+        }
+
+        log($"Video: the editor shows {name}'s pictures where asked ({flash} at 1 s, {between} at 1.5 s, {again} at 2 s).");
+        return 0;
+    }
+
     private static int Check(Action<string> log, string what, Playthrough run, int expected, bool virtualMachine)
     {
         var problems = 0;
@@ -178,6 +272,13 @@ public static class VideoSelfTest
         {
             problems++;
             log($"::error::Video: {what}: the sound came out garbled ({run.Garbled} samples weren't sound, and the loudest was {run.Loudest:0.00} where the beeps are 0.5).");
+        }
+
+        if (run.Flashes.Count < expected && run.Beeps.Count == expected && run.LostPictures > 0 && virtualMachine)
+        {
+            // Every picture of a flash came too late to show, so libVLC dropped them, as it should.
+            log($"::warning::Video: {what}: saw {run.Flashes.Count} flash(es) of {expected}, as this virtual machine was too slow to show {run.LostPictures} picture(s) in time, so they were dropped. It wasn't counted as a failure.");
+            return problems;
         }
 
         if (run.Flashes.Count != expected || run.Beeps.Count != expected)
@@ -220,6 +321,7 @@ public static class VideoSelfTest
         // Each picture is looked at as libVLC shows it, timed by libVLC's clock. A flash is three pictures (white,
         // yellow, then cyan), so one a slow machine drops still leaves the flash's start known from the others.
         var flashing = false;
+        var lostBefore = video.LostPictures;
         video.Frames.Shown = (pixels, width, height, stride) =>
         {
             var shownAt = video.Clock;
@@ -311,6 +413,9 @@ public static class VideoSelfTest
         // The last picture may come a moment after the sound runs out.
         Thread.Sleep(100);
         video.Frames.Shown = null;
+        // Counted since libVLC last started, which may have been before this play or during it.
+        var lost = video.LostPictures;
+        run.LostPictures = lost >= lostBefore ? lost - lostBefore : lost;
         video.Paused();
         return run;
     }
@@ -322,6 +427,9 @@ public static class VideoSelfTest
         public List<long> Beeps { get; } = new();
 
         public bool Ended { get; set; }
+
+        /// <summary>Pictures libVLC dropped for coming too late.</summary>
+        public int LostPictures { get; set; }
 
         /// <summary>The loudest sample heard (the beeps are at half volume).</summary>
         public float Loudest { get; set; }

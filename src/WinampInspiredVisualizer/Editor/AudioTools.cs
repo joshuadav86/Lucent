@@ -7,6 +7,7 @@ using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Video;
 
 namespace WinampInspiredVisualizer.Editor;
 
@@ -201,7 +202,7 @@ public static class AudioTools
         var dialog = new OpenFileDialog
         {
             Title = "Choose a sound to edit",
-            Filter = $"Music files|{Patterns()}|All files|*.*",
+            Filter = $"Music and video files|{Patterns()};{string.Join(";", Mp4Cutter.Extensions.Select(ext => "*" + ext))}|All files|*.*",
         };
         if (dialog.ShowDialog(owner) == true)
         {

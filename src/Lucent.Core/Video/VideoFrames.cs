@@ -71,6 +71,12 @@ public sealed class VideoFrames : IDisposable
     {
         lock (_gate)
         {
+            if (width == Width && height == Height && _drawing != 0)
+            {
+                // Started again at the same size (the editor's preview moving): the newest picture stays.
+                return;
+            }
+
             Free();
             Width = width;
             Height = height;

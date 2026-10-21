@@ -403,15 +403,26 @@
                     </ScrollViewer>
                 </DockPanel>
             </Border>
-            <editor:WaveformView x:Name="Waveform"
-                                 WaveBrush="{DynamicResource AccentBrush}"
-                                 SelectedWaveBrush="#F2F0EA"
-                                 LaneBrush="{DynamicResource SurfaceBrush}"
-                                 SelectionBrush="#2EF2F0EA"
-                                 LineBrush="{DynamicResource HairlineBrush}"
-                                 LabelBrush="{DynamicResource MutedTextBrush}"
-                                 CursorBrush="#4FD8E8"
-                                 PlayheadBrush="{DynamicResource TextBrush}" />
+            <Grid RowDefinitions="Auto,*">
+                <!-- A video's picture, at the cursor (or the selection's edge), and playing along while it plays -->
+                <Border x:Name="VideoPanel" IsVisible="False" Height="260" Margin="0,0,0,8" CornerRadius="10"
+                        Background="Black" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <Image x:Name="VideoPicture" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                        <TextBlock x:Name="PreviewTimeText" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,8"
+                                   FontSize="11" Foreground="#CCF2F0EA" FontFamily="Menlo, Consolas, monospace" />
+                    </Grid>
+                </Border>
+                <editor:WaveformView x:Name="Waveform" Grid.Row="1"
+                                     WaveBrush="{DynamicResource AccentBrush}"
+                                     SelectedWaveBrush="#F2F0EA"
+                                     LaneBrush="{DynamicResource SurfaceBrush}"
+                                     SelectionBrush="#2EF2F0EA"
+                                     LineBrush="{DynamicResource HairlineBrush}"
+                                     LabelBrush="{DynamicResource MutedTextBrush}"
+                                     CursorBrush="#4FD8E8"
+                                     PlayheadBrush="{DynamicResource TextBrush}" />
+            </Grid>
             <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
                 <TextBlock x:Name="LoadingText" Text="Opening the sound…" FontSize="13" HorizontalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />

@@ -85,9 +85,13 @@ public partial class EditorWindow
                 await InsertSoundsAsync(sounds.Skip(1).ToList(), opened.Audio.Frames);
             }
         }
-        else if (frame is { } at)
+        else if (frame is { } at && !IsVideo && !VideoEdit.IsEditableVideo(sounds[0]))
         {
             await InsertSoundsAsync(sounds, at);
+        }
+        else if (frame is not null && IsVideo && !VideoEdit.IsEditableVideo(sounds[0]))
+        {
+            VideoRefuses("Adding a sound");
         }
         else
         {
@@ -98,7 +102,7 @@ public partial class EditorWindow
     /// <summary>The dropped files the editor can open, or none if it isn't files being dragged.</summary>
     private static IReadOnlyList<string> DroppedSounds(DragEventArgs e) =>
         e.Data.GetData(DataFormats.FileDrop) is string[] paths
-            ? paths.Where(path => File.Exists(path) && AudioReaderFactory.IsSupported(path)).ToList()
+            ? paths.Where(path => File.Exists(path) && (AudioReaderFactory.IsSupported(path) || VideoEdit.IsEditableVideo(path))).ToList()
             : Array.Empty<string>();
 
     /// <summary>Where on the sound a drop onto the waveform goes in, or null when it isn't over the waveform.</summary>

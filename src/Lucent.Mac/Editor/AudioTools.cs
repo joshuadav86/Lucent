@@ -9,6 +9,7 @@ using Lucent.Mac.Windows;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Video;
 
 namespace Lucent.Mac.Editor;
 
@@ -227,7 +228,7 @@ public static class AudioTools
         var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Choose a sound to edit",
-            FileTypeFilter = FileTypes(),
+            FileTypeFilter = FileTypes(videos: true),
         });
         if (files.Count > 0 && files[0].TryGetLocalPath() is { } path)
         {
@@ -311,9 +312,14 @@ public static class AudioTools
         return item;
     }
 
-    private static List<FilePickerFileType> FileTypes() => new()
+    // With `videos`, the ones the editor can cut too.
+    private static List<FilePickerFileType> FileTypes(bool videos = false) => new()
     {
-        new FilePickerFileType("Music files") { Patterns = AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext).ToList() },
+        new FilePickerFileType(videos ? "Music and video files" : "Music files")
+        {
+            Patterns = AudioReaderFactory.SupportedExtensions.Concat(videos ? Mp4Cutter.Extensions : Enumerable.Empty<string>())
+                .Distinct(StringComparer.OrdinalIgnoreCase).Select(ext => "*" + ext).ToList(),
+        },
         new FilePickerFileType("All files") { Patterns = new[] { "*" } },
     };
 
