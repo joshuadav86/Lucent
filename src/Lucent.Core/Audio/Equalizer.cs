@@ -126,7 +126,7 @@ public sealed class Equalizer : ISampleProvider
     /// <summary>Takes on saved settings: on or off, band count, slider gains and preamp.</summary>
     public void Apply(EqualizerSettings settings)
     {
-        var bands = EqualizerBands.ForCount(settings.BandCount);
+        var bands = BandsFor(settings);
         Configure(settings.Enabled, bands, SliderGains(settings, bands), settings.PreampDb);
     }
 
@@ -146,6 +146,29 @@ public sealed class Equalizer : ISampleProvider
             UpdateDesigns(stream?.WaveFormat.SampleRate ?? _design.SampleRate);
             stream?.Retarget(_design);
         }
+    }
+
+    /// <summary>The band layout saved settings are for: one of Lucent's, or the classic skin's ten.</summary>
+    public static EqualizerBands BandsFor(EqualizerSettings settings) =>
+        settings.BandCount == EqualizerBands.Classic.Count ? EqualizerBands.Classic : EqualizerBands.ForCount(settings.BandCount);
+
+    /// <summary>
+    /// Moves saved settings to another band layout, keeping the same sound: a preset is redrawn at the new
+    /// bands, and a hand-made curve is traced through its sliders and sampled at them.
+    /// </summary>
+    public static void ChangeBands(EqualizerSettings settings, EqualizerBands bands)
+    {
+        var current = BandsFor(settings);
+        var gains = SliderGains(settings, current);
+        if (ReferenceEquals(current, bands))
+        {
+            settings.Gains = gains.ToList();
+            return;
+        }
+
+        var curve = EqualizerPresets.Find(settings.PresetName)?.Curve ?? EqualizerCurve.FromBands(current, gains);
+        settings.BandCount = bands.Count;
+        settings.Gains = curve.Sample(bands).ToList();
     }
 
     /// <summary>

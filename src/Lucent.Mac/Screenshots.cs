@@ -48,6 +48,7 @@ public static class Screenshots
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
         ("Queue", () => PreviewQueue()),
+        ("Queue-ClassicSkin", () => PreviewClassicQueue()),
         ("TrackInfo", TrackInfoPreviews.TrackInfo),
         ("TrackInfoLyrics", TrackInfoPreviews.TrackInfoLyrics),
         ("TrackInfoFile", TrackInfoPreviews.TrackInfoFile),
@@ -55,6 +56,7 @@ public static class Screenshots
         ("Artwork", TrackInfoPreviews.Artwork),
         ("ArtworkEmpty", TrackInfoPreviews.ArtworkEmpty),
         ("Equalizer", () => PreviewEqualizer()),
+        ("Equalizer-ClassicSkin", () => PreviewClassicEqualizer()),
         ("Analyzer", () => PreviewAnalyzer()),
         ("Radio", () => PreviewRadio(genre: false)),
         ("RadioGenre", () => PreviewRadio(genre: true)),
@@ -329,6 +331,45 @@ public static class Screenshots
         queue.EmptyPlaylistHint.IsVisible = false;
         queue.QueueCount.Text = $"{entries.Count} tracks";
         return queue;
+    }
+
+    /// <summary>The queue in Lucent Classic's playlist frame, two songs selected, part way through the second.</summary>
+    private static Window PreviewClassicQueue()
+    {
+        var queue = (QueueWindow)PreviewQueue();
+        queue.Width = 550;
+        queue.Height = 348;
+        queue.SetClassicSkin(WinampInspiredVisualizer.ClassicSkins.ClassicSkinLibrary.Default, 2);
+        queue.Opened += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            var entries = queue.PlaylistView.Items.OfType<PlaylistEntry>().ToList();
+            queue.PlaylistView.SelectedItems?.Add(entries[3]);
+            queue.PlaylistView.SelectedItems?.Add(entries[4]);
+            queue.ShowClassicState(WinampInspiredVisualizer.ClassicSkins.ClassicPlayState.Playing, TimeSpan.FromSeconds(83),
+                entries[1].Track.Duration, showRemaining: false);
+        });
+        return queue;
+    }
+
+    /// <summary>The equalizer in Lucent Classic, set to the Rock preset with the preamp down a little.</summary>
+    private static Window PreviewClassicEqualizer()
+    {
+        var player = new Lucent.Mac.Audio.AudioPlayer();
+        var settings = new AppSettings();
+        settings.Equalizer.BandCount = WinampInspiredVisualizer.Audio.EqualizerBands.Classic.Count;
+        settings.Equalizer.PresetName = "Rock";
+        settings.Equalizer.Gains = WinampInspiredVisualizer.Audio.EqualizerPresets.Find("Rock")!.Curve
+            .Sample(WinampInspiredVisualizer.Audio.EqualizerBands.Classic).ToList();
+        settings.Equalizer.PreampDb = -2;
+        EqualizerWindow.ClassicSkin = (WinampInspiredVisualizer.ClassicSkins.ClassicSkinLibrary.Default, 2);
+        try
+        {
+            return EqualizerWindow.Create(player, settings);
+        }
+        finally
+        {
+            EqualizerWindow.ClassicSkin = null;
+        }
     }
 
     private static Window PreviewEqualizer()

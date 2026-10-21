@@ -8,6 +8,53 @@
               Width="520" Height="320" MinWidth="300" MinHeight="160"
               Background="{DynamicResource SurfaceBrush}">
 
+    <w:ToolWindow.Styles>
+        <!-- In a classic skin: tight rows in the skin's colours and font, with no hover, as in Winamp's playlist. -->
+        <Style Selector="ListBox.classic ListBoxItem">
+            <Setter Property="Padding" Value="3,0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource ClassicTextBrush}" />
+        </Style>
+        <Style Selector="ListBox.classic ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.classic ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.classic ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ClassicSelectedBrush}" />
+        </Style>
+        <Style Selector="ListBox.classic ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ClassicSelectedBrush}" />
+        </Style>
+        <Style Selector="ListBox.classic TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource ClassicFont}" />
+            <Setter Property="FontSize" Value="{DynamicResource ClassicFontSize}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ListBox.classic TextBlock.current">
+            <Setter Property="Foreground" Value="{DynamicResource ClassicCurrentBrush}" />
+        </Style>
+    </w:ToolWindow.Styles>
+
+    <w:ToolWindow.Resources>
+        <!-- A classic skin's playlist row: "Artist - Title", and the length on the right. -->
+        <DataTemplate x:Key="ClassicQueueRow" x:DataType="pl:PlaylistEntry">
+            <Grid ColumnDefinitions="*,Auto" Height="{DynamicResource ClassicRowHeight}">
+                <TextBlock Classes.current="{Binding IsCurrent}" Text="{Binding ClassicText}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Classes.current="{Binding IsCurrent}" Text="{Binding Track.DurationText}" Margin="6,0,0,0" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="ClassicRemoteRow" x:DataType="st:RemoteListEntry">
+            <Grid ColumnDefinitions="*,Auto" Height="{DynamicResource ClassicRowHeight}">
+                <TextBlock Classes.current="{Binding IsCurrent}" Text="{Binding ClassicText}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Classes.current="{Binding IsCurrent}" Text="{Binding Track.DurationText}" Margin="6,0,0,0" />
+            </Grid>
+        </DataTemplate>
+    </w:ToolWindow.Resources>
+
     <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}">
         <Grid Margin="6,6,4,8" RowDefinitions="Auto,*,Auto">

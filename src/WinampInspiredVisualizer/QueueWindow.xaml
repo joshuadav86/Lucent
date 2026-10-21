@@ -11,6 +11,50 @@
                       CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
+    <local:ToolWindow.Resources>
+        <!-- In a classic skin: tight rows in the skin's colours and font, with no hover, as in Winamp's playlist. -->
+        <Style x:Key="ClassicRowItem" TargetType="ListBoxItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Row" Padding="3,0" Background="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource ClassicSelectedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ClassicRowText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource ClassicFont}" />
+            <Setter Property="FontSize" Value="{DynamicResource ClassicFontSize}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource ClassicTextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource ClassicCurrentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A classic skin's playlist row: "Artist - Title", and the length on the right. -->
+        <DataTemplate x:Key="ClassicRow">
+            <Grid Height="{DynamicResource ClassicRowHeight}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource ClassicRowText}" Text="{Binding ClassicText}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Style="{StaticResource ClassicRowText}" Text="{Binding Track.DurationText}" Margin="6,0,0,0" />
+            </Grid>
+        </DataTemplate>
+    </local:ToolWindow.Resources>
+
     <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}">
         <Grid Margin="6,6,4,8">
