@@ -26,6 +26,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                     <Grid Width="20" Height="20" VerticalAlignment="Center">
@@ -40,7 +41,13 @@
                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                Foreground="#E0A84F" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <!-- Frame rate readout, shown when "Show frame rate" is on in Options. It lives up here, not in the
+                     visuals bar, so a narrow window never squeezes it out. -->
+                <TextBlock x:Name="FrameRateText" Grid.Column="1" Text="– fps" Margin="12,0,10,0" FontSize="11"
+                           VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed"
+                           WindowChrome.IsHitTestVisibleInChrome="True"
+                           ToolTip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                     <local:LockButton Style="{StaticResource PanelToggle}" Padding="8,0" Margin="0,3,2,0" />
                     <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Height="34" Width="40" ToolTip="Maximize"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMaximizeRestore">
@@ -63,12 +70,6 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-
-                <!-- Frame rate readout, shown when "Show frame rate" is on in Options. -->
-                <TextBlock x:Name="FrameRateText" Grid.Column="0" Text="– fps" Margin="4,0,12,0" FontSize="11"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed"
-                           ToolTip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Button x:Name="PreviousButton" Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Previous visual (B)" Click="OnPreviousPreset">

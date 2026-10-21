@@ -13,7 +13,7 @@
         <Grid x:Name="WindowRoot" RowDefinitions="Auto,*,Auto">
 
             <!-- Title bar -->
-            <Grid x:Name="TitleBar" Grid.Row="0" Height="34" ColumnDefinitions="*,Auto" Background="{DynamicResource TitleBarBrush}"
+            <Grid x:Name="TitleBar" Grid.Row="0" Height="34" ColumnDefinitions="*,Auto,Auto" Background="{DynamicResource TitleBarBrush}"
                   w:Chrome.IsCaption="True" DoubleTapped="OnTitleBarDoubleTapped">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                     <Grid Width="20" Height="20" VerticalAlignment="Center">
@@ -28,7 +28,12 @@
                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                Foreground="#E0A84F" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <!-- Frame rate readout, shown when "Show frame rate" is on in Options. It lives up here, not in the
+                     visuals bar, so a narrow window never squeezes it out. -->
+                <TextBlock x:Name="FrameRateText" Grid.Column="1" Text="– fps" Margin="12,0,10,0" FontSize="11"
+                           VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" IsVisible="False"
+                           ToolTip.Tip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                     <w:LockButton Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,3,2,0" />
                     <Button x:Name="MaximizeButton" Theme="{StaticResource CaptionButton}" Height="34" Width="40" ToolTip.Tip="Maximize"
                             Click="OnMaximizeRestore">
@@ -46,12 +51,6 @@
 
             <!-- Visuals bar -->
             <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6" ColumnDefinitions="*,Auto,*" SizeChanged="OnBottomBarSizeChanged">
-
-                <!-- Frame rate readout, shown when "Show frame rate" is on in Options. -->
-                <TextBlock x:Name="FrameRateText" Grid.Column="0" Text="– fps" Margin="4,0,12,0" FontSize="11"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           Foreground="{DynamicResource MutedTextBrush}" IsVisible="False"
-                           ToolTip.Tip="Frames drawn per second, the size the visuals are drawn at, and whether HDR is on. Turn it off in Options." />
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Button x:Name="PreviousButton" Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Previous visual (B)" Click="OnPreviousPreset">
