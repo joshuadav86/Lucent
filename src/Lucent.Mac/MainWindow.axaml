@@ -426,7 +426,7 @@
                     ValueChanged="OnSeekValueChanged" />
 
             <!-- Transport, shuffle and repeat, and the switches for the other windows -->
-            <DockPanel Grid.Row="3" Margin="10,2,10,10">
+            <DockPanel x:Name="WindowTogglesHome" Grid.Row="3" Margin="10,2,10,10">
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Theme="{StaticResource TransportButton}" Width="32" Height="32" ToolTip.Tip="Previous track (Z)" Click="OnPrevious">
                         <Path Theme="{StaticResource SolidIcon}" Data="{StaticResource PreviousTrackIcon}" />

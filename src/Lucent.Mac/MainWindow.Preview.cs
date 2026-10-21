@@ -65,6 +65,7 @@ public partial class MainWindow
         classic.Duration = _current?.Track.Duration ?? TimeSpan.Zero;
         classic.CanSeek = classic.Duration > TimeSpan.Zero;
         classic.IsShaded = shaded;
+        _classicToolbar!.IsVisible = !shaded;
         _classicView.Tick();
     }
 
