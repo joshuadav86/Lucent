@@ -70,14 +70,15 @@ public sealed class VideoEdit
             throw new AudioFileException("This file has no pictures, so it isn't a video.");
         }
 
-        // AAC (nearly every video's sound) is decoded straight from the file by Lucent's own decoder, the same on
-        // Windows and the Mac. Anything else is copied out on its own (an .m4a file) for the system's music decoders.
+        // AAC (nearly every video's sound) and uncompressed sound are decoded straight from the file by Lucent's own
+        // decoders, the same on Windows and the Mac. Anything else is copied out on its own (an .m4a file) for the
+        // system's music decoders.
         try
         {
-            if (Mp4Sound.DecodeAac(movie, AudioFileLoader.MaxDuration, progress, cancellation) is { } aac)
+            if (Mp4Sound.Decode(movie, AudioFileLoader.MaxDuration, progress, cancellation) is { } decoded)
             {
-                var info = new SourceFileInfo(path, aac.SampleRate, aac.SourceChannels, 16, false, aac.BitrateKbps);
-                return (new VideoEdit(movie, aac.SampleRate), new AudioBuffer(aac.Channels, aac.SampleRate), info, aac.SourceChannels > 2);
+                var info = new SourceFileInfo(path, decoded.SampleRate, decoded.SourceChannels, decoded.Bits, false, decoded.BitrateKbps);
+                return (new VideoEdit(movie, decoded.SampleRate), new AudioBuffer(decoded.Channels, decoded.SampleRate), info, decoded.SourceChannels > 2);
             }
         }
         catch (InvalidDataException ex)
@@ -148,7 +149,7 @@ public sealed class VideoEdit
         "flac" => "FLAC",
         "alac" => "Apple Lossless",
         ".mp3" or "mp3" => "MP3",
-        "lpcm" or "sowt" or "twos" or "in24" or "in32" or "fl32" or "fl64" or "raw" => "uncompressed",
+        "lpcm" or "sowt" or "twos" or "in24" or "in32" or "fl32" or "fl64" or "raw" or "ipcm" or "fpcm" => "uncompressed",
         "samr" => "AMR",
         "" => "an unknown format",
         _ => $"\"{format.Trim()}\"",
