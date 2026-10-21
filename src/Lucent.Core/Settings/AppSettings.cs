@@ -203,6 +203,12 @@ public sealed class AppSettings
     /// <summary>Draws the classic player at twice its size, like Winamp's "double size" (D).</summary>
     public bool ClassicDoubleSize { get; set; } = true;
 
+    /// <summary>
+    /// How much bigger than its usual size Lucent's own player is drawn, from 1 up: dragging the player's
+    /// edges scales everything in it, keeping its shape.
+    /// </summary>
+    public double PlayerScale { get; set; } = 1;
+
     // ---- Track info and artwork ----
 
     /// <summary>

@@ -35,8 +35,7 @@ public partial class MainWindow
 
             LucentPlayer.Visibility = Visibility.Visible;
             SetCaptionHeight(CaptionHeight);
-            SizeToContent = SizeToContent.Height;
-            Width = 520;
+            ApplyPlayerSize();
             OptionsPopup.PlacementTarget = OptionsButton;
             Topmost = false;
             return;
@@ -60,6 +59,7 @@ public partial class MainWindow
         LucentPlayer.Visibility = Visibility.Collapsed;
         // The skin's own title bar moves the window, so Windows' caption area is turned off.
         SetCaptionHeight(0);
+        ApplyPlayerSize();
         SizeToContent = SizeToContent.WidthAndHeight;
         OptionsPopup.PlacementTarget = _classicView;
         SyncClassicPlayer();
@@ -68,7 +68,8 @@ public partial class MainWindow
     private void SetCaptionHeight(double height) => WindowChrome.SetWindowChrome(this, new WindowChrome
     {
         CaptionHeight = height,
-        ResizeBorderThickness = new Thickness(0),
+        // Lucent's own player grows from its edges; the classic player keeps its skin's size.
+        ResizeBorderThickness = new Thickness(_settings.ClassicSkin is null ? 6 : 0),
         GlassFrameThickness = new Thickness(0),
         CornerRadius = new CornerRadius(0),
         UseAeroCaptionButtons = false,

@@ -321,14 +321,16 @@
         <!-- Text inside the options panel: a label above each setting, and a quieter hint below some. -->
         <Style x:Key="OptionLabel" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="Margin" Value="2,14,0,6" />
         </Style>
         <Style x:Key="OptionHint" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="LineHeight" Value="17" />
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="2,6,0,0" />
         </Style>

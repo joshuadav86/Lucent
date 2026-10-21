@@ -102,6 +102,11 @@ public partial class MainWindow : Window
 
         _snapper = new WindowSnapper(this);
         _snapper.MoveFinished += (_, _) => SavePlacements();
+        _snapper.MoveFinished += (_, _) => OnPlayerResizeFinished();
+        SnapEveryWindow();
+        SizeChanged += OnPlayerWidthChanged;
+        LucentPlayer.SizeChanged += (_, _) => KeepPlayerShape();
+        Opened += (_, _) => KeepPlayerShape();
 
         _queue.PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>

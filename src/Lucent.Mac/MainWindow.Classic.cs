@@ -32,8 +32,7 @@ public partial class MainWindow
             }
 
             LucentPlayer.IsVisible = true;
-            SizeToContent = SizeToContent.Height;
-            Width = 520;
+            ApplyPlayerSize();
             OptionsPopup.PlacementTarget = OptionsButton;
             Topmost = false;
             return;
@@ -56,6 +55,7 @@ public partial class MainWindow
         _classicView.Zoom = _settings.ClassicDoubleSize ? 2 : 1;
         _classicView.IsVisible = true;
         LucentPlayer.IsVisible = false;
+        ApplyPlayerSize();
         SizeToContent = SizeToContent.WidthAndHeight;
         OptionsPopup.PlacementTarget = _classicView;
         SyncClassicPlayer();
