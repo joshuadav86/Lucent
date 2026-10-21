@@ -29,8 +29,8 @@
             </DockPanel>
 
             <!-- What did the splitting: the graphics card, or the processor and why. -->
-            <TextBlock x:Name="NoteText" Grid.Row="1" Margin="12,6,12,4" FontSize="11" TextWrapping="Wrap"
-                       Foreground="{DynamicResource FaintTextBrush}" />
+            <TextBlock x:Name="NoteText" Grid.Row="1" Margin="12,6,12,4" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedTextBrush}" />
 
             <!-- One row per stem: its name, mute and solo, and its waveform with the playhead. Click a waveform to play from there. -->
             <Grid x:Name="Rows" Grid.Row="2" Margin="10,4,10,0" />

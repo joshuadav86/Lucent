@@ -175,7 +175,7 @@
                 <TextBlock Text="Drop music here" Margin="0,12,0,0" FontSize="13" HorizontalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
                 <TextBlock Text="MP3 · FLAC · WAV · M4A · ALAC · WMA · OGG · Opus · AIFF" Margin="0,4,0,0"
-                           FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                           FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
         </Grid>
     </Border>

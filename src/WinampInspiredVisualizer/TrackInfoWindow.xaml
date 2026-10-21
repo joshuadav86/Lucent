@@ -190,8 +190,8 @@
                             <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
                             <TextBlock x:Name="ArtworkEmptyTitle" Text="No artwork" Margin="0,12,0,0" FontSize="13"
                                        HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock x:Name="ArtworkEmptyText" Margin="0,4,0,0" FontSize="11" MaxWidth="210"
-                                       TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource FaintTextBrush}"
+                            <TextBlock x:Name="ArtworkEmptyText" Margin="0,4,0,0" FontSize="12" MaxWidth="210"
+                                       TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource MutedTextBrush}"
                                        Text="Drop a picture here, or copy one and press Ctrl+V." />
                         </StackPanel>
                         <Border x:Name="DropHint" Visibility="Collapsed" CornerRadius="{DynamicResource CardCorner}" BorderThickness="2"
@@ -206,8 +206,8 @@
 
                 <TextBlock x:Name="ArtworkInfo" Margin="2,10,0,0" FontSize="11" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBlock x:Name="ArtworkNote" Margin="2,3,0,0" FontSize="11" TextWrapping="Wrap"
-                           Foreground="{DynamicResource FaintTextBrush}" />
+                <TextBlock x:Name="ArtworkNote" Margin="2,3,0,0" FontSize="12" TextWrapping="Wrap"
+                           Foreground="{DynamicResource MutedTextBrush}" />
 
                 <ListBox x:Name="PictureList" Margin="0,10,0,0" Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed"

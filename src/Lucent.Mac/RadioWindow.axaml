@@ -86,7 +86,7 @@
                         ToolTip.Tip="Play a station that isn't listed, from its stream's address (or its .pls, .m3u or .m3u8 link), audio or video"
                         Click="OnPlayAddress" />
                 <TextBlock FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           Foreground="{DynamicResource FaintTextBrush}"
+                           Foreground="{DynamicResource MutedTextBrush}"
                            Text="Stations from radio-browser.info, a free directory kept up by its listeners."
                            ToolTip.Tip="Radio Browser lists about 50,000 stations. Lucent shows the ones that were on the air at its last check, and the camera marks the ones with video." />
             </DockPanel>

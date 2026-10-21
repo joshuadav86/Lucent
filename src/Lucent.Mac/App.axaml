@@ -93,7 +93,7 @@
             <SolidColorBrush x:Key="HoverBrush" Color="#1D1D26" />
             <SolidColorBrush x:Key="HairlineBrush" Color="#1E1E28" />
             <SolidColorBrush x:Key="TextBrush" Color="#ECECF1" />
-            <SolidColorBrush x:Key="MutedTextBrush" Color="#7D7D8C" />
+            <SolidColorBrush x:Key="MutedTextBrush" Color="#8A8A99" />
             <SolidColorBrush x:Key="FaintTextBrush" Color="#4A4A57" />
             <SolidColorBrush x:Key="AccentBrush" Color="#8B7CFF" />
             <SolidColorBrush x:Key="AccentSoftBrush" Color="#2A2550" />
@@ -326,6 +326,7 @@
 
             <!-- Small rounded text button. -->
             <ControlTheme x:Key="PillButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                 <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
                 <Setter Property="FontSize" Value="11" />
                 <Setter Property="FontWeight" Value="SemiBold" />
@@ -382,14 +383,16 @@
             <!-- Text inside the options panel: a label above each setting, and a quieter hint below some. -->
             <ControlTheme x:Key="OptionLabel" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
-                <Setter Property="FontSize" Value="12" />
-                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                 <Setter Property="Margin" Value="2,14,0,6" />
             </ControlTheme>
             <ControlTheme x:Key="OptionHint" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
-                <Setter Property="FontSize" Value="11" />
-                <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+                <Setter Property="FontSize" Value="12.5" />
+                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                <Setter Property="LineHeight" Value="17" />
                 <Setter Property="TextWrapping" Value="Wrap" />
                 <Setter Property="Margin" Value="2,6,0,0" />
             </ControlTheme>
