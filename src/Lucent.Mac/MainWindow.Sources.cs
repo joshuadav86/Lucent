@@ -76,6 +76,14 @@ public partial class MainWindow
         ToolTip.SetTip(YouTubeSwitch, "Show the YouTube video playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. The sound stays in the browser. "
             + "The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
 
+        TidalSwitch.IsChecked = _settings.RemoteApp == RemoteApp.Tidal;
+        ToolTip.SetTip(TidalSwitch, "Show what TIDAL's web player (tidal.com) is playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. "
+            + "TIDAL's Mac app can't be controlled by other apps. The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
+
+        SoundCloudSwitch.IsChecked = _settings.RemoteApp == RemoteApp.SoundCloud;
+        ToolTip.SetTip(SoundCloudSwitch, "Show what SoundCloud is playing in Safari, Chrome, Edge or Brave and use the player's buttons for it. The sound stays in the browser. "
+            + "The browser needs \"Allow JavaScript from Apple Events\" turned on, and macOS asks once whether Lucent may control it.");
+
         ListenSwitch.IsChecked = _settings.ListenToOtherApps;
         ListenSwitch.IsEnabled = SystemAudio.IsSupported;
         ListenHint.Text = !SystemAudio.IsSupported ? "Listening to other apps needs macOS 14.2 or later."

@@ -21,6 +21,12 @@ public sealed class RemoteControl : IDisposable
     private int _listReads;
     private bool _disposed;
 
+    // The volume asked for and not yet sent (sent one at a time, the newest winning, as a dragged slider asks
+    // many times a second), and until when reads keep showing it rather than what the device said before.
+    private double? _volumeWanted;
+    private bool _sendingVolume;
+    private DateTime _volumeHeldUntil;
+
     public RemoteControl(IRemotePlayer player)
     {
         Player = player;
@@ -63,6 +69,53 @@ public sealed class RemoteControl : IDisposable
     public Task PlayFromListAsync(RemoteTrack track) => Player is IRemoteLists lists && List is { } list
         ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
         : Task.CompletedTask;
+
+    /// <summary>True when the app says its volume and Lucent can change it (<see cref="RemoteState.Volume"/>).</summary>
+    public bool HasVolume => Player is IRemoteVolume && State?.Volume is not null;
+
+    /// <summary>Changes the app's volume on the device it's playing on, from 0 to 1.</summary>
+    public async void SetVolume(double volume)
+    {
+        if (_disposed || Player is not IRemoteVolume remote || State is not { Volume: not null } state)
+        {
+            return;
+        }
+
+        volume = Math.Clamp(volume, 0, 1);
+        State = state with { Volume = volume };
+        _volumeWanted = volume;
+        _volumeHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(3);
+        if (_sendingVolume)
+        {
+            return;
+        }
+
+        _sendingVolume = true;
+        try
+        {
+            // A moment's wait gathers a drag's many steps into one request.
+            await Task.Delay(150, _stop.Token);
+            while (_volumeWanted is { } wanted && !_disposed)
+            {
+                _volumeWanted = null;
+                await remote.SetVolumeAsync(wanted, _stop.Token);
+            }
+        }
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested)
+        {
+            // Lucent stopped controlling the app.
+        }
+        catch (Exception ex)
+        {
+            _volumeWanted = null;
+            Report(ex);
+        }
+        finally
+        {
+            _sendingVolume = false;
+            _volumeHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(1);
+        }
+    }
 
     public Task SeekAsync(TimeSpan position) =>
         RunAsync(cancel => Player.SeekAsync(position, cancel), state => state with { Position = position, ReadAt = DateTime.UtcNow });
@@ -135,6 +188,12 @@ public sealed class RemoteControl : IDisposable
         if (_disposed)
         {
             return;
+        }
+
+        // The device takes a moment to report a volume just set, so what was asked for shows until then.
+        if (state is { Volume: not null } && State is { Volume: { } asked } && (_sendingVolume || DateTime.UtcNow < _volumeHeldUntil))
+        {
+            state = state with { Volume = asked };
         }
 
         State = state;

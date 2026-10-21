@@ -69,9 +69,13 @@ public partial class MainWindow
         AppleMusicSwitch.IsEnabled = AppleMusicRemote.IsSupported;
         AppleMusicSwitch.ToolTip = "Show what the Apple Music app is playing and use the player's buttons for it. The sound stays in Apple Music.";
 
+        TidalSwitch.IsChecked = _settings.RemoteApp == RemoteApp.Tidal;
+        TidalSwitch.IsEnabled = TidalRemote.IsSupported;
+        TidalSwitch.ToolTip = "Show what the TIDAL app is playing and use the player's buttons for it. The sound stays in TIDAL. For TIDAL's web player, use the web browser switch below.";
+
         YouTubeSwitch.IsChecked = _settings.RemoteApp == RemoteApp.YouTube;
         YouTubeSwitch.IsEnabled = YouTubeRemote.IsSupported;
-        YouTubeSwitch.ToolTip = "Show the YouTube video playing in your web browser and use the player's buttons for it. The sound stays in the browser.";
+        YouTubeSwitch.ToolTip = "Show what's playing in your web browser (YouTube, SoundCloud, TIDAL's web player, or any site) and use the player's buttons for it. The sound stays in the browser.";
 
         ListenSwitch.IsChecked = _settings.ListenToOtherApps;
         ListenHint.Text = _remote is not null && !_settings.ListenToOtherApps

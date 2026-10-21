@@ -695,7 +695,7 @@
                     <ControlTemplate>
                         <StackPanel>
                             <ToggleButton Name="Header" Focusable="False" Cursor="Hand" Background="Transparent"
-                                          BorderBrush="Transparent" Tag="{TemplateBinding Tag}"
+                                          BorderBrush="Transparent" Foreground="{DynamicResource MutedTextBrush}" Tag="{TemplateBinding Tag}"
                                           IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
                                 <!-- (Here, as a style can't reach into a template inside a template.) -->
                                 <ToggleButton.Styles>
@@ -709,7 +709,7 @@
                                                 BorderThickness="1" BorderBrush="{TemplateBinding BorderBrush}">
                                             <DockPanel>
                                                 <Path Name="Chevron" DockPanel.Dock="Left" Margin="2,0,10,0" VerticalAlignment="Center"
-                                                      Data="{StaticResource ChevronRightIcon}" Stroke="{DynamicResource MutedTextBrush}"
+                                                      Data="{StaticResource ChevronRightIcon}" Stroke="{TemplateBinding Foreground}"
                                                       StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" />
                                                 <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" />
                                             </DockPanel>
@@ -735,9 +735,8 @@
                 <Style Selector="^.highlighted /template/ ToggleButton#Header">
                     <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
                     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                </Style>
-                <Style Selector="^.highlighted /template/ ToggleButton#Header /template/ Path#Chevron">
-                    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                    <!-- The chevron's colour. (A selector can't go through two templates: Avalonia throws as the style loads.) -->
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
                 </Style>
             </ControlTheme>
         </ResourceDictionary>

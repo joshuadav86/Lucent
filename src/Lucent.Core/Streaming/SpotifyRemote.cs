@@ -11,7 +11,7 @@ namespace WinampInspiredVisualizer.Streaming;
 /// takes those buttons from Premium accounts; on a free account Lucent can still show what's playing.
 /// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -67,6 +67,10 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists
     public async Task<byte[]?> ArtworkAsync(RemoteTrack track, CancellationToken cancel) =>
         track.ArtworkUrl is { } url ? await _http.GetByteArrayAsync(url, cancel) : null;
 
+    // Like the other buttons, this needs Premium.
+    public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
+        CommandAsync(HttpMethod.Put, $"/volume?volume_percent={(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
+
     // The Web API's playback state (GET /me/player).
     private static RemoteState? ParseState(JsonElement root, DateTime readAt)
     {
@@ -81,7 +85,21 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists
                 : null;
         // No item: an advert, or a device that's on but has nothing loaded.
         var track = root.TryGetProperty("item", out var item) ? ParseTrack(item, null) : null;
-        return new RemoteState(track, playing, position, readAt, context);
+        // The Spotify Connect device it's playing on: this computer, a phone, a speaker or a TV. Some can't have
+        // their volume changed from elsewhere (supports_volume false).
+        string? device = null;
+        double? volume = null;
+        if (root.TryGetProperty("device", out var deviceJson) && deviceJson.ValueKind == JsonValueKind.Object)
+        {
+            device = Text(deviceJson, "name") is { Length: > 0 } name ? name : null;
+            var canSet = !deviceJson.TryGetProperty("supports_volume", out var supports) || supports.ValueKind != JsonValueKind.False;
+            if (canSet && deviceJson.TryGetProperty("volume_percent", out var percent) && percent.ValueKind == JsonValueKind.Number)
+            {
+                volume = Math.Clamp(percent.GetDouble() / 100, 0, 1);
+            }
+        }
+
+        return new RemoteState(track, playing, position, readAt, context, device, volume);
     }
 
     // A track or podcast episode. An album's own list of tracks leaves the album out, so it's passed in.
