@@ -27,6 +27,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
     private SpotifySignIn.Tokens? _tokens;
     private DateTime _waitUntil;
 
+    // The last song a device was playing (or paused on), shown paused while no device is playing for the account.
+    private RemoteState? _last;
+
     /// <param name="refreshToken">From <see cref="SpotifySignIn.SignInAsync"/>, or saved from before.</param>
     /// <param name="saveRefreshToken">Called when Spotify hands out a new refresh token, which replaces the saved one.</param>
     public SpotifyRemote(HttpClient http, string refreshToken, Action<string> saveRefreshToken)
@@ -44,16 +47,24 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         using var response = await SendAsync(HttpMethod.Get, Api, cancel);
         if (response.StatusCode == HttpStatusCode.NoContent)
         {
-            // Nothing playing on any of the account's devices.
-            return null;
+            // No device is playing for the account: Spotify was just opened, was quit and opened again, or has sat
+            // paused long enough to let go. The song read last stays, paused, as Spotify's own app still shows it,
+            // and Play picks it up again (see PlayOnSomeDeviceAsync).
+            return _last is { } last ? last with { IsPlaying = false, ReadAt = DateTime.UtcNow, Device = null, Volume = null } : null;
         }
 
         await ThrowIfFailedAsync(response, cancel);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancel));
-        return ParseState(json.RootElement, DateTime.UtcNow);
+        var state = ParseState(json.RootElement, DateTime.UtcNow);
+        if (state?.Track is not null)
+        {
+            _last = state;
+        }
+
+        return state;
     }
 
-    public Task PlayAsync(CancellationToken cancel) => CommandAsync(HttpMethod.Put, "/play", cancel);
+    public Task PlayAsync(CancellationToken cancel) => PlayOnSomeDeviceAsync(null, cancel);
 
     public Task PauseAsync(CancellationToken cancel) => CommandAsync(HttpMethod.Put, "/pause", cancel);
 
@@ -178,7 +189,68 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
                 ["offset"] = new Dictionary<string, string> { ["uri"] = song },
             })
             : JsonSerializer.Serialize(new Dictionary<string, object> { ["uris"] = new[] { song } });
-        return CommandAsync(HttpMethod.Put, "/play", cancel, body);
+        return PlayOnSomeDeviceAsync(body, cancel);
+    }
+
+    /// <summary>
+    /// Plays (what's loaded, or <paramref name="json"/>'s songs). With no device playing for the account, Spotify
+    /// refuses that (404, NO_ACTIVE_DEVICE), so the play goes to one of the account's devices that's on: this
+    /// computer's Spotify first, then the only one there is, then any computer. Spotify carries on there from
+    /// where the account left off.
+    /// </summary>
+    private async Task PlayOnSomeDeviceAsync(string? json, CancellationToken cancel)
+    {
+        using (var response = await SendAsync(HttpMethod.Put, Api + "/play", cancel, json))
+        {
+            if (response.StatusCode != HttpStatusCode.NotFound)
+            {
+                await ThrowIfFailedAsync(response, cancel);
+                return;
+            }
+        }
+
+        string? device;
+        using (var devices = await GetJsonAsync(Api + "/devices", null, cancel))
+        {
+            device = PickDevice(devices.RootElement, Environment.MachineName);
+        }
+
+        if (device is null)
+        {
+            throw new RemoteProblem("Spotify isn't open anywhere. Open Spotify on this computer (or a phone or speaker), then press play.");
+        }
+
+        if (json is null)
+        {
+            // Moving the account's playback to the device, playing, carries on where it left off.
+            await CommandAsync(HttpMethod.Put, string.Empty, cancel,
+                JsonSerializer.Serialize(new Dictionary<string, object> { ["device_ids"] = new[] { device }, ["play"] = true }));
+        }
+        else
+        {
+            await CommandAsync(HttpMethod.Put, $"/play?device_id={Uri.EscapeDataString(device)}", cancel, json);
+        }
+    }
+
+    /// <summary>The ID of the device to play on, from GET /me/player/devices, or null when none is on.</summary>
+    internal static string? PickDevice(JsonElement root, string machineName)
+    {
+        if (!root.TryGetProperty("devices", out var list) || list.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var devices = list.EnumerateArray()
+            .Where(device => Text(device, "id").Length > 0
+                && !(device.TryGetProperty("is_restricted", out var restricted) && restricted.ValueKind == JsonValueKind.True))
+            .ToList();
+        // Spotify names a computer's device after the computer, which macOS and Windows write with spaces and
+        // apostrophes ("Joshua's MacBook Pro") where the machine name has hyphens ("Joshuas-MacBook-Pro").
+        static string Plain(string text) => new(text.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        var computers = devices.Where(device => Text(device, "type").Equals("Computer", StringComparison.OrdinalIgnoreCase)).ToList();
+        var mine = computers.Where(device => Plain(Text(device, "name")) == Plain(machineName)).ToList();
+        var pick = mine.Count > 0 ? mine[0] : devices.Count == 1 ? devices[0] : computers.Count > 0 ? computers[0] : devices.FirstOrDefault();
+        return pick.ValueKind == JsonValueKind.Object ? Text(pick, "id") : null;
     }
 
     // Spotify only lists the songs of playlists the account made or collaborates on (GET /playlists/{id}/items).

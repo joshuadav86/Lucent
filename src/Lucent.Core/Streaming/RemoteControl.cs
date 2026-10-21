@@ -83,7 +83,14 @@ public sealed class RemoteControl : IDisposable
                     // Already paused: some apps refuse a pause then (Spotify says the command isn't allowed).
                 }
 
-                await Player.SeekAsync(TimeSpan.Zero, cancel);
+                try
+                {
+                    await Player.SeekAsync(TimeSpan.Zero, cancel);
+                }
+                catch (Exception) when (!wasPlaying)
+                {
+                    // Nothing to stop, and nowhere to rewind (Spotify with no device playing, say).
+                }
             },
             state => state with { IsPlaying = false, Position = TimeSpan.Zero, ReadAt = DateTime.UtcNow });
     }
