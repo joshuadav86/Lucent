@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using WinampInspiredVisualizer.Radio;
 using WinampInspiredVisualizer.Streaming;
+using WinampInspiredVisualizer.Video;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace Lucent.Mac;
@@ -15,7 +16,7 @@ public partial class MainWindow
 {
     private RadioDirectory? _radioDirectory;
     private RadioStation? _station;
-    private RadioStream? _radioStream;
+    private ILiveStream? _radioStream;
     private CancellationTokenSource? _tuning;
     private IReadOnlyList<RadioStation> _radioList = Array.Empty<RadioStation>();
     private string? _radioProblem;
@@ -72,7 +73,7 @@ public partial class MainWindow
         _stationTrack = null;
         ShowStationChange();
 
-        RadioStream stream;
+        ILiveStream stream;
         try
         {
             stream = await TuneInAsync(station, tuning.Token);
@@ -103,7 +104,7 @@ public partial class MainWindow
         _tuning = null;
         try
         {
-            _player.Load(station.StreamUrl, stream);
+            _player.Load(station.StreamUrl, stream.Sound);
         }
         catch (Exception ex)
         {
@@ -114,6 +115,21 @@ public partial class MainWindow
         }
 
         _radioStream = stream;
+        if (stream is VideoStream video)
+        {
+            // A video station's picture shows once it comes, in the visuals window, and it gets the camera from then on.
+            video.PictureStarted += () => Dispatcher.UIThread.Post(() =>
+            {
+                if (_radioStream == stream && _station is { } on)
+                {
+                    OnVideoChanged();
+                    _station = RadioGuide.MarkVideo(_settings, on);
+                    _settings.Save();
+                    StationChanged?.Invoke(this, EventArgs.Empty);
+                }
+            });
+        }
+
         stream.TitleChanged += _ => Dispatcher.UIThread.Post(() =>
         {
             if (_radioStream == stream)
@@ -144,14 +160,35 @@ public partial class MainWindow
         OutputStatus.Text = DescribeOutput();
     }
 
-    /// <summary>Opens the station's stream. A featured station whose address has moved is looked up in the directory.</summary>
-    private async Task<RadioStream> TuneInAsync(RadioStation station, CancellationToken cancel)
+    /// <summary>
+    /// Opens the station's stream: through Lucent's own radio player for MP3 and AAC, and through the video player
+    /// (libVLC) for video stations and the formats Lucent's own player doesn't read.
+    /// </summary>
+    private async Task<ILiveStream> TuneInAsync(RadioStation station, CancellationToken cancel)
+    {
+        if (RadioGuide.HasVideo(_settings, station))
+        {
+            return await OpenThroughVideoPlayerAsync(station.StreamUrl, cancel);
+        }
+
+        try
+        {
+            return await OpenRadioStreamAsync(station, cancel);
+        }
+        catch (RadioProblem problem) when (problem.Address is { } address && VideoEngine.MayWork && !cancel.IsCancellationRequested)
+        {
+            return await OpenThroughVideoPlayerAsync(address, cancel);
+        }
+    }
+
+    /// <summary>Opens an MP3 or AAC stream. A featured station whose address has moved is looked up in the directory.</summary>
+    private async Task<RadioStream> OpenRadioStreamAsync(RadioStation station, CancellationToken cancel)
     {
         try
         {
             return await RadioStream.OpenAsync(station.StreamUrl, RadioUserAgent, cancel, station.Codec);
         }
-        catch (RadioProblem) when (!station.IsFromDirectory && station.Network is not null && !cancel.IsCancellationRequested)
+        catch (RadioProblem problem) when (problem.Address is null && !station.IsFromDirectory && station.Network is not null && !cancel.IsCancellationRequested)
         {
             var found = await RadioDirectory.SearchAsync(new RadioQuery(station.Name, null, null, 0, RadioSort.Popular, 20), cancel);
             var same = found.FirstOrDefault(candidate => string.Equals(candidate.Name, station.Name, StringComparison.OrdinalIgnoreCase)
@@ -162,6 +199,18 @@ public partial class MainWindow
             }
 
             return await RadioStream.OpenAsync(same.StreamUrl, RadioUserAgent, cancel, same.Codec);
+        }
+    }
+
+    private static async Task<ILiveStream> OpenThroughVideoPlayerAsync(string address, CancellationToken cancel)
+    {
+        try
+        {
+            return await Task.Run(() => VideoStream.OpenStation(address, RadioUserAgent), cancel);
+        }
+        catch (NotSupportedException ex)
+        {
+            throw new RadioProblem("This station needs Lucent's video player (libVLC), which couldn't be loaded.", ex);
         }
     }
 

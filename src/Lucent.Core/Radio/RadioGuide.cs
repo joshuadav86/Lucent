@@ -66,11 +66,44 @@ public static class RadioGuide
             || (station.Network?.Contains(word, StringComparison.CurrentCultureIgnoreCase) ?? false));
     }
 
-    /// <summary>True when the station passes the quality and country filters.</summary>
-    public static bool PassesFilters(RadioStation station, int minBitrate, string? countryCode) =>
+    /// <summary>True when the station passes the quality, country and video filters.</summary>
+    public static bool PassesFilters(RadioStation station, AppSettings settings) =>
         // A station that doesn't say its bitrate isn't hidden by the quality filter: plenty of good ones don't.
-        (minBitrate <= 0 || station.Bitrate == 0 || station.Bitrate >= minBitrate)
-        && (string.IsNullOrEmpty(countryCode) || string.Equals(station.CountryCode, countryCode, StringComparison.OrdinalIgnoreCase));
+        (settings.RadioMinBitrate <= 0 || station.Bitrate == 0 || station.Bitrate >= settings.RadioMinBitrate)
+        && (string.IsNullOrEmpty(settings.RadioCountry) || string.Equals(station.CountryCode, settings.RadioCountry, StringComparison.OrdinalIgnoreCase))
+        && (!settings.RadioVideoOnly || HasVideo(settings, station));
+
+    /// <summary>
+    /// True when the station sends a picture, as far as Lucent knows: its format says so, it's a featured video
+    /// station, or Lucent has seen a picture from it (which the favorites and recently played remember).
+    /// </summary>
+    public static bool HasVideo(AppSettings settings, RadioStation station) =>
+        station.HasVideo
+        || settings.RadioRecent.Any(saved => saved.Id == station.Id && saved.Video)
+        || settings.RadioFavorites.Any(saved => saved.Id == station.Id && saved.Video);
+
+    /// <summary>Remembers that the station sent a picture, so it gets the camera from now on.</summary>
+    public static RadioStation MarkVideo(AppSettings settings, RadioStation station)
+    {
+        var marked = station with { Video = true };
+        for (var i = 0; i < settings.RadioRecent.Count; i++)
+        {
+            if (settings.RadioRecent[i].Id == station.Id)
+            {
+                settings.RadioRecent[i] = settings.RadioRecent[i] with { Video = true };
+            }
+        }
+
+        for (var i = 0; i < settings.RadioFavorites.Count; i++)
+        {
+            if (settings.RadioFavorites[i].Id == station.Id)
+            {
+                settings.RadioFavorites[i] = settings.RadioFavorites[i] with { Video = true };
+            }
+        }
+
+        return marked;
+    }
 
     /// <summary>
     /// A local section's stations, searched and filtered. The featured stations keep their networks' order (and the
@@ -86,7 +119,7 @@ public static class RadioGuide
             _ => settings.RadioRecent,
         };
         var shown = stations
-            .Where(station => Matches(station, search) && PassesFilters(station, settings.RadioMinBitrate, settings.RadioCountry));
+            .Where(station => Matches(station, search) && PassesFilters(station, settings));
         return section switch
         {
             Featured => shown.GroupBy(station => station.Network ?? string.Empty)

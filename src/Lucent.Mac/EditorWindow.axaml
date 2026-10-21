@@ -403,20 +403,44 @@
                     </ScrollViewer>
                 </DockPanel>
             </Border>
-            <editor:WaveformView x:Name="Waveform"
-                                 WaveBrush="{DynamicResource AccentBrush}"
-                                 SelectedWaveBrush="#F2F0EA"
-                                 LaneBrush="{DynamicResource SurfaceBrush}"
-                                 SelectionBrush="#2EF2F0EA"
-                                 LineBrush="{DynamicResource HairlineBrush}"
-                                 LabelBrush="{DynamicResource MutedTextBrush}"
-                                 CursorBrush="{DynamicResource AccentBrush}"
-                                 PlayheadBrush="{DynamicResource TextBrush}" />
+            <Grid RowDefinitions="Auto,*">
+                <!-- A video's picture, at the cursor (or the selection's edge), and playing along while it plays -->
+                <Border x:Name="VideoPanel" IsVisible="False" Height="260" Margin="0,0,0,8" CornerRadius="10"
+                        Background="Black" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <Image x:Name="VideoPicture" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                        <TextBlock x:Name="PreviewTimeText" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,8"
+                                   FontSize="11" Foreground="#CCF2F0EA" FontFamily="Menlo, Consolas, monospace" />
+                    </Grid>
+                </Border>
+                <editor:WaveformView x:Name="Waveform" Grid.Row="1"
+                                     WaveBrush="{DynamicResource AccentBrush}"
+                                     SelectedWaveBrush="#F2F0EA"
+                                     LaneBrush="{DynamicResource SurfaceBrush}"
+                                     SelectionBrush="#2EF2F0EA"
+                                     LineBrush="{DynamicResource HairlineBrush}"
+                                     LabelBrush="{DynamicResource MutedTextBrush}"
+                                     CursorBrush="#4FD8E8"
+                                     PlayheadBrush="{DynamicResource TextBrush}" />
+            </Grid>
             <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
                 <TextBlock x:Name="LoadingText" Text="Opening the sound…" FontSize="13" HorizontalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
                 <ProgressBar x:Name="LoadingProgress" Theme="{StaticResource ThinProgress}" Margin="0,12,0,0" />
             </StackPanel>
+            <!-- With no sound open: waiting for one to be dropped in -->
+            <Border x:Name="EmptyPanel" IsVisible="False" CornerRadius="10"
+                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
+                    <TextBlock Text="Drop a sound here to edit it" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" />
+                    <TextBlock Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{DynamicResource MutedTextBrush}"
+                               Text="Then drop more onto the waveform to add them where you let go, or anywhere else in the window to open another. The editor stays docked with the player, so you can leave it open." />
+                    <Button Theme="{StaticResource ToolButton}" Content="Choose a sound…" Margin="0,16,0,0"
+                            HorizontalAlignment="Center" Click="OnChooseSound" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Processing -->

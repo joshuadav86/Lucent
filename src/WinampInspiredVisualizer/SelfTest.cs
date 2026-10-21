@@ -20,7 +20,7 @@ namespace WinampInspiredVisualizer;
 /// Windows machines are, Direct3D draws in software: slowly, but the same pictures.
 /// </summary>
 /// <remarks>
-/// Usage: Lucent.exe --self-test [--sheet picture.png] [music files...]. Lucent.exe is a windowed program,
+/// Usage: Lucent.exe --self-test [--sheet picture.png] [--video clip.mp4] [music files...]. Lucent.exe is a windowed program,
 /// so nothing waits for it or shows what it writes unless its output is piped somewhere: in PowerShell,
 /// <c>Lucent.exe --self-test | Out-Host</c> waits, shows it, and sets $LASTEXITCODE (1 if anything failed).
 /// </remarks>
@@ -60,11 +60,16 @@ public static class SelfTest
         ShowOutput();
         string? sheetPath = null;
         var music = new List<string>();
+        var videos = new List<string>();
         for (var i = 0; i < args.Length; i++)
         {
             if (args[i] == "--sheet" && i + 1 < args.Length)
             {
                 sheetPath = args[++i];
+            }
+            else if (args[i] == "--video" && i + 1 < args.Length)
+            {
+                videos.Add(args[++i]);
             }
             else
             {
@@ -78,12 +83,15 @@ public static class SelfTest
             failures += TestDecoding(path) ? 0 : 1;
         }
 
+        failures += WinampInspiredVisualizer.Video.VideoSelfTest.Run(Console.WriteLine, videos);
+
         failures += TestVisuals(sheetPath);
         failures += TestOtherApps();
         failures += WinampInspiredVisualizer.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
         failures += TestLiveInputs();
         failures += Editor.Stems.StemSelfTest.Run(Console.WriteLine);
         failures += Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
+        failures += Audio.SongMapSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }

@@ -18,7 +18,7 @@ namespace WinampInspiredVisualizer.Radio;
 /// times, playing silence meanwhile, before giving up. The decoders are written in C# (see <see cref="RadioDecoder"/>),
 /// so a station sounds the same on every platform.
 /// </remarks>
-public sealed class RadioStream : WaveStream
+public sealed class RadioStream : WaveStream, ILiveStream
 {
     /// <summary>How much audio is held in hand before playing starts, and again after the stream ran dry.</summary>
     private static readonly TimeSpan Prebuffer = TimeSpan.FromSeconds(1.5);
@@ -93,6 +93,8 @@ public sealed class RadioStream : WaveStream
     /// <summary>"MP3", "AAC" or "AAC+".</summary>
     public string Codec { get; }
 
+    WaveStream ILiveStream.Sound => this;
+
     /// <summary>The song that's on, as the station last said, or null when it doesn't say.</summary>
     public string? NowPlaying => _nowPlaying;
 
@@ -150,6 +152,11 @@ public sealed class RadioStream : WaveStream
         {
             http.Dispose();
             throw new RadioProblem(Describe(ex), ex);
+        }
+        catch (RadioProblem problem) when (problem is { Unreadable: true, Address: null })
+        {
+            http.Dispose();
+            throw new RadioProblem(problem.Message, problem) { Unreadable = true, Address = address };
         }
         catch
         {
@@ -447,7 +454,7 @@ public sealed class RadioStream : WaveStream
 
                     if (Unsupported(type) is { } format)
                     {
-                        throw new RadioProblem($"This station streams {format}. Lucent plays MP3 and AAC stations for now; try another.");
+                        throw new RadioProblem($"This station streams {format}, which Lucent's own radio player doesn't read.") { Unreadable = true, Address = address };
                     }
 
                     var codec = IsAac(type, address, codecHint) ? RadioCodec.Aac : RadioCodec.Mp3;

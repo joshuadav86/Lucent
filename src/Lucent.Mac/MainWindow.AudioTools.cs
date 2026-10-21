@@ -13,6 +13,9 @@ public partial class MainWindow
     // The title bar's red Record button.
     private void OnRecord(object? sender, RoutedEventArgs e) => AudioTools.OpenRecorder(this, _player, _settings);
 
+    // The editor opens again with the player if it was left open, docked where it was.
+    private void ReopenEditor() => AudioTools.ReopenEditor(this, _player);
+
     /// <summary>Opens a song in the audio editor, for the queue and library menus.</summary>
     public void OpenInEditor(Window owner, string path) => AudioTools.OpenEditor(owner, _player, path);
 

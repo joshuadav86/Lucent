@@ -112,7 +112,7 @@ internal sealed class Mp3RadioDecoder : RadioDecoder
             audio.Limit = 0;
         }
 
-        throw new RadioProblem("The station's stream isn't MP3 audio Lucent can play.");
+        throw new RadioProblem("The station's stream isn't MP3 audio Lucent can play.") { Unreadable = true };
     }
 
     public override int Next(byte[] pcm)
@@ -180,7 +180,7 @@ internal sealed class AacRadioDecoder : RadioDecoder
         _decoder.DecodeFrame(firstFrame, _samples);
         if (_samples.SampleRate <= 0 || _samples.Channels is <= 0 or > 8)
         {
-            throw new RadioProblem("The station's AAC stream is in a form Lucent can't play.");
+            throw new RadioProblem("The station's AAC stream is in a form Lucent can't play.") { Unreadable = true };
         }
 
         _channels = _samples.Channels;
@@ -248,7 +248,7 @@ internal sealed class AacRadioDecoder : RadioDecoder
             audio.Limit = 0;
         }
 
-        throw new RadioProblem("The station's stream isn't AAC audio Lucent can play.");
+        throw new RadioProblem("The station's stream isn't AAC audio Lucent can play.") { Unreadable = true };
     }
 
     public override int Next(byte[] pcm)

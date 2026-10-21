@@ -161,7 +161,7 @@ public static class MusicSelfTest
         return new AudioBuffer(new[] { left, (float[])left.Clone() }, SampleRate);
     }
 
-    private static void Kick(float[] samples, int at, double level)
+    internal static void Kick(float[] samples, int at, double level)
     {
         var phase = 0.0;
         for (var i = 0; i < SampleRate / 4 && at + i < samples.Length; i++)
@@ -172,7 +172,7 @@ public static class MusicSelfTest
         }
     }
 
-    private static void Noise(float[] samples, int at, double level, double seconds, Random random)
+    internal static void Noise(float[] samples, int at, double level, double seconds, Random random)
     {
         for (var i = 0; i < seconds * SampleRate && at + i < samples.Length; i++)
         {

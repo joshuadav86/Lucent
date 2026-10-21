@@ -25,6 +25,7 @@ using WinampInspiredVisualizer.Visualizer;
 using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
 using WinampInspiredVisualizer.Windows;
+using WinampInspiredVisualizer.Video;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace WinampInspiredVisualizer;
@@ -90,6 +91,7 @@ public partial class MainWindow : Window
         _player.Equalizer.Balance = _settings.Balance;
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
+        _player.VideoChanged += (_, _) => OnVideoChanged();
         ApplySoundSettings();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
@@ -253,6 +255,7 @@ public partial class MainWindow : Window
         _openingWindows = false;
         UpdateWindowToggles();
         AlignBesidePlayerSoon();
+        ReopenEditor();
         Activate();
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
@@ -1478,12 +1481,13 @@ public partial class MainWindow : Window
 
     public async void AddFilesFromDialog(Window owner)
     {
-        var patterns = string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
+        var music = string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
+        var videos = string.Join(";", VideoFiles.Extensions.Select(ext => "*" + ext));
         var dialog = new OpenFileDialog
         {
-            Title = "Add music",
+            Title = "Add music and videos",
             Multiselect = true,
-            Filter = $"Music files|{patterns}|All files|*.*",
+            Filter = $"Music and videos|{music};{videos}|Music files|{music}|Videos|{videos}|All files|*.*",
         };
 
         if (dialog.ShowDialog(owner) == true)
@@ -1576,7 +1580,7 @@ public partial class MainWindow : Window
                 try
                 {
                     files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
-                        .Where(AudioReaderFactory.IsSupported)
+                        .Where(VideoFiles.IsPlayable)
                         .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
                         .ToList();
                 }
@@ -1591,7 +1595,7 @@ public partial class MainWindow : Window
                     yield return file;
                 }
             }
-            else if (File.Exists(path) && AudioReaderFactory.IsSupported(path))
+            else if (File.Exists(path) && VideoFiles.IsPlayable(path))
             {
                 yield return path;
             }
@@ -1873,7 +1877,7 @@ public partial class MainWindow : Window
 
     private void StopPlayback()
     {
-        if (RemoteTakes(remote => remote.PauseAsync()))
+        if (RemoteTakes(remote => remote.StopAsync()))
         {
             return;
         }

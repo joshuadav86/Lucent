@@ -2,13 +2,11 @@ namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>
 /// Keeps up with what another app (an <see cref="IRemotePlayer"/>) is playing, and presses its buttons
-/// for the player window. Make it on the UI thread: it reads the app about once a second, and
+/// for the player window. Make it on the UI thread: it reads the app every second or few, and
 /// <see cref="Changed"/> and everything it reports happen on that thread.
 /// </summary>
 public sealed class RemoteControl : IDisposable
 {
-    private static readonly TimeSpan ReadEvery = TimeSpan.FromSeconds(1);
-
     // The other app takes a moment to act on a button, so it's read again after this long to see what it did.
     private static readonly TimeSpan SettleTime = TimeSpan.FromMilliseconds(400);
 
@@ -26,6 +24,12 @@ public sealed class RemoteControl : IDisposable
     private double? _volumeWanted;
     private bool _sendingVolume;
     private DateTime _volumeHeldUntil;
+
+    // Until when a button's problem stays shown, though the app reads fine again.
+    private DateTime _problemHeldUntil;
+
+    // Until when reads keep the position just sought to, rather than where the app was before it caught up.
+    private DateTime _positionHeldUntil;
 
     public RemoteControl(IRemotePlayer player)
     {
@@ -60,6 +64,37 @@ public sealed class RemoteControl : IDisposable
         : RunAsync(Player.PlayAsync, state => state with { IsPlaying = true, Position = state.PositionNow, ReadAt = DateTime.UtcNow });
 
     public Task PauseAsync() => IsPlaying ? PlayPauseAsync() : Task.CompletedTask;
+
+    /// <summary>
+    /// Stop: pauses the app and goes back to the start of the song. The pause is sent even when the app last read
+    /// as paused, as that can be a moment out of date (or the play button's guess), and Stop has to stop the music.
+    /// </summary>
+    public Task StopAsync()
+    {
+        var wasPlaying = State is not { IsPlaying: false };
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await Player.PauseAsync(cancel);
+                }
+                catch (Exception) when (!wasPlaying)
+                {
+                    // Already paused: some apps refuse a pause then (Spotify says the command isn't allowed).
+                }
+
+                try
+                {
+                    await Player.SeekAsync(TimeSpan.Zero, cancel);
+                }
+                catch (Exception) when (!wasPlaying)
+                {
+                    // Nothing to stop, and nowhere to rewind (Spotify with no device playing, say).
+                }
+            },
+            state => state with { IsPlaying = false, Position = TimeSpan.Zero, ReadAt = DateTime.UtcNow });
+    }
 
     public Task NextAsync() => RunAsync(Player.NextAsync, null);
 
@@ -108,7 +143,7 @@ public sealed class RemoteControl : IDisposable
         catch (Exception ex)
         {
             _volumeWanted = null;
-            Report(ex);
+            Report(ex, fromButton: true);
         }
         finally
         {
@@ -117,8 +152,12 @@ public sealed class RemoteControl : IDisposable
         }
     }
 
-    public Task SeekAsync(TimeSpan position) =>
-        RunAsync(cancel => Player.SeekAsync(position, cancel), state => state with { Position = position, ReadAt = DateTime.UtcNow });
+    public Task SeekAsync(TimeSpan position)
+    {
+        // The app can take a moment to report the new place (Spotify especially), so the bar doesn't jump back meanwhile.
+        _positionHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+        return RunAsync(cancel => Player.SeekAsync(position, cancel), state => state with { Position = position, ReadAt = DateTime.UtcNow });
+    }
 
     // Presses one of the app's buttons. The guess shows the result straight away (the play button
     // turning to pause, the bar jumping), until the app is read again a moment later.
@@ -146,7 +185,7 @@ public sealed class RemoteControl : IDisposable
         }
         catch (Exception ex)
         {
-            Report(ex);
+            Report(ex, fromButton: true);
         }
 
         _readNow.Release();
@@ -159,7 +198,7 @@ public sealed class RemoteControl : IDisposable
             await ReadOnceAsync();
             try
             {
-                await _readNow.WaitAsync(ReadEvery, _stop.Token);
+                await _readNow.WaitAsync(Player.ReadAgainAfter(State), _stop.Token);
             }
             catch (OperationCanceledException)
             {
@@ -196,8 +235,17 @@ public sealed class RemoteControl : IDisposable
             state = state with { Volume = asked };
         }
 
+        if (state is { Track: { } song } && State is { Track: { } shown } && song.Id == shown.Id && DateTime.UtcNow < _positionHeldUntil)
+        {
+            state = state with { Position = State.PositionNow, ReadAt = DateTime.UtcNow };
+        }
+
         State = state;
-        Problem = null;
+        if (DateTime.UtcNow >= _problemHeldUntil)
+        {
+            Problem = null;
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
         ReadListIfChanged(state);
 
@@ -272,11 +320,17 @@ public sealed class RemoteControl : IDisposable
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Report(Exception ex)
+    private void Report(Exception ex, bool fromButton = false)
     {
         if (_disposed)
         {
             return;
+        }
+
+        // Why a button didn't work stays up long enough to read, rather than going with the next read a second later.
+        if (fromButton)
+        {
+            _problemHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(6);
         }
 
         Problem = ex is RemoteProblem ? ex.Message : $"Can't reach {Player.Name} right now.";

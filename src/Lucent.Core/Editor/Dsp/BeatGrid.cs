@@ -198,37 +198,21 @@ public sealed class BeatGrid
         }
 
         var (slices, bar, period) = found;
-        var tracked = slices.Select(slice => (double)slice * hop).ToArray();
-
-        // Most music keeps one tempo: the evenly spaced grid that lands on the most onsets. The beats tracked
-        // can slip onto the off-beat for a while (a breakdown with only hi-hats), which the grid rides through.
-        var onsets = BeatMap.Onsets(full);
-        var (gridPeriod, phase) = FitGrid(onsets, MedianGap(slices) is > 0 and var gap ? gap : period);
-        var near = slices.Count(slice => Math.Abs(Wrap(slice - phase, gridPeriod)) <= SteadySeconds * 2.5 * BeatMap.FramesPerSecond);
-        var steady = near >= slices.Count / 2;
-        var perBeat = gridPeriod * hop;
+        var steady = FitSteady(full, low, slices, period);
         cancel.ThrowIfCancellationRequested();
 
         // The loudness is measured in 10 ms slices, so line the beats up with the drum hits themselves.
         var hits = Transients.Analyze(audio).At(70);
         double[] beats;
         int firstDownbeat;
-        if (steady)
+        if (steady is { } grid)
         {
-            // From the first beat in the sound to the end; the downbeat is the beat of four the kick drum hits hardest.
-            var start = Wrap(phase, gridPeriod);
-            start = start < 0 ? start + gridPeriod : start;
-            var count = (int)Math.Floor((full.Length - 1 - start) / gridPeriod) + 1;
-            var kicks = BeatMap.Onsets(low);
-            beats = Enumerable.Range(0, Math.Max(1, count)).Select(i => (start + i * gridPeriod) * hop).ToArray();
-            firstDownbeat = Enumerable.Range(0, BeatsPerBar)
-                .Select(offset => (Offset: offset, Strength: Enumerable.Range(0, count).Where(i => i % BeatsPerBar == offset)
-                    .Select(i => BeatMap.Peak(kicks, (int)Math.Round(start + i * gridPeriod))).DefaultIfEmpty(0).Average()))
-                .MaxBy(choice => choice.Strength).Offset;
+            beats = Enumerable.Range(0, grid.Count).Select(i => (grid.Start + i * grid.Period) * hop).ToArray();
+            firstDownbeat = grid.FirstDownbeat;
         }
         else
         {
-            beats = tracked;
+            beats = slices.Select(slice => (double)slice * hop).ToArray();
             firstDownbeat = bar;
         }
 
@@ -239,7 +223,7 @@ public sealed class BeatGrid
         }
 
         // The shift can push the first beat off the start, or a new one could fit there.
-        if (steady)
+        if (steady is not null)
         {
             while (beats.Length > 1 && beats[0] < 0)
             {
@@ -248,8 +232,8 @@ public sealed class BeatGrid
             }
         }
 
-        var tempo = 60.0 * rate / (steady ? perBeat : (beats[^1] - beats[0]) / Math.Max(1, beats.Length - 1));
-        return new BeatGrid(beats, firstDownbeat, rate, tempo, steady);
+        var tempo = 60.0 * rate / (steady is { } fitted ? fitted.Period * hop : (beats[^1] - beats[0]) / Math.Max(1, beats.Length - 1));
+        return new BeatGrid(beats, firstDownbeat, rate, tempo, steady is not null);
     }
 
     /// <summary>Makes a grid at a known tempo, for tests: a beat every so often from <paramref name="firstBeat"/>.</summary>
@@ -259,6 +243,35 @@ public sealed class BeatGrid
         var count = Math.Max(1, (int)Math.Floor((frames - 1 - firstBeat) / perBeat) + 1);
         var beats = Enumerable.Range(0, count).Select(i => firstBeat + i * perBeat).ToArray();
         return new BeatGrid(beats, Mod(firstDownbeat, BeatsPerBar), sampleRate, tempo, true);
+    }
+
+    /// <summary>
+    /// Most music keeps one tempo: the evenly spaced grid that lands on the most onsets, if the beats tracked mostly
+    /// keep to it. The tracked beats can slip onto the off-beat for a while (a breakdown with only hi-hats, or a
+    /// drop with off-beat bass), which the grid rides through. In slices of <see cref="BeatMap.FramesPerSecond"/>:
+    /// the first beat, the spacing, how many beats fit in the sound, and which of the first four is the downbeat
+    /// (the one the kick drum hits hardest). Null when the music speeds up or slows down.
+    /// </summary>
+    internal static (double Start, double Period, int Count, int FirstDownbeat)? FitSteady(float[] full, float[] low, List<int> slices, double period)
+    {
+        var onsets = BeatMap.Onsets(full);
+        var (gridPeriod, phase) = FitGrid(onsets, MedianGap(slices) is > 0 and var gap ? gap : period);
+        var near = slices.Count(slice => Math.Abs(Wrap(slice - phase, gridPeriod)) <= SteadySeconds * 2.5 * BeatMap.FramesPerSecond);
+        if (near < slices.Count / 2)
+        {
+            return null;
+        }
+
+        // From the first beat in the sound to the end.
+        var start = Wrap(phase, gridPeriod);
+        start = start < 0 ? start + gridPeriod : start;
+        var count = Math.Max(1, (int)Math.Floor((full.Length - 1 - start) / gridPeriod) + 1);
+        var kicks = BeatMap.Onsets(low);
+        var firstDownbeat = Enumerable.Range(0, BeatsPerBar)
+            .Select(offset => (Offset: offset, Strength: Enumerable.Range(0, count).Where(i => i % BeatsPerBar == offset)
+                .Select(i => BeatMap.Peak(kicks, (int)Math.Round(start + i * gridPeriod))).DefaultIfEmpty(0).Average()))
+            .MaxBy(choice => choice.Strength).Offset;
+        return (start, gridPeriod, count, firstDownbeat);
     }
 
     /// <summary>

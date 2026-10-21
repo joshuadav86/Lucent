@@ -88,7 +88,7 @@ public partial class EditorWindow
 
     private async Task PasteAsync()
     {
-        if (_session is not { } session || IsBusy)
+        if (_session is not { } session || IsBusy || VideoRefuses("Pasting"))
         {
             return;
         }

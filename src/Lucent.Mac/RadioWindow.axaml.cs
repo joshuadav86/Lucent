@@ -15,7 +15,7 @@ namespace Lucent.Mac;
 
 /// <summary>
 /// The radio browser, laid out like the plugin browser: typing finds stations by name, genre, or country; the left
-/// column picks the featured networks (SomaFM, FRISKY, Radio Paradise, Nightride FM), the favorites, the stations
+/// column picks the featured networks (SomaFM, FRISKY, Radio Paradise, Nightride FM, The Lot Radio), the favorites, the stations
 /// played lately, every station, or one genre; the sort and the quality and country filters sit beside the search.
 /// The star beside a station makes it a favorite, and clicking a station plays it.
 /// </summary>
@@ -241,7 +241,7 @@ public partial class RadioWindow : Window
         _searching?.Cancel();
         var searching = _searching = new CancellationTokenSource();
         var genre = RadioGuide.GenreOf(Section);
-        var query = new RadioQuery(search, genre?.Tag, _settings.RadioCountry, _settings.RadioMinBitrate, _settings.RadioSort);
+        var query = new RadioQuery(search, genre?.Tag, _settings.RadioCountry, _settings.RadioMinBitrate, _settings.RadioSort, VideoOnly: _settings.RadioVideoOnly);
         StationCount.Text = "Looking…";
         try
         {
@@ -306,11 +306,12 @@ public partial class RadioWindow : Window
 
     private string EmptyText()
     {
-        var filtered = _settings.RadioMinBitrate > 0 || _settings.RadioCountry is not null;
+        var filtered = _settings.RadioMinBitrate > 0 || _settings.RadioCountry is not null || _settings.RadioVideoOnly;
         return Section switch
         {
             RadioGuide.Favorites when SearchText.Length == 0 && !filtered => "No favorites yet. Click the star beside a station to keep it here.",
             RadioGuide.Recent when SearchText.Length == 0 && !filtered => "Stations you play show up here.",
+            _ when _settings.RadioVideoOnly => "No video stations match. Try fewer words, look in All stations, or turn off the video filter.",
             _ when filtered => "No stations match. Try fewer words, or loosen the quality or country filter.",
             _ => "No stations match. Try fewer words, or look in All stations.",
         };
@@ -436,6 +437,25 @@ public partial class RadioWindow : Window
             content.Children.Add(speaker);
         }
 
+        // The camera: the station sends a picture, which shows in the visuals window.
+        var video = RadioGuide.HasVideo(_settings, station);
+        if (video)
+        {
+            var camera = new Avalonia.Controls.Shapes.Path
+            {
+                Data = ThemeIcon("VideoIcon"),
+                Stroke = ThemeBrush(playing ? "AccentBrush" : "FaintTextBrush"),
+                StrokeThickness = 1.2,
+                Width = 13,
+                Height = 13,
+                Stretch = Stretch.Uniform,
+                Margin = new Thickness(0, 0, 7, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            DockPanel.SetDock(camera, Dock.Left);
+            content.Children.Add(camera);
+        }
+
         content.Children.Add(new TextBlock
         {
             Text = station.Name,
@@ -446,7 +466,7 @@ public partial class RadioWindow : Window
         });
 
         var row = new Button { Theme = FindTheme("StationRow"), Content = content, Tag = station };
-        ToolTip.SetTip(row, Describe(station) + (playing ? "\nPlaying now." : "\nClick to play it; right-click for more."));
+        ToolTip.SetTip(row, Describe(station) + (video ? "\nA video station: its picture shows in the visuals window." : string.Empty) + (playing ? "\nPlaying now." : "\nClick to play it; right-click for more."));
         if (playing)
         {
             row.Background = ThemeBrush("AccentSoftBrush");
@@ -547,6 +567,10 @@ public partial class RadioWindow : Window
         var country = _countries.FirstOrDefault(candidate => candidate.Code == _settings.RadioCountry);
         CountryButton.Content = (_settings.RadioCountry is null ? "ANYWHERE" : (country?.Name ?? _settings.RadioCountry).ToUpperInvariant()) + "  ▾";
         ToolTip.SetTip(CountryButton, _settings.RadioCountry is null ? "Stations from every country. Click to choose one." : "Click to choose another country, or every country.");
+        VideoButton.Content = _settings.RadioVideoOnly ? "VIDEO ONLY" : "AUDIO + VIDEO";
+        ToolTip.SetTip(VideoButton, _settings.RadioVideoOnly
+            ? "Only stations with video (the ones with the camera). Click to show every station."
+            : "Every station, with and without video. Click to show only the ones with video.");
     }
 
     private void OnSortMenu(object? sender, RoutedEventArgs e)
@@ -643,6 +667,9 @@ public partial class RadioWindow : Window
 
         menu.Open(CountryButton);
     }
+
+    private void OnVideoFilter(object? sender, RoutedEventArgs e) =>
+        ChangeFilter(() => _settings.RadioVideoOnly = !_settings.RadioVideoOnly);
 
     private void ChangeFilter(Action change)
     {
@@ -750,7 +777,7 @@ public partial class RadioWindow : Window
     private async void OnPlayAddress(object? sender, RoutedEventArgs e)
     {
         var address = await PromptWindow.AskAsync(this, "Play a station by its address",
-            "The stream's address, or its .pls or .m3u link, from the station's website. Lucent plays MP3 and AAC streams.", "PLAY",
+            "The stream's address, or its .pls, .m3u or .m3u8 link, from the station's website. Audio and video stations both play.", "PLAY",
             check: text => RadioGuide.IsStreamAddress(text) ? null : "That doesn't look like a web address (http:// or https://).");
         if (address is not null)
         {

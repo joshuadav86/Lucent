@@ -12,6 +12,7 @@
     <AssemblyName>Lucent.Core</AssemblyName>
     <RootNamespace>WinampInspiredVisualizer</RootNamespace>
     <Version>0.1.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +30,11 @@
     <!-- A managed AAC and HE-AAC (AAC+) decoder, for the AAC radio stations, the same on every platform. MIT. -->
     <PackageReference Include="SharpJaad.AAC" Version="0.1.1" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <!--
+      libVLC's .NET side, for playing videos (see Video/VideoStream.cs). Each app brings libVLC itself, built for it:
+      VideoLAN.LibVLC.Windows on Windows, VideoLAN.LibVLC.Mac on a Mac. LGPL 2.1, like libVLC.
+    -->
+    <PackageReference Include="LibVLCSharp" Version="3.10.2" />
   </ItemGroup>
 
   <ItemGroup>
