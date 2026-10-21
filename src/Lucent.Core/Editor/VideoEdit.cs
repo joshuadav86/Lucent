@@ -70,6 +70,25 @@ public sealed class VideoEdit
             throw new AudioFileException("This file has no pictures, so it isn't a video.");
         }
 
+        // AAC (nearly every video's sound) is decoded straight from the file by Lucent's own decoder, the same on
+        // Windows and the Mac. Anything else is copied out on its own (an .m4a file) for the system's music decoders.
+        try
+        {
+            if (Mp4Sound.DecodeAac(movie, AudioFileLoader.MaxDuration, progress, cancellation) is { } aac)
+            {
+                var info = new SourceFileInfo(path, aac.SampleRate, aac.SourceChannels, 16, false, aac.BitrateKbps);
+                return (new VideoEdit(movie, aac.SampleRate), new AudioBuffer(aac.Channels, aac.SampleRate), info, aac.SourceChannels > 2);
+            }
+        }
+        catch (InvalidDataException ex)
+        {
+            throw new AudioFileException(ex.Message, ex);
+        }
+        catch (IOException ex)
+        {
+            throw new AudioFileException($"The video couldn't be read: {ex.Message}", ex);
+        }
+
         // The sound is copied out on its own (an .m4a file), which every system's music decoders read, then decoded.
         var sound = Path.Combine(Path.GetTempPath(), $"lucent-sound-{Guid.NewGuid():N}.m4a");
         try
@@ -88,7 +107,16 @@ public sealed class VideoEdit
             {
                 // A sound the system can't read in an .m4a (a camera's uncompressed sound in a .mov, say) may still
                 // read from the video itself.
-                loaded = AudioFileLoader.Load(path, progress, cancellation);
+                try
+                {
+                    loaded = AudioFileLoader.Load(path, progress, cancellation);
+                }
+                catch (AudioFileException ex)
+                {
+                    var format = movie.Tracks.FirstOrDefault(track => track.IsSound)?.Format ?? string.Empty;
+                    throw new AudioFileException(
+                        $"The editor couldn't decode this video's sound ({SoundFormatName(format)}), so it can't open the video. It plays in the player as usual.", ex);
+                }
             }
 
             var video = new VideoEdit(movie, loaded.Audio.SampleRate);
@@ -109,6 +137,22 @@ public sealed class VideoEdit
             }
         }
     }
+
+    // A sound format's name, from its code in the file.
+    private static string SoundFormatName(string format) => format.Trim().ToLowerInvariant() switch
+    {
+        "mp4a" => "AAC",
+        "ac-3" => "Dolby Digital",
+        "ec-3" => "Dolby Digital Plus",
+        "opus" => "Opus",
+        "flac" => "FLAC",
+        "alac" => "Apple Lossless",
+        ".mp3" or "mp3" => "MP3",
+        "lpcm" or "sowt" or "twos" or "in24" or "in32" or "fl32" or "fl64" or "raw" => "uncompressed",
+        "samr" => "AMR",
+        "" => "an unknown format",
+        _ => $"\"{format.Trim()}\"",
+    };
 
     // ---- Times ----
 

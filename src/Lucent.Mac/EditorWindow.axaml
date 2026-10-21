@@ -3,7 +3,7 @@
         xmlns:w="using:Lucent.Mac.Windows"
         xmlns:editor="using:Lucent.Mac.Editor"
         x:Class="Lucent.Mac.EditorWindow"
-        Title="Audio editor - Lucent"
+        Title="Video and audio editor - Lucent"
         Width="1240" Height="700" MinWidth="980" MinHeight="480"
         Background="{DynamicResource BackgroundBrush}"
         WindowStartupLocation="CenterOwner">
@@ -228,7 +228,7 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
                 <Image x:Name="TitleIcon" Width="16" Height="16" VerticalAlignment="Center"
                        RenderOptions.BitmapInterpolationMode="HighQuality" />
-                <TextBlock Text="AUDIO EDITOR" Margin="10,0,0,0" FontSize="11" FontWeight="SemiBold"
+                <TextBlock Text="VIDEO AND AUDIO EDITOR" Margin="10,0,0,0" FontSize="11" FontWeight="SemiBold"
                            Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                 <TextBlock x:Name="FileTitle" Margin="14,0,0,0" FontSize="12" MaxWidth="560"
                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
@@ -432,12 +432,12 @@
             <Border x:Name="EmptyPanel" IsVisible="False" CornerRadius="10"
                     BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
-                    <TextBlock Text="Drop a sound here to edit it" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
+                    <TextBlock Text="Drop a sound or video here to edit it" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}" />
                     <TextBlock Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
                                Foreground="{DynamicResource MutedTextBrush}"
                                Text="Then drop more onto the waveform to add them where you let go, or anywhere else in the window to open another. The editor stays docked with the player, so you can leave it open." />
-                    <Button Theme="{StaticResource ToolButton}" Content="Choose a sound…" Margin="0,16,0,0"
+                    <Button Theme="{StaticResource ToolButton}" Content="Choose a sound or video…" Margin="0,16,0,0"
                             HorizontalAlignment="Center" Click="OnChooseSound" />
                 </StackPanel>
             </Border>
@@ -447,7 +447,7 @@
         <Border x:Name="ProcessBar" Grid.Row="5" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="14,10,14,8">
             <StackPanel>
-                <WrapPanel>
+                <WrapPanel x:Name="ToolsPanel">
                     <Button x:Name="EffectsButton" Theme="{StaticResource ToolButton}" Click="OnEffects"
                             ToolTip.Tip="Every effect and tool, by category: normalize, volume, pitch, EQ, repair, channels, stems, and more. Type to find one (E)">
                         <StackPanel Orientation="Horizontal">

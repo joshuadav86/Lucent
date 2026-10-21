@@ -44,8 +44,9 @@ public partial class EditorWindow
         }
 
         VideoPanel.Visibility = Visibility.Visible;
-        // The effects and plugins change only the sound, which a video's save doesn't use.
-        ProcessBar.Visibility = Visibility.Collapsed;
+        // The effects, plugins and the rest change only the sound, which a video's save doesn't use: only Trim and
+        // Delete stay, which cut the pictures too.
+        ShowVideoTools(true);
         PluginBar.Visibility = Visibility.Collapsed;
         _previewAsked = -1;
         _previewTimer ??= new DispatcherTimer(DispatcherPriority.Render, Dispatcher) { Interval = TimeSpan.FromMilliseconds(30) };
@@ -65,8 +66,38 @@ public partial class EditorWindow
         VideoPicture.Source = null;
         _previewFrameShown = -1;
         VideoPanel.Visibility = Visibility.Collapsed;
-        ProcessBar.Visibility = Visibility.Visible;
+        ShowVideoTools(false);
         PluginBar.Visibility = _settings.ShowInserts ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // The tools under the waveform: for a video, only the ones that cut its pictures. What was hidden for a video is
+    // put back as it was.
+    private readonly Dictionary<UIElement, Visibility> _hiddenForVideo = new();
+
+    private void ShowVideoTools(bool video)
+    {
+        if (video)
+        {
+            foreach (UIElement tool in ToolsPanel.Children)
+            {
+                if (tool != TrimButton && tool != DeleteButton && !_hiddenForVideo.ContainsKey(tool))
+                {
+                    _hiddenForVideo[tool] = tool.Visibility;
+                    tool.Visibility = Visibility.Collapsed;
+                }
+            }
+
+            ScopeHint.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        foreach (var (tool, visibility) in _hiddenForVideo)
+        {
+            tool.Visibility = visibility;
+        }
+
+        _hiddenForVideo.Clear();
+        ScopeHint.Visibility = Visibility.Visible;
     }
 
     /// <summary>

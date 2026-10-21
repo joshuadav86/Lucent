@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Editor;
 
 namespace WinampInspiredVisualizer.Video;
@@ -170,15 +169,10 @@ public static class VideoSelfTest
         return problems;
     }
 
-    // The editor opens a video by its sound, copied out of it as an .m4a file for the system's music decoders: it has
-    // to decode, the whole 4 seconds, with the beeps where they are in the video.
+    // The editor opens a video by its sound, decoded by Lucent's own AAC decoder (or the system's, for other sounds):
+    // it has to decode, the whole 4 seconds, with the beeps where they are in the video.
     private static int TestEditorSound(Action<string> log, string path)
     {
-        if (AudioReaderFactory.OpenWithSystemDecoder is null)
-        {
-            return 0;
-        }
-
         var name = Path.GetFileName(path);
         var (_, audio, _, _) = VideoEdit.Load(path, null, CancellationToken.None);
         var seconds = audio.Frames / (double)audio.SampleRate;

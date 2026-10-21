@@ -414,7 +414,7 @@ public partial class EqualizerWindow : Window
         {
             // The spectrum would show the editor's sound (it listens to every app), but the EQ only shapes the
             // player's music, so it goes quiet instead.
-            StatusText.Text = "The audio editor is playing: this EQ only shapes the player's music";
+            StatusText.Text = "The editor is playing: this EQ only shapes the player's music";
             StatusText.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
             return;
         }
