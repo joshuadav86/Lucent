@@ -667,7 +667,11 @@ jobs:
           APPLE_ID="$(printf %s "$APPLE_ID" | tr -d '[:space:]')"
           APPLE_TEAM_ID="$(printf %s "$APPLE_TEAM_ID" | tr -d '[:space:]')"
           APPLE_APP_PASSWORD="$(printf %s "$APPLE_APP_PASSWORD" | tr -d '[:space:]')"
-          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            # Apple can take an hour or more to notarize, which would hold every pull request up; the builds
+            # people download (from main) are notarized, and pull requests still check the signing.
+            echo "::notice::Pull request build, so Lucent is signed but not notarized."
+          elif [ -n "$APPLE_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
             # Apple turning the sign-in down (a wrong Apple ID or app-specific password) shouldn't hold back the
             # Mac download: it still goes out signed, just not notarized, and the warning says what to fix.
             if xcrun notarytool store-credentials lucent-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
@@ -690,7 +694,7 @@ jobs:
           if [ -n "$NOTARY_PROFILE" ]; then
             # Notarize the plain app too, and staple the ticket so it opens without going online.
             ditto -c -k --keepParent out/Lucent.app "$RUNNER_TEMP/notarize.zip"
-            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --keychain "$MAC_KEYCHAIN" --wait
+            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --keychain "$MAC_KEYCHAIN" --wait --timeout 50m
             xcrun stapler staple out/Lucent.app
           fi
           ditto -c -k --keepParent out/Lucent.app "Lucent-mac-${{ matrix.arch }}.zip"
