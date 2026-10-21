@@ -107,8 +107,10 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
         Title = _media.Meta(MetadataType.Title);
 
         _player = new MediaPlayer(_media);
-        _player.SetAudioFormat("FL32", (uint)_rate, Channels);
         _player.SetAudioCallbacks(OnSound, OnSoundPaused, OnSoundResumed, OnSoundFlushed, OnSoundDrained);
+        // libVLC 3 sends its sound to Lucent only as 16-bit stereo: a fixed format set beforehand (SetAudioFormat) is
+        // ignored, and asked for any other way, it gives up. It's made float for the player as it comes (OnSound).
+        _player.SetAudioFormatCallback(OnSoundFormat, OnSoundCleanup);
         _player.SetVideoFormatCallbacks(OnPictureFormat, OnPictureCleanup);
         _player.SetVideoCallbacks(OnPictureLock, null, OnPictureShown);
         _player.EndReached += (_, _) => End();
@@ -372,7 +374,14 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
     {
         var frames = (int)count;
         var copy = new float[frames * Channels];
-        Marshal.Copy(samples, copy, 0, copy.Length);
+        unsafe
+        {
+            var sixteen = new ReadOnlySpan<short>((void*)samples, copy.Length);
+            for (var i = 0; i < copy.Length; i++)
+            {
+                copy[i] = sixteen[i] / 32768f;
+            }
+        }
         lock (_gate)
         {
             if (_discarding)
@@ -399,6 +408,24 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
             _blocks.Enqueue(new Block(copy, frames, pts));
             _heldFrameCount += frames;
         }
+    }
+
+    // On libVLC's thread, as the sound starts: asks for 16-bit stereo at the rate the player was told.
+    private unsafe int OnSoundFormat(ref nint opaque, ref nint format, ref uint rate, ref uint channels)
+    {
+        // format is libVLC's four-character buffer itself (LibVLCSharp passes it as a reference to a pointer).
+        fixed (nint* buffer = &format)
+        {
+            "S16N"u8.CopyTo(new Span<byte>(buffer, 4));
+        }
+
+        rate = (uint)_rate;
+        channels = Channels;
+        return 0;
+    }
+
+    private void OnSoundCleanup(nint opaque)
+    {
     }
 
     // libVLC paused at this moment by its clock.
