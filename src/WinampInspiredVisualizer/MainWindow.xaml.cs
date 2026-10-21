@@ -1949,6 +1949,27 @@ public partial class MainWindow : Window
 
     private void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_showingVolume)
+        {
+            return;
+        }
+
+        // While Lucent controls another app, the bar is that app's volume (or does nothing, when it can't be changed).
+        if (_remote is { } remote)
+        {
+            if (remote.HasVolume)
+            {
+                remote.SetVolume(e.NewValue);
+                VolumeText.Text = $"{e.NewValue * 100:0}%";
+            }
+            else
+            {
+                ShowVolume();
+            }
+
+            return;
+        }
+
         _player.Volume = (float)e.NewValue;
         _settings.Volume = e.NewValue;
         if (VolumeText is not null)

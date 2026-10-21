@@ -20,7 +20,9 @@ public sealed class YouTubeRemote : BrowserTabRemote, IRemoteLists
         var id=new URLSearchParams(location.search).get('v')||location.pathname;
         var title=(meta&&meta.title)||document.title.replace(/ - YouTube( Music)?$/,'');
         var list=new URLSearchParams(location.search).get('list')||'';
-        return out([v.paused?'paused':'playing',id,title,(meta&&meta.artist)||'',(meta&&meta.album)||'',isFinite(v.duration)?v.duration:0,v.currentTime,metaArt,list]);
+        var mp=document.getElementById('movie_player');
+        var volume=mp&&mp.getVolume?(mp.isMuted&&mp.isMuted()?0:mp.getVolume()/100):(v.muted?0:v.volume);
+        return out([v.paused?'paused':'playing',id,title,(meta&&meta.artist)||'',(meta&&meta.album)||'',isFinite(v.duration)?v.duration:0,v.currentTime,metaArt,list,volume]);
         """;
 
     // Run in the tab. The playlist panel beside a video playing through a playlist (the one on screen, as a narrow
@@ -121,6 +123,10 @@ public sealed class YouTubeRemote : BrowserTabRemote, IRemoteLists
         + "if(v.currentTime>3||!b||b.offsetParent===null){v.currentTime=0;}else{b.click();}";
 
     protected override string Seek(string seconds) => $"v.currentTime={seconds};";
+
+    // YouTube's player keeps its own volume (and puts it back on the video), so it's set there, with the video's for YouTube Music.
+    protected override string SetVolume(string volume) =>
+        $"var mp=document.getElementById('movie_player');if(mp&&mp.setVolume){{if(mp.unMute)mp.unMute();mp.setVolume(Math.round({volume}*100));}}else{{v.muted=false;v.volume={volume};}}";
 
     // YouTube's watch, Shorts and live pages, and YouTube Music. Not the home page, whose previews play too.
     protected override string Address(string url) =>

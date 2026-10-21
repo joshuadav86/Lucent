@@ -19,7 +19,7 @@ namespace Lucent.Mac.Streaming;
 /// macOS has nothing like those that other apps may press, so the Mac goes to the tab itself. Only
 /// running browsers are asked, so Lucent never opens one by itself.
 /// </remarks>
-public abstract class BrowserTabRemote : IRemotePlayer
+public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -58,8 +58,8 @@ public abstract class BrowserTabRemote : IRemotePlayer
     /// <summary>
     /// JavaScript that returns 'none' when the tab has no player, and otherwise <c>out</c> of these fields: the state
     /// ('playing' or 'paused'), an ID that tells one song from the next, its title, artist, album, length and position
-    /// (in seconds), the cover's address, and the ID of the playlist it's playing through (empty when there isn't one).
-    /// It runs after <see cref="Helpers"/>.
+    /// (in seconds), the cover's address, the ID of the playlist it's playing through (empty when there isn't one), and
+    /// the player's volume from 0 to 1 (empty when <see cref="SetVolume"/> can't change it). It runs after <see cref="Helpers"/>.
     /// </summary>
     protected abstract string ReadPlayer { get; }
 
@@ -76,6 +76,9 @@ public abstract class BrowserTabRemote : IRemotePlayer
 
     /// <summary>JavaScript that moves the player to <paramref name="seconds"/>, written with a point.</summary>
     protected abstract string Seek(string seconds);
+
+    /// <summary>JavaScript that sets the player's volume to <paramref name="volume"/> (0 to 1, written with a point), or null when it can't.</summary>
+    protected virtual string? SetVolume(string volume) => null;
 
     /// <summary>
     /// The bundle IDs the playing browser's sound comes from (its helpers' IDs start the same way; Safari's sound
@@ -145,7 +148,10 @@ public abstract class BrowserTabRemote : IRemotePlayer
         var track = new RemoteTrack($"{tab.Browser}|{song[1]}", song[2], song[3], song[4], Seconds(song[5]),
             song[7].StartsWith("http", StringComparison.Ordinal) ? song[7] : null);
         var playlist = song.Length > 8 && song[8].Length > 0 ? $"{tab.Browser}|{song[8]}" : null;
-        return new RemoteState(track, song[0] == "playing", Seconds(song[6]), readAt, playlist);
+        double? volume = song.Length > 9 && double.TryParse(song[9], NumberStyles.Float, CultureInfo.InvariantCulture, out var level) && double.IsFinite(level)
+            ? Math.Clamp(level, 0, 1)
+            : null;
+        return new RemoteState(track, song[0] == "playing", Seconds(song[6]), readAt, playlist, Volume: volume);
     }
 
     public Task PlayAsync(CancellationToken cancel) => TellAsync(Play, cancel);
@@ -158,6 +164,9 @@ public abstract class BrowserTabRemote : IRemotePlayer
 
     public Task SeekAsync(TimeSpan position, CancellationToken cancel) =>
         TellAsync(Seek(Math.Max(0, position.TotalSeconds).ToString("0.###", CultureInfo.InvariantCulture)), cancel);
+
+    public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
+        SetVolume(Math.Clamp(volume, 0, 1).ToString("0.###", CultureInfo.InvariantCulture)) is { } script ? TellAsync(script, cancel) : Task.CompletedTask;
 
     public async Task<byte[]?> ArtworkAsync(RemoteTrack track, CancellationToken cancel) =>
         track.ArtworkUrl is { } url ? await _http.GetByteArrayAsync(url, cancel) : null;

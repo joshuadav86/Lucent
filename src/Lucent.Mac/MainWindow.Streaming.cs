@@ -251,6 +251,7 @@ public partial class MainWindow
         _settings.Save();
         _shownRemoteTrack = null;
         _shownRemoteArtwork = null;
+        ShowVolume();
         ShowRemoteList();
         UpdateListening();
         ShowNowPlaying(_current?.Track);
@@ -351,15 +352,63 @@ public partial class MainWindow
 
         Title = name is null ? "Lucent" : $"{name} - Lucent";
 
+        // Spotify says which of the account's devices it's playing on, which may not be this computer.
+        var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
         TrackDetails.Text = remote.Problem
-            ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {remote.Player.Name}" : $"{track.Album} · in {remote.Player.Name}");
-        ToolTip.SetTip(TrackDetails, remote.Problem ?? $"The sound comes from {remote.Player.Name}. Lucent shows it and presses its buttons.");
+            ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {where}" : $"{track.Album} · in {where}");
+        ToolTip.SetTip(TrackDetails, remote.Problem ?? $"The sound comes from {where}. Lucent shows it and presses its buttons.");
+        ShowVolume();
 
         if (track?.Id != _shownRemoteTrack || !ReferenceEquals(remote.Artwork, _shownRemoteArtwork))
         {
             _shownRemoteTrack = track?.Id;
             _shownRemoteArtwork = remote.Artwork;
             ArtworkWindow.ShowRemote(track, remote.Artwork);
+        }
+    }
+
+    // Set while the volume bar is being moved to show a volume, so that isn't taken as the user changing it.
+    private bool _showingVolume;
+
+    /// <summary>
+    /// Shows the controlled app's volume on the volume bar, on the device it's playing on, or hides the bar when Lucent
+    /// can't change the volume there. Lucent's own volume comes back when it stops controlling the app.
+    /// </summary>
+    private void ShowVolume()
+    {
+        _showingVolume = true;
+        try
+        {
+            var visible = true;
+            if (_remote is { } remote)
+            {
+                var volume = remote.HasVolume ? remote.State?.Volume : null;
+                visible = volume is not null;
+                if (volume is { } level)
+                {
+                    var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
+                    VolumeSlider.Value = level;
+                    VolumeText.Text = $"{level * 100:0}%";
+                    ToolTip.SetTip(VolumeSlider, $"{where}'s volume (scrolling over the player changes it too)");
+                }
+            }
+            else
+            {
+                VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
+                VolumeText.Text = $"{VolumeSlider.Value * 100:0}%";
+                ToolTip.SetTip(VolumeSlider, "Volume (scrolling over the player changes it too)");
+            }
+
+            if (VolumeSlider.Parent is Control bar)
+            {
+                // Hidden but still taking its room, so the player doesn't change shape.
+                bar.Opacity = visible ? 1 : 0;
+                bar.IsHitTestVisible = visible;
+            }
+        }
+        finally
+        {
+            _showingVolume = false;
         }
     }
 

@@ -36,7 +36,7 @@ public sealed class TidalRemote : BrowserTabRemote
         var album=[].slice.call(f.querySelectorAll('a[href^="/album/"]')).filter(function(a){return !ti||!ti.contains(a);})[0];
         var img=f.querySelector('figure[data-test="current-media-imagery"] img')||f.querySelector('img');
         var art=(metaArt||(img&&(img.currentSrc||img.src))||'').replace(/\/\d+x\d+\.jpg$/,'/640x640.jpg');
-        return out([playing?'playing':'paused',(link&&link.getAttribute('href'))||title,title,(meta&&meta.artist)||by,(meta&&meta.album)||text(album),length,at,art,'']);
+        return out([playing?'playing':'paused',(link&&link.getAttribute('href'))||title,title,(meta&&meta.artist)||by,(meta&&meta.album)||text(album),length,at,art,'',v?(v.muted?0:v.volume):'']);
         """;
 
     public TidalRemote(HttpClient http)
@@ -62,6 +62,8 @@ public sealed class TidalRemote : BrowserTabRemote
 
     // Only the page's audio or video element can seek; without one, the song carries on where it is.
     protected override string Seek(string seconds) => $"if(v)v.currentTime={seconds};";
+
+    protected override string SetVolume(string volume) => $"if(v){{v.muted=false;v.volume={volume};}}";
 
     // The web player, at tidal.com now and listen.tidal.com before.
     protected override string Address(string url) => $"{url} contains \"://tidal.com/\" or {url} contains \"listen.tidal.com\"";
