@@ -149,6 +149,7 @@ public static class VideoSelfTest
             problems += Check(log, $"{name} cut without re-encoding", Play(video, pauseAt: null), 2, virtualMachine);
             problems += TestEditorSound(log, path);
             problems += TestPreview(log, path);
+            problems += TestPictures(log, path);
         }
         catch (Exception ex)
         {
@@ -160,6 +161,74 @@ public static class VideoSelfTest
             try
             {
                 File.Delete(cut);
+            }
+            catch (IOException)
+            {
+            }
+        }
+
+        return problems;
+    }
+
+    // Saving frames: every picture from just before a flash to just after it comes out in order, the flash's three
+    // and no more, and the same across a cut (with 1.5-2.5 s deleted, the last flash is 2 s into the edit). Then a
+    // short GIF is made.
+    private static int TestPictures(Action<string> log, string path)
+    {
+        var name = Path.GetFileName(path);
+        var (video, audio, _, _) = VideoEdit.Load(path, null, CancellationToken.None);
+        using var libVlc = VideoEngine.CreateForFrames();
+        string Colours(double from, double to)
+        {
+            var pictures = VideoExport.Pictures(video, from, to);
+            var seen = new List<string>();
+            VideoExport.Read(libVlc, video, pictures, 64, 36, (_, pixels, stride) =>
+            {
+                var middle = new byte[4];
+                Marshal.Copy(pixels + 18 * stride + 32 * 4, middle, 0, 4);
+                seen.Add(middle[0] > 200 || middle[1] > 200 || middle[2] > 200 ? "flash" : "dark");
+            }, CancellationToken.None);
+            return string.Join(" ", seen);
+        }
+
+        const string expected = "dark dark dark flash flash flash dark dark dark";
+        var problems = 0;
+        var flash = Colours(0.9, 1.2);
+        if (flash != expected)
+        {
+            problems++;
+            log($"::error::Video: saving the frames from 0.9 s to 1.2 s of {name} gave {flash}, not {expected}.");
+        }
+
+        var rate = audio.SampleRate;
+        video.Delete(new FrameRange((int)(1.5 * rate), rate), 1);
+        var cut = Colours(1.9, 2.2);
+        if (cut != expected)
+        {
+            problems++;
+            log($"::error::Video: with 1.5-2.5 s of {name} cut, saving the frames from 1.9 s to 2.2 s gave {cut}, not {expected}.");
+        }
+
+        var gif = Path.Combine(Path.GetTempPath(), $"lucent-gif-{Guid.NewGuid():N}.gif");
+        try
+        {
+            VideoExport.SaveGif(video, VideoExport.Pictures(video, 0.5, 1.5, 10), 10, 320, loop: true, dither: true, gif, null, CancellationToken.None);
+            var bytes = File.ReadAllBytes(gif);
+            if (bytes.Length < 100 || !bytes.AsSpan(0, 6).SequenceEqual("GIF89a"u8) || bytes[^1] != 0x3B)
+            {
+                problems++;
+                log($"::error::Video: the GIF made of {name} isn't a whole GIF ({bytes.Length} bytes).");
+            }
+            else if (problems == 0)
+            {
+                log($"Video: {name}'s frames save exactly, across a cut too, and a GIF of it is {bytes.Length} bytes.");
+            }
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(gif);
             }
             catch (IOException)
             {

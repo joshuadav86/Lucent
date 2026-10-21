@@ -28,6 +28,8 @@ public static class Program
         AudioReaderFactory.OpenWithSystemDecoder = path => new MacAudioFileReader(path);
         // MP3 encoding is left to each platform too: on the Mac it's LAME, shipped inside the app.
         AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
+        // A video's frames saved as JPEG, by SkiaSharp's encoder.
+        WinampInspiredVisualizer.Editor.VideoExport.EncodeJpeg = Library.CoverArt.EncodeJpeg;
 
         if (args.Length > 0 && args[0] == "--self-test")
         {

@@ -159,6 +159,16 @@ public static class CoverArt
         return EncodeJpeg(pixels, quality);
     }
 
+    /// <summary>Saves 32-bit BGRA pixels (the fourth byte is ignored) as JPEG bytes.</summary>
+    public static byte[] EncodeJpeg(nint bgra, int width, int height, int stride, int quality)
+    {
+        using var pixels = new SKBitmap();
+        pixels.InstallPixels(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque), bgra, stride);
+        using var image = SKImage.FromBitmap(pixels);
+        using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+        return encoded.ToArray();
+    }
+
     /// <summary>Saves a bitmap as PNG bytes, keeping every pixel and any transparency.</summary>
     public static byte[] EncodePng(Bitmap source)
     {

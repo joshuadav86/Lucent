@@ -171,6 +171,10 @@ public static class CoverArt
         return stream.ToArray();
     }
 
+    /// <summary>Saves 32-bit BGRA pixels (the fourth byte is ignored) as JPEG bytes.</summary>
+    public static byte[] EncodeJpeg(nint bgra, int width, int height, int stride, int quality) =>
+        EncodeJpeg(BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgr32, null, bgra, stride * height, stride), quality);
+
     /// <summary>Saves a bitmap as PNG bytes, keeping every pixel and any transparency.</summary>
     public static byte[] EncodePng(BitmapSource source)
     {

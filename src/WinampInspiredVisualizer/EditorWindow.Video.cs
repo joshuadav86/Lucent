@@ -1,5 +1,7 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -80,7 +82,7 @@ public partial class EditorWindow
         {
             foreach (UIElement tool in ToolsPanel.Children)
             {
-                if (tool != TrimButton && tool != DeleteButton && !_hiddenForVideo.ContainsKey(tool))
+                if (tool != TrimButton && tool != DeleteButton && tool != SavePicturesButton && !_hiddenForVideo.ContainsKey(tool))
                 {
                     _hiddenForVideo[tool] = tool.Visibility;
                     tool.Visibility = Visibility.Collapsed;
@@ -88,8 +90,11 @@ public partial class EditorWindow
             }
 
             ScopeHint.Visibility = Visibility.Collapsed;
+            SavePicturesButton.Visibility = Visibility.Visible;
             return;
         }
+
+        SavePicturesButton.Visibility = Visibility.Collapsed;
 
         foreach (var (tool, visibility) in _hiddenForVideo)
         {
@@ -248,6 +253,112 @@ public partial class EditorWindow
         }
 
         return await SaveVideoAsync(target, File.Exists(target));
+    }
+
+    // ---- Saving frames and GIFs ----
+
+    private void OnSavePicturesMenu(object sender, RoutedEventArgs e)
+    {
+        if (!IsVideo)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu { PlacementTarget = SavePicturesButton, Placement = PlacementMode.Top, VerticalOffset = -6 };
+        void Add(string header, string tip, bool gif)
+        {
+            var item = new MenuItem { Header = header, ToolTip = tip };
+            item.Click += async (_, _) => await SavePicturesAsync(gif);
+            menu.Items.Add(item);
+        }
+
+        Add("Frames as images…", "Every frame, or so many a second, as PNG or JPEG files", gif: false);
+        Add("GIF…", "An animated GIF, to share", gif: true);
+        menu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// Saves the selection (or the whole video) as images or a GIF, after asking how. The pictures are the original
+    /// video's, exactly as it has them, and follow the edit: a stretch across a cut has the pictures either side.
+    /// </summary>
+    private async Task SavePicturesAsync(bool gif)
+    {
+        if (_videoEdit is not { } video || _session is not { } session || IsBusy)
+        {
+            return;
+        }
+
+        var rate = (double)session.Audio.SampleRate;
+        var selection = Selection;
+        var (from, to) = selection.IsEmpty ? (0.0, video.Length) : (selection.Start / rate, selection.End / rate);
+        (int Width, int Height) size;
+        try
+        {
+            size = VideoExport.PictureSize(video);
+        }
+        catch (NotSupportedException)
+        {
+            size = (0, 0);
+        }
+
+        if (size.Width == 0)
+        {
+            ShowStatus("This video's pictures couldn't be read, so they can't be saved.");
+            return;
+        }
+
+        if (FrameExportWindow.Ask(this, video, from, to, size, gif) is not { } choice)
+        {
+            return;
+        }
+
+        string? saved = null;
+        string? problem = null;
+        var count = 0;
+        var ok = await RunBusyAsync(gif ? $"Making {Path.GetFileName(choice.GifPath)}…" : "Saving frames…", async (progress, token) =>
+        {
+            try
+            {
+                saved = await Task.Run(() =>
+                {
+                    var pictures = VideoExport.Pictures(video, from, to, gif ? choice.GifRate : choice.PerSecond);
+                    count = pictures.Count;
+                    if (!gif)
+                    {
+                        return VideoExport.SaveFrames(video, pictures, choice.Folder, choice.Format, progress, token);
+                    }
+
+                    VideoExport.SaveGif(video, pictures, choice.GifRate, choice.GifWidth, choice.Loop, choice.Dither, choice.GifPath, progress, token);
+                    return choice.GifPath;
+                }, token);
+            }
+            catch (InvalidDataException ex)
+            {
+                problem = ex.Message;
+            }
+            catch (VideoCutException ex)
+            {
+                problem = ex.Message;
+            }
+        });
+
+        if (problem is not null)
+        {
+            ShowStatus("That didn't work.");
+            MessageBox.Show(this, problem, gif ? "Save a GIF" : "Save frames", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!ok || saved is null)
+        {
+            return;
+        }
+
+        _lastSavedPath = saved;
+        ShowFileButton.Visibility = Visibility.Visible;
+        ShowStatus(gif
+            ? $"Saved \"{Path.GetFileName(saved)}\": {count} frames, {VideoExport.DescribeBytes(new FileInfo(saved).Length)}."
+            : $"Saved {count} {(count == 1 ? "frame" : "frames")} in \"{Path.GetFileName(saved)}\".");
     }
 
     // ---- The picture ----

@@ -39,6 +39,44 @@ public static class VideoEngine
     /// </summary>
     internal static bool KeepLatePictures { get; set; }
 
+    /// <summary>
+    /// A libVLC of its own for reading every picture of a video (to save as images, or a GIF): it never drops a
+    /// picture for coming late, so it can go as fast as it decodes. Dispose it when done. Throws
+    /// <see cref="NotSupportedException"/> when libVLC can't be loaded.
+    /// </summary>
+    public static LibVLC CreateForFrames()
+    {
+        Get();
+        return new LibVLC(Options(keepLatePictures: true));
+    }
+
+    private static string[] Options(bool keepLatePictures)
+    {
+        var options = new List<string>
+        {
+            // No file name written over the picture as it starts, and nothing said in the terminal.
+            "--no-video-title-show",
+            "--quiet",
+            // Decoded by the processor (FFmpeg's decoders), not the graphics card: every picture is copied
+            // back for Lucent to draw anyway, and the card's decoders take long enough to start that a
+            // video's first second showed up to half a second behind its sound (Windows and Mac alike).
+            "--avcodec-hw=none",
+            "--codec=avcodec,any",
+            // Never Xlib, on the Linux machines this is tested on: frames go to Lucent, not a window.
+            "--no-xlib",
+        };
+        if (keepLatePictures)
+        {
+            options.Add("--no-drop-late-frames");
+            options.Add("--no-skip-frames");
+            // FFmpeg's decoders skip pictures nothing else is drawn from when they fall behind, unless told not to.
+            options.Add("--no-avcodec-hurry-up");
+            options.Add("--avcodec-skip-frame=0");
+        }
+
+        return options.ToArray();
+    }
+
     /// <summary>Loads libVLC if it isn't yet. Throws <see cref="NotSupportedException"/> when it can't be loaded.</summary>
     public static LibVLC Get()
     {
@@ -57,26 +95,7 @@ public static class VideoEngine
             try
             {
                 Core.Initialize();
-                var options = new List<string>
-                {
-                    // No file name written over the picture as it starts, and nothing said in the terminal.
-                    "--no-video-title-show",
-                    "--quiet",
-                    // Decoded by the processor (FFmpeg's decoders), not the graphics card: every picture is copied
-                    // back for Lucent to draw anyway, and the card's decoders take long enough to start that a
-                    // video's first second showed up to half a second behind its sound (Windows and Mac alike).
-                    "--avcodec-hw=none",
-                    "--codec=avcodec,any",
-                    // Never Xlib, on the Linux machines this is tested on: frames go to Lucent, not a window.
-                    "--no-xlib",
-                };
-                if (KeepLatePictures)
-                {
-                    options.Add("--no-drop-late-frames");
-                    options.Add("--no-skip-frames");
-                }
-
-                _libVlc = new LibVLC(options.ToArray());
+                _libVlc = new LibVLC(Options(KeepLatePictures));
                 Version = _libVlc.Version;
                 return _libVlc;
             }
