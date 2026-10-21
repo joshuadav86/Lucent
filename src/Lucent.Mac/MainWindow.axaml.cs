@@ -198,6 +198,7 @@ public partial class MainWindow : Window
         SeekBar.AddHandler(Thumb.DragCompletedEvent, (_, _) => OnSeekDragCompleted());
 
         SetUpWindowPlaces();
+        SetUpLucentFullScreen();
         if (Saved("Player") is { } placement)
         {
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -341,6 +342,8 @@ public partial class MainWindow : Window
         _openingWindows = false;
         UpdateWindowToggles();
         AlignBesidePlayerSoon();
+        // Closed full screen: it opens full screen again, laid out on the screen it's on now.
+        TileSoon();
         ReopenEditor();
         Activate();
         RequestAnimationFrame(OnFrame);
@@ -797,6 +800,7 @@ public partial class MainWindow : Window
     /// <summary>Puts every window back together around the player, as on the first run, and remembers it.</summary>
     private void ArrangeWindows()
     {
+        LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         ArrangeFirstTime();
         SavePlacements();
@@ -821,55 +825,16 @@ public partial class MainWindow : Window
     private void OnFillScreen(object? sender, RoutedEventArgs e) => FillScreen();
 
     /// <summary>
-    /// Docks the shown windows together and stretches them to fill the screen: the library down the
-    /// left, the player at the top with the queue under it to the bottom, and the visuals filling the rest.
+    /// Docks the shown windows together and stretches them to fill the screen, once: the layout Lucent
+    /// full screen keeps (MainWindow.FullScreen.cs), without staying full screen or remembering where the
+    /// windows were. The library down the left, the player at the top with the equalizer and the queue
+    /// under it to the bottom, and the visuals filling the rest, with the other windows under them.
     /// </summary>
     private void FillScreen()
     {
+        LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
-        var area = Placement.WorkArea(this);
-        var library = _libraryWindow.IsVisible;
-        var visuals = _visuals.IsVisible;
-        var playerWidth = ActualWidth;
-        var playerHeight = ActualHeight;
-        var libraryWidth = 0.0;
-        if (library)
-        {
-            var room = area.Width - playerWidth;
-            libraryWidth = visuals
-                ? Math.Clamp(Placement.SizeOf(_libraryWindow).Width, _libraryWindow.MinWidth, Math.Max(_libraryWindow.MinWidth, room - _visuals.MinWidth))
-                : Math.Max(_libraryWindow.MinWidth, room);
-        }
-
-        // A locked player stays where it is, and the others fill the screen around it.
-        if (!WindowLocks.IsLocked(this))
-        {
-            MovePlayer(area.Left + libraryWidth, area.Top);
-        }
-
-        if (library)
-        {
-            Place(_libraryWindow, area.Left, area.Top, libraryWidth, area.Height);
-        }
-
-        var equalizerHeight = 0.0;
-        if (OpenEqualizerWindow is { } equalizer)
-        {
-            equalizerHeight = Placement.SizeOf(equalizer).Height;
-            Place(equalizer, Left, Top + playerHeight, playerWidth, equalizerHeight);
-        }
-
-        if (_queue.IsVisible)
-        {
-            Place(_queue, Left, Top + playerHeight + equalizerHeight, playerWidth, Math.Max(_queue.MinHeight, area.Height - playerHeight - equalizerHeight));
-        }
-
-        if (visuals)
-        {
-            Place(_visuals, Left + playerWidth, area.Top, Math.Max(_visuals.MinWidth, area.Right - Left - playerWidth), area.Height);
-        }
-
-        SavePlacements();
+        TileWindows();
     }
 
     private void OnShrinkWindows(object? sender, RoutedEventArgs e) => ShrinkWindows();
@@ -877,6 +842,7 @@ public partial class MainWindow : Window
     /// <summary>Docks the shown windows around the player at their smallest sizes.</summary>
     private void ShrinkWindows()
     {
+        LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         var playerWidth = ActualWidth;
         var playerHeight = ActualHeight;
@@ -1076,7 +1042,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void AlignBesidePlayer()
     {
-        if (IsShuttingDown || WindowState != WindowState.Normal || !IsLoaded)
+        // Lucent full screen lays the windows out itself.
+        if (IsShuttingDown || WindowState != WindowState.Normal || !IsLoaded || _settings.LucentFullScreen)
         {
             return;
         }
@@ -2139,6 +2106,9 @@ public partial class MainWindow : Window
                 break;
             case Key.X:
                 PlayNext(wrap: true);
+                break;
+            case Key.F11 when e.KeyModifiers == KeyModifiers.Shift:
+                ToggleLucentFullScreen();
                 break;
             case Key.F11:
                 _visuals.ToggleFullscreen();

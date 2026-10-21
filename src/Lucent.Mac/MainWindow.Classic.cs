@@ -321,6 +321,8 @@ public partial class MainWindow
         menu.Items.Add(MenuItemFor("Add a folder…", () => AddFolderFromDialog(this)));
         menu.Items.Add(MenuItemFor("Sources…", () => ToggleSources(SourcesButton)));
         menu.Items.Add(MenuItemFor("Options…", ShowOptions));
+
+        LucentFullScreen.AddTo(menu);
     }
 
     private static MenuItem MenuItemFor(string header, Action action)

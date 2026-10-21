@@ -408,6 +408,9 @@ jobs:
       - name: Check Windows and Mac have the same features
         run: dotnet run --project tools/ParityCheck -c Release
 
+      - name: Check Lucent full screen lays the windows out well at every scaling
+        run: dotnet run --project tools/LayoutCheck -c Release
+
       - name: Check the Mac styles have no selector through two templates
         # Avalonia only rejects "/template/ … /template/" when the style first loads, which can be long
         # after launch (it crashed 1.0.480 as the Library opened), so it's caught here instead.

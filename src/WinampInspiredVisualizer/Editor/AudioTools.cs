@@ -48,6 +48,9 @@ public static class AudioTools
     public static event EventHandler? EditorPlayingChanged;
 
     /// <summary>True while an audio editor is playing.</summary>
+    /// <summary>The editors that are open, the first opened first.</summary>
+    public static IReadOnlyList<EditorWindow> OpenEditors => Editors;
+
     public static bool IsEditorPlaying => Editors.Any(editor => editor.IsPlaying);
 
     internal static void NotifyEditorPlayingChanged() => EditorPlayingChanged?.Invoke(null, EventArgs.Empty);
