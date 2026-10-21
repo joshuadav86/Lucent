@@ -460,7 +460,7 @@
                                  SelectionBrush="#2EF2F0EA"
                                  LineBrush="{DynamicResource HairlineBrush}"
                                  LabelBrush="{DynamicResource MutedTextBrush}"
-                                 CursorBrush="{DynamicResource AccentBrush}"
+                                 CursorBrush="#4FD8E8"
                                  PlayheadBrush="{DynamicResource TextBrush}" />
             <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
                 <TextBlock x:Name="LoadingText" Text="Opening the sound…" FontSize="13" HorizontalAlignment="Center"

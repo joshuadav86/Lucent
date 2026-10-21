@@ -599,8 +599,20 @@ public sealed partial class WaveformView : Control
             var x = Math.Round(FrameToX(_cursor)) + 0.5;
             if (x >= 0 && x <= width)
             {
-                var pen = new Pen(CursorBrush ?? Brushes.White, 1);
-                dc.DrawLine(pen, new Point(x, lanesTop), new Point(x, height));
+                // Top to bottom, through the ruler with a small flag at the top like the playhead's, in its own
+                // colour (not the waves'), so it's easy to find.
+                var brush = CursorBrush ?? Brushes.White;
+                dc.DrawLine(new Pen(brush, 1.5), new Point(x, 0), new Point(x, height));
+                var flag = new StreamGeometry();
+                using (var g = flag.Open())
+                {
+                    g.BeginFigure(new Point(x - 5, 0), true);
+                    g.LineTo(new Point(x + 5, 0));
+                    g.LineTo(new Point(x, 7));
+                    g.EndFigure(true);
+                }
+
+                dc.DrawGeometry(brush, null, flag);
             }
         }
         else
