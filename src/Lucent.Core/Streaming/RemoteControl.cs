@@ -27,6 +27,9 @@ public sealed class RemoteControl : IDisposable
     private bool _sendingVolume;
     private DateTime _volumeHeldUntil;
 
+    // Until when a button's problem stays shown, though the app reads fine again.
+    private DateTime _problemHeldUntil;
+
     public RemoteControl(IRemotePlayer player)
     {
         Player = player;
@@ -60,6 +63,30 @@ public sealed class RemoteControl : IDisposable
         : RunAsync(Player.PlayAsync, state => state with { IsPlaying = true, Position = state.PositionNow, ReadAt = DateTime.UtcNow });
 
     public Task PauseAsync() => IsPlaying ? PlayPauseAsync() : Task.CompletedTask;
+
+    /// <summary>
+    /// Stop: pauses the app and goes back to the start of the song. The pause is sent even when the app last read
+    /// as paused, as that can be a moment out of date (or the play button's guess), and Stop has to stop the music.
+    /// </summary>
+    public Task StopAsync()
+    {
+        var wasPlaying = State is not { IsPlaying: false };
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await Player.PauseAsync(cancel);
+                }
+                catch (Exception) when (!wasPlaying)
+                {
+                    // Already paused: some apps refuse a pause then (Spotify says the command isn't allowed).
+                }
+
+                await Player.SeekAsync(TimeSpan.Zero, cancel);
+            },
+            state => state with { IsPlaying = false, Position = TimeSpan.Zero, ReadAt = DateTime.UtcNow });
+    }
 
     public Task NextAsync() => RunAsync(Player.NextAsync, null);
 
@@ -108,7 +135,7 @@ public sealed class RemoteControl : IDisposable
         catch (Exception ex)
         {
             _volumeWanted = null;
-            Report(ex);
+            Report(ex, fromButton: true);
         }
         finally
         {
@@ -146,7 +173,7 @@ public sealed class RemoteControl : IDisposable
         }
         catch (Exception ex)
         {
-            Report(ex);
+            Report(ex, fromButton: true);
         }
 
         _readNow.Release();
@@ -197,7 +224,11 @@ public sealed class RemoteControl : IDisposable
         }
 
         State = state;
-        Problem = null;
+        if (DateTime.UtcNow >= _problemHeldUntil)
+        {
+            Problem = null;
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
         ReadListIfChanged(state);
 
@@ -272,11 +303,17 @@ public sealed class RemoteControl : IDisposable
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Report(Exception ex)
+    private void Report(Exception ex, bool fromButton = false)
     {
         if (_disposed)
         {
             return;
+        }
+
+        // Why a button didn't work stays up long enough to read, rather than going with the next read a second later.
+        if (fromButton)
+        {
+            _problemHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(6);
         }
 
         Problem = ex is RemoteProblem ? ex.Message : $"Can't reach {Player.Name} right now.";

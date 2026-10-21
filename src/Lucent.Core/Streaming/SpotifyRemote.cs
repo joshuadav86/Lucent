@@ -367,6 +367,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         {
             HttpStatusCode.Forbidden when body.Contains("PREMIUM_REQUIRED", StringComparison.Ordinal) =>
                 new RemoteProblem("Spotify only lets other apps play, pause and skip with a Premium account."),
+            // The device or what's playing doesn't allow it just now (some speakers and TVs, an advert).
+            HttpStatusCode.Forbidden when body.Contains("Restriction violated", StringComparison.OrdinalIgnoreCase) =>
+                new RemoteProblem("Spotify won't let other apps do that on the device it's playing on right now."),
             HttpStatusCode.Forbidden =>
                 new RemoteProblem("Spotify wouldn't let Lucent do that. If this Spotify app is still in development mode, your account needs adding to it on developer.spotify.com."),
             HttpStatusCode.NotFound =>

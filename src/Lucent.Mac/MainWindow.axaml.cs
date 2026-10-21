@@ -1952,7 +1952,7 @@ public partial class MainWindow : Window
 
     private void StopPlayback()
     {
-        if (RemoteTakes(remote => remote.PauseAsync()))
+        if (RemoteTakes(remote => remote.StopAsync()))
         {
             return;
         }
