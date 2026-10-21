@@ -55,6 +55,11 @@ public static class VideoEngine
                     // No file name written over the picture as it starts, and nothing said in the terminal.
                     "--no-video-title-show",
                     "--quiet",
+                    // Decoded by the processor (FFmpeg's decoders), not the graphics card: every picture is copied
+                    // back for Lucent to draw anyway, and the card's decoders take long enough to start that a
+                    // video's first second showed up to half a second behind its sound (Windows and Mac alike).
+                    "--avcodec-hw=none",
+                    "--codec=avcodec,any",
                     // Never Xlib, on the Linux machines this is tested on: frames go to Lucent, not a window.
                     "--no-xlib");
                 Version = _libVlc.Version;
