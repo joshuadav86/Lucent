@@ -88,6 +88,13 @@ public interface IRemotePlayer : IDisposable
 
     /// <summary>The song's cover as an image file's bytes (JPEG or PNG), or null when it has none.</summary>
     Task<byte[]?> ArtworkAsync(RemoteTrack track, CancellationToken cancel);
+
+    /// <summary>
+    /// How long to wait before reading the app again, after reading <paramref name="state"/>. Once a second suits an
+    /// app on this computer; a web service that limits how often it's asked waits longer, as the position moves on
+    /// by itself between reads. A button pressed is always read straight after.
+    /// </summary>
+    TimeSpan ReadAgainAfter(RemoteState? state) => TimeSpan.FromSeconds(1);
 }
 
 /// <summary>An <see cref="IRemotePlayer"/> that can say which songs it's playing through, and play one of them.</summary>

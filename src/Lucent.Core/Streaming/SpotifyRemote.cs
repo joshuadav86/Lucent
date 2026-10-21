@@ -64,6 +64,20 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         return state;
     }
 
+    // Spotify limits how often an app may ask, over each 30 seconds, and a reading a second (with the playlist and
+    // queue reads beside it) ran into that. Every 3 seconds while playing, or as the song ends if that's sooner,
+    // so the next song shows on time; every 5 while paused.
+    public TimeSpan ReadAgainAfter(RemoteState? state)
+    {
+        if (state is not { IsPlaying: true })
+        {
+            return TimeSpan.FromSeconds(5);
+        }
+
+        var left = state.Track is { Duration.Ticks: > 0 } track ? track.Duration - state.PositionNow + TimeSpan.FromSeconds(0.5) : TimeSpan.MaxValue;
+        return left < TimeSpan.FromSeconds(3) ? TimeSpan.FromSeconds(Math.Max(1, left.TotalSeconds)) : TimeSpan.FromSeconds(3);
+    }
+
     public Task PlayAsync(CancellationToken cancel) => PlayOnSomeDeviceAsync(null, cancel);
 
     public Task PauseAsync(CancellationToken cancel) => CommandAsync(HttpMethod.Put, "/pause", cancel);
@@ -392,7 +406,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
     {
         if (DateTime.UtcNow < _waitUntil)
         {
-            throw new RemoteProblem("Spotify asked Lucent to slow down. It'll carry on in a moment.");
+            throw new RemoteProblem(SlowDown());
         }
 
         for (var attempt = 0; ; attempt++)
@@ -427,6 +441,15 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         }
     }
 
+    // Spotify says how long to wait, which is usually seconds but can be much longer after a lot of asking.
+    private string SlowDown()
+    {
+        var left = _waitUntil - DateTime.UtcNow;
+        return left > TimeSpan.FromMinutes(1.5)
+            ? $"Spotify asked Lucent to wait {(left > TimeSpan.FromHours(1.5) ? $"about {left.TotalHours:0} hours" : $"about {left.TotalMinutes:0} minutes")} before asking again. Spotify itself still plays."
+            : "Spotify asked Lucent to slow down. It'll carry on in a moment.";
+    }
+
     private async Task ThrowIfFailedAsync(HttpResponseMessage response, CancellationToken cancel)
     {
         if (response.IsSuccessStatusCode)
@@ -446,8 +469,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
                 new RemoteProblem("Spotify wouldn't let Lucent do that. If this Spotify app is still in development mode, your account needs adding to it on developer.spotify.com."),
             HttpStatusCode.NotFound =>
                 new RemoteProblem("Start playing something in Spotify first, then Lucent can control it."),
-            HttpStatusCode.TooManyRequests =>
-                new RemoteProblem("Spotify asked Lucent to slow down. It'll carry on in a moment."),
+            HttpStatusCode.TooManyRequests => new RemoteProblem(SlowDown()),
             HttpStatusCode.Unauthorized =>
                 new RemoteProblem("Spotify signed Lucent out. Sign in again from the Add music menu."),
             _ => new RemoteProblem($"Spotify had a problem ({(int)response.StatusCode})."),

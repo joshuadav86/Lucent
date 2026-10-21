@@ -2,13 +2,11 @@ namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>
 /// Keeps up with what another app (an <see cref="IRemotePlayer"/>) is playing, and presses its buttons
-/// for the player window. Make it on the UI thread: it reads the app about once a second, and
+/// for the player window. Make it on the UI thread: it reads the app every second or few, and
 /// <see cref="Changed"/> and everything it reports happen on that thread.
 /// </summary>
 public sealed class RemoteControl : IDisposable
 {
-    private static readonly TimeSpan ReadEvery = TimeSpan.FromSeconds(1);
-
     // The other app takes a moment to act on a button, so it's read again after this long to see what it did.
     private static readonly TimeSpan SettleTime = TimeSpan.FromMilliseconds(400);
 
@@ -29,6 +27,9 @@ public sealed class RemoteControl : IDisposable
 
     // Until when a button's problem stays shown, though the app reads fine again.
     private DateTime _problemHeldUntil;
+
+    // Until when reads keep the position just sought to, rather than where the app was before it caught up.
+    private DateTime _positionHeldUntil;
 
     public RemoteControl(IRemotePlayer player)
     {
@@ -151,8 +152,12 @@ public sealed class RemoteControl : IDisposable
         }
     }
 
-    public Task SeekAsync(TimeSpan position) =>
-        RunAsync(cancel => Player.SeekAsync(position, cancel), state => state with { Position = position, ReadAt = DateTime.UtcNow });
+    public Task SeekAsync(TimeSpan position)
+    {
+        // The app can take a moment to report the new place (Spotify especially), so the bar doesn't jump back meanwhile.
+        _positionHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+        return RunAsync(cancel => Player.SeekAsync(position, cancel), state => state with { Position = position, ReadAt = DateTime.UtcNow });
+    }
 
     // Presses one of the app's buttons. The guess shows the result straight away (the play button
     // turning to pause, the bar jumping), until the app is read again a moment later.
@@ -193,7 +198,7 @@ public sealed class RemoteControl : IDisposable
             await ReadOnceAsync();
             try
             {
-                await _readNow.WaitAsync(ReadEvery, _stop.Token);
+                await _readNow.WaitAsync(Player.ReadAgainAfter(State), _stop.Token);
             }
             catch (OperationCanceledException)
             {
@@ -228,6 +233,11 @@ public sealed class RemoteControl : IDisposable
         if (state is { Volume: not null } && State is { Volume: { } asked } && (_sendingVolume || DateTime.UtcNow < _volumeHeldUntil))
         {
             state = state with { Volume = asked };
+        }
+
+        if (state is { Track: { } song } && State is { Track: { } shown } && song.Id == shown.Id && DateTime.UtcNow < _positionHeldUntil)
+        {
+            state = state with { Position = State.PositionNow, ReadAt = DateTime.UtcNow };
         }
 
         State = state;
