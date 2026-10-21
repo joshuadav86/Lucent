@@ -511,6 +511,13 @@ public sealed partial class WaveformView : FrameworkElement
         {
             var top = LaneTop(c, laneHeight);
             var lane = new Rect(0, top, width, laneHeight);
+            // A lane muted (or left out of a solo) is dimmed: it isn't heard.
+            var heard = IsHeard(c);
+            if (!heard)
+            {
+                dc.PushOpacity(0.35);
+            }
+
             if (spectrogram)
             {
                 DrawSpectrogram(dc, c, lane);
@@ -539,7 +546,13 @@ public sealed partial class WaveformView : FrameworkElement
                 label += "   " + AmplitudeZoomText(_amplitudeZoom);
             }
 
+            if (!heard)
+            {
+                dc.Pop();
+            }
+
             dc.DrawText(Text(label, 10, spectrogram ? SelectedWaveBrush : LabelBrush), new Point(8, top + 4));
+            DrawListenButtons(dc, c, top);
         }
 
         if (spectrogram)
@@ -1084,6 +1097,14 @@ public sealed partial class WaveformView : FrameworkElement
         }
 
         var position = e.GetPosition(this);
+        if (ListenButtonAt(position) is { } button)
+        {
+            // A lane's mute or solo button.
+            ToggleListen(button.Channel, button.Solo);
+            e.Handled = true;
+            return;
+        }
+
         if (IsOnLengthTag(position))
         {
             // The selection's length tag: a click switches it between bars and beats and minutes and seconds.
@@ -1173,7 +1194,7 @@ public sealed partial class WaveformView : FrameworkElement
         if (!IsMouseCaptured && _panFrom is null)
         {
             HoverClip(position);
-            Cursor = IsOnLengthTag(position) ? Cursors.Hand
+            Cursor = IsOnLengthTag(position) || ListenButtonAt(position) is not null ? Cursors.Hand
                 : MarkerAt(position) is not null ? Cursors.SizeWE
                 : EdgeAt(position, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) is { } edge ? EdgeCursor(edge)
                 : (IsOnClipBar(position) || MovesClipAt(position)) && _peaks is not null ? Cursors.Hand

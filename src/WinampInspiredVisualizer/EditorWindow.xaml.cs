@@ -93,6 +93,7 @@ public partial class EditorWindow : Window
         Waveform.MouseRightButtonUp += OnWaveformRightClick;
         Overview.NavigateRequested += (_, frame) => Waveform.ScrollTo(frame);
         Overview.ZoomRequested += (_, notches) => Waveform.Zoom(Math.Pow(0.8, notches));
+        Waveform.HeardChannelsChanged += (_, _) => OnHeardChannelsChanged();
         Waveform.LengthInTime = _settings.LengthInTime;
         Waveform.LengthUnitsChanged += (_, _) =>
         {
@@ -297,9 +298,20 @@ public partial class EditorWindow : Window
         Waveform.Selection = default;
         Waveform.SelectedChannel = null;
         Waveform.CursorFrame = 0;
+        Waveform.ResetListening();
         // Cleared first, so the new sound starts zoomed to fit.
         Waveform.Peaks = null;
         Overview.Peaks = null;
+    }
+
+    /// <summary>A lane's solo or mute changed: what's heard follows straight away, even while playing.</summary>
+    private void OnHeardChannelsChanged()
+    {
+        var heard = Waveform.HeardChannels;
+        _player.HeardChannels = heard;
+        ShowStatus(heard.All(on => on) ? "Both channels are heard."
+            : heard.Any(on => on) ? $"Only the {(heard[0] ? "left" : "right")} channel is heard. Solo and mute change what you hear, not the sound itself."
+            : "Both channels are muted. Solo and mute change what you hear, not the sound itself.");
     }
 
     private void ShowFileName()

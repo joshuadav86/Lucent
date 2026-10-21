@@ -537,6 +537,9 @@ public sealed partial class WaveformView : Control
         {
             var top = LaneTop(c, laneHeight);
             var lane = new Rect(0, top, width, laneHeight);
+            // A lane muted (or left out of a solo) is dimmed: it isn't heard.
+            var heard = IsHeard(c);
+            DrawingContext.PushedState? dimmed = heard ? null : dc.PushOpacity(0.35);
             if (spectrogram)
             {
                 DrawSpectrogram(dc, c, lane);
@@ -567,7 +570,9 @@ public sealed partial class WaveformView : Control
                 label += "   " + AmplitudeZoomText(_amplitudeZoom);
             }
 
+            dimmed?.Dispose();
             dc.DrawText(Text(label, 10, spectrogram ? SelectedWaveBrush : LabelBrush), new Point(8, top + 4));
+            DrawListenButtons(dc, c, top);
         }
 
         if (spectrogram)
@@ -1162,6 +1167,14 @@ public sealed partial class WaveformView : Control
             return;
         }
 
+        if (ListenButtonAt(position) is { } button)
+        {
+            // A lane's mute or solo button.
+            ToggleListen(button.Channel, button.Solo);
+            e.Handled = true;
+            return;
+        }
+
         if (IsOnLengthTag(position))
         {
             // The selection's length tag: a click switches it between bars and beats and minutes and seconds.
@@ -1254,7 +1267,7 @@ public sealed partial class WaveformView : Control
         if (!IsMouseCaptured && _panFrom is null)
         {
             HoverClip(position);
-            Cursor = IsOnLengthTag(position) ? HandCursor
+            Cursor = IsOnLengthTag(position) || ListenButtonAt(position) is not null ? HandCursor
                 : MarkerAt(position) is not null ? SideToSideCursor
                 : EdgeAt(position, _modifiers.HasFlag(KeyModifiers.Shift)) is { } edge ? EdgeCursor(edge)
                 : (IsOnClipBar(position) || MovesClipAt(position)) && _peaks is not null ? HandCursor
