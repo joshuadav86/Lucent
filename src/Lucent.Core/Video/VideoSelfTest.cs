@@ -9,6 +9,7 @@ namespace WinampInspiredVisualizer.Video;
 /// same moments. Each is played through libVLC with the sound read as an output reads it (CI machines may have no
 /// speakers), paused partway, then played again from 1.5 seconds after it ends. Every flash has to be seen and every
 /// beep heard, each beep within <see cref="InStepMs"/> of its flash, and the sound has to last as long as the video.
+/// MP4 and MOV clips are then cut without re-encoding (<see cref="Mp4Cutter"/>) and the cut played the same way.
 /// </summary>
 public static class VideoSelfTest
 {
@@ -104,6 +105,59 @@ public static class VideoSelfTest
         if (video.Relined > 0)
         {
             log($"::warning::Video: {name}'s sound had to be lined up with its picture again {video.Relined} time(s) while playing.");
+        }
+
+        if (Mp4Cutter.CanCut(path))
+        {
+            problems += TestCut(log, path, virtualMachine);
+        }
+
+        return problems;
+    }
+
+    // Cuts the second around the middle flash out without re-encoding (the clips have a keyframe every half
+    // second), then plays what's left: the first and last flashes, now a second apart, each still with its beep.
+    private static int TestCut(Action<string> log, string path, bool virtualMachine)
+    {
+        var name = Path.GetFileName(path);
+        var problems = 0;
+        var cut = Path.Combine(Path.GetTempPath(), $"lucent-cut-{Guid.NewGuid():N}{Path.GetExtension(path)}");
+        try
+        {
+            var movie = Mp4Cutter.Read(path);
+            // A start just after a keyframe moves back to it, and an end lands on a picture.
+            var keep = new[] { new VideoRange(0, 1.5), new VideoRange(2.52, 4) };
+            var snapped = movie.Snap(keep);
+            if (snapped.Count != 2 || Math.Abs(snapped[1].Start - 2.5) > 0.001 || Math.Abs(snapped[0].End - 1.5) > 0.001)
+            {
+                problems++;
+                log($"::error::Video: cutting {name}, the kept parts snapped to {string.Join(", ", snapped.Select(range => $"{range.Start:0.000}-{range.End:0.000} s"))}, not 0-1.5 s and 2.5-4 s.");
+            }
+
+            Mp4Cutter.Write(movie, keep, cut);
+            using var video = new VideoStream(cut);
+            if (!video.HasSound || !video.HasPicture || Math.Abs(video.TotalTime.TotalSeconds - 3) > 0.1)
+            {
+                problems++;
+                log($"::error::Video: {name} cut down to 3 s opened as {(video.HasPicture ? "a picture" : "no picture")}, {(video.HasSound ? "sound" : "no sound")} and {video.TotalTime.TotalSeconds:0.00} s.");
+            }
+
+            problems += Check(log, $"{name} cut without re-encoding", Play(video, pauseAt: null), 2, virtualMachine);
+        }
+        catch (Exception ex)
+        {
+            problems++;
+            log($"::error::Video: {name} couldn't be cut without re-encoding: {ex}");
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(cut);
+            }
+            catch (IOException)
+            {
+            }
         }
 
         return problems;
