@@ -71,6 +71,7 @@
                     <Button x:Name="SortButton" Style="{StaticResource PillButton}" Margin="8,0,0,0" Click="OnSortMenu" />
                     <Button x:Name="QualityButton" Style="{StaticResource PillButton}" Margin="6,0,0,0" Click="OnQualityMenu" />
                     <Button x:Name="CountryButton" Style="{StaticResource PillButton}" Margin="6,0,0,0" Click="OnCountryMenu" />
+                    <Button x:Name="VideoButton" Style="{StaticResource PillButton}" Margin="6,0,0,0" Click="OnVideoFilter" />
                 </StackPanel>
                 <Grid>
                     <TextBox x:Name="SearchBox" Style="{StaticResource SearchInput}" Tag="Search stations by name, genre, or country"
@@ -101,12 +102,12 @@
                 <TextBlock x:Name="StationCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
                 <Button DockPanel.Dock="Left" Style="{StaticResource PillButton}" Content="PLAY AN ADDRESS…" Margin="0,0,10,0"
-                        ToolTip="Play a station that isn't listed, from its stream's address (or its .pls or .m3u link)"
+                        ToolTip="Play a station that isn't listed, from its stream's address (or its .pls, .m3u or .m3u8 link), audio or video"
                         Click="OnPlayAddress" />
                 <TextBlock FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource FaintTextBrush}"
-                           Text="Stations from radio-browser.info, a free directory kept up by its listeners. MP3 and AAC stations."
-                           ToolTip="Radio Browser lists about 50,000 stations. Lucent shows the MP3 and AAC ones that were on the air at its last check." />
+                           Text="Stations from radio-browser.info, a free directory kept up by its listeners."
+                           ToolTip="Radio Browser lists about 50,000 stations. Lucent shows the ones that were on the air at its last check, and the camera marks the ones with video." />
             </DockPanel>
         </Grid>
     </Border>

@@ -28,12 +28,13 @@ public enum RadioSort
 /// <param name="Text">Words in the station's name (or, as a second search, its tags).</param>
 /// <param name="Tag">A genre tag the stations must have, by substring.</param>
 /// <param name="CountryCode">The two-letter country the stations must be in.</param>
-public sealed record RadioQuery(string Text, string? Tag, string? CountryCode, int MinBitrate, RadioSort Sort, int Limit = 150);
+/// <param name="VideoOnly">Only stations whose format names a picture as well as sound.</param>
+public sealed record RadioQuery(string Text, string? Tag, string? CountryCode, int MinBitrate, RadioSort Sort, int Limit = 150, bool VideoOnly = false);
 
 /// <summary>
 /// The Radio Browser directory (radio-browser.info): a free, open list of about 50,000 stations around the world,
-/// kept up by its listeners, with no account or key. Lucent lists only the MP3 and AAC stations, which it can play on every
-/// platform, and leaves out the ones whose stream was down at the directory's last check.
+/// kept up by its listeners, with no account or key. Lucent plays MP3 and AAC stations itself, and every other format
+/// (video stations, Opus, Ogg, FLAC) through libVLC, and leaves out the ones whose stream was down at the directory's last check.
 /// </summary>
 /// <remarks>
 /// The directory runs on a few servers. Radio Browser asks apps to find them through
@@ -54,6 +55,7 @@ public sealed class RadioDirectory
     private readonly HttpClient _http;
     private readonly SemaphoreSlim _serverLock = new(1, 1);
     private List<string>? _servers;
+    private IReadOnlyList<string>? _videoCodecs;
 
     public RadioDirectory(HttpClient http, string userAgent)
     {
@@ -130,6 +132,38 @@ public sealed class RadioDirectory
 
     private async Task<IReadOnlyList<RadioStation>> SearchOnceAsync(RadioQuery query, string? name, string? tag, CancellationToken cancel)
     {
+        if (!query.VideoOnly)
+        {
+            return await SearchCodecAsync(query, name, tag, codec: null, cancel);
+        }
+
+        // The directory takes one format at a time, and lists video stations under their sound and picture together
+        // ("AAC,H.264", "AAC+H.264", "MP3,H.264"…), so each of those is asked for, and the answers merged.
+        var codecs = await VideoCodecsAsync(cancel);
+        var answers = await Task.WhenAll(codecs.Select(codec => SearchCodecAsync(query, name, tag, codec, cancel)));
+        return WithoutDuplicates(RadioGuide.Sort(answers.SelectMany(found => found).DistinctBy(station => station.Id), query.Sort))
+            .Take(query.Limit)
+            .ToList();
+    }
+
+    /// <summary>The formats the directory lists that name a picture, the most used first.</summary>
+    private async Task<IReadOnlyList<string>> VideoCodecsAsync(CancellationToken cancel)
+    {
+        if (_videoCodecs is { } known)
+        {
+            return known;
+        }
+
+        var codecs = await GetAsync<List<DirectoryCount>>("json/codecs?order=stationcount&reverse=true&hidebroken=true", cancel);
+        return _videoCodecs = codecs
+            .Where(codec => codec.StationCount > 0 && RadioStation.IsVideoCodec(codec.Name))
+            .Select(codec => codec.Name)
+            .Take(12)
+            .ToList();
+    }
+
+    private async Task<IReadOnlyList<RadioStation>> SearchCodecAsync(RadioQuery query, string? name, string? tag, string? codec, CancellationToken cancel)
+    {
         var (order, reverse) = query.Sort switch
         {
             RadioSort.Votes => ("votes", true),
@@ -143,9 +177,13 @@ public sealed class RadioDirectory
             "hidebroken=true",
             $"order={order}",
             $"reverse={(reverse ? "true" : "false")}",
-            // The directory takes one codec at a time, so it's asked for more than are shown and the others are left out here.
+            // Asked for more than are shown, as the same station listed again is left out here.
             $"limit={query.Limit * 2}",
         };
+        if (codec is not null)
+        {
+            parts.Add("codec=" + Uri.EscapeDataString(codec));
+        }
         if (!string.IsNullOrWhiteSpace(name))
         {
             parts.Add("name=" + Uri.EscapeDataString(name));
@@ -167,22 +205,11 @@ public sealed class RadioDirectory
         }
 
         var stations = await GetAsync<List<DirectoryStation>>("json/stations/search?" + string.Join("&", parts), cancel);
-        var playable = stations.Select(ToStation)
-            .Where(station => station.StreamUrl.Length > 0 && IsPlayable(station.Codec));
+        var playable = stations.Select(ToStation).Where(station => station.StreamUrl.Length > 0);
         return WithoutDuplicates(playable)
             .Take(query.Limit)
             .ToList();
     }
-
-    /// <summary>
-    /// True for the formats Lucent plays: MP3, and AAC (including HE-AAC, which the directory calls AAC+). A video
-    /// station ("AAC,H.264") counts when its sound is one of them, as Lucent plays the sound.
-    /// </summary>
-    public static bool IsPlayable(string codec) => codec.Trim().ToUpperInvariant().Split(',', '/')[0].Trim() switch
-    {
-        "MP3" or "AAC" or "AAC+" or "AACP" or "HE-AAC" => true,
-        var audio => audio.StartsWith("AAC+H") || audio.StartsWith("MP3+H"),
-    };
 
     /// <summary>
     /// Leaves out the stations listed more than once. Listeners add the same station again and again, so Groove Salad
@@ -388,4 +415,13 @@ public sealed class RadioProblem : Exception
         : base(message, inner)
     {
     }
+
+    /// <summary>True when the station was reached but sends a format Lucent's own radio player doesn't read.</summary>
+    public bool Unreadable { get; init; }
+
+    /// <summary>
+    /// For an <see cref="Unreadable"/> station, the stream's address (past any playlist, when it got that far), for the
+    /// video player (libVLC), which reads nearly every format, to try instead.
+    /// </summary>
+    public string? Address { get; init; }
 }

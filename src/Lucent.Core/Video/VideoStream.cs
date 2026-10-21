@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
 using NAudio.Wave;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Radio;
 
 namespace WinampInspiredVisualizer.Video;
 
@@ -22,7 +23,7 @@ namespace WinampInspiredVisualizer.Video;
 /// libVLC is only ever told what to do from the UI thread.
 /// </para>
 /// </remarks>
-public sealed class VideoStream : WaveStream, IPlayerControlled
+public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
 {
     /// <summary>Sound is played in stereo: libVLC mixes surround sound down.</summary>
     private const int Channels = 2;
@@ -46,12 +47,14 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
     private const long SeekDiscardUs = 2_000_000;
 
     private readonly LibVLC _libVlc;
-    private readonly Media _media;
+    private Media _media;
+    private Media? _playlist;
     private readonly MediaPlayer _player;
     private readonly WaveFormat _format;
     private readonly int _rate;
     private readonly int _heldFrames;
-    private readonly (int Width, int Height) _pictureSize;
+    private (int Width, int Height) _pictureSize;
+    private int _sizeChecked;
     private readonly bool _rotated;
     private readonly object _gate = new();
     private readonly Queue<Block> _blocks = new();
@@ -70,33 +73,67 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
     private long _position;
     private long _anchorMs = -1;
     private long _anchorClock;
+    private volatile bool _hasPicture;
+    private string? _nowPlaying;
 
     /// <summary>
     /// Opens a video file, or a stream at an address (with <c>://</c> in it), ready to play. Throws when libVLC can't
     /// be loaded or can't read it.
     /// </summary>
     public VideoStream(string pathOrAddress)
+        : this(pathOrAddress, live: false, userAgent: null)
+    {
+    }
+
+    private VideoStream(string pathOrAddress, bool live, string? userAgent)
     {
         Source = pathOrAddress;
+        IsLive = live;
         _libVlc = VideoEngine.Get();
         _media = pathOrAddress.Contains("://")
             ? new Media(_libVlc, new Uri(pathOrAddress))
             : new Media(_libVlc, Path.GetFullPath(pathOrAddress), FromType.FromPath);
-
-        // Off the UI thread: Parse finishes on libVLC's thread, and awaiting it here could wait on the UI thread forever.
-        var parsed = Task.Run(() => _media.Parse(pathOrAddress.Contains("://") ? MediaParseOptions.ParseNetwork : MediaParseOptions.ParseLocal, 10_000))
-            .GetAwaiter().GetResult();
-        if (parsed == MediaParsedStatus.Failed)
+        if (userAgent is not null)
         {
-            _media.Dispose();
-            throw new InvalidDataException("This file can't be played: it may be damaged, or not a video.");
+            _media.AddOption(":http-user-agent=" + userAgent);
         }
 
-        var tracks = _media.Tracks;
+        if (live)
+        {
+            // A station's playlist (.pls, .m3u) lists its stream, which is what's played.
+            if (IsPlaylist(pathOrAddress))
+            {
+                Task.Run(() => _media.Parse(MediaParseOptions.ParseNetwork, 8_000)).GetAwaiter().GetResult();
+                if (_media.SubItems.Count > 0 && _media.SubItems[0] is { } listed)
+                {
+                    // The playlist is kept until the end: the stream it lists belongs to it.
+                    _playlist = _media;
+                    _media = listed;
+                    if (userAgent is not null)
+                    {
+                        _media.AddOption(":http-user-agent=" + userAgent);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Off the UI thread: Parse finishes on libVLC's thread, and awaiting it here could wait on the UI thread forever.
+            var parsed = Task.Run(() => _media.Parse(pathOrAddress.Contains("://") ? MediaParseOptions.ParseNetwork : MediaParseOptions.ParseLocal, 10_000))
+                .GetAwaiter().GetResult();
+            if (parsed == MediaParsedStatus.Failed)
+            {
+                _media.Dispose();
+                throw new InvalidDataException("This file can't be played: it may be damaged, or not a video.");
+            }
+        }
+
+        // A station's tracks aren't known until it plays: it's taken to have sound, and its picture shows when one comes.
+        var tracks = live ? Array.Empty<MediaTrack>() : _media.Tracks;
         var audio = tracks.Where(track => track.TrackType == TrackType.Audio).Select(track => track.Data.Audio).FirstOrDefault();
         var video = tracks.Where(track => track.TrackType == TrackType.Video).Select(track => track.Data.Video).FirstOrDefault();
-        HasSound = tracks.Any(track => track.TrackType == TrackType.Audio);
-        HasPicture = tracks.Any(track => track.TrackType == TrackType.Video);
+        HasSound = live || tracks.Any(track => track.TrackType == TrackType.Audio);
+        _hasPicture = tracks.Any(track => track.TrackType == TrackType.Video);
         _rate = audio.Rate is >= 8000 and <= 384000 ? (int)audio.Rate : DefaultRate;
         _format = WaveFormat.CreateIeeeFloatWaveFormat(_rate, Channels);
         _heldFrames = (int)(_rate * HeldSeconds);
@@ -116,8 +153,17 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
         _player.EndReached += (_, _) => End();
         _player.EncounteredError += (_, _) =>
         {
-            Problem = "The video stopped because libVLC couldn't go on reading it.";
+            Problem = live ? "The station couldn't be played, or stopped sending." : "The video stopped because libVLC couldn't go on reading it.";
             End();
+        };
+        _media.MetaChanged += (_, e) =>
+        {
+            // A station's "now playing" (from its ICY or HLS titles).
+            if (e.MetadataType == MetadataType.NowPlaying && _media.Meta(MetadataType.NowPlaying) is { Length: > 0 } title && title != _nowPlaying)
+            {
+                _nowPlaying = title;
+                TitleChanged?.Invoke(title);
+            }
         };
         _player.LengthChanged += (_, e) =>
         {
@@ -139,14 +185,85 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
     /// <summary>The file or address this was opened from.</summary>
     public string Source { get; }
 
+    /// <summary>True for a station (<see cref="OpenStation"/>): it can't be moved through and has no end.</summary>
+    public bool IsLive { get; }
+
+    /// <summary>Raised (on libVLC's thread) when a station's picture first comes, so it can be shown.</summary>
+    public event Action? PictureStarted;
+
+    /// <summary>Raised (on libVLC's thread) when a station says a new song is on.</summary>
+    public event Action<string>? TitleChanged;
+
+    /// <summary>Raised (on libVLC's thread) when a station stopped sending, or couldn't be played.</summary>
+    public event Action<Exception?>? Lost;
+
+    WaveStream ILiveStream.Sound => this;
+
+    /// <summary>The song a station says is on, or null.</summary>
+    public string? NowPlaying => _nowPlaying;
+
+    /// <summary>True while a station is on its way (or waiting for more): silence is playing.</summary>
+    public bool IsBuffering
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return IsLive && _blocks.Count == 0 && !_ended;
+            }
+        }
+    }
+
+    /// <summary>Not known: libVLC doesn't say.</summary>
+    public int Bitrate => 0;
+
+    /// <summary>The sound's format once libVLC has it ("Opus", "AAC"…), otherwise null.</summary>
+    public string? Codec
+    {
+        get
+        {
+            var codec = _player.Media?.Tracks.FirstOrDefault(track => track.TrackType == TrackType.Audio).Codec ?? 0;
+            return codec == 0 ? null : CodecName(codec);
+        }
+    }
+
+    /// <summary>
+    /// Tunes in to a station through libVLC: a video station, or one in a format Lucent's own radio player doesn't read
+    /// (Opus, Ogg, FLAC, AAC in MP4). Its picture, if it has one, shows once it comes (<see cref="PictureStarted"/>).
+    /// </summary>
+    public static VideoStream OpenStation(string address, string userAgent) => new(address, live: true, userAgent);
+
+    private static bool IsPlaylist(string address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri)
+        && Path.GetExtension(uri.AbsolutePath).ToLowerInvariant() is ".pls" or ".m3u" or ".asx" or ".xspf";
+
+    // libVLC's four-letter codes, as people know them.
+    private static string CodecName(uint fourcc)
+    {
+        var code = new string(new[] { (char)(fourcc & 0xFF), (char)((fourcc >> 8) & 0xFF), (char)((fourcc >> 16) & 0xFF), (char)(fourcc >> 24) }).Trim();
+        return code.ToLowerInvariant() switch
+        {
+            "mpga" or "mp3" => "MP3",
+            "mp4a" => "AAC",
+            "opus" => "Opus",
+            "vorb" => "Vorbis",
+            "flac" => "FLAC",
+            "a52" => "AC-3",
+            _ => code.ToUpperInvariant(),
+        };
+    }
+
     /// <summary>The title tagged in the file, or null.</summary>
     public string? Title { get; }
 
     /// <summary>True when the video has a sound track. Without one, the player plays silence for as long as it lasts.</summary>
     public bool HasSound { get; }
 
-    /// <summary>True when there's a picture to show (an audio-only file opened this way has none).</summary>
-    public bool HasPicture { get; }
+    /// <summary>
+    /// True when there's a picture to show (an audio-only file opened this way has none). A station's turns true when
+    /// its first picture comes.
+    /// </summary>
+    public bool HasPicture => _hasPicture;
 
     /// <summary>The pictures, as libVLC shows them.</summary>
     public VideoFrames Frames { get; } = new();
@@ -155,6 +272,8 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
     public string? Problem { get; private set; }
 
     public override WaveFormat WaveFormat => _format;
+
+    public override bool CanSeek => !IsLive;
 
     public override long Length => Interlocked.Read(ref _lengthMs) * _format.AverageBytesPerSecond / 1000 / _format.BlockAlign * _format.BlockAlign;
 
@@ -489,6 +608,11 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
             _ended = true;
             Monitor.PulseAll(_gate);
         }
+
+        if (IsLive)
+        {
+            Lost?.Invoke(Problem is { } problem ? new RadioProblem(problem) : null);
+        }
     }
 
     // ---- The pictures ----
@@ -512,6 +636,12 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
         pitches = (uint)(w * 4);
         lines = (uint)h;
         Frames.SetSize(w, h);
+        if (!_hasPicture)
+        {
+            _hasPicture = true;
+            PictureStarted?.Invoke();
+        }
+
         return 1;
     }
 
@@ -525,12 +655,51 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
         return 0;
     }
 
-    private void OnPictureShown(nint opaque, nint picture) => Frames.FinishPicture();
+    private void OnPictureShown(nint opaque, nint picture)
+    {
+        Frames.FinishPicture();
+        if (IsLive && Interlocked.Exchange(ref _sizeChecked, 1) == 0)
+        {
+            Task.Run(CheckLiveSize);
+        }
+    }
+
+    // A station's picture size isn't known until it plays, so the first was asked for at the size libVLC offered,
+    // which its decoder pads (320 × 180 comes as 320 × 194) and so is a little stretched. Once the true size is
+    // known, the picture is asked for again at it, by turning the picture off and on.
+    private void CheckLiveSize()
+    {
+        uint width = 0, height = 0;
+        if (_closing || !_player.Size(0, ref width, ref height) || width == 0 || height == 0)
+        {
+            return;
+        }
+
+        var size = VideoFrames.SizeFor((int)width, (int)height, 1, 1);
+        if (size == (Frames.Width, Frames.Height))
+        {
+            return;
+        }
+
+        _pictureSize = size;
+        var track = _player.VideoTrack;
+        if (track >= 0)
+        {
+            _player.SetVideoTrack(-1);
+            _player.SetVideoTrack(track);
+        }
+    }
 
     // ---- Seeking and closing ----
 
     private void Seek(long ms)
     {
+        if (IsLive)
+        {
+            // A station can't be moved through; the player's rewind on Stop lands here and does nothing.
+            return;
+        }
+
         var length = Interlocked.Read(ref _lengthMs);
         if (length > 0)
         {
@@ -616,6 +785,7 @@ public sealed class VideoStream : WaveStream, IPlayerControlled
             _player.Stop();
             _player.Dispose();
             _media.Dispose();
+            _playlist?.Dispose();
             Frames.Dispose();
         }
 

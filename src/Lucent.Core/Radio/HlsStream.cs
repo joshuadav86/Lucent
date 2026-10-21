@@ -86,7 +86,7 @@ internal sealed class HlsStream : Stream
         if (playlist.Contains("#EXT-X-STREAM-INF", StringComparison.OrdinalIgnoreCase))
         {
             var variant = BestVariant(playlist, address)
-                ?? throw new RadioProblem("The station's HLS stream doesn't offer audio Lucent can play (MP3 or AAC).");
+                ?? throw new RadioProblem("The station's HLS stream doesn't offer audio Lucent can play (MP3 or AAC).") { Unreadable = true };
             address = variant.Address;
             bitrate = variant.Kbps;
             playlist = await GetTextAsync(http, address, userAgent, cancel);
@@ -257,11 +257,11 @@ internal sealed class HlsStream : Stream
             else if (line.StartsWith("#EXT-X-KEY:", StringComparison.OrdinalIgnoreCase)
                      && !Attributes(line[(line.IndexOf(':') + 1)..]).GetValueOrDefault("METHOD", "NONE").Equals("NONE", StringComparison.OrdinalIgnoreCase))
             {
-                throw new RadioProblem("The station's HLS stream is encrypted, which Lucent can't play.");
+                throw new RadioProblem("The station's HLS stream is encrypted, which Lucent can't play.") { Unreadable = true };
             }
             else if (line.StartsWith("#EXT-X-MAP:", StringComparison.OrdinalIgnoreCase))
             {
-                throw new RadioProblem("The station's HLS stream is in MP4 pieces, which Lucent can't play yet.");
+                throw new RadioProblem("The station's HLS stream is in MP4 pieces, which Lucent can't play yet.") { Unreadable = true };
             }
             else if (line.StartsWith("#EXT-X-ENDLIST", StringComparison.OrdinalIgnoreCase))
             {
