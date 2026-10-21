@@ -338,6 +338,9 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
     /// <summary>How many times the sound was lined up again with the picture after drifting, for the self-test.</summary>
     public int Relined { get; private set; }
 
+    /// <summary>How many pictures libVLC has dropped for coming too late to show, since it last started, for the self-test.</summary>
+    public int LostPictures => _media.Statistics.LostPictures;
+
     /// <summary>libVLC's clock now, in microseconds: the clock the pictures are shown by.</summary>
     public long Clock => _libVlc.Clock;
 
