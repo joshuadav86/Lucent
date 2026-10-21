@@ -118,6 +118,14 @@ public static class VideoSelfTest
             log($"::error::Video: {what} didn't reach its end within {Limit.TotalSeconds:0} s.");
         }
 
+        // The beeps are a clean tone at half volume. Sound in the wrong format (16-bit read as float, say) comes out
+        // as noise far beyond full volume, or not a number at all, while still seeming to beep in time.
+        if (run.Garbled > 0 || run.Loudest is < 0.3f or > 0.8f)
+        {
+            problems++;
+            log($"::error::Video: {what}: the sound came out garbled ({run.Garbled} samples weren't sound, and the loudest was {run.Loudest:0.00} where the beeps are 0.5).");
+        }
+
         if (run.Flashes.Count != expected || run.Beeps.Count != expected)
         {
             problems++;
@@ -216,6 +224,18 @@ public static class VideoSelfTest
             }
 
             var samples = MemoryMarshal.Cast<byte, float>(chunk.AsSpan(0, read));
+            foreach (var sample in samples)
+            {
+                if (float.IsFinite(sample) && Math.Abs(sample) <= 1)
+                {
+                    run.Loudest = Math.Max(run.Loudest, Math.Abs(sample));
+                }
+                else
+                {
+                    run.Garbled++;
+                }
+            }
+
             for (var i = 0; i < samples.Length / 2; i++)
             {
                 if (Math.Abs(samples[i * 2]) > 0.1f)
@@ -248,6 +268,12 @@ public static class VideoSelfTest
         public List<long> Beeps { get; } = new();
 
         public bool Ended { get; set; }
+
+        /// <summary>The loudest sample heard (the beeps are at half volume).</summary>
+        public float Loudest { get; set; }
+
+        /// <summary>Samples that weren't sound at all: not a number, or beyond full volume.</summary>
+        public int Garbled { get; set; }
 
         public TimeSpan? HalfSecondIn { get; set; }
     }
