@@ -651,13 +651,15 @@ jobs:
           rm -f "$RUNNER_TEMP/app.p12"
           if [ -n "$MACOS_INSTALLER_CERTIFICATE_P12" ] && [ -n "$MACOS_SIGN_INSTALL_IDENTITY" ]; then
             echo "$MACOS_INSTALLER_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
-            security import "$RUNNER_TEMP/installer.p12" -k "$keychain" -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" \
-              -T /usr/bin/productbuild -T /usr/bin/productsign
+            # productbuild has no --keychain option and, on a runner with no one to answer, waits forever on the
+            # "allow access to this key" prompt, so this throwaway keychain lets any tool use the installer key.
+            security import "$RUNNER_TEMP/installer.p12" -k "$keychain" -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" -A
             rm -f "$RUNNER_TEMP/installer.p12"
             echo "install_identity=$MACOS_SIGN_INSTALL_IDENTITY" >> "$GITHUB_OUTPUT"
           fi
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null
           security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -d user -s "$keychain"
           echo "identity=$MACOS_SIGN_APP_IDENTITY" >> "$GITHUB_OUTPUT"
           echo "keychain=$keychain" >> "$GITHUB_OUTPUT"
 
@@ -690,6 +692,8 @@ jobs:
           ditto -c -k --keepParent out/Lucent.app "Lucent-mac-${{ matrix.arch }}.zip"
 
       - name: Build the installer and update package
+        # A few minutes normally; fail rather than sit on a stuck signing prompt for hours.
+        timeout-minutes: 45
         env:
           SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
           SIGN_INSTALL_IDENTITY: ${{ steps.signing.outputs.install_identity }}
