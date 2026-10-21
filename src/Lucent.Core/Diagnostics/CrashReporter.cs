@@ -45,8 +45,9 @@ public static class CrashReporter
     private const int MaxRecentErrors = 3000;
     private static readonly TimeSpan MaxAge = TimeSpan.FromDays(30);
 
-    // Sending waits until Lucent has settled, so it never slows the start.
-    private static readonly TimeSpan SendDelay = TimeSpan.FromSeconds(15);
+    // Sending waits a moment so it never slows the start, but not long: a Lucent that crashes a few seconds
+    // after every launch has to get its reports out before the next crash, or none ever arrive.
+    private static readonly TimeSpan SendDelay = TimeSpan.FromSeconds(2);
 
     // A .NET crash is also caught by the operating system, a moment later; one report is enough.
     private static readonly TimeSpan SameCrash = TimeSpan.FromMinutes(2);
