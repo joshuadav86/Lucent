@@ -7,7 +7,7 @@ namespace WinampInspiredVisualizer.Video;
 /// The apps' --self-test check of video playback, with the clips in tools/test-media: four seconds of a dimmed test
 /// pattern that flashes for a tenth of a second (white, yellow, then cyan) at 1, 2 and 3 seconds, with a beep at the
 /// same moments. Each is played through libVLC with the sound read as an output reads it (CI machines may have no
-/// speakers), paused partway, then played again from 2.5 seconds after it ends. Every flash has to be seen and every
+/// speakers), paused partway, then played again from 1.5 seconds after it ends. Every flash has to be seen and every
 /// beep heard, each beep within <see cref="InStepMs"/> of its flash, and the sound has to last as long as the video.
 /// </summary>
 public static class VideoSelfTest
@@ -89,15 +89,16 @@ public static class VideoSelfTest
             log($"::error::Video: {name}'s pictures came as {video.Frames.Width} × {video.Frames.Height}, not 320 × 180.");
         }
 
-        // Played again from 2.5 seconds, after it ended: only the last flash and beep.
-        video.CurrentTime = TimeSpan.FromSeconds(2.5);
+        // Played again from 1.5 seconds, after it ended: the last two flashes and beeps. The first is half a second
+        // in, which gives libVLC (a moment to start again on a slow machine) time to show it.
+        video.CurrentTime = TimeSpan.FromSeconds(1.5);
         var again = Play(video, pauseAt: null);
-        problems += Check(log, $"{name} played again from 2.5 s", again, 1, virtualMachine);
+        problems += Check(log, $"{name} played again from 1.5 s", again, 2, virtualMachine);
         // Half a second in, less the moment libVLC takes to start.
-        if (again.HalfSecondIn is not { } position || position.TotalSeconds < 2.4 || position.TotalSeconds > 3.2)
+        if (again.HalfSecondIn is not { } position || position.TotalSeconds < 1.4 || position.TotalSeconds > 2.2)
         {
             problems++;
-            log($"::error::Video: half a second after playing {name} from 2.5 s, it said it was at {again.HalfSecondIn?.TotalSeconds:0.00} s.");
+            log($"::error::Video: half a second after playing {name} from 1.5 s, it said it was at {again.HalfSecondIn?.TotalSeconds:0.00} s.");
         }
 
         if (video.Relined > 0)
