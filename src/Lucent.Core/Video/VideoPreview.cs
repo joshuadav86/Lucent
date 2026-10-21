@@ -19,6 +19,11 @@ public sealed class VideoPreview : IDisposable
     private bool _disposed;
     private volatile bool _pauseOnPicture;
     private volatile bool _holding;
+    // Where Show was asked to go, and where it was then: a picture already on its way from the old place (shown as
+    // the player starts again, before the move takes) isn't the one asked for, so it doesn't stop it.
+    private double _target;
+    private double _from;
+    private int _passedOver;
 
     public VideoPreview(string path)
     {
@@ -47,6 +52,9 @@ public sealed class VideoPreview : IDisposable
     /// <summary>True while it plays along.</summary>
     public bool IsPlaying => _player.IsPlaying;
 
+    /// <summary>True while it's still on its way to the picture <see cref="Show"/> asked for.</summary>
+    public bool IsFinding => _pauseOnPicture;
+
     /// <summary>Where it is, in seconds.</summary>
     public double Time => Math.Max(0, _player.Time) / 1000.0;
 
@@ -56,6 +64,9 @@ public sealed class VideoPreview : IDisposable
         if (!Start(seconds, playing: false))
         {
             // libVLC doesn't show a picture for a move while paused, so it plays until the next picture shows.
+            _from = Time;
+            _target = seconds;
+            _passedOver = 0;
             _holding = false;
             _pauseOnPicture = true;
             _player.Time = (long)(seconds * 1000);
@@ -107,6 +118,7 @@ public sealed class VideoPreview : IDisposable
         }
 
         _started = true;
+        _from = _target = seconds;
         _media.AddOption($":start-time={seconds:0.###}".Replace(',', '.'));
         // To show one picture, it plays until that picture shows (see Show).
         _pauseOnPicture = !playing;
@@ -157,7 +169,12 @@ public sealed class VideoPreview : IDisposable
         }
 
         Frames.FinishPicture();
-        if (_pauseOnPicture)
+        if (_pauseOnPicture && !Arrived())
+        {
+            // Plays on to the next picture.
+            _passedOver++;
+        }
+        else if (_pauseOnPicture)
         {
             // Not on libVLC's own thread, which pausing waits for.
             _pauseOnPicture = false;
@@ -170,5 +187,13 @@ public sealed class VideoPreview : IDisposable
                 }
             });
         }
+    }
+
+    // True once the player has moved to where Show asked: it's nearer there than where it came from. A few pictures
+    // on, it's taken as there anyway, so a move it reports late can't leave it playing.
+    private bool Arrived()
+    {
+        var now = Time;
+        return Math.Abs(now - _target) <= Math.Abs(now - _from) || _passedOver >= 8;
     }
 }

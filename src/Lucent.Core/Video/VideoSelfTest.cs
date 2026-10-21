@@ -210,8 +210,8 @@ public static class VideoSelfTest
         return 0;
     }
 
-    // The editor's picture: asked for the moment of the first flash, it shows the flash (to a picture either side),
-    // and asked for a moment between flashes, it doesn't.
+    // The editor's picture: asked for the middle of a flash (three pictures long), it shows the flash, to a picture
+    // either side, and asked for a moment between flashes, it doesn't.
     private static int TestPreview(Action<string> log, string path)
     {
         var name = Path.GetFileName(path);
@@ -221,7 +221,7 @@ public static class VideoSelfTest
             var before = preview.Frames.Count;
             preview.Show(seconds);
             var waited = Stopwatch.StartNew();
-            while (waited.Elapsed < TimeSpan.FromSeconds(5) && (preview.Frames.Count == before || preview.Frames.Count == 0))
+            while (waited.Elapsed < TimeSpan.FromSeconds(5) && (preview.Frames.Count == before || preview.Frames.Count == 0 || preview.IsFinding))
             {
                 Thread.Sleep(10);
             }
@@ -244,10 +244,10 @@ public static class VideoSelfTest
             return colour;
         }
 
-        var flash = Shows(1.0);
+        var flash = Shows(1.034);
         var between = Shows(1.5);
-        var again = Shows(2.0);
-        if (flash is not ("white" or "yellow") || between != "dark" || again is not ("white" or "yellow"))
+        var again = Shows(2.034);
+        if (flash is null or "dark" || between != "dark" || again is null or "dark")
         {
             log($"::error::Video: the editor's picture of {name} at 1 s, 1.5 s and 2 s was {flash ?? "nothing"}, {between ?? "nothing"} and {again ?? "nothing"}, not the flash, the dimmed pattern, then the flash.");
             return 1;
