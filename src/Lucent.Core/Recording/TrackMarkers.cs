@@ -5,7 +5,8 @@ using System.Text;
 namespace WinampInspiredVisualizer.Recording;
 
 /// <summary>A track inside a longer recording, such as one song of a DJ set.</summary>
-public sealed record TrackMark(TimeSpan Start, string Title);
+/// <param name="Performer">Who it's by, when that's known apart from the title (for a cue sheet's PERFORMER).</param>
+public sealed record TrackMark(TimeSpan Start, string Title, string? Performer = null);
 
 /// <summary>
 /// Where the songs start in a long recording, so the player's Next and Previous can skip between them.
@@ -196,6 +197,11 @@ public static class CueSheet
         {
             text.AppendLine(CultureInfo.InvariantCulture, $"  TRACK {i + 1:00} AUDIO");
             text.AppendLine(CultureInfo.InvariantCulture, $"    TITLE \"{Quote(all[i].Title)}\"");
+            if (!string.IsNullOrWhiteSpace(all[i].Performer))
+            {
+                text.AppendLine(CultureInfo.InvariantCulture, $"    PERFORMER \"{Quote(all[i].Performer!)}\"");
+            }
+
             var frames = (long)Math.Round(all[i].Start.TotalSeconds * 75);
             text.AppendLine(CultureInfo.InvariantCulture, $"    INDEX 01 {frames / 75 / 60:00}:{frames / 75 % 60:00}:{frames % 75:00}");
         }
@@ -208,6 +214,8 @@ public static class CueSheet
     {
         var tracks = new List<TrackMark>();
         string? title = null;
+        string? performer = null;
+        var inTrack = false;
         var files = 0;
         foreach (var raw in File.ReadLines(path))
         {
@@ -220,6 +228,12 @@ public static class CueSheet
             if (line.StartsWith("TRACK ", StringComparison.OrdinalIgnoreCase))
             {
                 title = null;
+                performer = null;
+                inTrack = true;
+            }
+            else if (inTrack && line.StartsWith("PERFORMER ", StringComparison.OrdinalIgnoreCase))
+            {
+                performer = line[10..].Trim().Trim('"');
             }
             else if (line.StartsWith("TITLE ", StringComparison.OrdinalIgnoreCase))
             {
@@ -233,8 +247,9 @@ public static class CueSheet
                     && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var seconds)
                     && int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out var frames))
                 {
+                    var name = string.IsNullOrWhiteSpace(title) ? $"Track {tracks.Count + 1}" : title;
                     tracks.Add(new TrackMark(TimeSpan.FromSeconds(minutes * 60 + seconds + frames / 75.0),
-                        string.IsNullOrWhiteSpace(title) ? $"Track {tracks.Count + 1}" : title));
+                        string.IsNullOrWhiteSpace(performer) ? name : $"{performer} - {name}"));
                 }
             }
         }

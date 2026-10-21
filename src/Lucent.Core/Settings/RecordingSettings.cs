@@ -38,6 +38,12 @@ public sealed class RecordingSettings
     /// <summary>1 for a mono file from one channel, 2 for stereo from a pair.</summary>
     public int Channels { get; set; } = 2;
 
+    /// <summary>
+    /// With <see cref="Channels"/> 1: the pair starting at <see cref="FirstChannel"/> is mixed into one mono
+    /// channel, rather than one input being taken on its own.
+    /// </summary>
+    public bool SumToMono { get; set; }
+
     public int SampleRate { get; set; } = 48000;
 
     public int BitDepth { get; set; } = 24;
@@ -60,8 +66,17 @@ public sealed class RecordingSettings
     /// <summary>Lucent marks where it hears one song give way to the next, as well as the marks made by hand.</summary>
     public bool DetectSongChanges { get; set; } = true;
 
+    /// <summary>
+    /// Each track's song is looked up with ACRCloud, using the DJ's own key (each app's Audio/SongIdAccount.cs),
+    /// and the marks are named after them. Does nothing until a key has been entered.
+    /// </summary>
+    public bool IdentifySongs { get; set; } = true;
+
     /// <summary>A .cue sheet listing the tracks is saved beside each recording, for players and DJ software that read them.</summary>
     public bool WriteCueSheet { get; set; } = true;
+
+    /// <summary>Finished recordings show up in the library: their folder becomes a library folder.</summary>
+    public bool AddToLibrary { get; set; } = true;
 
     /// <summary>The live plugins, in order, with their settings, so they come back the next time the window opens.</summary>
     public ChainPreset? Plugins { get; set; }
@@ -105,6 +120,7 @@ public sealed class RecordingSettings
 
                     settings.Channels = Math.Clamp(settings.Channels, 1, 2);
                     settings.FirstChannel = Math.Max(0, settings.FirstChannel);
+                    settings.SumToMono &= settings.Channels == 1;
                     return settings;
                 }
             }

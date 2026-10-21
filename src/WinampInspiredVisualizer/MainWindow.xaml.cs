@@ -1097,6 +1097,7 @@ public partial class MainWindow : Window
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
         _visuals.ShowFrameRate(_settings.ShowFrameRate);
         _visuals.UpdateAutoCycleButton();
+        _visuals.UpdatePreviousButton();
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
     }
 
@@ -1175,6 +1176,9 @@ public partial class MainWindow : Window
                 break;
             case "TransitionSpeed" when Enum.TryParse<TransitionSpeed>(value, out var speed):
                 _settings.TransitionSpeed = speed;
+                break;
+            case "PreviousVisual" when Enum.TryParse<PreviousVisualMode>(value, out var previous):
+                _settings.PreviousVisual = previous;
                 break;
             case "Theme":
                 _settings.Theme = value;
@@ -1270,6 +1274,7 @@ public partial class MainWindow : Window
                 "Glow" => _settings.Glow.ToString(),
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
+                "PreviousVisual" => _settings.PreviousVisual.ToString(),
                 "Theme" => ThemeManager.Find(_settings.Theme).Name,
                 "Skin" => SkinManager.Find(_settings.Skin).Name,
                 "Updates" => _settings.EveryBuild ? "EveryBuild" : "Stable",
@@ -1893,7 +1898,7 @@ public partial class MainWindow : Window
                 _visuals.ChangePreset(+1);
                 break;
             case Key.B:
-                _visuals.ChangePreset(-1);
+                _visuals.PreviousPreset();
                 break;
             case Key.V:
                 _visuals.TogglePresetPicker();
@@ -2152,6 +2157,25 @@ public partial class MainWindow : Window
 
     /// <summary>Opens the Bandcamp and Beatport window: importing downloads, and syncing a Bandcamp collection.</summary>
     public void ShowStores() => StoreWindow.Open(this, _stores, _settings);
+
+    /// <summary>
+    /// Puts a finished recording's folder into the library (from the Record window), listed under its one
+    /// heading the first time, so the recording and the ones after it show up there.
+    /// </summary>
+    public void AddRecordingToLibrary(string path)
+    {
+        if (Path.GetDirectoryName(path) is not { Length: > 0 } folder)
+        {
+            return;
+        }
+
+        if (LibraryFolderList.LinkedFolderOf(_settings.LibraryFolders, folder) is null)
+        {
+            LibraryFolderList.SetTogether(_settings.LibraryFoldersTogether, folder, on: true);
+        }
+
+        LinkLibraryFolder(folder);
+    }
 
     /// <summary>Puts a folder into the library, if it isn't in it already (the Bandcamp folder, say).</summary>
     private void LinkLibraryFolder(string folder)
