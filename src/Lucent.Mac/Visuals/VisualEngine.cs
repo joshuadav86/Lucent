@@ -32,7 +32,7 @@ public sealed partial class VisualEngine : IDisposable
 {
     /// <summary>The visuals' own pictures: half-float, so glow and HDR have room above white.</summary>
     internal const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
-    private const int ConstantCount = 28;
+    private const int ConstantCount = 32;
     private const int ParticleStride = 48;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const int ParticleGroupSize = 256;
@@ -96,9 +96,13 @@ public sealed partial class VisualEngine : IDisposable
     private volatile bool _autoResolutionOn;
     private int _fromPreset = -1;
     private double _transitionStart;
+    private double _transitionLength = 3;
     private double _lastSwitch;
     private double? _landing;
     private BeatMap? _landingSong;
+    // Whether that landing is on a drop, which gets a quick cut.
+    private bool _landingOnDrop;
+    private readonly SongFollower _songFollower = new();
     private int _transitionStyle;
     private int _windowWidth;
     private int _windowHeight;
@@ -509,6 +513,7 @@ public sealed partial class VisualEngine : IDisposable
             _analyzer.Update(deltaTime);
         }
 
+        FollowSong(deltaTime);
         var progress = UpdatePresetChoice(now);
         if (_activePreset < 0)
         {
@@ -546,7 +551,9 @@ public sealed partial class VisualEngine : IDisposable
         _constants[11] = _quality;
         _constants[12] = progress;
         _constants[13] = _transitionStyle;
-        _constants[14] = _bloomStrength;
+        // The glow swells through a build-up and flares on the drop.
+        var moment = _songFollower.Moment;
+        _constants[14] = _bloomStrength * (1f + 0.35f * moment.BuildUp + 0.5f * moment.Drop);
         _constants[15] = (float)_renderWidth / _windowWidth;
         var display = Display;
         _constants[16] = HdrActive ? 1f : 0f;
@@ -555,6 +562,13 @@ public sealed partial class VisualEngine : IDisposable
         _constants[19] = _frameCount++;
         _constants[23] = LookAmount(AvsVisual.ShownPlain, progress);
         _constants[24] = LookAmount(MilkDropLook.BringsIntoLight, progress);
+        _constants[25] = moment.BeatPhase;
+        _constants[26] = moment.BarPhase;
+        _constants[27] = moment.Intensity;
+        _constants[28] = moment.BuildUp;
+        _constants[29] = moment.Drop;
+        _constants[30] = moment.SectionPhase;
+        _constants[31] = _songFollower.Mapped ? 1f : 0f;
 
         var target = _feedback[_current]!;
         var previous = _feedback[1 - _current]!;
@@ -910,28 +924,37 @@ public sealed partial class VisualEngine : IDisposable
             var interval = _autoCycleSeconds;
             if (CurrentSong() is { } song)
             {
-                // The song's bars are known: start the change early enough that the new visual is
-                // fully in right on a downbeat, preferring the start of a phrase.
+                // The song's bars are known: start the change early enough that the new visual is fully in
+                // right on a downbeat, preferring the start of a phrase, or cut to it right on a drop.
                 var lead = _transitionSeconds;
-                if (_landing is { } planned && (_landingSong != song.Beats || song.Position > planned + 0.25 || planned - song.Position > lead + 30))
+                if (_landing is { } planned && (_landingSong != song.Beats || song.Position > planned + 0.25 || planned - song.Position > interval * 1.5 + 30))
                 {
+                    // A new song, or the song was moved on or back past it.
                     _landing = null;
                 }
 
-                if (_landing is null && waited + lead >= interval)
+                if (_landing is null && AutoLanding.Plan(song.Beats, song.Position, waited, interval, lead) is { } plan)
                 {
-                    _landing = song.Beats.LandingAfter(song.Position + lead, preferPhraseWithin: 8);
+                    _landing = plan.At;
+                    _landingOnDrop = plan.OnDrop;
                     _landingSong = song.Beats;
                 }
 
-                if ((_landing is { } landing && song.Position >= landing - lead) || waited > interval + 30)
+                // A cut onto a drop is quick, and centred on it so the new visual hits with the music.
+                var length = _landingOnDrop ? Math.Min(lead, AutoLanding.DropCutSeconds) : lead;
+                var start = _landingOnDrop ? length / 2 : length;
+                if (_landing is { } landing && song.Position >= landing - start)
                 {
-                    AutoSwitch(now);
+                    AutoSwitch(now, length);
+                }
+                else if (waited > interval * 1.5 + 30)
+                {
+                    AutoSwitch(now, lead);
                 }
             }
             else if ((waited > interval && _analyzer.Beat > 0.9f) || waited > interval + 8)
             {
-                AutoSwitch(now);
+                AutoSwitch(now, _transitionSeconds);
             }
         }
 
@@ -940,7 +963,7 @@ public sealed partial class VisualEngine : IDisposable
             return 1f;
         }
 
-        var t = Math.Clamp((now - _transitionStart) / _transitionSeconds, 0.0, 1.0);
+        var t = Math.Clamp((now - _transitionStart) / _transitionLength, 0.0, 1.0);
         if (t >= 1.0)
         {
             ReleaseParticles(_fromPreset);
@@ -951,13 +974,26 @@ public sealed partial class VisualEngine : IDisposable
         return (float)(t * t * (3 - 2 * t));
     }
 
-    private void AutoSwitch(double now)
+    /// <summary>Moves the song follower on a frame, and lets the song's own beats drive the beat pulse.</summary>
+    private void FollowSong(float deltaTime)
+    {
+        _songFollower.Update(CurrentSong(), deltaTime, _analyzer.Level);
+        // In a quiet stretch, a breakdown without drums, only beats that are heard count.
+        _analyzer.FollowsSong = _songFollower.Mapped && _songFollower.Moment.Intensity >= 0.3f;
+        if (_analyzer.FollowsSong && _songFollower.BeatNow)
+        {
+            // Beats hit harder in the more intense parts of the song.
+            _analyzer.MarkBeat(0.55f + 0.45f * _songFollower.Moment.Intensity);
+        }
+    }
+
+    private void AutoSwitch(double now, double length)
     {
         var next = RandomReadyPreset();
         if (next >= 0)
         {
             _requestedPreset = next;
-            StartTransition(next, now);
+            StartTransition(next, now, length);
             PresetChanged?.Invoke(next);
         }
     }
@@ -991,7 +1027,8 @@ public sealed partial class VisualEngine : IDisposable
         return ready.Count == 0 ? -1 : ready[_random.Next(ready.Count)];
     }
 
-    private void StartTransition(int presetIndex, double now)
+    /// <summary>Starts blending to a visual, over <paramref name="length"/> seconds (the Transition setting when not given).</summary>
+    private void StartTransition(int presetIndex, double now, double? length = null)
     {
         _landing = null;
         var leaving = _fromPreset;
@@ -1003,6 +1040,7 @@ public sealed partial class VisualEngine : IDisposable
         }
 
         _transitionStart = now;
+        _transitionLength = length ?? _transitionSeconds;
         _lastSwitch = now;
         var styles = _morphsOnly ? MorphTransitionStyles : AllTransitionStyles;
         _transitionStyle = styles[_random.Next(styles.Length)];

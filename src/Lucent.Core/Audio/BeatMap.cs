@@ -1,26 +1,34 @@
 using NAudio.Wave;
+using WinampInspiredVisualizer.Editor.Dsp;
 
 namespace WinampInspiredVisualizer.Audio;
 
 /// <summary>
 /// Where a song's bars start, found by listening to the whole file ahead of time: its tempo, the
 /// beats, which beat is the "one" of each bar (the downbeat), and which downbeats start a new
-/// four-bar phrase. Auto mode uses it to land each change of visual on a downbeat.
+/// four-bar phrase. Auto mode uses it to land each change of visual on a downbeat. It also maps out the
+/// song's sections, build-ups and drops (see BeatMap.Sections.cs), which the visuals follow.
 /// </summary>
-public sealed class BeatMap
+public sealed partial class BeatMap
 {
     // The song is measured in short slices, this many a second.
     internal const int FramesPerSecond = 100;
 
-    private BeatMap(double tempo, double[] downbeats, double[] phraseStarts)
+    private BeatMap(double tempo, double[] beats, double[] downbeats, double[] phraseStarts, SongSection[] sections, SongDrop[] drops)
     {
         Tempo = tempo;
+        Beats = beats;
         Downbeats = downbeats;
         PhraseStarts = phraseStarts;
+        Sections = sections;
+        Drops = drops;
     }
 
     /// <summary>Beats per minute.</summary>
     public double Tempo { get; }
+
+    /// <summary>Every beat, in seconds from the start of the song.</summary>
+    public IReadOnlyList<double> Beats { get; }
 
     /// <summary>The first beat of every bar, in seconds from the start of the song.</summary>
     public IReadOnlyList<double> Downbeats { get; }
@@ -77,6 +85,12 @@ public sealed class BeatMap
             return null;
         }
 
+        return FromEnergy(full, low, cancel);
+    }
+
+    /// <summary>Finds the bars, sections and drops in a song's loudness, measured as <see cref="MeasureEnergy(float[][], int)"/> does.</summary>
+    internal static BeatMap? FromEnergy(float[] full, float[] low, CancellationToken cancel)
+    {
         var found = FindBeats(full, low, cancel);
         if (found is null)
         {
@@ -84,6 +98,16 @@ public sealed class BeatMap
         }
 
         var (beats, bar, periodFound) = found.Value;
+        if (BeatGrid.FitSteady(full, low, beats, periodFound) is { } steady)
+        {
+            // A steady tempo: ride its grid through any stretch where the beats tracked slip onto the off-beat.
+            beats = Enumerable.Range(0, steady.Count).Select(i => (int)Math.Round(steady.Start + i * steady.Period)).Where(f => f < full.Length).ToList();
+            bar = steady.FirstDownbeat;
+            periodFound = steady.Period;
+        }
+
+        bar = ChangesOnTheOne(full, low, beats) ?? bar;
+
         var downbeats = beats.Where((_, i) => i % 4 == bar).ToList();
 
         // Sections change on phrase boundaries: the bar where the loudness of the four bars ahead
@@ -104,9 +128,10 @@ public sealed class BeatMap
             phraseStarts = downbeats.Where((_, i) => i % 4 == phase).ToList();
         }
 
+        var (sections, drops) = FindSections(full, low, beats, downbeats);
         static double Seconds(int frame) => (double)frame / FramesPerSecond;
-        return new BeatMap(60.0 * FramesPerSecond / periodFound,
-            downbeats.Select(Seconds).ToArray(), phraseStarts.Select(Seconds).ToArray());
+        return new BeatMap(60.0 * FramesPerSecond / periodFound, beats.Select(Seconds).ToArray(),
+            downbeats.Select(Seconds).ToArray(), phraseStarts.Select(Seconds).ToArray(), sections, drops);
     }
 
     /// <summary>

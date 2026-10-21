@@ -27,6 +27,14 @@ public partial class VisualizerWindow
 
         var menu = new ContextMenu { PlacementTarget = VisualizerFrame, Placement = PlacementMode.MousePoint };
         menu.Items.Add(Item(_isFullscreen ? "Leave fullscreen" : "Fullscreen", _isFullscreen ? "Esc" : "F11", ToggleFullscreen));
+        if (_video is { HasPicture: true })
+        {
+            // While a video plays: its picture, or the visuals to its sound.
+            var visualsInstead = Item("Show visuals instead of the video", "", ToggleVisualsInsteadOfVideo);
+            visualsInstead.IsChecked = _visualsInsteadOfVideo;
+            menu.Items.Add(visualsInstead);
+        }
+
         menu.Items.Add(new Separator());
         if (_isFullscreen && Player is { } playback)
         {

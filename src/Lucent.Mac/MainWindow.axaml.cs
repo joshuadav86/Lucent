@@ -27,6 +27,7 @@ using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using WinampInspiredVisualizer.Video;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
 namespace Lucent.Mac;
@@ -118,6 +119,7 @@ public partial class MainWindow : Window
         _player.Equalizer.Balance = _settings.Balance;
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
+        _player.VideoChanged += (_, _) => OnVideoChanged();
         ApplySoundSettings();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
@@ -1552,11 +1554,16 @@ public partial class MainWindow : Window
     {
         var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Add music",
+            Title = "Add music and videos",
             AllowMultiple = true,
             FileTypeFilter = new[]
             {
+                new FilePickerFileType("Music and videos")
+                {
+                    Patterns = AudioReaderFactory.SupportedExtensions.Concat(VideoFiles.Extensions).Distinct().Select(ext => "*" + ext).ToList(),
+                },
                 new FilePickerFileType("Music files") { Patterns = AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext).ToList() },
+                new FilePickerFileType("Videos") { Patterns = VideoFiles.Extensions.Select(ext => "*" + ext).ToList() },
                 FilePickerFileTypes.All,
             },
         });
@@ -1651,7 +1658,7 @@ public partial class MainWindow : Window
                 try
                 {
                     files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
-                        .Where(AudioReaderFactory.IsSupported)
+                        .Where(VideoFiles.IsPlayable)
                         .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
                         .ToList();
                 }
@@ -1666,7 +1673,7 @@ public partial class MainWindow : Window
                     yield return file;
                 }
             }
-            else if (File.Exists(path) && AudioReaderFactory.IsSupported(path))
+            else if (File.Exists(path) && VideoFiles.IsPlayable(path))
             {
                 yield return path;
             }
