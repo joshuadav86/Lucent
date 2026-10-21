@@ -161,6 +161,7 @@ public static class AudioTools
             return;
         }
 
+        KeepInFrontOfPlayer(main);
         var settings = EditorSettings.Load();
         if (Editors.Count == 1 && main.WindowState == WindowState.Normal
             && settings is { WindowOffsetX: { } x, WindowOffsetY: { } y, WindowWidth: { } width, WindowHeight: { } height }
@@ -181,6 +182,35 @@ public static class AudioTools
             // A second editor, for a song opened while the first has unsaved edits: where macOS puts it, as before.
             main.AddToSnapping(window);
         }
+    }
+
+    private static bool _keptInFront;
+
+    /// <summary>
+    /// Brings the open editors back in front of the player's other windows (the visuals, queue, library and the
+    /// rest) whenever the player comes to the front, such as when it's clicked or dragged. Where there's no free
+    /// room beside the player's windows (a small or zoomed-in screen), the editor sits over them instead of docked,
+    /// and without this the visuals and the rest drew over it as the player was moved under it. As on Windows,
+    /// it's ordered to the front natively, so the player keeps the keyboard.
+    /// </summary>
+    private static void KeepInFrontOfPlayer(Window main)
+    {
+        if (_keptInFront)
+        {
+            return;
+        }
+
+        _keptInFront = true;
+        main.Activated += (_, _) =>
+        {
+            foreach (var editor in Editors.Where(editor => editor.IsVisible && editor.WindowState != WindowState.Minimized))
+            {
+                if (editor.TryGetPlatformHandle() is Avalonia.Platform.IMacOSTopLevelPlatformHandle { NSWindow: var native } && native != IntPtr.Zero)
+                {
+                    Interop.ObjC.SendVoid(native, "orderFront:", IntPtr.Zero);
+                }
+            }
+        };
     }
 
     /// <summary>True when enough of the window's title bar is on a screen to grab it.</summary>
