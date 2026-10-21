@@ -654,20 +654,27 @@ jobs:
           rm -f "$RUNNER_TEMP/app.p12"
           if [ -n "$MACOS_INSTALLER_CERTIFICATE_P12" ] && [ -n "$MACOS_SIGN_INSTALL_IDENTITY" ]; then
             echo "$MACOS_INSTALLER_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
-            security import "$RUNNER_TEMP/installer.p12" -k "$keychain" -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" \
-              -T /usr/bin/productbuild -T /usr/bin/productsign
+            # productbuild has no --keychain option and, on a runner with no one to answer, waits forever on the
+            # "allow access to this key" prompt, so this throwaway keychain lets any tool use the installer key.
+            security import "$RUNNER_TEMP/installer.p12" -k "$keychain" -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" -A
             rm -f "$RUNNER_TEMP/installer.p12"
             echo "install_identity=$MACOS_SIGN_INSTALL_IDENTITY" >> "$GITHUB_OUTPUT"
           fi
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null
           security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -d user -s "$keychain"
           echo "identity=$MACOS_SIGN_APP_IDENTITY" >> "$GITHUB_OUTPUT"
           echo "keychain=$keychain" >> "$GITHUB_OUTPUT"
 
           if [ -n "$APPLE_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
-            xcrun notarytool store-credentials lucent-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
-              --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
-            echo "notary_profile=lucent-notary" >> "$GITHUB_OUTPUT"
+            # Apple turning the sign-in down (a wrong Apple ID or app-specific password) shouldn't hold back the
+            # Mac download: it still goes out signed, just not notarized, and the warning says what to fix.
+            if xcrun notarytool store-credentials lucent-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_PASSWORD" --keychain "$keychain"; then
+              echo "notary_profile=lucent-notary" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::Apple turned down the notarization sign-in, so Lucent is signed but not notarized. Check the APPLE_ID and APPLE_APP_PASSWORD secrets."
+            fi
           else
             echo "::notice::No notarization credentials in the secrets, so Lucent is signed but not notarized."
           fi
@@ -688,6 +695,8 @@ jobs:
           ditto -c -k --keepParent out/Lucent.app "Lucent-mac-${{ matrix.arch }}.zip"
 
       - name: Build the installer and update package
+        # A few minutes normally; fail rather than sit on a stuck signing prompt for hours.
+        timeout-minutes: 45
         env:
           SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
           SIGN_INSTALL_IDENTITY: ${{ steps.signing.outputs.install_identity }}
