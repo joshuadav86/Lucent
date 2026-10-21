@@ -84,7 +84,7 @@ public partial class MainWindow
                         Activate();
                     }
 
-                    player = new SpotifyRemote(StreamingHttp, refreshToken, SpotifyAccount.Save);
+                    player = new SpotifyRemote(StreamingHttp, refreshToken, SpotifyAccount.Save, new SpotifyAppRemote());
                     break;
                 case RemoteApp.AppleMusic when AppleMusicRemote.IsSupported:
                     player = new AppleMusicRemote();
