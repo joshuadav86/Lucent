@@ -568,7 +568,7 @@ public sealed partial class VisualEngine : IDisposable
         _constants[28] = moment.BuildUp;
         _constants[29] = moment.Drop;
         _constants[30] = moment.SectionPhase;
-        _constants[31] = _songFollower.Mapped ? 1f : 0f;
+        _constants[31] = _songFollower.Mapped ? 1f : _songFollower.Live ? 0.5f : 0f;
 
         var target = _feedback[_current]!;
         var previous = _feedback[1 - _current]!;
@@ -952,9 +952,10 @@ public sealed partial class VisualEngine : IDisposable
                     AutoSwitch(now, lead);
                 }
             }
-            else if ((waited > interval && _analyzer.Beat > 0.9f) || waited > interval + 8)
+            else if (AutoLanding.Heard(_songFollower, waited, interval, _analyzer.Beat) is { } onDrop)
             {
-                AutoSwitch(now, _transitionSeconds);
+                // Followed live: a cut the moment a drop is heard, otherwise a change on a downbeat (or a beat).
+                AutoSwitch(now, onDrop ? Math.Min(_transitionSeconds, AutoLanding.DropCutSeconds / 2) : _transitionSeconds);
             }
         }
 
@@ -977,9 +978,9 @@ public sealed partial class VisualEngine : IDisposable
     /// <summary>Moves the song follower on a frame, and lets the song's own beats drive the beat pulse.</summary>
     private void FollowSong(float deltaTime)
     {
-        _songFollower.Update(CurrentSong(), deltaTime, _analyzer.Level);
+        _songFollower.Update(CurrentSong(), deltaTime, _analyzer);
         // In a quiet stretch, a breakdown without drums, only beats that are heard count.
-        _analyzer.FollowsSong = _songFollower.Mapped && _songFollower.Moment.Intensity >= 0.3f;
+        _analyzer.FollowsSong = (_songFollower.Mapped || _songFollower.Live) && _songFollower.Moment.Intensity >= 0.3f;
         if (_analyzer.FollowsSong && _songFollower.BeatNow)
         {
             // Beats hit harder in the more intense parts of the song.

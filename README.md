@@ -42,7 +42,7 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor, and analyzer for
 
 ## 202 visuals
 
-Every visual is drawn live on your graphics card and listens to the bass, mids, treble, and beat of what's playing. Lucent studies each song ahead of time and maps its arrangement: the beats and bars, the intros, verses, and breakdowns, and the build-ups and drops. The visuals pulse on the song's real beats, glow brighter through a build-up, and Auto cuts to a new visual right as the drop hits. Otherwise it changes on a downbeat, with morphs that melt, glow, fly, or fold one visual into the next.
+Every visual is drawn live on your graphics card and listens to the bass, mids, treble, and beat of what's playing. Lucent studies each song ahead of time and maps its arrangement: the beats and bars, the intros, verses, and breakdowns, and the build-ups and drops. The visuals pulse on the song's real beats, glow brighter through a build-up, and Auto cuts to a new visual right as the drop hits. Online radio, streams, and other apps' sound are followed live, by ear: Lucent locks onto the beat, predicts the bars, and hears a drop the moment it lands. Otherwise it changes on a downbeat, with morphs that melt, glow, fly, or fold one visual into the next.
 
 ### Ray traced
 
@@ -317,7 +317,7 @@ Shortcuts work from any Lucent window. Your keyboard's media keys work even when
 - A Direct3D 11 visualizer with MilkDrop-style feedback trails, and visuals that compile in the background and are kept on disk, so the app starts straight away
 - The visual picker lists visuals in family folders (switch them off with the FOLDERS pill) and filters by tag; CLEAR shows everything again. Enter shows the first match, Esc clears the search
 - Favorite visuals and lists: star a visual in the picker, under the visuals, or with F. The menu at the top of the picker switches between all visuals, favorites, and your lists
-- Auto mode moves to a new visual about every 25 seconds, on a downbeat at the start of a phrase where it can. When a drop is coming it waits for it and cuts to the new visual right on the drop, and it lingers a little longer in quiet intros and breakdowns. The beat pulse follows the song's own beats, and the glow builds through a build-up and flares on the drop. The AUTO pill shows how often; click the arrow beside it to choose anything from 10 seconds to 3 minutes
+- Auto mode moves to a new visual about every 25 seconds, on a downbeat at the start of a phrase where it can. When a drop is coming it waits for it and cuts to the new visual right on the drop, and it lingers a little longer in quiet intros and breakdowns. The beat pulse follows the song's own beats, and the glow builds through a build-up and flares on the drop. For radio, streams, and other apps, where nothing can be studied ahead, it follows the beat live: it cuts on a drop the moment it's heard and holds on through a build-up waiting for one. The AUTO pill shows how often; click the arrow beside it to choose anything from 10 seconds to 3 minutes
 - Fullscreen: double-click or F11. Leave with Esc, a double-click, the × in the top-right corner, or the right-click menu. Click once to pause or play, in a window or fullscreen
 - The right-click menu on the visuals: fullscreen, a seek bar, play or pause, stop, next and previous track, volume, the next or previous visual, the picker, favorite, Auto and its timing, recording a video, and the graphics options
 - Remembers the last visual, your options, your skin, and your theme
