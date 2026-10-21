@@ -5,10 +5,10 @@ namespace WinampInspiredVisualizer.Video;
 
 /// <summary>
 /// The apps' --self-test check of video playback, with the clips in tools/test-media: four seconds of a dimmed test
-/// pattern that flashes white for a tenth of a second at 1, 2 and 3 seconds, with a beep at the same moments. Each is
-/// played through libVLC with the sound read as an output reads it (CI machines may have no speakers), paused
-/// partway, then played again from 2.5 seconds after it ends. Every flash has to be seen and every beep heard, each
-/// beep within <see cref="InStepMs"/> of its flash, and the sound has to last as long as the video.
+/// pattern that flashes for a tenth of a second (white, yellow, then cyan) at 1, 2 and 3 seconds, with a beep at the
+/// same moments. Each is played through libVLC with the sound read as an output reads it (CI machines may have no
+/// speakers), paused partway, then played again from 2.5 seconds after it ends. Every flash has to be seen and every
+/// beep heard, each beep within <see cref="InStepMs"/> of its flash, and the sound has to last as long as the video.
 /// </summary>
 public static class VideoSelfTest
 {
@@ -19,6 +19,9 @@ public static class VideoSelfTest
     private const double OutOfStepMs = 90;
 
     private static readonly TimeSpan Limit = TimeSpan.FromSeconds(20);
+
+    /// <summary>How long each of a flash's pictures lasts: the clips are 30 frames a second.</summary>
+    private const long FlashPictureUs = 1_000_000 / 30;
 
     /// <summary>Returns the number of problems, after writing what it found (GitHub's ::error:: lines for problems).</summary>
     public static int Run(Action<string> log, IReadOnlyList<string> videos)
@@ -119,7 +122,7 @@ public static class VideoSelfTest
 
         var gaps = run.Flashes.Zip(run.Beeps, (flash, beep) => (beep - flash) / 1000.0).ToList();
         var worst = gaps.MaxBy(Math.Abs);
-        var described = string.Join(", ", gaps.Select(gap => $"{gap:+0;-0} ms"));
+        var described = string.Join(", ", gaps.Select(gap => $"{Math.Round(gap):+0;-0;0} ms"));
         if (Math.Abs(worst) > OutOfStepMs)
         {
             problems++;
@@ -143,23 +146,31 @@ public static class VideoSelfTest
     private static Playthrough Play(VideoStream video, TimeSpan? pauseAt)
     {
         var run = new Playthrough();
-        // Each picture is looked at as libVLC shows it, timed by libVLC's clock.
-        var bright = false;
+        // Each picture is looked at as libVLC shows it, timed by libVLC's clock. A flash is three pictures (white,
+        // yellow, then cyan), so one a slow machine drops still leaves the flash's start known from the others.
+        var flashing = false;
         video.Frames.Shown = (pixels, width, height, stride) =>
         {
             var shownAt = video.Clock;
             var middle = new byte[4];
             Marshal.Copy(pixels + height / 2 * stride + width / 2 * 4, middle, 0, 4);
-            var now = middle[0] > 200 && middle[1] > 200 && middle[2] > 200;
-            if (now && !bright)
+            var (blue, green, red) = (middle[0] > 200, middle[1] > 200, middle[2] > 200);
+            var picture = (red, green, blue) switch
+            {
+                (true, true, true) => 0,
+                (true, true, false) => 1,
+                (false, true, true) => 2,
+                _ => -1,
+            };
+            if (picture >= 0 && !flashing)
             {
                 lock (run)
                 {
-                    run.Flashes.Add(shownAt);
+                    run.Flashes.Add(shownAt - picture * FlashPictureUs);
                 }
             }
 
-            bright = now;
+            flashing = picture >= 0;
         };
 
         var rate = video.WaveFormat.SampleRate;
