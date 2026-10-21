@@ -691,7 +691,7 @@ public sealed partial class Renderer : IDisposable
         _constants[28] = moment.BuildUp;
         _constants[29] = moment.Drop;
         _constants[30] = moment.SectionPhase;
-        _constants[31] = _songFollower.Mapped ? 1f : 0f;
+        _constants[31] = _songFollower.Mapped ? 1f : _songFollower.Live ? 0.5f : 0f;
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
         _frameTime = now;
@@ -1090,10 +1090,10 @@ public sealed partial class Renderer : IDisposable
                     AutoSwitch(now, lead);
                 }
             }
-            else if ((waited > interval && _analyzer.Beat > 0.9f) || waited > interval + 8)
+            else if (AutoLanding.Heard(_songFollower, waited, interval, _analyzer.Beat) is { } onDrop)
             {
-                // Otherwise switch on a beat once enough time has passed, or regardless a little later.
-                AutoSwitch(now, _transitionSeconds);
+                // Followed live: a cut the moment a drop is heard, otherwise a change on a downbeat (or a beat).
+                AutoSwitch(now, onDrop ? Math.Min(_transitionSeconds, AutoLanding.DropCutSeconds / 2) : _transitionSeconds);
             }
         }
 
@@ -1122,9 +1122,9 @@ public sealed partial class Renderer : IDisposable
     /// <summary>Moves the song follower on a frame, and lets the song's own beats drive the beat pulse.</summary>
     private void FollowSong(float deltaTime)
     {
-        _songFollower.Update(ReadSong(), deltaTime, _analyzer.Level);
+        _songFollower.Update(ReadSong(), deltaTime, _analyzer);
         // In a quiet stretch, a breakdown without drums, only beats that are heard count.
-        _analyzer.FollowsSong = _songFollower.Mapped && _songFollower.Moment.Intensity >= 0.3f;
+        _analyzer.FollowsSong = (_songFollower.Mapped || _songFollower.Live) && _songFollower.Moment.Intensity >= 0.3f;
         if (_analyzer.FollowsSong && _songFollower.BeatNow)
         {
             // Beats hit harder in the more intense parts of the song.

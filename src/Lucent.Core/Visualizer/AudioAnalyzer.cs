@@ -23,6 +23,9 @@ public sealed class AudioAnalyzer
     private const float LowestFrequency = 30f;
     private const float HighestFrequency = 16000f;
 
+    // The bands, from the bottom, that PunchNow covers (the first 8 are the bass).
+    private const int PunchBands = 44;
+
     private readonly AudioCapture? _capture;
     private readonly float[] _samples = new float[FftSize];
     private readonly Complex[] _fft = new Complex[FftSize];
@@ -66,6 +69,18 @@ public sealed class AudioAnalyzer
     public float Level { get; private set; }
 
     public int BeatCount { get; private set; }
+
+    /// <summary>The bass this frame, unsmoothed, 0 to 1 (a 60 dB range): what <see cref="LiveBeatTracker"/> listens to.</summary>
+    public float BassNow { get; private set; }
+
+    /// <summary>
+    /// The level from just above the deep bass to the upper mids (about 65 Hz to 2 kHz) this frame, unsmoothed, 0 to 1:
+    /// where drum hits jump across many bands at once, while a held bass note or hi-hats barely move it.
+    /// </summary>
+    public float PunchNow { get; private set; }
+
+    /// <summary>The overall loudness this frame, unsmoothed, 0 to 1 across 60 dB.</summary>
+    public float LoudnessNow { get; private set; }
 
     /// <summary>
     /// True while the playing song's beats are known (see <see cref="SongFollower"/>): the beat then follows them,
@@ -127,6 +142,7 @@ public sealed class AudioAnalyzer
         var attack = 1f - MathF.Exp(-deltaTime * 35f);
         var release = 1f - MathF.Exp(-deltaTime * 7f);
         var bassNow = 0f;
+        var punchNow = 0f;
 
         for (var band = 0; band < BandCount; band++)
         {
@@ -146,12 +162,19 @@ public sealed class AudioAnalyzer
             {
                 bassNow += target / 8f;
             }
+            else if (band < PunchBands)
+            {
+                punchNow += target / (PunchBands - 8);
+            }
         }
 
         Bass = Average(0, 10);
         Mid = Average(10, 36);
         Treble = Average(36, BandCount);
         var rms = MathF.Sqrt(sumSquares / FftSize);
+        BassNow = bassNow;
+        PunchNow = punchNow;
+        LoudnessNow = Math.Clamp((20f * MathF.Log10(rms + 1e-9f) + 60f) / 60f, 0f, 1f);
         Level += (Math.Clamp(rms * 3f, 0f, 1f) - Level) * release;
 
         DetectBeat(bassNow, deltaTime);
