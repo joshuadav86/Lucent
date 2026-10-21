@@ -51,6 +51,7 @@ public partial class VisualizerWindow
         _isFullscreen = !_isFullscreen;
         TitleBar.IsVisible = !_isFullscreen;
         BottomBar.IsVisible = !_isFullscreen;
+        UpdateElsewhereBar();
         Frame.BorderThickness = new Thickness(_isFullscreen ? 0 : 1);
         PresetPopup.IsOpen = false;
 

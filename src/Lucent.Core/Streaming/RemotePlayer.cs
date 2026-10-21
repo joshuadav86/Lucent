@@ -26,8 +26,12 @@ public sealed record RemoteTrack(string Id, string Title, string Artist, string 
 /// <param name="ListId">The playlist or album the song is playing from, as the app names it, or null when it doesn't say.</param>
 /// <param name="Device">The speaker, TV or computer the app is playing on (Spotify Connect's device), or null when the app doesn't say.</param>
 /// <param name="Volume">The app's volume there, from 0 to 1, or null when Lucent can't read or change it.</param>
+/// <param name="IsElsewhere">
+/// True when <paramref name="Device"/> isn't this computer (a phone, speaker or TV), so the sound never passes through
+/// it and the visuals can't hear it.
+/// </param>
 public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Position, DateTime ReadAt, string? ListId = null,
-    string? Device = null, double? Volume = null)
+    string? Device = null, double? Volume = null, bool IsElsewhere = false)
 {
     /// <summary>Where the song is now: the position it was read at, moved on by the time since while it plays.</summary>
     public TimeSpan PositionNow
@@ -51,6 +55,14 @@ public interface IRemoteVolume
 {
     /// <param name="volume">From 0 to 1.</param>
     Task SetVolumeAsync(double volume, CancellationToken cancel);
+}
+
+/// <summary>An app that can play on one of several devices (Spotify Connect), and can be moved to this computer.</summary>
+public interface IRemoteDevices
+{
+    /// <summary>Moves the app's playback to this computer, carrying on where it was.</summary>
+    /// <exception cref="RemoteProblem">When the app isn't open on this computer.</exception>
+    Task PlayHereAsync(CancellationToken cancel);
 }
 
 /// <summary>A problem the user can do something about, worded for them (sign in again, open the app, and so on).</summary>

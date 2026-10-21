@@ -19,6 +19,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- Title bar -->
@@ -63,8 +64,22 @@
             <!-- A Direct3D surface is placed in here from code. Double-click it for fullscreen. -->
             <Border x:Name="VisualizerFrame" Grid.Row="1" Background="Black" />
 
+            <!-- Why the visuals hear nothing, when the controlled app plays on another device (Spotify on a TV, say). It sits
+                 under the picture, not over it, as nothing can be drawn over the Direct3D view. -->
+            <Border x:Name="ElsewhereBar" Grid.Row="2" Margin="8,6,8,0" Padding="12,6" Visibility="Collapsed"
+                    CornerRadius="{DynamicResource CardCorner}" Background="{DynamicResource SurfaceRaisedBrush}"
+                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                <DockPanel>
+                    <Button x:Name="PlayHereButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="12,0,0,0"
+                            Content="PLAY ON THIS PC" VerticalAlignment="Center" Click="OnPlayHere"
+                            ToolTip="Move Spotify's playback to this PC, so the visuals hear it. To keep listening on the TV or speaker, cast this PC's sound there (or plug it in)." />
+                    <TextBlock x:Name="ElsewhereText" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </DockPanel>
+            </Border>
+
             <!-- Visuals bar -->
-            <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6" SizeChanged="OnBottomBarSizeChanged">
+            <Grid x:Name="BottomBar" Grid.Row="3" Margin="8,6,8,6" SizeChanged="OnBottomBarSizeChanged">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />

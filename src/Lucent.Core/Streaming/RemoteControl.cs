@@ -106,6 +106,22 @@ public sealed class RemoteControl : IDisposable
         ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
         : Task.CompletedTask;
 
+    /// <summary>
+    /// Why the visuals can't follow the music, worded for the user, while the app plays on another device (Spotify on
+    /// a TV, say), or null when it plays here.
+    /// </summary>
+    public string? ElsewhereNote => State is { IsPlaying: true, IsElsewhere: true } state
+        ? $"{Player.Name} is playing on {state.Device ?? "another device"}, so the sound doesn't pass through this computer and the visuals can't hear it."
+        : null;
+
+    /// <summary>True when the app can be moved to this computer (<see cref="PlayHereAsync"/>).</summary>
+    public bool CanPlayHere => Player is IRemoteDevices && State is { IsElsewhere: true };
+
+    /// <summary>Moves the app's playback to this computer, so the visuals hear it.</summary>
+    public Task PlayHereAsync() => Player is IRemoteDevices devices
+        ? RunAsync(devices.PlayHereAsync, state => state with { IsElsewhere = false, Device = null })
+        : Task.CompletedTask;
+
     /// <summary>True when the app says its volume and Lucent can change it (<see cref="RemoteState.Volume"/>).</summary>
     public bool HasVolume => Player is IRemoteVolume && State?.Volume is not null;
 
