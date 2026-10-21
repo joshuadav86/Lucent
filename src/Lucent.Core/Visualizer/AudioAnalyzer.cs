@@ -67,6 +67,20 @@ public sealed class AudioAnalyzer
 
     public int BeatCount { get; private set; }
 
+    /// <summary>
+    /// True while the playing song's beats are known (see <see cref="SongFollower"/>): the beat then follows them,
+    /// through <see cref="MarkBeat"/>, instead of being guessed from jumps in the bass.
+    /// </summary>
+    public bool FollowsSong { get; set; }
+
+    /// <summary>A beat of the song's own, <paramref name="strength"/> hard (0..1), this frame.</summary>
+    public void MarkBeat(float strength)
+    {
+        Beat = strength;
+        BeatCount++;
+        _sinceBeat = 0;
+    }
+
     public void Update(float deltaTime)
     {
         if (_capture is null || _capture.IsSilent)
@@ -176,7 +190,7 @@ public sealed class AudioAnalyzer
     private void DetectBeat(float bassNow, float deltaTime)
     {
         _sinceBeat += deltaTime;
-        if (bassNow > _bassAverage * 1.3f + 0.05f && _sinceBeat > 0.28)
+        if (!FollowsSong && bassNow > _bassAverage * 1.3f + 0.05f && _sinceBeat > 0.28)
         {
             Beat = 1f;
             BeatCount++;

@@ -34,6 +34,17 @@ cbuffer Params : register(b0)
     float ParticleWeight;      // how bright each particle is drawn: 1 on Normal detail, less with more particles
     float PlainOutput;         // 1 while a classic preset shows as it first looked: no glow or tone-mapping (used by the engine)
     float ClassicLift;         // 1 while a modernised MilkDrop preset shows: its 8-bit picture brought into Lucent's light (used by the engine)
+
+    // The song's structure. For a song in the library (its beats and sections are worked out ahead of time)
+    // these follow the arrangement; otherwise SongMapped is 0, the phases and BuildUp/Drop stay 0, and
+    // Intensity follows the loudness.
+    float BeatPhase;           // 0..1 through each beat (0 on the beat)
+    float BarPhase;            // 0..1 through each bar (0 on the downbeat)
+    float Intensity;           // 0..1, how intense this part of the song is: low in intros and breakdowns, high in drops and choruses
+    float BuildUp;             // climbs 0..1 through the build-up to a drop, 0 otherwise
+    float Drop;                // 1 the moment a drop hits, fading over a few seconds
+    float SectionPhase;        // 0..1 through the current section
+    float SongMapped;          // 1 while the values above follow a mapped song
 };
 
 Texture2D PreviousFrame : register(t0);

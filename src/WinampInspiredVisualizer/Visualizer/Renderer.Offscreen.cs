@@ -126,6 +126,7 @@ public sealed partial class Renderer
     {
         var output = _offscreenOutputView ?? throw new InvalidOperationException("The renderer isn't open.");
         _offscreenPosition = songPosition;
+        FollowSong(deltaTime);
         var progress = UpdatePresetChoice(now);
         if (_activePreset < 0)
         {
