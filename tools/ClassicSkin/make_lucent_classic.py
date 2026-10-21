@@ -435,7 +435,9 @@ TINY = {
     "N": ["##.", "#.#", "#.#", "#.#", "#.#"], "H": ["#.#", "#.#", "###", "#.#", "#.#"],
     "U": ["#.#", "#.#", "#.#", "#.#", "###"], "F": ["###", "#..", "##.", "#..", "#.."],
     "L": ["#..", "#..", "#..", "#..", "###"], "Q": ["###", "#.#", "#.#", "###", "..#"],
-    "P": ["###", "#.#", "###", "#..", "#.."],
+    "P": ["###", "#.#", "###", "#..", "#.."], "A": [".#.", "#.#", "###", "#.#", "#.#"],
+    "D": ["##.", "#.#", "#.#", "#.#", "##."], "I": ["###", ".#.", ".#.", ".#.", "###"],
+    "C": ["###", "#..", "#..", "#..", "###"],
 }
 
 
@@ -544,6 +546,246 @@ def viscolor_txt():
     return "".join(f"{r},{g},{b}, // {name}\n" for (r, g, b), name in zip(colours, names))
 
 
+# ---- The equalizer (eqmain.bmp) ----
+
+EQ_LABELS = ["31", "63", "125", "250", "500", "1K", "2K", "4K", "8K", "16K"]
+
+
+def title_bar(draw, image, y, title, active, buttons):
+    """A 275 x 14 title bar like the player's: grip ridges either side of the name, and its buttons drawn in."""
+    top = (46, 44, 66) if active else (30, 30, 40)
+    bottom = (20, 20, 30) if active else (16, 16, 22)
+    vertical(draw, 0, y, 274, y + 13, top, bottom)
+    bevel(draw, 0, y, 274, y + 13, EDGE_LIGHT if active else (44, 44, 56), EDGE_DARK)
+    x = (275 - text_width(title)) // 2
+    for gx0, gx1 in ((8, x - 6), (x + text_width(title) + 6, 275 - 8 - 11 * len(buttons))):
+        for gy in (y + 4, y + 7, y + 10):
+            draw.line((gx0, gy, gx1, gy), fill=(64, 60, 92) if active else (40, 40, 52))
+            draw.line((gx0, gy + 1, gx1, gy + 1), fill=EDGE_DARK)
+    text(draw, x, y + 4, title, TEXT if active else MUTED)
+    if active:
+        horizontal(draw, x, y + 10, x + text_width(title), y + 10, gradient)
+    for bx, glyph in buttons:
+        small_button(draw, bx, y + 3, glyph, False)
+
+
+CLOSE_GLYPH = [(2, 2), (6, 2), (3, 3), (5, 3), (4, 4), (3, 5), (5, 5), (2, 6), (6, 6)]
+
+
+def small_button(draw, x, y, glyph, pressed):
+    face = (18, 18, 26) if pressed else (40, 40, 56)
+    draw.rectangle((x, y, x + 8, y + 8), fill=face)
+    bevel(draw, x, y, x + 8, y + 8, EDGE_DARK if pressed else FACE_LIGHT, FACE_LIGHT if pressed else EDGE_DARK)
+    for px, py in glyph:
+        draw.point((x + px, y + py), fill=ACCENT if pressed else TEXT)
+
+
+def labelled_button(draw, x, y, w, h, label, on, pressed, led=True):
+    """A small raised button with an LED and a label, like the player's EQ and PL toggles."""
+    if pressed:
+        vertical(draw, x, y, x + w - 1, y + h - 1, (16, 14, 28), (30, 26, 50))
+        bevel(draw, x, y, x + w - 1, y + h - 1, EDGE_DARK, (60, 52, 100))
+    else:
+        vertical(draw, x, y, x + w - 1, y + h - 1, (52, 52, 70), (26, 26, 36))
+        bevel(draw, x, y, x + w - 1, y + h - 1, FACE_LIGHT, EDGE_DARK)
+    if led:
+        draw.rectangle((x + 3, y + h // 2 - 1, x + 4, y + h // 2), fill=CYAN if on else (40, 40, 52))
+        tiny_text(draw, x + 7, y + (h - 5) // 2, label, TEXT if on else MUTED)
+    else:
+        tiny_text(draw, x + (w - (len(label) * 4 - 1)) // 2, y + (h - 5) // 2, label, CYAN if pressed else TEXT)
+
+
+def eq_slider_frame(draw, x, y, level):
+    """One of a band slider's 28 backgrounds: a groove lit from the middle to the slider's level."""
+    draw.rectangle((x, y, x + 13, y + 62), fill=BODY)
+    draw.rectangle((x + 5, y + 1, x + 8, y + 61), fill=GROOVE)
+    bevel(draw, x + 5, y + 1, x + 8, y + 61, EDGE_DARK, (40, 40, 54))
+    middle = y + 31
+    target = y + 6 + round((1 - level) * 50)
+    for yy in range(min(middle, target), max(middle, target) + 1):
+        t = 1 - (yy - y - 6) / 50
+        draw.line((x + 6, yy, x + 7, yy), fill=mix(gradient(t), GROOVE, 0.15))
+    # Ticks either side at +12, 0 and -12.
+    for ty in (y + 6, middle, y + 56):
+        draw.point((x + 2, ty), fill=FAINT)
+        draw.point((x + 11, ty), fill=FAINT)
+
+
+def eqmain_bmp():
+    image = Image.new("RGB", (275, 315), BLACK)
+    draw = ImageDraw.Draw(image)
+
+    # The window: body, the graph's window, and labels. The sliders, buttons and title bar are sprites.
+    body(draw, 275, 116)
+    well(draw, 86, 17, 198, 35)
+    text(draw, 44, 39, "+12", MUTED)
+    text(draw, 49, 66, "+0", MUTED)
+    text(draw, 44, 95, "-12", MUTED)
+    tiny_text(draw, 16, 104, "PREAMP", MUTED)
+    for band, label in enumerate(EQ_LABELS):
+        cx = 78 + band * 18 + 7
+        text(draw, cx - text_width(label) // 2, 104, label, MUTED)
+    draw.line((38, 38, 38, 100), fill=(16, 16, 24))
+    lucent_mark(image, 265, 107, 4)
+
+    # Close button (up, then pressed), at 0,116 and 0,125.
+    small_button(draw, 0, 116, CLOSE_GLYPH, False)
+    small_button(draw, 0, 125, CLOSE_GLYPH, True)
+
+    # ON and AUTO: off, on, off pressed, on pressed.
+    for x, on, pressed in ((10, False, False), (69, True, False), (128, False, True), (187, True, True)):
+        labelled_button(draw, x, 119, 26, 12, "ON", on, pressed)
+        labelled_button(draw, x + 26, 119, 32, 12, "AUTO", on, pressed)
+
+    # Title bars: active at 134, inactive at 149, with the close button drawn in.
+    title_bar(draw, image, 134, "EQUALIZER", True, [(264, CLOSE_GLYPH)])
+    title_bar(draw, image, 149, "EQUALIZER", False, [(264, CLOSE_GLYPH)])
+
+    # The slider thumb, up and held.
+    for y, pressed in ((164, False), (176, True)):
+        thumb(draw, 0, y, 11, 11, pressed)
+
+    # 28 slider backgrounds, 15 apart, two rows of 14.
+    for frame in range(28):
+        eq_slider_frame(draw, 13 + frame % 14 * 15, 164 + frame // 14 * 65, frame / 27)
+
+    # PRESETS, up and pressed.
+    labelled_button(draw, 224, 164, 44, 12, "PRESETS", False, False, led=False)
+    labelled_button(draw, 224, 176, 44, 12, "PRESETS", False, True, led=False)
+
+    # The graph's background (a faint grid with a centre line), its line colours top to bottom, and the preamp line.
+    draw.rectangle((0, 294, 112, 312), fill=LCD)
+    for gx in range(0, 113, 12):
+        for gy in range(294, 313, 2):
+            draw.point((gx + 2, gy), fill=(20, 20, 30))
+    draw.line((0, 303, 112, 303), fill=(28, 28, 40))
+    for i in range(19):
+        draw.point((115, 294 + i), fill=gradient(1 - i / 18))
+    draw.line((0, 314, 112, 314), fill=(70, 66, 110))
+    return image
+
+
+# ---- The playlist (pledit.bmp, pledit.txt) ----
+
+
+def pledit_bmp():
+    image = Image.new("RGB", (280, 186), BLACK)
+    draw = ImageDraw.Draw(image)
+
+    def top_piece(x, w, y, active, kind):
+        top = (46, 44, 66) if active else (30, 30, 40)
+        bottom = (20, 20, 30) if active else (16, 16, 22)
+        vertical(draw, x, y, x + w - 1, y + 19, top, bottom)
+        draw.line((x, y, x + w - 1, y), fill=EDGE_LIGHT if active else (44, 44, 56))
+        draw.line((x, y + 19, x + w - 1, y + 19), fill=EDGE_DARK)
+        ridge = (64, 60, 92) if active else (40, 40, 52)
+        if kind in ("tile", "left", "right"):
+            x0 = x + (3 if kind == "left" else 0)
+            x1 = x + w - 1 - (24 if kind == "right" else 0)
+            for gy in (y + 5, y + 8, y + 11):
+                if x1 >= x0:
+                    draw.line((x0, gy, x1, gy), fill=ridge)
+                    draw.line((x0, gy + 1, x1, gy + 1), fill=EDGE_DARK)
+        if kind == "left":
+            draw.line((x, y, x, y + 19), fill=EDGE_LIGHT if active else (44, 44, 56))
+        if kind == "right":
+            draw.line((x + w - 1, y, x + w - 1, y + 19), fill=EDGE_DARK)
+            small_button(draw, x + w - 11, y + 3, CLOSE_GLYPH, False)
+        if kind == "title":
+            label = "PLAYLIST"
+            tx = x + (w - text_width(label)) // 2
+            text(draw, tx, y + 6, label, TEXT if active else MUTED)
+            if active:
+                horizontal(draw, tx, y + 12, tx + text_width(label), y + 12, gradient)
+
+    for y, active in ((0, True), (21, False)):
+        top_piece(0, 25, y, active, "left")
+        top_piece(26, 100, y, active, "title")
+        top_piece(127, 25, y, active, "tile")
+        top_piece(153, 25, y, active, "right")
+
+    # Left edge (12 wide) and right edge (20 wide, with the scroll bar's groove), 29 tall.
+    vertical(draw, 0, 42, 11, 70, BODY, BODY)
+    draw.line((0, 42, 0, 70), fill=EDGE_LIGHT)
+    draw.line((10, 42, 11, 42), fill=BODY)
+    draw.line((11, 42, 11, 70), fill=EDGE_DARK)
+    vertical(draw, 31, 42, 50, 70, BODY, BODY)
+    draw.line((31, 42, 31, 70), fill=EDGE_LIGHT)
+    draw.rectangle((36, 42, 43, 70), fill=GROOVE)
+    draw.line((35, 42, 35, 70), fill=EDGE_DARK)
+    draw.line((44, 42, 44, 70), fill=(40, 40, 54))
+    draw.line((50, 42, 50, 70), fill=EDGE_DARK)
+
+    # The close button pressed, the shade button pressed, and the scroll handle up and held.
+    small_button(draw, 52, 42, CLOSE_GLYPH, True)
+    small_button(draw, 62, 42, [(2, 4), (3, 4), (4, 4), (5, 4), (6, 4)], True)
+    for x, pressed in ((52, False), (61, True)):
+        thumb(draw, x, 53, 8, 18, pressed)
+
+    # The bottom bar: a tile, the left end with ADD REM SEL MISC, the right end with the time and transport.
+    def bottom_body(x, w):
+        vertical(draw, x, 72 if x < 179 else 0, x + w - 1, (72 if x < 179 else 0) + 37, BODY_LIGHT, BODY_DARK)
+
+    vertical(draw, 179, 0, 203, 37, BODY_LIGHT, BODY_DARK)
+    draw.line((179, 0, 203, 0), fill=(16, 16, 24))
+    draw.line((179, 37, 203, 37), fill=EDGE_DARK)
+
+    vertical(draw, 0, 72, 124, 109, BODY_LIGHT, BODY_DARK)
+    draw.line((0, 72, 124, 72), fill=(16, 16, 24))
+    draw.line((0, 72, 0, 109), fill=EDGE_LIGHT)
+    draw.line((0, 109, 124, 109), fill=EDGE_DARK)
+    for x, label in ((14, "ADD"), (43, "REM"), (72, "SEL"), (101, "MISC")):
+        labelled_button(draw, x, 80, 22, 18, label, False, False, led=False)
+
+    vertical(draw, 126, 72, 275, 109, BODY_LIGHT, BODY_DARK)
+    draw.line((126, 72, 275, 72), fill=(16, 16, 24))
+    draw.line((275, 72, 275, 109), fill=EDGE_DARK)
+    draw.line((126, 109, 275, 109), fill=EDGE_DARK)
+    rx, ry = 126, 72
+    # The running time's window (18 letters), and the time's (5 letters, with the colon).
+    well(draw, rx + 7, ry + 10, rx + 7 + 89, ry + 15)
+    well(draw, rx + 66, ry + 23, rx + 66 + 29, ry + 28)
+    draw.point((rx + 66 + 17, ry + 24), fill=LCD_TEXT)
+    draw.point((rx + 66 + 17, ry + 27), fill=LCD_TEXT)
+    # A little transport: previous, play, pause, stop, next, eject, 10 apart.
+    shapes = [
+        [(2, y) for y in range(2, 7)] + [(4, 4), (5, 3), (5, 4), (5, 5)] + [(6, y) for y in range(2, 7)],
+        [(3, 2), (3, 3), (3, 4), (3, 5), (3, 6), (4, 3), (4, 4), (4, 5), (5, 4)],
+        [(3, 2), (3, 3), (3, 4), (3, 5), (3, 6), (6, 2), (6, 3), (6, 4), (6, 5), (6, 6)],
+        [(x, y) for x in range(3, 7) for y in range(3, 7)],
+        [(3, y) for y in range(2, 7)] + [(4, 3), (4, 4), (4, 5), (5, 4)] + [(7, y) for y in range(2, 7)],
+        [(4, 2), (3, 3), (4, 3), (5, 3), (2, 4), (3, 4), (4, 4), (5, 4), (6, 4), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6)],
+    ]
+    for i, shape in enumerate(shapes):
+        bx = rx + 3 + i * 10
+        for px, py in shape:
+            draw.point((bx + px, ry + 22 + py), fill=TEXT)
+    labelled_button(draw, rx + 150 - 44, ry + 8, 22, 18, "LIST", False, False, led=False)
+    # Scroll up and down arrows, and the resize grip in the corner.
+    for ay, up in ((ry + 2, True), (ry + 8, False)):
+        for i in range(3):
+            y = ay + (i if up else 2 - i) + 1
+            draw.line((rx + 135 + 3 - i, y, rx + 135 + 4 + i, y), fill=MUTED)
+    for i in range(3):
+        draw.line((rx + 149 - 3 - i * 4, ry + 36, rx + 148, ry + 36 - 3 - i * 4), fill=FAINT)
+
+    # The visualizer's spot, shown when the window is wide.
+    vertical(draw, 205, 0, 279, 37, BODY_LIGHT, BODY_DARK)
+    well(draw, 207, 12, 278, 27)
+    draw.line((205, 0, 279, 0), fill=(16, 16, 24))
+    draw.line((205, 37, 279, 37), fill=EDGE_DARK)
+    return image
+
+
+def pledit_txt():
+    return ("[Text]\n"
+            "Normal=#B8C4E0\n"
+            "Current=#22D3EE\n"
+            "NormalBG=#07070C\n"
+            "SelectedBG=#2A2350\n"
+            "Font=Arial\n")
+
+
 README = """Lucent Classic
 ==============
 
@@ -573,6 +815,8 @@ def build():
         "balance.bmp": slider_bmp(38, balance=True),
         "shufrep.bmp": shufrep_bmp(),
         "text.bmp": text_bmp(),
+        "eqmain.bmp": eqmain_bmp(),
+        "pledit.bmp": pledit_bmp(),
     }
     return sheets
 
@@ -590,6 +834,7 @@ def main():
         for name, image in sheets.items():
             wsz.writestr(zipfile.ZipInfo(name, stamp), bmp_bytes(image), zipfile.ZIP_DEFLATED)
         wsz.writestr(zipfile.ZipInfo("viscolor.txt", stamp), viscolor_txt(), zipfile.ZIP_DEFLATED)
+        wsz.writestr(zipfile.ZipInfo("pledit.txt", stamp), pledit_txt(), zipfile.ZIP_DEFLATED)
         wsz.writestr(zipfile.ZipInfo("readme.txt", stamp), README, zipfile.ZIP_DEFLATED)
 
     if args.sheets:

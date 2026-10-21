@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Visualizer;
@@ -483,7 +482,7 @@ public sealed class ClassicPlayer
     /// <summary>Text in the skin's font. Too long to fit, it scrolls round, with "***" between laps.</summary>
     private void DrawText(string text, int left, int top, int width, bool scroll, bool rightAlign = false)
     {
-        text = Simplify(text);
+        text = SkinCanvas.Simplify(text);
         var textWidth = text.Length * ClassicSprites.GlyphWidth;
         var offset = 0;
         if (scroll && textWidth > width)
@@ -520,26 +519,6 @@ public sealed class ClassicPlayer
                 }
             }
         }
-    }
-
-    /// <summary>Takes accents off letters the skin's font doesn't have (é becomes e), keeping the few it does.</summary>
-    private static string Simplify(string text)
-    {
-        var builder = new StringBuilder(text.Length);
-        foreach (var c in text)
-        {
-            if (ClassicSprites.Glyph(c) is not null)
-            {
-                builder.Append(c);
-                continue;
-            }
-
-            var plain = c.ToString().Normalize(NormalizationForm.FormD)
-                .FirstOrDefault(part => ClassicSprites.Glyph(part) is not null);
-            builder.Append(plain == default ? ' ' : plain);
-        }
-
-        return builder.ToString();
     }
 
     private void Draw(Sprite sprite, int left, int top)

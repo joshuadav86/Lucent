@@ -13,6 +13,9 @@ public sealed class RemoteListEntry : INotifyPropertyChanged
 
     public RemoteTrack Track { get; }
 
+    /// <summary>The row as a classic skin's playlist shows it: "Artist - Title".</summary>
+    public string ClassicText => string.IsNullOrEmpty(Track.Artist) ? Track.Title : $"{Track.Artist} - {Track.Title}";
+
     public bool IsCurrent
     {
         get => _isCurrent;

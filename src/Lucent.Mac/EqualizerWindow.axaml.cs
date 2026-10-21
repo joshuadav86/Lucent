@@ -88,8 +88,16 @@ public partial class EqualizerWindow : Window
         _settings = settings;
         _fitWidth = fitWidth;
         _bands = EqualizerBands.ForCount(Eq.BandCount);
-        Eq.BandCount = _bands.Count;
-        Eq.Gains = Equalizer.SliderGains(Eq, _bands).ToList();
+        if (ClassicSkin is null)
+        {
+            Eq.BandCount = _bands.Count;
+            Eq.Gains = Equalizer.SliderGains(Eq, _bands).ToList();
+        }
+        else
+        {
+            // Opening in a classic skin, which keeps its ten sliders as they are.
+            Equalizer.ChangeBands(Eq, EqualizerBands.Classic);
+        }
         // The spectrum fills the response box under the curve, whatever size the box is.
         _spectrum = new EqualizerSpectrum(player.Capture);
         CurveFrame.Child = null;
@@ -138,6 +146,10 @@ public partial class EqualizerWindow : Window
         FitHeader();
         BuildBands();
         ShowSettings();
+        if (ClassicSkin is { } classic)
+        {
+            SetClassicSkin(classic.Skin, classic.Zoom);
+        }
     }
 
     private EqualizerSettings Eq => _settings.Equalizer;

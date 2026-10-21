@@ -12,8 +12,8 @@ using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer;
 
-// Classic skins: the player drawn by a Winamp 2 skin (.wsz) instead of Lucent's own layout, with Lucent's buttons in a strip below it. The other windows
-// keep Lucent's look. Lucent.Core's ClassicPlayer draws it; this feeds it the player's state and acts on its buttons.
+// Classic skins: the player drawn by a Winamp 2 skin (.wsz) instead of Lucent's own layout, with Lucent's buttons in a strip below it. The
+// equalizer and queue take on the skin too. Lucent.Core's ClassicPlayer draws it; this feeds it the player's state and acts on its buttons.
 public partial class MainWindow
 {
     private const double CaptionHeight = 34;
@@ -41,6 +41,7 @@ public partial class MainWindow
             SizeToContent = SizeToContent.Height;
             Width = 520;
             Topmost = false;
+            SkinOtherWindows(null);
             return;
         }
 
@@ -83,7 +84,20 @@ public partial class MainWindow
         _classicView!.Zoom = zoom;
         // The buttons wrap onto a second row rather than make the window wider than the skin.
         _classicToolbar!.Width = ClassicSprites.WindowWidth * zoom;
+        SkinOtherWindows(_classicView.Player.Skin);
     }
+
+    /// <summary>The equalizer and queue in the classic skin too (at the player's size), or back in Lucent's look with null.</summary>
+    private void SkinOtherWindows(ClassicSkin? skin)
+    {
+        var zoom = _settings.ClassicDoubleSize ? 2 : 1;
+        EqualizerWindow.ClassicSkin = skin is null ? null : (skin, zoom);
+        EqualizerWindow.Current?.SetClassicSkin(skin, zoom);
+        _queue.SetClassicSkin(skin, zoom);
+    }
+
+    /// <summary>A transport button on another classic window (the playlist's), done as the player's would.</summary>
+    internal void RunClassicCommand(ClassicCommand command) => OnClassicCommand(command);
 
     /// <summary>
     /// Lucent's own buttons (Sources, audio tools, Options, and the Visuals, Library, Art and other window
@@ -128,6 +142,8 @@ public partial class MainWindow
         {
             SyncClassicPlayer();
             _classicView!.Tick();
+            var classic = _classicView.Player;
+            _queue.ShowClassicState(classic.PlayState, classic.Position, classic.Duration, classic.ShowRemaining);
         }
     }
 

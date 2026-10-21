@@ -18,6 +18,9 @@ public sealed class PlaylistEntry : INotifyPropertyChanged
 
     public string Indicator => _isCurrent ? "▶" : string.Empty;
 
+    /// <summary>The row as a classic skin's playlist shows it: "Artist - Title".</summary>
+    public string ClassicText => string.IsNullOrEmpty(Track.Artist) ? Track.Title : $"{Track.Artist} - {Track.Title}";
+
     /// <summary>
     /// Shows freshly read tags for the same file, after its info was edited. The row itself stays, so it
     /// keeps its place in the queue and, if it's the one playing, carries on being the current track.
@@ -27,6 +30,7 @@ public sealed class PlaylistEntry : INotifyPropertyChanged
         Track = track;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Track)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ArtistSuffix)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ClassicText)));
     }
 
     public bool IsCurrent

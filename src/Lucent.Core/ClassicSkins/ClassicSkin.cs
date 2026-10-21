@@ -7,17 +7,18 @@ namespace WinampInspiredVisualizer.ClassicSkins;
 
 /// <summary>
 /// A classic Winamp skin (.wsz): a zip of .bmp sprite sheets and a few text files, laid out the way Winamp 2
-/// laid them out. Lucent reads the main window's sheets and the visualizer's colours. Like Winamp, a skin
+/// laid them out. Lucent reads the main window's, the equalizer's and the playlist's sheets, the visualizer's
+/// colours and the playlist's colours and font. Like Winamp, a skin
 /// that leaves a sheet out borrows it from the default skin (Lucent's own), and one without a balance
 /// sheet uses its volume sheet for both.
 /// </summary>
 public sealed partial class ClassicSkin
 {
-    /// <summary>The sprite sheets the player window draws from, by file name without ".bmp".</summary>
+    /// <summary>The sprite sheets the player, equalizer and playlist windows draw from, by file name without ".bmp".</summary>
     public static readonly string[] SheetNames =
     {
         "main", "titlebar", "cbuttons", "numbers", "nums_ex", "playpaus", "monoster", "posbar", "volume", "balance",
-        "shufrep", "text",
+        "shufrep", "text", "eqmain", "pledit",
     };
 
     // A skin is a few hundred kilobytes; anything far bigger isn't one, and isn't unpacked.
@@ -25,11 +26,12 @@ public sealed partial class ClassicSkin
 
     private readonly Dictionary<string, SkinImage> _images;
 
-    private ClassicSkin(string name, Dictionary<string, SkinImage> images, uint[] visColors)
+    private ClassicSkin(string name, Dictionary<string, SkinImage> images, uint[] visColors, ClassicPlaylistStyle playlist)
     {
         Name = name;
         _images = images;
         VisColors = visColors;
+        Playlist = playlist;
         UsesExtendedNumbers = images.ContainsKey("nums_ex");
     }
 
@@ -37,6 +39,9 @@ public sealed partial class ClassicSkin
 
     /// <summary>The visualizer's 24 colours from viscolor.txt (0xAARRGGBB): background, dots, 16 for the bars from top to bottom, 5 for the oscilloscope, and the peaks.</summary>
     public uint[] VisColors { get; }
+
+    /// <summary>The playlist's text colours and font, from pledit.txt.</summary>
+    public ClassicPlaylistStyle Playlist { get; }
 
     /// <summary>True when the time is drawn from nums_ex.bmp, which has its own minus sign, rather than numbers.bmp.</summary>
     public bool UsesExtendedNumbers { get; }
@@ -117,7 +122,10 @@ public sealed partial class ClassicSkin
         var colours = byName.TryGetValue("viscolor.txt", out var readColours) && readColours() is { } text
             ? ParseVisColors(Encoding.Latin1.GetString(text), fallback?.VisColors)
             : fallback?.VisColors ?? DefaultVisColors;
-        return new ClassicSkin(name, images, colours);
+        var playlist = byName.TryGetValue("pledit.txt", out var readPlaylist) && readPlaylist() is { } ini
+            ? ClassicPlaylistStyle.Parse(Encoding.Latin1.GetString(ini), fallback?.Playlist)
+            : fallback?.Playlist ?? ClassicPlaylistStyle.Default;
+        return new ClassicSkin(name, images, colours, playlist);
     }
 
     /// <summary>

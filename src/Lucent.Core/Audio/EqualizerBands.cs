@@ -38,6 +38,12 @@ public sealed class EqualizerBands
     /// </summary>
     public static EqualizerBands? Former(int count) => count is 3 or 5 or 10 or 31 ? Create(count) : null;
 
+    /// <summary>
+    /// The ten bands of a classic skin's equalizer, which has Winamp's ten sliders: the ISO octaves, 31 Hz to
+    /// 16 kHz. Not one of the <see cref="Counts"/> Lucent's own equalizer offers.
+    /// </summary>
+    public static EqualizerBands Classic { get; } = Create(10);
+
     /// <summary>The layout for one of the <see cref="Counts"/>; anything else gets the nearest one.</summary>
     public static EqualizerBands ForCount(int count)
     {
