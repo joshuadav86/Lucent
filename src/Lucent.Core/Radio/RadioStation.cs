@@ -48,8 +48,29 @@ public sealed record RadioStation
     /// <summary>The network it belongs to, for the featured stations (SomaFM, FRISKY…), otherwise null.</summary>
     public string? Network { get; init; }
 
+    /// <summary>
+    /// True for a station known to send a picture: a featured video station, or one Lucent has seen a picture from.
+    /// Others count too when their format says so (<see cref="HasVideo"/>).
+    /// </summary>
+    public bool Video { get; init; }
+
+    /// <summary>True when the station sends a picture as well as sound, as far as Lucent knows: the camera beside it.</summary>
+    public bool HasVideo => Video || IsVideoCodec(Codec);
+
     /// <summary>True for stations from Radio Browser, whose plays are counted there.</summary>
     public bool IsFromDirectory => !Id.Contains(':');
+
+    /// <summary>
+    /// True when the directory's format names a picture: it lists video stations as their sound and picture together,
+    /// such as "AAC,H.264" or "AAC+H.264".
+    /// </summary>
+    public static bool IsVideoCodec(string codec)
+    {
+        var upper = codec.ToUpperInvariant();
+        return VideoCodecs.Any(upper.Contains);
+    }
+
+    private static readonly string[] VideoCodecs = { "H.264", "H264", "AVC", "H.265", "H265", "HEVC", "VP8", "VP9", "AV1", "MPEG4", "MPEG-4", "THEORA" };
 
     /// <summary>"ambient · electronica · United States · 128 kbps", leaving out whatever isn't known.</summary>
     public string Details(int tags = 2)

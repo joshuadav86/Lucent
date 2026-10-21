@@ -71,6 +71,8 @@ public partial class VisualizerWindow
     {
         if (ReferenceEquals(video, _video))
         {
+            // The same video (a station whose picture has just come, say): shown if it now has one.
+            UpdateVideo();
             return;
         }
 
