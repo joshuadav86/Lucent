@@ -88,9 +88,10 @@ public sealed class RemoteControl : IDisposable
                 {
                     await Player.SeekAsync(TimeSpan.Zero, cancel);
                 }
-                catch (Exception) when (!wasPlaying)
+                catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    // Nothing to stop, and nowhere to rewind (Spotify with no device playing, say).
+                    // The music has stopped, which is what matters: some apps can't rewind (or have nothing to rewind,
+                    // like Spotify with no device playing), and the next read shows where the song really is.
                 }
             },
             state => state with { IsPlaying = false, Position = TimeSpan.Zero, ReadAt = DateTime.UtcNow });

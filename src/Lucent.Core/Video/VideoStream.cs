@@ -43,6 +43,9 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
     /// <summary>How much decoded sound is held, at most. libVLC waits for room when it gets ahead.</summary>
     private const double HeldSeconds = 2;
 
+    /// <summary>How much sound a station with no picture holds before it plays, and again after it ran dry.</summary>
+    private const double StationPrebufferSeconds = 1;
+
     /// <summary>How long to ignore sound decoded before a seek, if libVLC doesn't say it has thrown the rest away.</summary>
     private const long SeekDiscardUs = 2_000_000;
 
@@ -60,6 +63,7 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
     private readonly Queue<Block> _blocks = new();
     private int _heldFrameCount;
     private bool _lined;
+    private bool _refilling;
     private bool _closing;
     private bool _ended;
     private bool _discarding;
@@ -209,7 +213,7 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
         {
             lock (_gate)
             {
-                return IsLive && _blocks.Count == 0 && !_ended;
+                return IsLive && !_ended && (_blocks.Count == 0 || _refilling);
             }
         }
     }
@@ -287,6 +291,13 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
     {
         get
         {
+            // A station's time is how long it's been heard since tuning in. libVLC's own time for a live stream is
+            // where it is in the station's window of the broadcast, which jumps about as the window moves.
+            if (IsLive)
+            {
+                return TimeSpan.FromSeconds((double)Interlocked.Read(ref _position) / _format.AverageBytesPerSecond);
+            }
+
             if (_seekMs is { } target)
             {
                 return TimeSpan.FromMilliseconds(target);
@@ -406,6 +417,12 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
                 frames = 0;
             }
 
+            if (IsLive && !_hasPicture && written < frames)
+            {
+                written = ReadInOrder(output, written, frames);
+                frames = 0;
+            }
+
             var heard = _libVlc.Clock + HeardDelayUs;
             while (written < frames)
             {
@@ -459,8 +476,45 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
             Monitor.PulseAll(_gate);
         }
 
-        _position += written * _format.BlockAlign;
+        Interlocked.Add(ref _position, written * _format.BlockAlign);
         return written * _format.BlockAlign;
+    }
+
+    // Called with the lock held, for a station with no picture: there's nothing to keep the sound in step with, so it
+    // plays in the order it came, as Lucent's own radio player plays a station. (Lined up with libVLC's clock, it was
+    // cut short and padded with silence each time a live stream's clock jumped, which stuttered.) When it runs dry it
+    // plays silence until a moment's worth has come again, so it doesn't stutter in and out.
+    private int ReadInOrder(Span<float> output, int written, int frames)
+    {
+        if (_refilling && _heldFrameCount < _rate * StationPrebufferSeconds && !_ended)
+        {
+            output[(written * Channels)..].Clear();
+            return frames;
+        }
+
+        _refilling = false;
+        while (written < frames && _blocks.Count > 0)
+        {
+            var block = _blocks.Peek();
+            var take = Math.Min(frames - written, block.Frames - block.Used);
+            block.Samples.AsSpan(block.Used * Channels, take * Channels).CopyTo(output[(written * Channels)..]);
+            block.Used += take;
+            written += take;
+            _heldFrameCount -= take;
+            if (block.Used == block.Frames)
+            {
+                _blocks.Dequeue();
+            }
+        }
+
+        if (written < frames && !_ended)
+        {
+            output[(written * Channels)..].Clear();
+            written = frames;
+            _refilling = true;
+        }
+
+        return written;
     }
 
     // Called with the lock held: sound and picture had drifted apart, and are lined up again.
