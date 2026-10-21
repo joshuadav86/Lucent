@@ -15,7 +15,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=VT323&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap">
 <style>
 html, body { margin: 0; }
 [hidden] { display: none !important; }
@@ -151,7 +151,7 @@ kbd {
 .readout .wrap { display: flex; flex-wrap: wrap; gap: 14px 40px; padding-block: 22px; font: 400 14px/1.2 var(--font-mono); color: var(--muted); }
 .readout b { font-weight: 500; color: var(--fg); font-size: 20px; margin-right: 6px; font-variant-numeric: tabular-nums; }
 
-section.band { padding-block: clamp(72px, 9vw, 120px); }
+section.band { padding-block: clamp(72px, 9vw, 120px); overflow-x: clip; }
 .section-head { display: grid; gap: 18px; margin-bottom: 44px; }
 
 /* ---------- visuals ---------- */
@@ -255,6 +255,193 @@ ul.ticks li::before { content: ""; position: absolute; left: 0; top: .62em; widt
 .skin:hover span { color: var(--fg); }
 @media (max-width: 560px) { .skin { grid-template-columns: 1fr; gap: 4px; } }
 .try-hint { font: 400 13px var(--font-mono); color: var(--muted); }
+
+/* ---------- player mock: Lucent's windows, drawn in the current skin and theme ----------
+   The same markup appears in The player and in Skins and themes. A skin sets the --k-* tokens
+   below (shape, type, finish), the theme sets the colors, mirroring SkinManager in the apps. */
+.desk {
+  --hi: rgba(255,255,255,.18); --lo: rgba(0,0,0,.6);
+  --raised: color-mix(in srgb, var(--surface) 88%, var(--fg));
+  --k-wr: 12px; --k-cr: 8px; --k-round: 999px;
+  --k-ui: var(--font-body); --k-disp: var(--font-body); --k-dw: 600; --k-case: none; --k-track: 0;
+  --k-win: color-mix(in srgb, var(--bg) 55%, var(--surface));
+  --k-edge: var(--line); --k-shadow: 0 30px 60px -30px rgba(0,0,0,.7);
+  --k-sheen: none; --k-bar: transparent;
+  --k-disp-bg: var(--bg); --k-disp-edge: var(--line); --k-disp-in: none; --k-lines: none; --k-disp-glow: none;
+  --k-time: var(--fg); --k-title: var(--fg);
+  --k-face: transparent; --k-blight: transparent; --k-bdark: transparent; --k-glyph: var(--muted);
+  --k-gloss: none; --k-pglow: 0 6px 18px -6px var(--a1);
+  position: relative; isolation: isolate; display: grid; gap: 6px;
+  font-family: var(--k-ui); color: var(--fg); line-height: 1.3; user-select: none;
+}
+html[data-light] .desk { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
+/* A soft wash of the accent behind the windows, so Glass has something to frost. */
+.desk::before {
+  content: ""; position: absolute; inset: -8% -6%; z-index: -1; pointer-events: none; filter: blur(30px);
+  background: radial-gradient(40% 45% at 20% 25%, color-mix(in srgb, var(--a1) 45%, transparent), transparent 70%),
+              radial-gradient(40% 45% at 85% 80%, color-mix(in srgb, var(--a2) 35%, transparent), transparent 70%);
+  opacity: .55;
+}
+.lw {
+  position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  border-radius: var(--k-wr); background: var(--k-win); border: 1px solid var(--k-edge);
+  box-shadow: var(--k-shadow); transition: border-radius .35s, background .35s, box-shadow .35s;
+}
+.lw { container-type: inline-size; }
+@container (max-width: 420px) { .lw .lw-links { display: none; } }
+.lw-body > * { min-width: 0; }
+.lw::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: var(--k-sheen); border-radius: inherit; }
+.lw-title {
+  display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--k-bar);
+  font: var(--k-dw) 10.5px/1 var(--k-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.lw-title b { color: var(--fg); font-weight: inherit; }
+.lw-title .x { margin-left: auto; display: flex; gap: 10px; opacity: .7; }
+.lw-logo { width: 13px; height: 13px; border-radius: 4px; background: linear-gradient(135deg, var(--a1), var(--a2)); flex: none; }
+.lw svg { width: 12px; height: 12px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.lw-body { padding: 0 10px 10px; display: grid; gap: 9px; }
+.lw-display {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center;
+  padding: 10px 12px; border-radius: var(--k-cr); background: var(--k-disp-bg); border: 1px solid var(--k-disp-edge);
+  box-shadow: var(--k-disp-in), var(--k-disp-glow); overflow: hidden;
+}
+.lw-display::after { content: ""; position: absolute; inset: 0; background: var(--k-lines); pointer-events: none; }
+.lw-time { font: var(--k-dw) 30px/1 var(--k-disp); color: var(--k-time); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.lw-track { display: grid; gap: 2px; min-width: 0; }
+.lw-track b { font: 600 13px/1.2 var(--k-ui); color: var(--k-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: var(--k-case); letter-spacing: var(--k-track); }
+.lw-track span { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lw-meter { display: flex; align-items: flex-end; gap: 2px; height: 16px; }
+.lw-meter i { flex: 1; min-width: 2px; background: linear-gradient(0deg, var(--a1), var(--a2)); border-radius: 1px; height: 40%; transform-origin: bottom; animation: lwBar 1s ease-in-out infinite alternate; }
+@keyframes lwBar { from { transform: scaleY(.35); } to { transform: scaleY(1); } }
+.lw-vol { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
+.lw-vol i { flex: 1; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--a1) 0 70%, var(--line) 70%); }
+.lw-seek { height: 4px; border-radius: 2px; background: var(--line); position: relative; }
+.lw-seek i { position: absolute; inset: 0 62% 0 0; border-radius: inherit; background: linear-gradient(90deg, var(--a1), var(--a2)); }
+.lw-seek i::after { content: ""; position: absolute; right: -5px; top: -3px; width: 10px; height: 10px; border-radius: var(--k-round); background: var(--fg); }
+.lw-row { display: flex; align-items: center; gap: 4px; }
+.lw-b {
+  display: grid; place-items: center; width: 26px; height: 24px; border-radius: var(--k-cr); color: var(--k-glyph);
+  background: var(--k-face); border: 1px solid; border-color: var(--k-blight) var(--k-bdark) var(--k-bdark) var(--k-blight);
+}
+.lw-play {
+  position: relative; display: grid; place-items: center; width: 34px; height: 34px; margin: 0 3px; border-radius: var(--k-round);
+  background: linear-gradient(135deg, var(--a1), var(--a2)); color: var(--on-accent); box-shadow: var(--k-pglow);
+  border: 1px solid; border-color: var(--k-blight) var(--k-bdark) var(--k-bdark) var(--k-blight);
+}
+.lw-play::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--k-gloss); }
+.lw-play svg { width: 13px; height: 13px; fill: currentColor; stroke: none; margin-left: 2px; }
+.lw-links { margin-left: auto; display: flex; gap: 9px; font-size: 11px; color: var(--a2); white-space: nowrap; }
+.lw-links span:nth-child(n+4) { color: var(--muted); }
+.lw-list { display: grid; padding: 0 6px 8px; }
+.lw-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; padding: 6px 8px; border-radius: calc(var(--k-cr) * .8); position: relative; }
+.lw-item b { font-weight: 500; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lw-item span { font-size: 10.5px; color: var(--muted); grid-row: 2; }
+.lw-item em { font: normal 10.5px var(--font-mono); color: var(--muted); grid-row: span 2; align-self: center; }
+.lw-item.on { background: color-mix(in srgb, var(--a1) 18%, transparent); }
+.lw-item.on::before { content: ""; position: absolute; left: 1px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--a2); }
+.lw-item.on b { color: var(--a2); }
+.lw-eq { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; padding: 6px 12px 10px; flex: 1; min-height: 120px; }
+.lw-f { position: relative; }
+.lw-f::before { content: ""; position: absolute; left: calc(50% - 2px); width: 4px; top: 4px; bottom: 18px; border-radius: 2px; background: var(--line); box-shadow: var(--k-track-in, none); }
+.lw-f::after { content: ""; position: absolute; left: calc(50% - 2px); width: 4px; top: calc(4px + var(--v) * (100% - 22px)); bottom: 18px; border-radius: 2px; background: linear-gradient(0deg, var(--a1), var(--a2)); opacity: .55; }
+.lw-f i {
+  position: absolute; z-index: 1; left: 50%; top: calc(4px + var(--v) * (100% - 22px)); width: var(--k-kw, 16px); height: var(--k-kh, 8px);
+  transform: translate(-50%, -50%); border-radius: var(--k-kr, 4px); background: var(--k-knob, color-mix(in srgb, var(--fg) 88%, var(--a1)));
+  border: 1px solid; border-color: var(--k-blight) var(--k-bdark) var(--k-bdark) var(--k-blight); box-shadow: var(--k-kglow, 0 2px 4px rgba(0,0,0,.4));
+}
+.lw-f span { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font: 9px/1 var(--k-disp); color: var(--muted); }
+.desk-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+@media (max-width: 560px) { .desk-pair { grid-template-columns: 1fr; } }
+.lw-vis { position: relative; flex: 1; min-height: 140px; background: #000; margin: 0 6px 6px; border-radius: calc(var(--k-cr) * .8); overflow: hidden; }
+.lw-vis img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lw-vis span { position: absolute; left: 8px; bottom: 8px; font-size: 10.5px; color: #fff; background: rgba(0,0,0,.55); padding: 3px 8px; border-radius: var(--k-round); }
+
+/* Classic: raised bevels around a sunken black LCD with scan lines. */
+[data-skin="Classic"] .desk {
+  --k-wr: 0px; --k-cr: 0px; --k-round: 2px;
+  --k-ui: Tahoma, Verdana, var(--font-body); --k-disp: "VT323", "Lucida Console", var(--font-mono); --k-dw: 400; --k-case: uppercase; --k-track: .04em;
+  --k-win: var(--surface); --k-shadow: 0 30px 60px -30px rgba(0,0,0,.7), inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--lo);
+  --k-edge: color-mix(in srgb, var(--bg) 50%, #000);
+  --k-bar: linear-gradient(180deg, rgba(255,255,255,.07), rgba(0,0,0,.22));
+  --k-disp-bg: color-mix(in srgb, var(--bg) 40%, #000); --k-disp-edge: color-mix(in srgb, var(--bg) 40%, #000);
+  --k-disp-in: inset 2px 2px 0 rgba(0,0,0,.6), inset -1px -1px 0 var(--hi);
+  --k-lines: repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 1px, transparent 1px 3px);
+  --k-time: var(--a2); --k-title: var(--a2);
+  --k-face: linear-gradient(180deg, var(--raised), var(--surface)); --k-blight: var(--hi); --k-bdark: var(--lo); --k-glyph: var(--fg);
+  --k-pglow: none;
+}
+[data-skin="Classic"] .lw-time { font-size: 38px; }
+[data-skin="Classic"] .desk { --k-knob: var(--k-face); --k-kr: 0; --k-kw: 14px; --k-kh: 11px; --k-track-in: inset 1px 1px 0 rgba(0,0,0,.6); }
+[data-skin="Classic"] .lw-seek, [data-skin="Classic"] .lw-vol i { border-radius: 0; box-shadow: inset 1px 1px 0 var(--lo); }
+[data-skin="Classic"] .lw-play { width: 30px; height: 26px; }
+/* Glass: frosted, see-through panes, light along the top, glossy round buttons. */
+[data-skin="Glass"] .desk {
+  --k-wr: 19px; --k-cr: 13px;
+  --k-ui: var(--font-body); --k-disp: var(--font-body); --k-dw: 300;
+  --k-win: color-mix(in srgb, var(--bg) 55%, transparent);
+  --k-edge: color-mix(in srgb, #fff 18%, transparent);
+  --k-shadow: 0 30px 60px -30px rgba(0,0,0,.6), inset 0 1px 0 color-mix(in srgb, #fff 30%, transparent);
+  --k-sheen: linear-gradient(160deg, color-mix(in srgb, #fff 9%, transparent), transparent 42%, color-mix(in srgb, var(--a2) 6%, transparent));
+  --k-disp-bg: color-mix(in srgb, var(--bg) 50%, transparent); --k-disp-edge: color-mix(in srgb, #fff 16%, transparent);
+  --k-face: linear-gradient(180deg, color-mix(in srgb, #fff 10%, transparent), color-mix(in srgb, #fff 2%, transparent));
+  --k-blight: color-mix(in srgb, #fff 22%, transparent); --k-bdark: color-mix(in srgb, #fff 5%, transparent); --k-glyph: var(--fg);
+  --k-gloss: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.1) 48%, transparent 50%);
+}
+[data-skin="Glass"] .lw { backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); }
+[data-skin="Glass"] .desk::before { opacity: 1; }
+[data-skin="Glass"] .lw-b { border-radius: 999px; width: 28px; height: 28px; }
+[data-skin="Glass"] .lw-play { width: 40px; height: 40px; }
+[data-skin="Glass"] .lw-time { font-size: 34px; }
+[data-skin="Glass"] .desk { --k-knob: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--a2) 40%, #fff) 60%); --k-kr: 999px; --k-kw: 13px; --k-kh: 13px; }
+/* Neon: hard edges in the accent that glow, over scan lines. */
+[data-skin="Neon"] .desk {
+  --k-wr: 3px; --k-cr: 2px; --k-round: 2px;
+  --k-ui: "Barlow Semi Condensed", Bahnschrift, var(--font-body); --k-disp: var(--font-mono); --k-dw: 500; --k-case: uppercase; --k-track: .06em;
+  --k-win: var(--bg); --k-edge: color-mix(in srgb, var(--a1) 75%, transparent);
+  --k-shadow: 0 0 22px -6px var(--a1), 0 30px 60px -30px rgba(0,0,0,.7);
+  --k-sheen: linear-gradient(180deg, transparent, color-mix(in srgb, var(--a1) 7%, transparent));
+  --k-disp-edge: var(--a1); --k-disp-glow: 0 0 18px -2px var(--a1);
+  --k-lines: repeating-linear-gradient(0deg, rgba(0,0,0,.3) 0 1px, transparent 1px 3px);
+  --k-time: var(--a2);
+  --k-blight: color-mix(in srgb, var(--a1) 45%, transparent); --k-bdark: color-mix(in srgb, var(--a1) 45%, transparent); --k-glyph: var(--a2);
+  --k-pglow: 0 0 16px 0 var(--a1);
+}
+[data-skin="Neon"] .lw-title { color: var(--a2); }
+[data-skin="Neon"] .desk { --k-knob: var(--bg); --k-kr: 1px; --k-kw: 16px; --k-kh: 7px; --k-kglow: 0 0 8px var(--a1); }
+[data-skin="Neon"] .lw-f i { border-color: var(--a2); }
+[data-skin="Neon"] .lw-time { text-shadow: 0 0 12px var(--a2); }
+/* Studio: brushed metal, metal buttons, and an inset display. */
+[data-skin="Studio"] .desk {
+  --k-wr: 6px; --k-cr: 4px;
+  --k-ui: "Barlow Semi Condensed", Bahnschrift, var(--font-body); --k-disp: "Barlow Semi Condensed", Bahnschrift, var(--font-body); --k-dw: 500; --k-track: .02em;
+  --k-win: var(--surface); --k-edge: color-mix(in srgb, var(--bg) 40%, #000);
+  --k-shadow: 0 30px 60px -30px rgba(0,0,0,.7), inset 0 1px 0 var(--hi);
+  --k-sheen: repeating-linear-gradient(90deg, rgba(255,255,255,.01) 0 1px, transparent 1px 3px),
+             linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03) 35%, transparent 50%, rgba(255,255,255,.02) 65%, rgba(0,0,0,.18));
+  --k-disp-bg: color-mix(in srgb, var(--bg) 55%, #000); --k-disp-edge: rgba(0,0,0,.6);
+  --k-disp-in: inset 0 2px 6px rgba(0,0,0,.5), 0 1px 0 var(--hi);
+  --k-face: linear-gradient(180deg, color-mix(in srgb, var(--raised) 84%, var(--fg)), color-mix(in srgb, var(--surface) 96%, var(--fg)));
+  --k-blight: var(--hi); --k-bdark: var(--lo); --k-glyph: var(--fg);
+  --k-gloss: linear-gradient(180deg, rgba(255,255,255,.3), transparent 55%, rgba(0,0,0,.15));
+}
+[data-skin="Studio"] .lw-time { font-size: 34px; letter-spacing: .02em; }
+[data-skin="Studio"] .lw-title { letter-spacing: .16em; }
+[data-skin="Studio"] .desk { --k-knob: linear-gradient(180deg, #e8e8e8, #8a8a8a 50%, #bdbdbd); --k-kr: 2px; --k-kw: 18px; --k-kh: 10px; }
+
+/* Lucent Classic: the real skin, as the app draws it (player, equalizer, and queue). */
+.desk.wsz { gap: 0; max-width: 550px; }
+.desk.wsz img { width: 100%; height: auto; image-rendering: pixelated; box-shadow: 0 30px 60px -30px rgba(0,0,0,.8); }
+.desk.wsz::before { opacity: .35; }
+
+/* The player section: player and queue on the left, visuals on the right, snapped into one rectangle. */
+.desk.lay { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); grid-template-rows: auto 1fr; }
+.desk.lay .lw-vis-win { grid-column: 2; grid-row: 1 / span 2; }
+@media (max-width: 560px) {
+  .desk.lay { grid-template-columns: 1fr; }
+  .desk.lay .lw-vis-win { grid-column: auto; grid-row: auto; }
+  .lw-links { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .lw-meter i { animation: none; } .lw, .lw-display { transition: none; } }
 
 /* ---------- everything else ---------- */
 .extras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); }
@@ -386,7 +573,7 @@ footer a:hover { color: var(--fg); }
       <div class="stack">
         <p class="eyebrow">The player</p>
         <h2 id="player-title">Your music, laid out your way.</h2>
-        <p class="lede">The library, queue, equalizer, analyzer, artwork, and visuals each get their own window. They snap together and move as one. Lucent remembers where you left each one, a lock keeps any of them in place, and the link button takes them all along with the player.</p>
+        <p class="lede">The player, library, queue, equalizer, analyzer, artwork, and visuals each get their own resizable window. They snap together and move as one. Lucent remembers where you left each one, a lock keeps any of them in place, and the link button takes them all along with the player.</p>
         <div class="keys">
           <div><kbd>D</kbd> Tidy every window into one neat rectangle</div>
           <div><kbd>G</kbd> Fill the screen</div>
@@ -394,13 +581,7 @@ footer a:hover { color: var(--fg); }
           <div><kbd>J</kbd> Link every window, so they all follow the player</div>
         </div>
       </div>
-      <div class="collage">
-        <div class="screen"><img src="img/library.png" width="380" height="560" alt="The Library window, with songs grouped by folder" loading="lazy"></div>
-        <div class="col">
-          <div class="screen"><img src="img/classic-skin.png" width="550" height="232" alt="The player wearing the Lucent Classic skin" loading="lazy" style="image-rendering:pixelated"></div>
-          <div class="screen"><img src="img/queue.png" width="520" height="320" alt="The Queue window with six tracks" loading="lazy"></div>
-        </div>
-      </div>
+      <div class="desk lay" id="deskPlayer" role="img" aria-label="The Lucent player, queue, and visuals windows snapped together, in the skin and theme picked under Skins and themes"></div>
     </div>
   </section>
 
@@ -427,21 +608,21 @@ footer a:hover { color: var(--fg); }
   <section class="band alt" id="editor" aria-labelledby="ed-title">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">Audio editor</p>
+        <p class="eyebrow">Video and audio editor</p>
         <h2 id="ed-title">Edit, repair, and measure without leaving your player.</h2>
-        <p class="lede">Right-click any sound and choose Open in editor. Cut, clean up, split stems, master, and undo anything. Your original stays safe.</p>
+        <p class="lede">Right-click any song or video and open it in the editor. Cut, clean up, split stems, master, and undo anything. Your original stays safe.</p>
       </div>
       <div class="screen"><img src="img/editor.png" width="1240" height="700" alt="The Lucent audio editor with three clips, fades, a crossfade where two clips overlap, markers, and the Inserts strip for VST3 plugins" loading="lazy"></div>
       <div class="analyzer-notes ed-features">
+        <div><h3>Video too</h3><p>Trim MP4 and MOV without re-encoding. Save frames as images, or as a GIF.</p></div>
+        <div><h3>Dock it anywhere</h3><p>Snap the editor beside the player, or drag it free.</p></div>
         <div><h3>Split into stems</h3><p>AI splits vocals, drums, bass, and the rest. Solo, mute, keep, or save them.</p></div>
         <div><h3>Tempo, key, and loops</h3><p>BPM, key, a snapping beat grid, and a loop maker that finds seamless loops.</p></div>
         <div><h3>Plugin browser</h3><p>Search your plugins, filter by type, and star favorites.</p></div>
         <div><h3>Plugin chains</h3><p>Run VST3 effects live, save chains, or bring them from REAPER.</p></div>
         <div><h3>History</h3><p>Every step listed. Click one to go back.</p></div>
-        <div><h3>Clips like REAPER</h3><p>Trim and fade by dragging clip edges. Overlap clips to crossfade.</p></div>
-        <div><h3>Move clips, find hits</h3><p>Drag clips around, and Tab to Transient jumps to the next hit.</p></div>
+        <div><h3>Clips like REAPER</h3><p>Drag clips to move, trim, and fade. Overlap them to crossfade.</p></div>
         <div><h3>Every effect, one menu</h3><p>Press <kbd>E</kbd> to search every built-in effect.</p></div>
-        <div><h3>Room to work</h3><p>Pinch to zoom, and <kbd>F11</kbd> for full screen.</p></div>
         <div><h3>Cut, copy, and paste</h3><p>Click-free joins, zero-crossing snap, and paste between apps.</p></div>
         <div><h3>Analyze</h3><p>Peak, true peak, loudness, DC offset, stereo, and a clip finder.</p></div>
         <div><h3>Meters and views</h3><p>True-peak and LUFS meters, and a spectrogram view.</p></div>
@@ -534,16 +715,14 @@ footer a:hover { color: var(--fg); }
       <div class="stack">
         <p class="eyebrow">Skins and themes</p>
         <h2 id="skins-title">Five skins. Eight themes. Any combination.</h2>
-        <p class="lede">Skins set the shape, themes set the colors. Try one here.</p>
-        <p class="lede">Or go full Winamp 2: Lucent Classic is built in, and any .wsz skin imports with a drop.</p>
-        <div class="screen classic-shot"><img src="img/classic-skin.png" width="550" height="232" alt="The Lucent player wearing Lucent Classic, a Winamp 2 style skin with a pixel display, sliders, and transport buttons"></div>
+        <p class="lede">Skins set the shape, themes set the colors. Pick one of each and watch the player change.</p>
+        <p class="lede">Or go full Winamp 2 with Lucent Classic, or drop in any .wsz skin.</p>
         <div class="skins" role="group" aria-label="Skins" id="skinList"></div>
       </div>
       <div class="stack">
         <div class="themes" role="group" aria-label="Themes" id="themeList"></div>
         <p class="try-hint" id="themeHint">Theme: Midnight · Skin: Lucent</p>
-        <div class="screen"><img src="img/fullscreen-menu.jpg" width="1600" height="900" alt="Lucent fullscreen on the Neon Downpour visual, with the right-click menu open" loading="lazy"></div>
-        <p class="try-hint"><kbd>F11</kbd> for full screen. Right-click for every option.</p>
+        <div class="desk" id="deskSkins" role="img" aria-label="The Lucent player, equalizer, and queue in the chosen skin and theme"></div>
       </div>
     </div>
   </section>
@@ -556,6 +735,7 @@ footer a:hover { color: var(--fg); }
         <p class="lede">Thousands of stations, with Lucent's EQ, meters, and visuals on every one.</p>
         <ul class="ticks">
           <li><b>The good stuff, up front.</b> SomaFM, FRISKY, Radio Paradise, and Nightride FM.</li>
+          <li><b>Video stations.</b> Watch live sets from The Lot Radio, or filter to Video only.</li>
           <li><b>Every genre.</b> 31 genres, search, and filters.</li>
           <li><b>Favorites and history.</b> Star stations and find recent ones.</li>
           <li><b>Just works.</b> MP3 and AAC streams, now-playing info, and auto-reconnect.</li>
@@ -579,7 +759,8 @@ footer a:hover { color: var(--fg); }
         <div><h3>Tag editor</h3><p>Edit titles, artists, lyrics, and art safely.</p></div>
         <div><h3>Bandcamp and Beatport</h3><p>Purchases land in your library automatically.</p></div>
         <div><h3>Visuals for any app</h3><p>Visuals for anything your computer plays.</p></div>
-        <div><h3>Spotify, Apple Music, TIDAL, SoundCloud, and YouTube</h3><p>Control them from Lucent's player.</p></div>
+        <div><h3>Spotify, Apple Music, TIDAL, SoundCloud, and YouTube</h3><p>Control them from Lucent's player. Spotify's song info comes straight from the app.</p></div>
+        <div><h3>Videos</h3><p>Play MP4 and MOV videos, with Lucent's EQ on the sound.</p></div>
         <div><h3>Your default player</h3><p>Make Lucent your music player in one click.</p></div>
         <div><h3>Import from another player</h3><p>Bring playlists, plays, and ratings from Apple Music, MusicBee, foobar2000, Plex, or YouTube Music.</p></div>
         <div><h3>Record live</h3><p>Record from your audio interface, up to 192 kHz, with VST3 effects.</p></div>
@@ -980,44 +1161,98 @@ footer a:hover { color: var(--fg); }
   };
   const SKINS = [
     ["Lucent", "Soft corners, hairlines, and calm, modern type", "Midnight", { r: "14px", glow: "0 0 0 transparent" }],
-    ["Classic", "Square corners, raised buttons, and a black LCD, like the players of 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
+    ["Classic", "Square corners, raised buttons, and a black LCD, like 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
     ["Glass", "Frosted panes, soft light, and big round buttons", "Deep Ocean", { r: "24px", glow: "0 0 0 1px rgba(255,255,255,.06)" }],
-    ["Neon", "Hard edges that glow in the accent color, over scan lines", "Ultraviolet", { r: "0px", glow: "0 0 18px -2px var(--a1)" }],
-    ["Studio", "Brushed metal and an inset display, like rack-mounted hi-fi gear", "Graphite", { r: "6px", glow: "inset 0 1px 0 rgba(255,255,255,.08)" }]
+    ["Neon", "Hard edges that glow, over scan lines", "Ultraviolet", { r: "0px", glow: "0 0 18px -2px var(--a1)" }],
+    ["Studio", "Brushed metal and an inset display, like hi-fi gear", "Graphite", { r: "6px", glow: "inset 0 1px 0 rgba(255,255,255,.08)" }],
+    ["Lucent Classic", "Winamp 2 pixel art on the player, equalizer, and queue", null, { r: "2px", glow: "0 0 0 transparent" }, true]
   ];
-  let cur = { theme: "Midnight", skin: "Lucent" };
+  let cur = { theme: "Midnight", skin: "Lucent" }, lastShape = "Lucent";
   const themeList = document.getElementById("themeList"), skinList = document.getElementById("skinList");
+  const deskSkins = document.getElementById("deskSkins"), deskPlayer = document.getElementById("deskPlayer");
   for (const name in THEMES) {
     const t = THEMES[name], b = document.createElement("button");
     b.type = "button"; b.className = "swatch"; b.dataset.t = name;
     b.style.background = t.bg; b.style.color = t.fg;
     b.innerHTML = `<div class="bar" style="background:${t.surface}"><i style="background:linear-gradient(90deg,${t.a1},${t.a2})"></i></div><span>${name}</span>`;
-    b.onclick = () => applyTheme(name);
+    // Lucent Classic brings its own colors, so a theme picked while it's on goes back to the last skin.
+    b.onclick = () => { if (isWsz()) applySkin(lastShape); applyTheme(name); };
     themeList.append(b);
   }
   SKINS.forEach(([name, look, made]) => {
     const b = document.createElement("button"); b.type = "button"; b.className = "skin"; b.dataset.s = name;
-    b.innerHTML = `<b>${name}</b><span>${look}</span><em>made for ${made}</em>`;
-    b.onclick = () => { applySkin(name); applyTheme(made); };
+    b.innerHTML = `<b>${name}</b><span>${look}</span><em>${made ? "made for " + made : "built in"}</em>`;
+    b.onclick = () => { applySkin(name); if (made) applyTheme(made); };
     skinList.append(b);
   });
+  const isWsz = () => !!(SKINS.find(x => x[0] === cur.skin) || [])[4];
+
+  /* The mock windows. Decorative, so plain markup; each desk has an aria-label. */
+  const I = {
+    prev: '<svg viewBox="0 0 24 24"><path d="M6 5v14M19 5l-10 7 10 7z"/></svg>',
+    stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>',
+    next: '<svg viewBox="0 0 24 24"><path d="M18 5v14M5 5l10 7-10 7z"/></svg>',
+    eject: '<svg viewBox="0 0 24 24"><path d="M5 19h14M12 5l7 9H5z"/></svg>',
+    shuffle: '<svg viewBox="0 0 24 24"><path d="M16 4h4v4M4 20 20 4M20 16v4h-4M15 15l5 5M4 4l5 5"/></svg>',
+    repeat: '<svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></svg>',
+    play: '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>',
+    plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>',
+    min: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
+    close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+  };
+  const meter = Array.from({ length: 18 }, (_, i) =>
+    `<i style="animation-duration:${(.38 + hash(i + 3) * .5).toFixed(2)}s;animation-delay:-${hash(i + 9).toFixed(2)}s;height:${Math.round(35 + 60 * hash(i + 1))}%"></i>`).join("");
+  const title = (name, note, extra = "") =>
+    `<div class="lw-title"><i class="lw-logo"></i><b>${name}</b>${note ? `<span>${note}</span>` : ""}<span class="x">${extra}${I.min}${I.close}</span></div>`;
+  const playerWin = () => `<div class="lw">${title("Lucent", "", I.plus + I.gear)}<div class="lw-body">
+      <div class="lw-display"><div class="lw-time">1:23</div>
+        <div class="lw-track"><b>Roygbiv</b><span>Boards of Canada · 320 kbps</span></div>
+        <div class="lw-meter">${meter}</div><div class="lw-vol">VOL<i></i></div></div>
+      <div class="lw-seek"><i></i></div>
+      <div class="lw-row"><span class="lw-b">${I.prev}</span><span class="lw-play">${I.play}</span><span class="lw-b">${I.stop}</span><span class="lw-b">${I.next}</span><span class="lw-b">${I.eject}</span><span class="lw-b">${I.shuffle}</span><span class="lw-b">${I.repeat}</span>
+        <span class="lw-links"><span>Visuals</span><span>Queue</span><span>EQ</span><span>Library</span></span></div>
+    </div></div>`;
+  const SONGS = [["Roygbiv", "Boards of Canada", "2:31"], ["Aquarius", "Boards of Canada", "5:52"], ["Turquoise Hexagon Sun", "Boards of Canada", "5:07"], ["Xtal", "Aphex Twin", "4:51"], ["Pulsewidth", "Aphex Twin", "3:47"]];
+  const queueWin = n => `<div class="lw">${title("Queue", `${n} tracks`)}<div class="lw-list">${SONGS.slice(0, n).map((x, i) =>
+      `<div class="lw-item${i === 0 ? " on" : ""}"><b>${x[0]}</b><span>${x[1]}</span><em>${x[2]}</em></div>`).join("")}</div></div>`;
+  const EQ = [.3, .26, .36, .5, .58, .55, .45, .34, .28, .24];
+  const eqWin = () => `<div class="lw">${title("Equalizer", "10 bands")}<div class="lw-eq">${EQ.map((v, i) =>
+      `<div class="lw-f" style="--v:${v}"><i></i><span>${["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"][i]}</span></div>`).join("")}</div></div>`;
+  const visWin = () => `<div class="lw lw-vis-win">${title("Visuals", "60 fps")}<div class="lw-vis"><img src="img/cosmic-jellyfish.jpg" alt="" loading="lazy"><span>Cosmic Jellyfish</span></div></div>`;
+  deskPlayer.innerHTML = playerWin() + queueWin(4) + visWin();
+  function drawSkinsDesk() {
+    deskSkins.classList.toggle("wsz", isWsz());
+    deskSkins.innerHTML = isWsz()
+      ? `<img src="img/classic-skin.png" width="550" height="232" alt=""><img src="img/classic-eq.png" width="550" height="232" alt=""><img src="img/classic-queue.png" width="550" height="348" alt="">`
+      : playerWin() + `<div class="desk-pair">${eqWin()}${queueWin(3)}</div>`;
+    deskSkins.setAttribute("aria-label", isWsz()
+      ? "The Lucent player, equalizer, and queue wearing Lucent Classic, a Winamp 2 style pixel skin"
+      : `The Lucent player, equalizer, and queue in the ${cur.skin} skin and ${cur.theme} theme`);
+  }
   function applyTheme(name) {
     const t = THEMES[name]; cur.theme = name;
     for (const k of ["bg", "surface", "fg", "muted", "a1", "a2"]) root.style.setProperty("--" + k, t[k]);
     root.style.setProperty("--line", t.light ? "rgba(15,27,42,.12)" : "rgba(255,255,255,.10)");
     root.style.setProperty("--on-accent", name === "Graphite" ? "#0C0C0C" : "#ffffff");
     root.style.colorScheme = t.light ? "light" : "dark";
-    themeList.querySelectorAll(".swatch").forEach(s => s.setAttribute("aria-pressed", s.dataset.t === name));
+    root.toggleAttribute("data-light", !!t.light);
+    themeList.querySelectorAll(".swatch").forEach(s => s.setAttribute("aria-pressed", s.dataset.t === name && !isWsz()));
     if (mapName === "theme") cmap = MAPS.theme();
-    hint(); save();
+    hint(); save(); drawSkinsDesk();
   }
   function applySkin(name) {
     const s = SKINS.find(x => x[0] === name); cur.skin = name;
+    if (!s[4]) lastShape = name;
+    root.dataset.skin = s[4] ? "Classic" : name;
     root.style.setProperty("--r", s[3].r); root.style.setProperty("--glow", s[3].glow);
     skinList.querySelectorAll(".skin").forEach(x => x.setAttribute("aria-pressed", x.dataset.s === name));
-    hint(); save();
+    themeList.querySelectorAll(".swatch").forEach(x => x.setAttribute("aria-pressed", x.dataset.t === cur.theme && !s[4]));
+    hint(); save(); drawSkinsDesk();
   }
-  const hint = () => document.getElementById("themeHint").textContent = `Theme: ${cur.theme} · Skin: ${cur.skin}`;
+  const hint = () => document.getElementById("themeHint").textContent = isWsz()
+    ? "Skin: Lucent Classic · it brings its own colors"
+    : `Theme: ${cur.theme} · Skin: ${cur.skin}`;
   const save = () => { try { localStorage.setItem("lucent-look", JSON.stringify(cur)); } catch (e) {} };
   try { const s = JSON.parse(localStorage.getItem("lucent-look") || "null"); if (s && THEMES[s.theme]) cur = s; } catch (e) {}
   applySkin(SKINS.some(s => s[0] === cur.skin) ? cur.skin : "Lucent"); applyTheme(cur.theme);
