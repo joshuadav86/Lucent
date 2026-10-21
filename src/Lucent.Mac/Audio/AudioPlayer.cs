@@ -208,7 +208,8 @@ public sealed class AudioPlayer : IDisposable
         WaveStream reader;
         try
         {
-            reader = AudioReaderFactory.Open(path);
+            // Only decoders that start at once: a file only libVLC reads is decoded as it plays, after a gap.
+            reader = AudioReaderFactory.OpenQuickly(path);
         }
         catch (Exception)
         {

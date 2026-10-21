@@ -69,6 +69,9 @@ cat > "$app/Contents/Info.plist" <<PLIST
         <string>public.aifc-audio</string>
         <string>org.xiph.ogg-audio</string>
         <string>org.xiph.opus</string>
+        <string>com.apple.coreaudio-format</string>
+        <string>public.ac3-audio</string>
+        <string>public.enhanced-ac3-audio</string>
       </array>
     </dict>
     <dict>

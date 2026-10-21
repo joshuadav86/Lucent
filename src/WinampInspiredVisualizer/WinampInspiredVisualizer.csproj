@@ -52,7 +52,11 @@
     <VlcWindowsArm64Enabled>false</VlcWindowsArm64Enabled>
   </PropertyGroup>
   <ItemGroup>
-    <VlcWindowsX64ExcludeFiles Include="plugins\stream_out\%2A%2A;plugins\access_output\%2A%2A;plugins\mux\%2A%2A;plugins\visualization\%2A%2A;plugins\video_splitter\%2A%2A;lua\http\%2A%2A;libvlc.lib;libvlccore.lib" />
+    <!--
+      Kept from those: the four that decode music only libVLC reads to a WAV for the editor (Lucent.Core's
+      Audio/LibVlcAudioDecoder.cs): stream_out_transcode, stream_out_standard, access_output_file and mux_wav.
+    -->
+    <VlcWindowsX64ExcludeFiles Include="plugins\stream_out\libstream_out_autodel_plugin.dll;plugins\stream_out\libstream_out_bridge_plugin.dll;plugins\stream_out\libstream_out_chromaprint_plugin.dll;plugins\stream_out\libstream_out_chromecast_plugin.dll;plugins\stream_out\libstream_out_delay_plugin.dll;plugins\stream_out\libstream_out_description_plugin.dll;plugins\stream_out\libstream_out_display_plugin.dll;plugins\stream_out\libstream_out_dummy_plugin.dll;plugins\stream_out\libstream_out_duplicate_plugin.dll;plugins\stream_out\libstream_out_es_plugin.dll;plugins\stream_out\libstream_out_gather_plugin.dll;plugins\stream_out\libstream_out_mosaic_bridge_plugin.dll;plugins\stream_out\libstream_out_record_plugin.dll;plugins\stream_out\libstream_out_setid_plugin.dll;plugins\stream_out\libstream_out_smem_plugin.dll;plugins\stream_out\libstream_out_stats_plugin.dll;plugins\access_output\libaccess_output_dummy_plugin.dll;plugins\access_output\libaccess_output_http_plugin.dll;plugins\access_output\libaccess_output_livehttp_plugin.dll;plugins\access_output\libaccess_output_rist_plugin.dll;plugins\access_output\libaccess_output_shout_plugin.dll;plugins\access_output\libaccess_output_srt_plugin.dll;plugins\access_output\libaccess_output_udp_plugin.dll;plugins\mux\libmux_asf_plugin.dll;plugins\mux\libmux_avi_plugin.dll;plugins\mux\libmux_dummy_plugin.dll;plugins\mux\libmux_mp4_plugin.dll;plugins\mux\libmux_mpjpeg_plugin.dll;plugins\mux\libmux_ogg_plugin.dll;plugins\mux\libmux_ps_plugin.dll;plugins\mux\libmux_ts_plugin.dll;plugins\visualization\%2A%2A;plugins\video_splitter\%2A%2A;lua\http\%2A%2A;libvlc.lib;libvlccore.lib" />
   </ItemGroup>
 
   <ItemGroup>
