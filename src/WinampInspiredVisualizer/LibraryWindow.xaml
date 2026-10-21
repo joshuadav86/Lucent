@@ -206,8 +206,8 @@
                 <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
                 <TextBlock x:Name="EmptyLibraryTitle" Text="Link a music folder" Margin="0,12,0,0" FontSize="13"
                            HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBlock x:Name="EmptyLibraryText" Margin="0,4,0,0" FontSize="11" MaxWidth="220"
-                           TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource FaintTextBrush}"
+                <TextBlock x:Name="EmptyLibraryText" Margin="0,4,0,0" FontSize="12" MaxWidth="220"
+                           TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource MutedTextBrush}"
                            Text="Every sound inside it shows up here, newest first, and new files appear on their own." />
                 <Button x:Name="LinkFolderButton" Style="{StaticResource PickerButton}" Margin="0,14,0,0" HorizontalAlignment="Center"
                         Click="OnLinkLibraryFolder">

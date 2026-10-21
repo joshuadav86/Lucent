@@ -34,7 +34,7 @@ public static class ThemeManager
     public static IReadOnlyList<Theme> Themes { get; } = new[]
     {
         new Theme("Midnight", "#09090C", "#101015", "#16161D", "#1D1D26", "#1E1E28",
-            "#ECECF1", "#7D7D8C", "#4A4A57", "#8B7CFF", "#2A2550", "#8B5CF6", "#22D3EE", "#FFFFFF"),
+            "#ECECF1", "#8A8A99", "#4A4A57", "#8B7CFF", "#2A2550", "#8B5CF6", "#22D3EE", "#FFFFFF"),
         new Theme("Deep Ocean", "#050B14", "#0A1422", "#0F1C2E", "#15263C", "#172A40",
             "#E6F1FF", "#7A93B0", "#415670", "#3B9EFF", "#0F2A4A", "#2563EB", "#22D3EE", "#FFFFFF"),
         new Theme("Glacier", "#E9EFF5", "#F5F8FB", "#FFFFFF", "#E1E9F2", "#D3DEE9",
