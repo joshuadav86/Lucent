@@ -93,6 +93,12 @@ public sealed class WindowSnapper
     public event EventHandler? MoveFinished;
 
     /// <summary>
+    /// The player's shape (its height over its width), which it keeps while an edge is dragged, since it
+    /// scales as a whole. Null while the player can't be resized.
+    /// </summary>
+    public Func<double?>? PlayerShape { get; set; }
+
+    /// <summary>
     /// True while every window moves with the player, docked to it or not (the player's link button).
     /// Locked windows still stay put.
     /// </summary>
@@ -100,6 +106,11 @@ public sealed class WindowSnapper
 
     public void Add(Window window)
     {
+        if (_windows.Contains(window))
+        {
+            return;
+        }
+
         _windows.Add(window);
         window.Closed += (_, _) => _windows.Remove(window);
         if (PresentationSource.FromVisual(window) is HwndSource source)
@@ -182,6 +193,8 @@ public sealed class WindowSnapper
                 if (!_resized)
                 {
                     _resized = true;
+                    // The player found the windows docked to it to carry them, but it's being resized, not moved.
+                    _carried.Clear();
                     if (GetKeyState(VK_CONTROL) >= 0)
                     {
                         FindLinked(hwnd, edge);
@@ -190,6 +203,11 @@ public sealed class WindowSnapper
 
                 var rect = Visible(UnsnappedSize(hwnd, edge), _startMargins);
                 SnapSize(hwnd, ref rect, edge);
+                if (hwnd == Handle(_main) && PlayerShape?.Invoke() is { } shape)
+                {
+                    KeepShape(hwnd, ref rect, edge, shape);
+                }
+
                 MoveLinked(ref rect);
                 Marshal.StructureToPtr(Outer(rect, _startMargins), lParam, false);
                 break;
@@ -198,7 +216,7 @@ public sealed class WindowSnapper
                 OnDpiChanged(hwnd, wParam, lParam);
                 break;
             case WM_EXITSIZEMOVE:
-                if (hwnd == _moving && !_resized && _carried.Count == 0)
+                if (hwnd == _moving && !_resized && _carried.Count == 0 && hwnd != Handle(_main))
                 {
                     MatchCorners(hwnd);
                 }
@@ -298,7 +316,7 @@ public sealed class WindowSnapper
     /// Finds the windows that resize along with this one. For each edge being dragged: a docked
     /// window on the other side of it gives way (its facing edge follows), and a docked window
     /// whose own edge runs along the same line goes with it (that edge follows too). The player
-    /// can't be resized, so where it sits on the line nothing follows that edge, and a window
+    /// isn't resized by other windows, so where it sits on the line nothing follows that edge, and a window
     /// that's also docked to something that isn't moving stays put.
     /// </summary>
     private void FindLinked(IntPtr hwnd, int edge)
@@ -316,7 +334,16 @@ public sealed class WindowSnapper
             sides.Add(Side.Right);
         }
 
-        if (edge is WMSZ_TOP or WMSZ_TOPLEFT or WMSZ_TOPRIGHT)
+        // The player keeps its shape, so dragging its top or bottom moves a side edge too (its right one).
+        // The windows under it move with its bottom edge as its height changes, like when it changes skin.
+        if (hwnd == Handle(_main))
+        {
+            if (sides.Count == 0)
+            {
+                sides.Add(Side.Right);
+            }
+        }
+        else if (edge is WMSZ_TOP or WMSZ_TOPLEFT or WMSZ_TOPRIGHT)
         {
             sides.Add(Side.Top);
         }
@@ -403,7 +430,9 @@ public sealed class WindowSnapper
 
         foreach (var linked in _linked)
         {
-            var target = linked.Start;
+            // The edges that don't follow stay where they are now: where the resize found them, unless
+            // something else moved them since (the windows under the player follow its bottom edge).
+            var target = VisibleRect(linked.Handle);
             foreach (var (own, driver) in linked.Edges)
             {
                 Set(ref target, own, Get(linked.Start, own) + Get(rect, driver) - Get(start, driver));
@@ -441,11 +470,51 @@ public sealed class WindowSnapper
         ? a.Top < b.Bottom && b.Top < a.Bottom
         : a.Left < b.Right && b.Left < a.Right;
 
-    private static bool Resizable(IntPtr handle) =>
-        HwndSource.FromHwnd(handle)?.RootVisual is Window { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip } window
+    /// <summary>
+    /// True for a window another window's resize can resize along with it. Not the player: it keeps its
+    /// shape, so only dragging its own edges resizes it. Nor a locked window.
+    /// </summary>
+    private bool Resizable(IntPtr handle) =>
+        handle != Handle(_main)
+        && HwndSource.FromHwnd(handle)?.RootVisual is Window { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip } window
         && !WindowLocks.IsLocked(window);
 
     private static bool IsLocked(IntPtr handle) => HwndSource.FromHwnd(handle)?.RootVisual is Window window && WindowLocks.IsLocked(window);
+
+    /// <summary>
+    /// Keeps the player's shape while one of its edges is dragged: the width follows the mouse (or, dragging
+    /// the top or bottom, the height does and the width follows it), between the player's smallest and
+    /// largest size, and the edges opposite the dragged ones stay put.
+    /// </summary>
+    private void KeepShape(IntPtr hwnd, ref Rect rect, int edge, double shape)
+    {
+        var scale = Scale(hwnd);
+        var min = (int)Math.Ceiling(_main.MinWidth * scale);
+        var max = double.IsInfinity(_main.MaxWidth) ? int.MaxValue : (int)Math.Floor(_main.MaxWidth * scale);
+        var width = edge is WMSZ_TOP or WMSZ_BOTTOM
+            ? (int)Math.Round((rect.Bottom - rect.Top) / shape)
+            : rect.Right - rect.Left;
+        width = Math.Clamp(width, min, Math.Max(min, max));
+        var height = (int)Math.Round(width * shape);
+
+        if (edge is WMSZ_LEFT or WMSZ_TOPLEFT or WMSZ_BOTTOMLEFT)
+        {
+            rect.Left = rect.Right - width;
+        }
+        else
+        {
+            rect.Right = rect.Left + width;
+        }
+
+        if (edge is WMSZ_TOP or WMSZ_TOPLEFT or WMSZ_TOPRIGHT)
+        {
+            rect.Top = rect.Bottom - height;
+        }
+        else
+        {
+            rect.Bottom = rect.Top + height;
+        }
+    }
 
     private static (int Width, int Height) MinSize(IntPtr handle)
     {

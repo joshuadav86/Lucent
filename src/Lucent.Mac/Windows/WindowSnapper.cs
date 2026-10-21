@@ -401,7 +401,12 @@ public sealed class WindowSnapper
         try
         {
             var rect = BoxOf(window);
-            SnapSize(window, ref rect, _resizeSides);
+            // The player keeps the shape macOS held it to, so its edges aren't snapped.
+            if (window != _main)
+            {
+                SnapSize(window, ref rect, _resizeSides);
+            }
+
             MoveLinked(ref rect);
             var current = BoxOf(window);
             if (!rect.Equals(current))
@@ -430,7 +435,7 @@ public sealed class WindowSnapper
     /// Finds the windows that resize along with this one. For each edge being dragged: a docked
     /// window on the other side of it gives way (its facing edge follows), and a docked window
     /// whose own edge runs along the same line goes with it (that edge follows too). The player
-    /// can't be resized, so where it sits on the line nothing follows that edge, and a window
+    /// isn't resized by other windows, so where it sits on the line nothing follows that edge, and a window
     /// that's also docked to something that isn't moving stays put.
     /// </summary>
     private void FindLinked(Window window, Sides edges)
@@ -448,7 +453,16 @@ public sealed class WindowSnapper
             sides.Add(Side.Right);
         }
 
-        if (edges.HasFlag(Sides.TopSide))
+        // The player keeps its shape, so dragging its top or bottom moves a side edge too (its right one).
+        // The windows under it move with its bottom edge as its height changes, like when it changes skin.
+        if (window == _main)
+        {
+            if (sides.Count == 0)
+            {
+                sides.Add(Side.Right);
+            }
+        }
+        else if (edges.HasFlag(Sides.TopSide))
         {
             sides.Add(Side.Top);
         }
@@ -468,7 +482,7 @@ public sealed class WindowSnapper
 
             // Windows whose edge runs along the same line go with it.
             var along = group.Where(other => Math.Abs(Get(other.Rect, side) - line) <= flush).ToList();
-            if (along.Any(other => !other.Window.CanResize))
+            if (along.Any(other => !Resizable(other.Window)))
             {
                 along.Clear();
             }
@@ -480,7 +494,7 @@ public sealed class WindowSnapper
 
             // Windows on the other side of the line give way, unless something else docked to them stays put.
             var facing = group.Where(other => Math.Abs(Get(other.Rect, opposite) - line) <= flush && Across(self, other.Rect, side)).ToList();
-            if (facing.Any(other => !other.Window.CanResize))
+            if (facing.Any(other => !Resizable(other.Window)))
             {
                 facing.Clear();
             }
@@ -500,6 +514,12 @@ public sealed class WindowSnapper
 
         _linked.AddRange(follows.Values);
     }
+
+    /// <summary>
+    /// True for a window another window's resize can resize along with it. Not the player: it keeps its
+    /// shape, so only dragging its own edges resizes it.
+    /// </summary>
+    private bool Resizable(Window window) => window != _main && window.CanResize;
 
     /// <summary>Moves the linked windows with the edges of the one being resized, keeping each above its minimum size.</summary>
     private void MoveLinked(ref Box rect)
@@ -534,7 +554,9 @@ public sealed class WindowSnapper
 
         foreach (var linked in _linked)
         {
-            var target = linked.Start;
+            // The edges that don't follow stay where they are now: where the resize found them, unless
+            // something else moved them since (the windows under the player follow its bottom edge).
+            var target = BoxOf(linked.Window);
             foreach (var (own, driver) in linked.Edges)
             {
                 Set(ref target, own, Get(linked.Start, own) + Get(rect, driver) - Get(start, driver));
@@ -659,7 +681,7 @@ public sealed class WindowSnapper
     /// </summary>
     private void MatchCorners(Window window)
     {
-        if (!window.CanResize || window.WindowState != WindowState.Normal)
+        if (!Resizable(window) || window.WindowState != WindowState.Normal)
         {
             return;
         }

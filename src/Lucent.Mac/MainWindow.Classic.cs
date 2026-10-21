@@ -36,8 +36,7 @@ public partial class MainWindow
             }
 
             LucentPlayer.IsVisible = true;
-            SizeToContent = SizeToContent.Height;
-            Width = 520;
+            ApplyPlayerSize();
             Topmost = false;
             SkinOtherWindows(null);
             return;
@@ -71,6 +70,7 @@ public partial class MainWindow
         _classicPanel!.IsVisible = true;
         MoveLucentButtons(toClassic: true);
         LucentPlayer.IsVisible = false;
+        ApplyPlayerSize();
         SizeToContent = SizeToContent.WidthAndHeight;
         SyncClassicPlayer();
     }
