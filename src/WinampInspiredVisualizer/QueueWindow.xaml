@@ -46,6 +46,7 @@
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnClearQueue">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource ClearIcon}" />
                     </Button>
+                    <local:LockButton Style="{StaticResource PanelToggle}" Padding="8,0" Margin="0,0,2,0" />
                     <Button Style="{StaticResource IconButton}" Width="32" Height="32" ToolTip="Hide the queue (Q)"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnHideWindow">
                         <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />

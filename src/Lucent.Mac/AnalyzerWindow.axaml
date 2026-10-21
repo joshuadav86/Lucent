@@ -29,6 +29,7 @@
                             ToolTip.Tip="The colours loudness is painted in">
                         <StackPanel x:Name="PaletteBar" Orientation="Horizontal" />
                     </Border>
+                    <w:LockButton Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,0,2,0" VerticalAlignment="Center" />
                     <Button x:Name="FullScreenButton" Theme="{StaticResource CaptionButton}" Height="36">
                         <Path x:Name="FullScreenIcon" Theme="{StaticResource CaptionIcon}" />
                     </Button>

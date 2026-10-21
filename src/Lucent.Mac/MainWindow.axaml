@@ -55,6 +55,12 @@
                                   ToolTip.Tip="Record, edit, or convert sounds" Click="OnAudioTools">
                         <Path Theme="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
                     </ToggleButton>
+                    <!-- Link: every window moves with the player when it's dragged, docked or not. Then the player's own lock. -->
+                    <ToggleButton x:Name="LinkToggle" Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
+                                  ToolTip.Tip="Link the windows: every window moves with the player when you drag it, docked or not (J)" Click="OnToggleLink">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource LinkIcon}" />
+                    </ToggleButton>
+                    <w:LockButton Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0" />
                     <ToggleButton x:Name="OptionsButton" Theme="{StaticResource PanelToggle}" Padding="7,0"
                                   ToolTip.Tip="Options: graphics, visual changes, skins, and themes (O)" Click="OnToggleOptions">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource OptionsIcon}" StrokeThickness="1.3" />
@@ -480,6 +486,8 @@
                             <MenuItem Header="Dock all windows to the player" InputGesture="D" Click="OnArrangeWindows" />
                             <MenuItem Header="Fill the screen" InputGesture="G" Click="OnFillScreen" />
                             <MenuItem Header="Shrink everything" InputGesture="K" Click="OnShrinkWindows" />
+                            <Separator />
+                            <MenuItem x:Name="LinkMenuItem" Header="Move every window with the player" InputGesture="J" ToggleType="CheckBox" Click="OnToggleLink" />
                         </ContextMenu>
                     </StackPanel.ContextMenu>
                     <ToggleButton x:Name="VisualsToggle" Theme="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"

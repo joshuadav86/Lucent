@@ -16,6 +16,9 @@ namespace Lucent.Mac.Windows;
 /// and it stretches to line that one up too. Resizing a window resizes the windows docked to it
 /// along that edge: the edge between two windows moves both, and an outside edge shared by several
 /// windows moves them all. Hold ⌘ while resizing to resize just the one window.
+/// A window that's locked (<see cref="WindowLocks"/>) stays where it is: it can't be dragged or resized,
+/// and nothing carries or resizes it along with another. With <see cref="MoveEveryWindow"/> on, dragging
+/// the player carries every window, docked to it or not.
 /// </summary>
 /// <remarks>
 /// On Windows this works on the window messages sent while Windows moves a window. On the Mac the
@@ -76,6 +79,12 @@ public sealed class WindowSnapper
     /// <summary>Raised when the user finishes moving or resizing one of the windows.</summary>
     public event EventHandler? MoveFinished;
 
+    /// <summary>
+    /// True while every window moves with the player, docked to it or not (the player's link button).
+    /// Locked windows still stay put.
+    /// </summary>
+    public Func<bool>? MoveEveryWindow { get; set; }
+
     public void Add(Window window)
     {
         if (_windows.Contains(window))
@@ -104,6 +113,13 @@ public sealed class WindowSnapper
         if (sender is not Window window || e.Handled || !e.GetCurrentPoint(window).Properties.IsLeftButtonPressed
             || e.ClickCount > 1 || window.WindowState != WindowState.Normal || FullScreen.Fills(window) || !OnCaption(e.Source as Visual, window))
         {
+            return;
+        }
+
+        if (WindowLocks.IsLocked(window))
+        {
+            // Locked in place: its title bar doesn't move it (handled, so macOS doesn't either).
+            e.Handled = true;
             return;
         }
 
@@ -241,6 +257,15 @@ public sealed class WindowSnapper
         var mainRect = BoxOf(_main);
         var group = new List<(Window Window, Box Rect)> { (_main, mainRect) };
         var others = DockableWindows().ToList();
+        var locked = others.Where(other => WindowLocks.IsLocked(other.Window)).ToList();
+        others.RemoveAll(other => WindowLocks.IsLocked(other.Window));
+        if (MoveEveryWindow?.Invoke() == true)
+        {
+            // Linked: they all go with the player, wherever they are.
+            group.AddRange(others);
+            others.Clear();
+        }
+
         for (var i = 0; i < group.Count; i++)
         {
             foreach (var other in others.ToList())
@@ -258,7 +283,8 @@ public sealed class WindowSnapper
             _carried.Add((window, rect.Left - mainRect.Left, rect.Top - mainRect.Top));
         }
 
-        foreach (var (window, _) in others)
+        // Locked windows stay where they are, docked or not.
+        foreach (var (window, _) in others.Concat(locked))
         {
             _staying.Add((window, window.Position));
         }

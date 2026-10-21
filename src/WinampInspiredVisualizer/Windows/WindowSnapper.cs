@@ -11,6 +11,9 @@ namespace WinampInspiredVisualizer.Windows;
 /// and it stretches to line that one up too. Resizing a window resizes the windows docked to it
 /// along that edge: the edge between two windows moves both, and an outside edge shared by several
 /// windows moves them all. Hold Ctrl while resizing to resize just the one window.
+/// A window that's locked (<see cref="WindowLocks"/>) stays where it is: it can't be dragged or resized,
+/// and nothing carries or resizes it along with another. With <see cref="MoveEveryWindow"/> on, dragging
+/// the player carries every window, docked to it or not.
 /// Works on the raw window rectangles (physical pixels) while Windows moves them.
 /// </summary>
 /// <remarks>
@@ -27,6 +30,10 @@ public sealed class WindowSnapper
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
     private const int WM_DPICHANGED = 0x02E0;
+    private const int WM_SYSCOMMAND = 0x0112;
+
+    private const int SC_SIZE = 0xF000;
+    private const int SC_MOVE = 0xF010;
 
     private const int WMSZ_LEFT = 1;
     private const int WMSZ_RIGHT = 2;
@@ -70,6 +77,9 @@ public sealed class WindowSnapper
     private Rect _startMargins;
     private bool _resized;
 
+    /// <summary>True while Windows is moving or resizing a locked window, which is held where it started.</summary>
+    private bool _held;
+
     /// <summary>The windows resizing along with the one being resized, found when the resize starts.</summary>
     private readonly List<Linked> _linked = new();
 
@@ -81,6 +91,12 @@ public sealed class WindowSnapper
 
     /// <summary>Raised when the user finishes moving or resizing one of the windows.</summary>
     public event EventHandler? MoveFinished;
+
+    /// <summary>
+    /// True while every window moves with the player, docked to it or not (the player's link button).
+    /// Locked windows still stay put.
+    /// </summary>
+    public Func<bool>? MoveEveryWindow { get; set; }
 
     public void Add(Window window)
     {
@@ -100,6 +116,23 @@ public sealed class WindowSnapper
     {
         switch (msg)
         {
+            // A locked window doesn't start moving or resizing at all (its title bar and edges do nothing).
+            case WM_SYSCOMMAND when (wParam.ToInt64() & 0xFFF0) is SC_MOVE or SC_SIZE && IsLocked(hwnd):
+                handled = true;
+                break;
+            case WM_ENTERSIZEMOVE when IsLocked(hwnd):
+                // Something got it moving anyway: it's held where it is until it lets go.
+                _moving = hwnd;
+                _held = true;
+                GetWindowRect(hwnd, out _startRect);
+                break;
+            case WM_MOVING or WM_SIZING when hwnd == _moving && _held:
+                Marshal.StructureToPtr(_startRect, lParam, false);
+                break;
+            case WM_EXITSIZEMOVE when hwnd == _moving && _held:
+                _moving = IntPtr.Zero;
+                _held = false;
+                break;
             case WM_ENTERSIZEMOVE:
                 _moving = hwnd;
                 _resized = false;
@@ -409,7 +442,10 @@ public sealed class WindowSnapper
         : a.Left < b.Right && b.Left < a.Right;
 
     private static bool Resizable(IntPtr handle) =>
-        HwndSource.FromHwnd(handle)?.RootVisual is Window { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip };
+        HwndSource.FromHwnd(handle)?.RootVisual is Window { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip } window
+        && !WindowLocks.IsLocked(window);
+
+    private static bool IsLocked(IntPtr handle) => HwndSource.FromHwnd(handle)?.RootVisual is Window window && WindowLocks.IsLocked(window);
 
     private static (int Width, int Height) MinSize(IntPtr handle)
     {
@@ -676,7 +712,14 @@ public sealed class WindowSnapper
     {
         GetWindowRect(main, out var mainRect);
         var group = new List<(IntPtr Handle, Rect Rect)> { (main, VisibleRect(main)) };
-        var others = DockableWindows(main).ToList();
+        var others = DockableWindows(main).Where(other => !IsLocked(other.Handle)).ToList();
+        if (MoveEveryWindow?.Invoke() == true)
+        {
+            // Linked: they all go with the player, wherever they are.
+            group.AddRange(others);
+            others.Clear();
+        }
+
         for (var i = 0; i < group.Count; i++)
         {
             foreach (var other in others.ToList())

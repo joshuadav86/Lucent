@@ -98,6 +98,10 @@
         <!-- The analyzer: a frame with a heatmap's bands and a waveform along the bottom. -->
         <Geometry x:Key="AnalyzerIcon">M3,1.5 H13 Q14.5,1.5 14.5,3 V13 Q14.5,14.5 13,14.5 H3 Q1.5,14.5 1.5,13 V3 Q1.5,1.5 3,1.5 Z M4,5 H7 M9,5 H12 M4,8 H12 M3.5,12 L5,10.5 L6.5,12.5 L8,10 L9.5,12.5 L11,10.5 L12.5,12</Geometry>
         <Geometry x:Key="PinIcon">M9.5,1.5 L14.5,6.5 M10.75,2.75 L7,6.5 L4,6.5 L9.5,12 L9.5,9 L13.25,5.25 M6.75,9.25 L1.75,14.25</Geometry>
+        <!-- A window's lock, shut while it's locked in place, and the link that moves every window with the player. -->
+        <Geometry x:Key="LockIcon">M3.5,7.5 H12.5 V14.5 H3.5 Z M5.5,7.5 V5 A2.5,2.5 0 0 1 10.5,5 V7.5 M8,10.25 V11.75</Geometry>
+        <Geometry x:Key="UnlockIcon">M3.5,7.5 H12.5 V14.5 H3.5 Z M5.5,7.5 V4.5 A2.5,2.5 0 0 1 10.5,4.5 V5 M8,10.25 V11.75</Geometry>
+        <Geometry x:Key="LinkIcon">M6.5,9.5 L9.5,6.5 M8.2,4.6 L9.6,3.2 A2.6,2.6 0 0 1 13.3,6.9 L11.9,8.3 M7.8,11.4 L6.4,12.8 A2.6,2.6 0 0 1 2.7,9.1 L4.1,7.7</Geometry>
         <Geometry x:Key="FullscreenIcon">M1,5 V1 H5 M11,1 H15 V5 M15,11 V15 H11 M5,15 H1 V11</Geometry>
         <Geometry x:Key="SpeakerIcon">M1,5 H4 L8,1 V15 L4,11 H1 Z</Geometry>
         <Geometry x:Key="SpeakerWavesIcon">M11,5 Q13,8 11,11 M13.5,2.5 Q17,8 13.5,13.5</Geometry>

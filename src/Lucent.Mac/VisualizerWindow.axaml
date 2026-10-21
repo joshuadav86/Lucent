@@ -29,6 +29,7 @@
                                Foreground="#E0A84F" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                    <w:LockButton Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,3,2,0" />
                     <Button x:Name="MaximizeButton" Theme="{StaticResource CaptionButton}" Height="34" Width="40" ToolTip.Tip="Maximize"
                             Click="OnMaximizeRestore">
                         <Path x:Name="MaximizeIcon" Theme="{StaticResource CaptionIcon}" Data="{StaticResource MaximizeIcon}" />

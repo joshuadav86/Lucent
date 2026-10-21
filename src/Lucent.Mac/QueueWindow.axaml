@@ -37,6 +37,7 @@
                     <Button Theme="{StaticResource IconButton}" x:Name="ClearQueueButton" Width="32" Height="32" ToolTip.Tip="Clear the queue" Click="OnClearQueue">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ClearIcon}" />
                     </Button>
+                    <w:LockButton Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,0,2,0" />
                     <Button Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Hide the queue (Q)" Click="OnHideWindow">
                         <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
                     </Button>

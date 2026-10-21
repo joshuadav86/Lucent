@@ -1,6 +1,7 @@
 <Window x:Class="WinampInspiredVisualizer.ArtworkWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:WinampInspiredVisualizer.Windows"
         Title="Artwork - Lucent"
         Icon="Assets/Lucent.ico"
         Width="420" Height="456" MinWidth="200" MinHeight="236"
@@ -26,6 +27,7 @@
         <!-- Title bar: what's playing, keep on top, close. -->
         <DockPanel Grid.Row="0">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <w:LockButton Style="{StaticResource PanelToggle}" Padding="8,0" Margin="0,4,2,0" />
                 <ToggleButton x:Name="OnTopToggle" Style="{StaticResource PanelToggle}" Padding="8,0" Margin="0,4,2,0"
                               ToolTip="Keep this window on top of other programs" Click="OnToggleOnTop"
                               WindowChrome.IsHitTestVisibleInChrome="True">
