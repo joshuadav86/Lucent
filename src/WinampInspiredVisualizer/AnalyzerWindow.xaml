@@ -1,6 +1,7 @@
 <Window x:Class="WinampInspiredVisualizer.AnalyzerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:WinampInspiredVisualizer.Windows"
         Title="Analyzer - Lucent"
         Icon="Assets/Lucent.ico"
         Width="760" Height="460" MinWidth="440" MinHeight="220"
@@ -42,6 +43,7 @@
                         ToolTip="The colours loudness is painted in">
                     <StackPanel x:Name="PaletteBar" Orientation="Horizontal" />
                 </Border>
+                <w:LockButton Style="{StaticResource PanelToggle}" Padding="8,0" Margin="0,0,2,0" VerticalAlignment="Center" />
                 <Button x:Name="FullScreenButton" Style="{StaticResource CaptionButton}" Height="36"
                         WindowChrome.IsHitTestVisibleInChrome="True">
                     <Path x:Name="FullScreenIcon" Style="{StaticResource CaptionIcon}" />

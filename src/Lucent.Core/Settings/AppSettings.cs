@@ -63,6 +63,12 @@ public sealed class AppSettings
     /// <summary>Whether the equalizer is open, docked under the player like Winamp's.</summary>
     public bool ShowEqualizer { get; set; } = true;
 
+    /// <summary>Whether the analyzer was open when Lucent closed, so it opens again with it.</summary>
+    public bool ShowAnalyzer { get; set; }
+
+    /// <summary>Whether the artwork window was open when Lucent closed, so it opens again with it.</summary>
+    public bool ShowArtwork { get; set; }
+
     // ---- Player ----
 
     public bool Shuffle { get; set; }
@@ -103,8 +109,20 @@ public sealed class AppSettings
     /// <summary>Send a report to Lucent's developer when Lucent crashes, with nothing personal in it.</summary>
     public bool SendCrashReports { get; set; } = true;
 
-    /// <summary>Where each window was last left, by name ("Player", "Visuals", "Queue", "Library").</summary>
+    /// <summary>
+    /// Where each window was last left, by name ("Player", "Visuals", "Queue", "Library", "Equalizer",
+    /// "Analyzer", "Artwork"). Lucent opens them there again next time.
+    /// </summary>
     public Dictionary<string, WindowBounds> Windows { get; set; } = new();
+
+    /// <summary>
+    /// The windows locked in place, by the same names: they can't be moved or resized, don't move with
+    /// the player, and stay where they are when the windows are docked or laid out again.
+    /// </summary>
+    public List<string> LockedWindows { get; set; } = new();
+
+    /// <summary>Every window moves with the player when it's dragged, docked to it or not (J).</summary>
+    public bool LinkWindows { get; set; }
 
     // ---- Graphics ----
 
@@ -454,4 +472,11 @@ public sealed class WindowBounds
     public double Width { get; set; }
 
     public double Height { get; set; }
+
+    /// <summary>
+    /// Whether it was docked to the player (or to a window docked to it) when it was left. Opened again
+    /// later, a docked window docks to the player wherever the player is by then; one left on its own
+    /// goes back where it was.
+    /// </summary>
+    public bool Docked { get; set; }
 }

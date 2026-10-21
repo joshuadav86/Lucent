@@ -192,6 +192,7 @@ public partial class MainWindow : Window
         SeekBar.AddHandler(Thumb.DragStartedEvent, (_, _) => OnSeekDragStarted());
         SeekBar.AddHandler(Thumb.DragCompletedEvent, (_, _) => OnSeekDragCompleted());
 
+        SetUpWindowPlaces();
         if (Saved("Player") is { } placement)
         {
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -302,24 +303,35 @@ public partial class MainWindow : Window
             ShowTool(_visuals);
         }
 
-        // The queue and library always open docked to the player (they keep the size they had).
+        // The queue and library open where they were left, or docked to the player the first time
+        // (they keep the size they had).
         if (_settings.ShowQueue)
         {
-            DockToPlayer(_queue);
+            if (Saved(_queue.PlacementName) is null)
+            {
+                DockToPlayer(_queue);
+            }
+
             ShowTool(_queue);
         }
 
         if (_settings.ShowLibrary)
         {
-            DockToPlayer(_libraryWindow);
+            if (Saved(_libraryWindow.PlacementName) is null)
+            {
+                DockToPlayer(_libraryWindow);
+            }
+
             ShowTool(_libraryWindow);
         }
 
-        // The equalizer opens under the player, moving the queue down to make room.
+        // The equalizer opens where it was left (the first time, under the player, moving the queue down to make room).
         if (!firstTime && _settings.ShowEqualizer)
         {
             OpenEqualizer();
         }
+
+        ReopenSmallWindows();
 
         _openingWindows = false;
         UpdateWindowToggles();
@@ -415,8 +427,9 @@ public partial class MainWindow : Window
 
         var column = new List<Window>();
         var edge = Top + e.PreviousSize.Height;
+        // A locked window stays put, and so do the ones under it.
         while (candidates.FirstOrDefault(window => !column.Contains(window) && window.WindowState == WindowState.Normal
-                   && Math.Abs(window.Top() - edge) < 2
+                   && !WindowLocks.IsLocked(window) && Math.Abs(window.Top() - edge) < 2
                    && window.Left() < Left + ActualWidth - 2 && window.Left() + Placement.SizeOf(window).Width > Left + 2) is { } next)
         {
             column.Add(next);
@@ -464,10 +477,16 @@ public partial class MainWindow : Window
         var groupWidth = libraryWidth + playerWidth + visualsWidth;
         var left = work.Left + Math.Max(0, (work.Width - groupWidth) / 2);
         var top = work.Top + Math.Max(0, (work.Height - stackHeight) / 2);
+        if (WindowLocks.Holds(this))
+        {
+            // The player's locked where it is: the others are laid out around it there.
+            left = Left - libraryWidth;
+            top = Top;
+        }
 
         // Placed by hand from here on, so the player isn't centred again when it settles its size.
         WindowStartupLocation = WindowStartupLocation.Manual;
-        this.MoveTo(left + libraryWidth, top);
+        MovePlayer(left + libraryWidth, top);
         if (equalizer is not null)
         {
             Place(equalizer, Left, top + playerHeight, playerWidth, equalizerHeight);
@@ -481,8 +500,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private static void Place(Window window, double left, double top, double width, double height) =>
-        Placement.Place(window, left, top, width, height);
+    /// <summary>Puts a window at that place and size, unless it's locked where it is.</summary>
+    private static void Place(Window window, double left, double top, double width, double height)
+    {
+        if (!WindowLocks.Holds(window))
+        {
+            Placement.Place(window, left, top, width, height);
+        }
+    }
 
     private void RestorePlacement(ToolWindow window)
     {
@@ -529,6 +554,11 @@ public partial class MainWindow : Window
     /// </summary>
     private void DockToPlayer(ToolWindow window)
     {
+        if (WindowLocks.Holds(window))
+        {
+            return;
+        }
+
         var area = Placement.WorkArea(this);
         window.WindowStartupLocation = WindowStartupLocation.Manual;
         window.WindowState = WindowState.Normal;
@@ -597,7 +627,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void LiftDocked(double distance)
     {
-        if (WindowState != WindowState.Normal)
+        if (WindowState != WindowState.Normal || WindowLocks.IsLocked(this))
         {
             return;
         }
@@ -612,7 +642,8 @@ public partial class MainWindow : Window
         {
             foreach (var other in others.ToList())
             {
-                if (Touches(Placement.BoundsOf(group[i]), Placement.BoundsOf(other)))
+                // A locked window stays where it is, and goes back there once the player has moved.
+                if (!WindowLocks.IsLocked(other) && Touches(Placement.BoundsOf(group[i]), Placement.BoundsOf(other)))
                 {
                     group.Add(other);
                     others.Remove(other);
@@ -650,6 +681,12 @@ public partial class MainWindow : Window
     public void DockNewWindow(Window window)
     {
         _snapper.Add(window);
+        RememberWhenClosed(window);
+        if (OpenWhereLeft(window))
+        {
+            return;
+        }
+
         DockToGroup(window, Array.Empty<Window>());
     }
 
@@ -767,7 +804,8 @@ public partial class MainWindow : Window
     {
         var moving = new[] { AnalyzerWindow.Current, ArtworkWindow.Current }
             .OfType<Window>()
-            .Where(window => window.IsVisible && window.WindowState == WindowState.Normal)
+            // A locked one stays where it is.
+            .Where(window => window.IsVisible && window.WindowState == WindowState.Normal && !WindowLocks.IsLocked(window))
             .ToList();
         for (var i = 0; i < moving.Count; i++)
         {
@@ -798,7 +836,12 @@ public partial class MainWindow : Window
                 : Math.Max(_libraryWindow.MinWidth, room);
         }
 
-        this.MoveTo(area.Left + libraryWidth, area.Top);
+        // A locked player stays where it is, and the others fill the screen around it.
+        if (!WindowLocks.IsLocked(this))
+        {
+            MovePlayer(area.Left + libraryWidth, area.Top);
+        }
+
         if (library)
         {
             Place(_libraryWindow, area.Left, area.Top, libraryWidth, area.Height);
@@ -916,25 +959,30 @@ public partial class MainWindow : Window
 
     private void SavePlacements()
     {
-        Remember("Player", this);
-        if (OpenEqualizerWindow is { } equalizer)
-        {
-            Remember("Equalizer", equalizer);
-        }
-
+        var docked = DockedGroup();
+        Remember("Player", this, docked);
         foreach (var window in ToolWindows)
         {
             // While fullscreen, keep the size the visuals will go back to.
             if (window != _visuals || !_visuals.IsFullscreen)
             {
-                Remember(window.PlacementName, window);
+                Remember(window.PlacementName, window, docked);
+            }
+        }
+
+        foreach (var window in SmallWindows)
+        {
+            if (WindowLocks.NameOf(window) is { } name)
+            {
+                Remember(name, window, docked);
             }
         }
 
         _settings.Save();
     }
 
-    private void Remember(string name, Window window)
+    /// <summary>Remembers where a window is, and whether it's docked to the player (it touches one of the <paramref name="docked"/> windows).</summary>
+    private void Remember(string name, Window window, List<Rect> docked)
     {
         // Only a window that has been shown has a place of its own; a minimized or fullscreen one keeps
         // the place it had before.
@@ -946,7 +994,14 @@ public partial class MainWindow : Window
         var bounds = Placement.BoundsOf(window);
         if (bounds.Width > 0 && bounds.Height > 0)
         {
-            _settings.Windows[name] = new WindowBounds { Left = bounds.Left, Top = bounds.Top, Width = bounds.Width, Height = bounds.Height };
+            _settings.Windows[name] = new WindowBounds
+            {
+                Left = bounds.Left,
+                Top = bounds.Top,
+                Width = bounds.Width,
+                Height = bounds.Height,
+                Docked = window != this && docked.Any(rect => Touches(rect, bounds)),
+            };
         }
     }
 
@@ -971,7 +1026,15 @@ public partial class MainWindow : Window
 
     private void ToggleAnalyzer() => AnalyzerToggle.IsChecked = AnalyzerWindow.Toggle(this, _player, _settings);
 
-    private void OnAnalyzerOpenChanged(object? sender, EventArgs e) => AnalyzerToggle.IsChecked = AnalyzerWindow.IsOpen;
+    private void OnAnalyzerOpenChanged(object? sender, EventArgs e)
+    {
+        AnalyzerToggle.IsChecked = AnalyzerWindow.IsOpen;
+        // Closing Lucent closes the analyzer too; that shouldn't count as switching it off.
+        if (!IsShuttingDown)
+        {
+            _settings.ShowAnalyzer = AnalyzerWindow.IsOpen;
+        }
+    }
 
     /// <summary>The equalizer window, if it's open.</summary>
     private static Window? OpenEqualizerWindow => EqualizerWindow.Current is { IsVisible: true } equalizer ? equalizer : null;
@@ -1024,7 +1087,8 @@ public partial class MainWindow : Window
         var height = bottom - Top;
         foreach (var window in new ToolWindow[] { _visuals, _libraryWindow })
         {
-            if (!window.IsVisible || window.WindowState != WindowState.Normal || window == _visuals && _visuals.IsFullscreen)
+            if (!window.IsVisible || window.WindowState != WindowState.Normal || window == _visuals && _visuals.IsFullscreen
+                || WindowLocks.IsLocked(window))
             {
                 continue;
             }
@@ -1059,13 +1123,12 @@ public partial class MainWindow : Window
             }
         };
 
-        // Opening with the player, it goes back where it was when Lucent last closed.
-        if (_openingWindows && Saved("Equalizer") is { } placement)
+        // It goes back where it was left (opening with the player, where it was when Lucent last closed).
+        if (OpenWhereLeft(equalizer))
         {
             _snapper.Add(equalizer);
-            Place(equalizer, placement.Left, placement.Top, placement.Width, placement.Height);
-            // macOS can move a window as it first appears; put it back where it belongs.
-            equalizer.Opened += (_, _) => equalizer.MoveTo(placement.Left, placement.Top);
+            RememberWhenClosed(equalizer);
+            AlignBesidePlayerSoon();
             return;
         }
 
@@ -1088,9 +1151,10 @@ public partial class MainWindow : Window
         }
 
         _snapper.Add(equalizer);
+        RememberWhenClosed(equalizer);
         Place(equalizer, Left, playerBottom, ActualWidth, height);
         AlignBesidePlayerSoon();
-        if (!_queue.IsVisible || Math.Abs(_queue.Left() - Left) >= 2 || Math.Abs(_queue.Top() - playerBottom) >= 2)
+        if (!_queue.IsVisible || WindowLocks.IsLocked(_queue) || Math.Abs(_queue.Left() - Left) >= 2 || Math.Abs(_queue.Top() - playerBottom) >= 2)
         {
             return;
         }
@@ -1106,7 +1170,8 @@ public partial class MainWindow : Window
         {
             foreach (var window in new Window[] { _visuals, _libraryWindow })
             {
-                if (window.IsVisible && window.WindowState == WindowState.Normal && Math.Abs(window.Top() + window.ActualHeight() - bottom) < 2)
+                if (window.IsVisible && window.WindowState == WindowState.Normal && !WindowLocks.IsLocked(window)
+                    && Math.Abs(window.Top() + window.ActualHeight() - bottom) < 2)
                 {
                     window.Height = newBottom - window.Top();
                 }
@@ -1121,7 +1186,7 @@ public partial class MainWindow : Window
         var top = equalizer.Top();
         var bottom = top + equalizer.ActualHeight();
         if (IsShuttingDown || Math.Abs(top - (Top + ActualHeight)) >= 2 || Math.Abs(equalizer.Left() - Left) >= 2
-            || !_queue.IsVisible || Math.Abs(_queue.Left() - Left) >= 2 || Math.Abs(_queue.Top() - bottom) >= 2)
+            || !_queue.IsVisible || WindowLocks.IsLocked(_queue) || Math.Abs(_queue.Left() - Left) >= 2 || Math.Abs(_queue.Top() - bottom) >= 2)
         {
             return;
         }
@@ -1152,8 +1217,11 @@ public partial class MainWindow : Window
 
         if (window != _visuals)
         {
-            // The queue and library always open docked to the player, wherever they were left.
-            DockToPlayer(window);
+            // The queue and library open docked to the player, unless they were left somewhere on their own.
+            if (!OpenWhereLeft(window))
+            {
+                DockToPlayer(window);
+            }
         }
         else if (!IsOnScreen(window))
         {
@@ -2109,6 +2177,9 @@ public partial class MainWindow : Window
                 break;
             case Key.L:
                 ToggleWindow(_libraryWindow);
+                break;
+            case Key.J:
+                ToggleLink();
                 break;
             case Key.S:
                 ToggleShuffle();

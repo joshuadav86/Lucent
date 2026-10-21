@@ -166,6 +166,8 @@ public partial class MainWindow
         window.Add(Item("Dock All Windows to the Player", ArrangeWindows));
         window.Add(Item("Fill the Screen", FillScreen));
         window.Add(Item("Shrink Everything", ShrinkWindows));
+        var link = Check("Move Every Window with the Player", ToggleLink);
+        window.Add(link);
         window.Add(new NativeMenuItemSeparator());
         window.Add(Item("Minimize", () => WindowState = WindowState.Minimized, new KeyGesture(Key.M, KeyModifiers.Meta)));
         window.Opening += (_, _) =>
@@ -176,6 +178,7 @@ public partial class MainWindow
             showArt.IsChecked = ArtworkWindow.IsOpen;
             showEqualizer.IsChecked = OpenEqualizerWindow is not null;
             showAnalyzer.IsChecked = AnalyzerWindow.IsOpen;
+            link.IsChecked = _settings.LinkWindows;
         };
         bar.Add(new NativeMenuItem("Window") { Menu = window });
 

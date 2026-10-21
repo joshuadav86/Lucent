@@ -19,7 +19,15 @@ public partial class MainWindow
         }
     }
 
-    private void OnArtworkOpenChanged(object? sender, EventArgs e) => ArtToggle.IsChecked = ArtworkWindow.IsOpen;
+    private void OnArtworkOpenChanged(object? sender, EventArgs e)
+    {
+        ArtToggle.IsChecked = ArtworkWindow.IsOpen;
+        // Closing Lucent closes the artwork too; that shouldn't count as switching it off.
+        if (!IsShuttingDown)
+        {
+            _settings.ShowArtwork = ArtworkWindow.IsOpen;
+        }
+    }
 
     private void OnNowPlayingEditInfo(object sender, RoutedEventArgs e)
     {
