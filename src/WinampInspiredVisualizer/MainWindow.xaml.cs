@@ -578,8 +578,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Opens a small window (the artwork or the equalizer) docked to the outside of the player and
-    /// the windows docked to it, in the first spot where it fits on the screen without covering
+    /// Opens a small window (the artwork, the equalizer or the analyzer) docked to the outside of the
+    /// player and the windows docked to it, in the first spot where it fits on the screen without covering
     /// anything, shrinking it a little if it has to. It then snaps and moves with them like the rest.
     /// </summary>
     public void DockNewWindow(Window window)
@@ -591,10 +591,17 @@ public partial class MainWindow : Window
             return;
         }
 
+        DockToGroup(window, Array.Empty<Window>());
+    }
+
+    // Finds the window a free spot against the player's group. The windows in `moving` are about to be
+    // docked too, so where they are now doesn't count as taken.
+    private void DockToGroup(Window window, IReadOnlyCollection<Window> moving)
+    {
         window.WindowStartupLocation = WindowStartupLocation.Manual;
         var area = ScreenArea.Of(this);
         var shown = Application.Current.Windows.Cast<Window>()
-            .Where(other => other != window && other.IsVisible && other.WindowState == WindowState.Normal
+            .Where(other => other != window && !moving.Contains(other) && other.IsVisible && other.WindowState == WindowState.Normal
                 && (other == this || other.Owner == this) && !(other == _visuals && _visuals.IsFullscreen))
             .Select(other => new Rect(other.Left, other.Top, other.ActualWidth, other.ActualHeight))
             .ToList();
@@ -697,6 +704,22 @@ public partial class MainWindow : Window
         RestoreAllWindows();
         ArrangeFirstTime();
         SavePlacements();
+        // Once the arranged windows have their new sizes, so the spots beside them are worked out from where they are now.
+        Dispatcher.InvokeAsync(RedockSmallWindows, DispatcherPriority.Background);
+    }
+
+    /// <summary>Docks the analyzer and the artwork back against the player's group, wherever they'd been moved to.</summary>
+    private void RedockSmallWindows()
+    {
+        var moving = new[] { AnalyzerWindow.Current, ArtworkWindow.Current }
+            .OfType<Window>()
+            // A locked one stays where it is.
+            .Where(window => window.IsVisible && window.WindowState == WindowState.Normal && !WindowLocks.IsLocked(window))
+            .ToList();
+        for (var i = 0; i < moving.Count; i++)
+        {
+            DockToGroup(moving[i], moving.Skip(i + 1).ToList());
+        }
     }
 
     private void OnFillScreen(object sender, RoutedEventArgs e) => FillScreen();
