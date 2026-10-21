@@ -12,7 +12,7 @@ namespace WinampInspiredVisualizer;
 
 /// <summary>
 /// The radio browser, laid out like the plugin browser: typing finds stations by name, genre, or country; the left
-/// column picks the featured networks (SomaFM, FRISKY, Radio Paradise, Nightride FM), the favorites, the stations
+/// column picks the featured networks (SomaFM, FRISKY, Radio Paradise, Nightride FM, The Lot Radio), the favorites, the stations
 /// played lately, every station, or one genre; the sort and the quality and country filters sit beside the search.
 /// The star beside a station makes it a favorite, and clicking a station plays it.
 /// </summary>
