@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using WinampInspiredVisualizer.Settings;
 
 namespace Lucent.Mac.Interop;
 
@@ -7,6 +9,12 @@ namespace Lucent.Mac.Interop;
 /// macOS encrypts it with the user's keychain and only lets the app that saved it read it back
 /// without asking (the Mac's equivalent of Windows' per-user DPAPI protection).
 /// </summary>
+/// <remarks>
+/// "The app that saved it" is the app's signing identity. A Developer ID signature names the team, which
+/// every update keeps; an ad-hoc signature (every Lucent before 2026-10-22) names that one build, so each
+/// update was a stranger to the items the last one saved and macOS asked for the login password. Read
+/// re-saves an item once under the current team, so a single Allow is the last time it asks.
+/// </remarks>
 internal static partial class Keychain
 {
     private const string Security = "/System/Library/Frameworks/Security.framework/Security";
@@ -18,8 +26,27 @@ internal static partial class Keychain
 
     private static readonly Lazy<Symbols> Loaded = new(() => new Symbols());
 
-    /// <summary>The saved secret, or null when there's none. Throws <see cref="KeychainException"/> if it can't be read.</summary>
-    public static byte[]? Read(string service, string account)
+    private static readonly object OwnersGate = new();
+    private static readonly Lazy<string?> Team = new(ReadOwnTeam);
+
+    private static string OwnersPath => Path.Combine(AppDataFolder.Path, "keychain-owners.txt");
+
+    /// <summary>
+    /// The saved secret, or null when there's none. Throws <see cref="KeychainException"/> if it can't be read.
+    /// The first read by a Developer ID signed Lucent saves the item again, so it belongs to the team from then on.
+    /// </summary>
+    public static byte[]? Read(string service, string account, string label)
+    {
+        var secret = ReadItem(service, account);
+        if (secret is not null)
+        {
+            Adopt(service, account, label, secret);
+        }
+
+        return secret;
+    }
+
+    private static byte[]? ReadItem(string service, string account)
     {
         var symbols = Loaded.Value;
         using var query = new CFDictionaryBuilder(symbols)
@@ -66,6 +93,76 @@ internal static partial class Keychain
         if (status != 0)
         {
             throw new KeychainException(status);
+        }
+    }
+
+    /// <summary>Saves the item again under this app's team if it hasn't been yet (see the remarks above).</summary>
+    private static void Adopt(string service, string account, string label, byte[] secret)
+    {
+        if (Team.Value is not { } team)
+        {
+            // Ad hoc (a PR or local build): re-saving wouldn't outlive the next build anyway.
+            return;
+        }
+
+        var entry = $"{service}\t{team}";
+        lock (OwnersGate)
+        {
+            try
+            {
+                if (File.Exists(OwnersPath) && File.ReadAllLines(OwnersPath).Contains(entry))
+                {
+                    return;
+                }
+
+                Write(service, account, label, secret);
+                Directory.CreateDirectory(Path.GetDirectoryName(OwnersPath)!);
+                File.AppendAllLines(OwnersPath, [entry]);
+            }
+            catch (Exception ex) when (ex is KeychainException or IOException or UnauthorizedAccessException)
+            {
+                // Tried again next time; the secret that was read is still good.
+            }
+        }
+    }
+
+    /// <summary>The team ID Lucent.app is signed with, or null when it's signed ad hoc (or not in a bundle).</summary>
+    private static string? ReadOwnTeam()
+    {
+        try
+        {
+            // AppContext.BaseDirectory is Lucent.app/Contents/MacOS/.
+            var bundle = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", ".."));
+            if (!bundle.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            var start = new ProcessStartInfo("/usr/bin/codesign")
+            {
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            start.ArgumentList.Add("-dv");
+            start.ArgumentList.Add("--verbose=2");
+            start.ArgumentList.Add(bundle);
+            using var codesign = Process.Start(start);
+            if (codesign is null)
+            {
+                return null;
+            }
+
+            // codesign -d writes its details to stderr, one "Key=value" per line.
+            var details = codesign.StandardError.ReadToEnd();
+            codesign.WaitForExit(5000);
+            var line = details.Split('\n').FirstOrDefault(l => l.StartsWith("TeamIdentifier=", StringComparison.Ordinal));
+            var team = line?["TeamIdentifier=".Length..].Trim();
+            return string.IsNullOrEmpty(team) || team == "not set" ? null : team;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
+        {
+            return null;
         }
     }
 

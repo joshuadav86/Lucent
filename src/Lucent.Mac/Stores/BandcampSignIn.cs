@@ -87,7 +87,7 @@ public static class BandcampSignIn
 
         try
         {
-            return Keychain.Read(Service, Account) is { } bytes ? Encoding.UTF8.GetString(bytes) : null;
+            return Keychain.Read(Service, Account, Label) is { } bytes ? Encoding.UTF8.GetString(bytes) : null;
         }
         catch (Exception ex) when (ex is KeychainException or DllNotFoundException or EntryPointNotFoundException)
         {

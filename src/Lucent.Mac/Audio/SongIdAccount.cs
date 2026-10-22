@@ -24,7 +24,7 @@ public static class SongIdAccount
 
         try
         {
-            return Keychain.Read(Service, Account) is { } bytes ? AcrCloudKey.FromText(Encoding.UTF8.GetString(bytes)) : null;
+            return Keychain.Read(Service, Account, Label) is { } bytes ? AcrCloudKey.FromText(Encoding.UTF8.GetString(bytes)) : null;
         }
         catch (Exception ex) when (ex is KeychainException or DllNotFoundException or EntryPointNotFoundException)
         {
