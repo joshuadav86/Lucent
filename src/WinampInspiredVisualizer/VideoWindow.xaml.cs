@@ -256,6 +256,7 @@ public partial class VideoWindow : Window
         var onTop = Item("Keep on top", null, () => Topmost = !Topmost);
         onTop.IsChecked = Topmost;
         menu.Items.Add(onTop);
+        LucentFullScreen.AddTo(menu);
         menu.IsOpen = true;
     }
 

@@ -293,6 +293,7 @@ public partial class VideoWindow : Window
         onTop.ToggleType = MenuItemToggleType.CheckBox;
         onTop.IsChecked = Topmost;
         menu.Items.Add(onTop);
+        LucentFullScreen.AddTo(menu);
         menu.Open(Picture);
     }
 
