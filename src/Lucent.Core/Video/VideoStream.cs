@@ -43,6 +43,15 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
     /// <summary>How much decoded sound is held, at most. libVLC waits for room when it gets ahead.</summary>
     private const double HeldSeconds = 2;
 
+    /// <summary>
+    /// How much a station's sound is held, at most: more than a file's, so a late piece of an HLS stream (or a slow
+    /// moment on the network) is played through rather than heard as a gap.
+    /// </summary>
+    private const double StationHeldSeconds = 10;
+
+    /// <summary>How far ahead libVLC reads a station before it starts playing, in milliseconds (its default is 1000).</summary>
+    private const int StationCachingMs = 3000;
+
     /// <summary>How much sound a station with no picture holds before it plays, and again after it ran dry.</summary>
     private const double StationPrebufferSeconds = 1;
 
@@ -104,6 +113,9 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
 
         if (live)
         {
+            // A few seconds read ahead (an HLS station has them ready at once), so the sound has some in hand from the start.
+            _media.AddOption($":network-caching={StationCachingMs}");
+
             // A station's playlist (.pls, .m3u) lists its stream, which is what's played.
             if (IsPlaylist(pathOrAddress))
             {
@@ -117,6 +129,8 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
                     {
                         _media.AddOption(":http-user-agent=" + userAgent);
                     }
+
+                    _media.AddOption($":network-caching={StationCachingMs}");
                 }
             }
         }
@@ -140,7 +154,7 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
         _hasPicture = tracks.Any(track => track.TrackType == TrackType.Video);
         _rate = audio.Rate is >= 8000 and <= 384000 ? (int)audio.Rate : DefaultRate;
         _format = WaveFormat.CreateIeeeFloatWaveFormat(_rate, Channels);
-        _heldFrames = (int)(_rate * HeldSeconds);
+        _heldFrames = (int)(_rate * (live ? StationHeldSeconds : HeldSeconds));
         _lengthMs = Math.Max(0, _media.Duration);
         _pictureSize = VideoFrames.SizeFor((int)video.Width, (int)video.Height, video.SarNum, video.SarDen);
         // Pictures taken with the phone on its side are stood up by libVLC, which swaps their width and height.
@@ -279,7 +293,8 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
 
     public override bool CanSeek => !IsLive;
 
-    public override long Length => Interlocked.Read(ref _lengthMs) * _format.AverageBytesPerSecond / 1000 / _format.BlockAlign * _format.BlockAlign;
+    /// <summary>The video's length, or 0 for a station, which has no end (libVLC gives an HLS station's window of the broadcast as its length).</summary>
+    public override long Length => IsLive ? 0 : Interlocked.Read(ref _lengthMs) * _format.AverageBytesPerSecond / 1000 / _format.BlockAlign * _format.BlockAlign;
 
     public override long Position
     {

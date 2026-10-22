@@ -21,6 +21,15 @@ public partial class MainWindow
     private IReadOnlyList<RadioStation> _radioList = Array.Empty<RadioStation>();
     private string? _radioProblem;
     private byte[]? _radioLogo;
+    private StationArt? _stationArt;
+    private string? _songCoverFor;
+    private byte[]? _songCover;
+    private CancellationTokenSource? _songCoverLookup;
+    private LiveShows? _liveShows;
+    private LiveShow? _liveShow;
+    private byte[]? _liveShowPicture;
+    private DateTime _liveShowCheckedAt;
+    private bool _liveShowChecking;
     private string? _shownStationArtwork;
     private Track? _stationTrack;
 
@@ -63,6 +72,9 @@ public partial class MainWindow
         ForgetUpNext();
         if (_station?.Id != station.Id)
         {
+            _liveShow = null;
+            _liveShowPicture = null;
+            _liveShowCheckedAt = default;
             _radioLogo = null;
             LoadStationLogo(station);
         }
@@ -259,9 +271,33 @@ public partial class MainWindow
         _radioProblem = null;
         _radioLogo = null;
         _shownStationArtwork = null;
+        _songCoverLookup?.Cancel();
+        _songCoverFor = null;
+        _songCover = null;
+        _liveShow = null;
+        _liveShowPicture = null;
+        _liveShowCheckedAt = default;
         _stationTrack = null;
         StationChanged?.Invoke(this, EventArgs.Empty);
         UpdateTrackFavoriteButton();
+    }
+
+    /// <summary>Opens the page where listeners support the station (a donation page, say) in the browser. Lucent takes no payments itself.</summary>
+    public void OpenStationSupport(RadioStation station)
+    {
+        if (FeaturedStations.SupportPage(station) is not { } page)
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(page) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ShowError("Couldn't open the station's support page.", ex);
+        }
     }
 
     public void SetStationFavorite(RadioStation station, bool favorite)
@@ -307,7 +343,9 @@ public partial class MainWindow
             return;
         }
 
-        var song = _radioStream?.NowPlaying;
+        // The song the stream says is on, or else, on a live DJ station, the show that's on.
+        var streamSong = _radioStream?.NowPlaying;
+        var song = streamSong ?? _liveShow?.Title;
         var marquee = _tuning is not null ? $"Tuning in to {station.Name}…" : song ?? station.Name;
         // Set only when it changes, so a long title keeps scrolling smoothly.
         if (NowPlayingText.Text != marquee)
@@ -319,13 +357,18 @@ public partial class MainWindow
         TrackDetails.Text = StationDetails(station);
         ToolTip.SetTip(TrackDetails, _radioProblem ?? $"{station.Name}, live: {station.StreamUrl}");
 
-        var artwork = $"{station.Id}\n{song}\n{_radioLogo?.Length}";
+        if (streamSong != _songCoverFor)
+        {
+            LookUpSongCover(station, streamSong);
+        }
+
+        var artwork = $"{station.Id}\n{song}\n{_radioLogo?.Length}\n{_songCover?.Length}\n{_liveShowPicture?.Length}";
         if (artwork != _shownStationArtwork)
         {
             _shownStationArtwork = artwork;
             var (artist, title) = SplitSong(song);
             ArtworkWindow.ShowRemote(new RemoteTrack(station.Id, title ?? station.Name, artist ?? string.Empty, station.Name, TimeSpan.Zero),
-                _radioLogo);
+                _songCover ?? _liveShowPicture ?? _radioLogo);
         }
     }
 
@@ -358,6 +401,8 @@ public partial class MainWindow
             {
                 TrackDetails.Text = details;
             }
+
+            CheckLiveShow(station);
         }
     }
 
@@ -369,7 +414,7 @@ public partial class MainWindow
             return null;
         }
 
-        var (artist, title) = SplitSong(_radioStream?.NowPlaying);
+        var (artist, title) = SplitSong(_radioStream?.NowPlaying ?? _liveShow?.Title);
         return _stationTrack ??= Track.ForStation(station.StreamUrl, title ?? station.Name, artist ?? string.Empty, station.Name, station.Bitrate);
     }
 
@@ -385,17 +430,28 @@ public partial class MainWindow
         return dash > 0 ? (song[..dash].Trim(), song[(dash + 3)..].Trim()) : (null, song);
     }
 
+    /// <summary>Song covers and station logos, for the artwork window.</summary>
+    private StationArt StationArt => _stationArt ??= new StationArt(StreamingHttp);
+
+    /// <summary>
+    /// Shows the station again in the artwork window, for when it opens while a station is on (it opens showing
+    /// the queue's song otherwise).
+    /// </summary>
+    private void ShowStationArtwork()
+    {
+        if (_station is not null)
+        {
+            _shownStationArtwork = null;
+            ShowStation();
+        }
+    }
+
     private async void LoadStationLogo(RadioStation station)
     {
-        if (station.Logo is not { } logo || !RadioGuide.IsStreamAddress(logo))
-        {
-            return;
-        }
-
         try
         {
-            var bytes = await StreamingHttp.GetByteArrayAsync(logo);
-            if (_station?.Id == station.Id && bytes.Length is > 0 and < 4_000_000)
+            var bytes = await StationArt.LogoAsync(station, CancellationToken.None);
+            if (_station?.Id == station.Id && bytes is not null)
             {
                 _radioLogo = bytes;
                 ShowStation();
@@ -404,6 +460,83 @@ public partial class MainWindow
         catch (Exception)
         {
             // No logo, that's all.
+        }
+    }
+
+    /// <summary>Looks for the cover of the song the station says is on; the station's logo shows meanwhile, and if none is found.</summary>
+    private async void LookUpSongCover(RadioStation station, string? song)
+    {
+        _songCoverLookup?.Cancel();
+        _songCoverFor = song;
+        _songCover = null;
+        if (song is null)
+        {
+            return;
+        }
+
+        var lookup = _songCoverLookup = new CancellationTokenSource();
+        var (artist, title) = SplitSong(song);
+        try
+        {
+            var cover = await StationArt.SongCoverAsync(artist ?? string.Empty, title ?? song, lookup.Token);
+            if (!lookup.IsCancellationRequested && _station?.Id == station.Id && _songCoverFor == song && cover is not null)
+            {
+                _songCover = cover;
+                ShowStation();
+            }
+        }
+        catch (Exception)
+        {
+            // No cover: the logo stays.
+        }
+    }
+
+    /// <summary>
+    /// With the position timer: on a live DJ station (The Lot, NTS) whose stream doesn't say who's on, finds the show
+    /// that's on every couple of minutes, for the title and the artwork window.
+    /// </summary>
+    private async void CheckLiveShow(RadioStation station)
+    {
+        if (_liveShowChecking || DateTime.UtcNow - _liveShowCheckedAt < TimeSpan.FromMinutes(2) || !LiveShows.Knows(station))
+        {
+            return;
+        }
+
+        _liveShowChecking = true;
+        _liveShowCheckedAt = DateTime.UtcNow;
+        try
+        {
+            _liveShows ??= new LiveShows(StreamingHttp);
+            var show = await _liveShows.NowAsync(station, CancellationToken.None);
+            if (_station?.Id != station.Id || show == _liveShow)
+            {
+                return;
+            }
+
+            byte[]? picture = null;
+            if (show?.Picture is { } address)
+            {
+                picture = await StationArt.PictureAsync(address, CancellationToken.None);
+            }
+
+            if (_station?.Id != station.Id)
+            {
+                return;
+            }
+
+            _liveShow = show;
+            _liveShowPicture = picture;
+            _stationTrack = null;
+            ShowStation();
+            UpdateMediaControls();
+        }
+        catch (Exception)
+        {
+            // Not known this time; it's tried again in a couple of minutes.
+        }
+        finally
+        {
+            _liveShowChecking = false;
         }
     }
 

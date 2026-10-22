@@ -11,15 +11,62 @@ public static class FeaturedStations
     public const string RadioParadise = "Radio Paradise";
     public const string Nightride = "Nightride FM";
     public const string TheLot = "The Lot Radio";
+    public const string Nts = "NTS";
 
     /// <summary>The networks in the order they're listed.</summary>
-    public static readonly IReadOnlyList<string> Networks = new[] { SomaFm, Frisky, RadioParadise, Nightride, TheLot };
+    public static readonly IReadOnlyList<string> Networks = new[] { SomaFm, Frisky, RadioParadise, Nightride, TheLot, Nts };
 
     /// <summary>Networks whose stations come from a directory search for this name, rather than the list below.</summary>
     public static readonly IReadOnlyDictionary<string, string> LookedUp = new Dictionary<string, string>
     {
         [Frisky] = "frisky",
     };
+
+    /// <summary>
+    /// Where each network takes support from its listeners: a donation page, a Patreon, or (for The Lot, which asks
+    /// for neither) its shop.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> SupportPages = new Dictionary<string, string>
+    {
+        [SomaFm] = "https://somafm.com/support/",
+        [RadioParadise] = "https://radioparadise.com/support",
+        [Nightride] = "https://www.patreon.com/nightridefm",
+        [TheLot] = "https://www.thelotradio.com/shop",
+        [Nts] = "https://www.nts.live/supporters",
+    };
+
+    // The networks' own web addresses, so their stations found in the directory are known too.
+    private static readonly (string Host, string Network)[] Hosts =
+    {
+        ("somafm.com", SomaFm), ("radioparadise.com", RadioParadise), ("nightride.fm", Nightride),
+        ("thelotradio.com", TheLot), ("nts.live", Nts), ("ntslive.net", Nts),
+    };
+
+    /// <summary>
+    /// Where listeners can support the station, or null when Lucent doesn't know: a featured network's page, found by
+    /// the station's network, or for a station from the directory by its website's or stream's address.
+    /// </summary>
+    public static string? SupportPage(RadioStation station)
+    {
+        var network = station.Network;
+        if (network is null)
+        {
+            foreach (var address in new[] { station.Homepage, station.StreamUrl })
+            {
+                if (address is not null && Uri.TryCreate(address.Trim(), UriKind.Absolute, out var uri))
+                {
+                    var host = uri.Host.ToLowerInvariant();
+                    network = Hosts.FirstOrDefault(known => host == known.Host || host.EndsWith("." + known.Host)).Network;
+                    if (network is not null)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return network is not null && SupportPages.TryGetValue(network, out var page) ? page : null;
+    }
 
     public static readonly IReadOnlyList<RadioStation> Stations = new[]
     {
@@ -72,6 +119,11 @@ public static class FeaturedStations
         // The Lot's DJs are filmed live from a shipping container in Brooklyn, so the stream is video (HLS from Livepeer).
         Station(TheLot, "thelot:live", "The Lot Radio", "https://livepeercdn.studio/hls/85c28sa2o8wppm58/index.m3u8", 0,
             "https://www.thelotradio.com", "dj sets", "house", "electronic") with { Video = true, Codec = "H.264" },
+        // NTS's two live channels, from London (and LA, Shanghai and elsewhere): a different DJ or show most hours.
+        Station(Nts, "nts:1", "NTS 1", "https://stream-relay-geo.ntslive.net/stream", 0,
+            "https://www.nts.live", "dj sets", "eclectic", "electronic") with { Country = "United Kingdom", CountryCode = "GB" },
+        Station(Nts, "nts:2", "NTS 2", "https://stream-relay-geo.ntslive.net/stream2", 0,
+            "https://www.nts.live", "dj sets", "eclectic", "experimental") with { Country = "United Kingdom", CountryCode = "GB" },
     };
 
     private static RadioStation Soma(string channel, string name, params string[] tags) =>

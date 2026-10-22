@@ -417,12 +417,46 @@ public partial class RadioWindow : Window
             _player.OpenStationWebsite(station);
         };
 
+        // Where listeners can support the station (a donation page), when Lucent knows it; kept in place like the website's.
+        var supportPage = FeaturedStations.SupportPage(station);
+        var support = new Button
+        {
+            Theme = FindTheme("IconButton"),
+            Width = 24,
+            Height = 24,
+            Margin = new Thickness(6, -4, 0, -4),
+            Focusable = false,
+            Opacity = supportPage is not null ? 1 : 0,
+            IsHitTestVisible = supportPage is not null,
+            Content = new Avalonia.Controls.Shapes.Path
+            {
+                Data = ThemeIcon("HeartIcon"),
+                Stroke = ThemeBrush("FaintTextBrush"),
+                StrokeThickness = 1.2,
+                Width = 12,
+                Height = 12,
+                Stretch = Stretch.Uniform,
+            },
+        };
+        if (supportPage is not null)
+        {
+            ToolTip.SetTip(support, $"Support the station ({supportPage})");
+        }
+
+        support.Click += (_, e) =>
+        {
+            e.Handled = true;
+            _player.OpenStationSupport(station);
+        };
+
         DockPanel.SetDock(star, Dock.Right);
         DockPanel.SetDock(website, Dock.Right);
+        DockPanel.SetDock(support, Dock.Right);
         DockPanel.SetDock(detail, Dock.Right);
         var content = new DockPanel();
         content.Children.Add(star);
         content.Children.Add(website);
+        content.Children.Add(support);
         content.Children.Add(detail);
         if (playing)
         {
@@ -547,6 +581,9 @@ public partial class RadioWindow : Window
         var website = new MenuItem { Header = "Open the station's website", IsEnabled = station.Homepage is not null };
         website.Click += (_, _) => _player.OpenStationWebsite(station);
         menu.Items.Add(website);
+        var supportItem = new MenuItem { Header = "Support the station…", IsEnabled = FeaturedStations.SupportPage(station) is not null };
+        supportItem.Click += (_, _) => _player.OpenStationSupport(station);
+        menu.Items.Add(supportItem);
         var copy = new MenuItem { Header = "Copy the stream's address" };
         copy.Click += async (_, _) =>
         {
