@@ -22,6 +22,52 @@ public static class FeaturedStations
         [Frisky] = "frisky",
     };
 
+    /// <summary>
+    /// Where each network takes support from its listeners: a donation page, a Patreon, or (for The Lot, which asks
+    /// for neither) its shop.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> SupportPages = new Dictionary<string, string>
+    {
+        [SomaFm] = "https://somafm.com/support/",
+        [RadioParadise] = "https://radioparadise.com/support",
+        [Nightride] = "https://www.patreon.com/nightridefm",
+        [TheLot] = "https://www.thelotradio.com/shop",
+        [Nts] = "https://www.nts.live/supporters",
+    };
+
+    // The networks' own web addresses, so their stations found in the directory are known too.
+    private static readonly (string Host, string Network)[] Hosts =
+    {
+        ("somafm.com", SomaFm), ("radioparadise.com", RadioParadise), ("nightride.fm", Nightride),
+        ("thelotradio.com", TheLot), ("nts.live", Nts), ("ntslive.net", Nts),
+    };
+
+    /// <summary>
+    /// Where listeners can support the station, or null when Lucent doesn't know: a featured network's page, found by
+    /// the station's network, or for a station from the directory by its website's or stream's address.
+    /// </summary>
+    public static string? SupportPage(RadioStation station)
+    {
+        var network = station.Network;
+        if (network is null)
+        {
+            foreach (var address in new[] { station.Homepage, station.StreamUrl })
+            {
+                if (address is not null && Uri.TryCreate(address.Trim(), UriKind.Absolute, out var uri))
+                {
+                    var host = uri.Host.ToLowerInvariant();
+                    network = Hosts.FirstOrDefault(known => host == known.Host || host.EndsWith("." + known.Host)).Network;
+                    if (network is not null)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return network is not null && SupportPages.TryGetValue(network, out var page) ? page : null;
+    }
+
     public static readonly IReadOnlyList<RadioStation> Stations = new[]
     {
         Soma("groovesalad", "Groove Salad", "ambient", "downtempo", "chillout"),

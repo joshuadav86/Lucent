@@ -282,6 +282,24 @@ public partial class MainWindow
         UpdateTrackFavoriteButton();
     }
 
+    /// <summary>Opens the page where listeners support the station (a donation page, say) in the browser. Lucent takes no payments itself.</summary>
+    public void OpenStationSupport(RadioStation station)
+    {
+        if (FeaturedStations.SupportPage(station) is not { } page)
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(page) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ShowError("Couldn't open the station's support page.", ex);
+        }
+    }
+
     public void SetStationFavorite(RadioStation station, bool favorite)
     {
         RadioGuide.SetFavorite(_settings, station, favorite);
