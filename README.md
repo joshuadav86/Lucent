@@ -249,7 +249,7 @@ Lucent doesn't ship anyone else's skins: each belongs to whoever drew it. Lucent
 1. Download [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
 2. Run it. Lucent installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
 
-Installed Lucent keeps itself up to date. It checks for a newer version when it starts and every hour while it runs, downloads it in the background, and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists, and visuals are kept. It updates to stable releases; to get every new build as soon as it's made, choose **Every build** under **Options > Updates**. (Until the first stable release is out, everyone gets every build.) Uninstall it from Windows' **Installed apps** list.
+Installed Lucent keeps itself up to date. It checks for a newer version when it starts and every hour while it runs, downloads it in the background, and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists, and visuals are kept. It updates to stable releases; to get every new build as soon as it's made, choose **Every build** under **Options > Updates**. (Until the first stable release is out, everyone gets every build.) To decide when updates go in yourself, switch off **Install updates automatically** under **Options > Updates**: Lucent still downloads them and tells you one is ready, but installs it only when you choose **Restart and install**. Uninstall it from Windows' **Installed apps** list.
 
 If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
 
@@ -264,7 +264,7 @@ Lucent for the Mac is the same app (every window, the visuals drawn with Metal) 
 
 Installed Lucent keeps itself up to date just like on Windows, with the same **UPDATE** button in the title bar. Your settings, playlists, and visuals are in `~/Library/Application Support/Lucent` and are kept. To uninstall, drag Lucent from Applications to the Bin.
 
-Lucent isn't signed by Apple yet, so the first time macOS says it can't check the installer (or the app). Open **System Settings > Privacy & Security**, scroll down, and click **Open Anyway**.
+The installer and the app are signed with Lucent's Apple Developer ID and notarized by Apple, so they open like any other Mac app, with no warnings to click past.
 
 Rather not install? Download `Lucent-mac-arm64.zip` or `Lucent-mac-x64.zip`, open it, and double-click `Lucent.app` (drag it to Applications first if you like). That copy doesn't update itself.
 
@@ -394,7 +394,7 @@ dotnet publish src/Lucent.Mac -c Release -r osx-arm64 --self-contained -o publis
 tools/package-mac.sh publish-mac . 0.1.0
 ```
 
-CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, every visual drawn on the graphics card, a track shown in Now Playing, and a short video recorded and checked), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, they're added to the Latest build release. Adding Apple signing and notarization later only needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml).
+CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, every visual drawn on the graphics card, a track shown in Now Playing, and a short video recorded and checked), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, the app and installer are signed with Lucent's Developer ID, notarized by Apple, and stapled, then added to the Latest build release. Signing needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml). Pull request builds are signed but not notarized, since Apple can take an hour or more to answer.
 
 ### Releases
 
