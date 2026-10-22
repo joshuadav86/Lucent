@@ -164,6 +164,7 @@ public partial class MainWindow : Window
         TrackInfoWindow.TagsSaved += OnTagsSaved;
         ArtworkWindow.OpenChanged += OnArtworkOpenChanged;
         AnalyzerWindow.OpenChanged += OnAnalyzerOpenChanged;
+        VideoWindow.OpenChanged += OnVideoOpenChanged;
         AudioTools.MainPlayerChanged += (_, _) => UpdatePlayPauseButton();
         AudioTools.FilesReplaced += OnTagsSaved;
         UpdatePlayPauseButton();
@@ -718,10 +719,10 @@ public partial class MainWindow : Window
         Dispatcher.InvokeAsync(RedockSmallWindows, DispatcherPriority.Background);
     }
 
-    /// <summary>Docks the analyzer and the artwork back against the player's group, wherever they'd been moved to.</summary>
+    /// <summary>Docks the analyzer, the artwork and the video back against the player's group, wherever they'd been moved to.</summary>
     private void RedockSmallWindows()
     {
-        var moving = new[] { AnalyzerWindow.Current, ArtworkWindow.Current }
+        var moving = new[] { AnalyzerWindow.Current, ArtworkWindow.Current, VideoWindow.Current }
             .OfType<Window>()
             // A locked one stays where it is.
             .Where(window => window.IsVisible && window.WindowState == WindowState.Normal && !WindowLocks.IsLocked(window))
@@ -2047,6 +2048,9 @@ public partial class MainWindow : Window
             case Key.Y:
                 ToggleAnalyzer();
                 break;
+            case Key.P:
+                ToggleVideo();
+                break;
             case Key.O:
                 Activate();
                 ToggleOptions();
@@ -2328,6 +2332,7 @@ public partial class MainWindow : Window
         TrackInfoWindow.TagsSaved -= OnTagsSaved;
         ArtworkWindow.OpenChanged -= OnArtworkOpenChanged;
         AnalyzerWindow.OpenChanged -= OnAnalyzerOpenChanged;
+        VideoWindow.OpenChanged -= OnVideoOpenChanged;
         _settings.CollapsedLibraryFolders = _libraryWindow.CollapsedFolders.ToList();
         _settings.Save();
         _library.Dispose();

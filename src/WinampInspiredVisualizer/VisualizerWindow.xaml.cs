@@ -65,7 +65,7 @@ public partial class VisualizerWindow : ToolWindow
         host.PresetChanged += (_, _) => ShowPreset();
         host.FrameRateMeasured += (_, stats) =>
             FrameRateText.Text = $"{stats.FramesPerSecond:0} fps · {stats.Width} × {stats.Height}" + (stats.Hdr ? " · HDR" : string.Empty);
-        VisualizerFrame.Child = WithVideoLayer(host);
+        VisualizerFrame.Child = host;
         UpdateAutoCycleButton();
         UpdatePreviousButton();
         UpdateGroupFamiliesButton();

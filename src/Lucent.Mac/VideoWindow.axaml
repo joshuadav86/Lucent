@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="using:Lucent.Mac.Windows"
+        x:Class="Lucent.Mac.VideoWindow"
+        Title="Video - Lucent"
+        Width="640" Height="396" MinWidth="320" MinHeight="216"
+        CanResize="True"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        Background="{DynamicResource SurfaceBrush}">
+
+    <!-- Same custom title bar as the main window, with native resizing. -->
+    <Border x:Name="Frame" BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1">
+        <Grid x:Name="WindowRoot" Background="{DynamicResource PanelSheenBrush}" RowDefinitions="Auto,*">
+
+            <!-- Title bar: what's playing, lock, full screen and close. -->
+            <DockPanel x:Name="TitleBar" Grid.Row="0" Height="36" Background="{DynamicResource TitleBarBrush}" w:Chrome.IsCaption="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <w:LockButton Theme="{StaticResource PanelToggle}" Padding="8,0" Margin="0,0,2,0" VerticalAlignment="Center" />
+                    <Button x:Name="FullScreenButton" Theme="{StaticResource CaptionButton}" Height="36">
+                        <Path x:Name="FullScreenIcon" Theme="{StaticResource CaptionIcon}" />
+                    </Button>
+                    <Button Theme="{StaticResource CloseCaptionButton}" Height="36" ToolTip.Tip="Close (P)" Click="OnCloseWindow">
+                        <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <Image x:Name="TitleIcon" Width="14" Height="14" VerticalAlignment="Center"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <TextBlock Text="VIDEO" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="TitleText" Margin="12,0,8,0" FontSize="12" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" />
+            </DockPanel>
+
+            <!-- The picture, as big as fits, letterboxed in black. Click to play or pause, double-click for full screen,
+                 right-click or Control-click for the menu. -->
+            <Grid x:Name="Picture" Grid.Row="1" Background="Black"
+                  PointerPressed="OnPicturePressed" PointerReleased="OnPictureReleased" PointerMoved="OnPictureMoved">
+                <Image x:Name="VideoImage" Stretch="Uniform" IsVisible="False"
+                       RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                <StackPanel x:Name="Placeholder" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Viewbox Width="44" Height="44" HorizontalAlignment="Center">
+                        <Path Data="{StaticResource VideoIcon}" Stroke="{DynamicResource AccentGradientBrush}" StrokeThickness="1"
+                              StrokeJoin="Round" StrokeLineCap="Round" />
+                    </Viewbox>
+                    <TextBlock x:Name="PlaceholderTitle" Text="No video playing" Margin="0,12,0,0" FontSize="13" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" Foreground="#E6FFFFFF" />
+                    <TextBlock x:Name="PlaceholderText" Text="Videos and video stations play here, beside the visuals."
+                               Margin="0,4,0,0" FontSize="11" MaxWidth="260" TextWrapping="Wrap" TextAlignment="Center"
+                               HorizontalAlignment="Center" Foreground="#99FFFFFF" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

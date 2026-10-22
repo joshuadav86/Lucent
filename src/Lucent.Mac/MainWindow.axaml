@@ -213,6 +213,11 @@
                                   Click="OnToggleAnalyzer">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource AnalyzerIcon}" />
                     </ToggleButton>
+                    <ToggleButton x:Name="VideoToggle" Theme="{StaticResource PanelToggle}" Padding="7,0"
+                                  ToolTip.Tip="Show or hide the video: videos and video stations, in a window of their own beside the visuals (P)"
+                                  Click="OnToggleVideo">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource VideoIcon}" />
+                    </ToggleButton>
                 </StackPanel>
             </DockPanel>
         </Grid>

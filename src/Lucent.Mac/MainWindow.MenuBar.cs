@@ -157,7 +157,8 @@ public partial class MainWindow
         var showArt = Check("Artwork", ToggleArtwork);
         var showEqualizer = Check("Equalizer", ToggleEqualizer);
         var showAnalyzer = Check("Analyzer", ToggleAnalyzer);
-        foreach (var item in new[] { showVisuals, showQueue, showLibrary, showArt, showEqualizer, showAnalyzer })
+        var showVideo = Check("Video", ToggleVideo);
+        foreach (var item in new[] { showVisuals, showQueue, showLibrary, showArt, showEqualizer, showAnalyzer, showVideo })
         {
             window.Add(item);
         }
@@ -178,6 +179,7 @@ public partial class MainWindow
             showArt.IsChecked = ArtworkWindow.IsOpen;
             showEqualizer.IsChecked = OpenEqualizerWindow is not null;
             showAnalyzer.IsChecked = AnalyzerWindow.IsOpen;
+            showVideo.IsChecked = VideoWindow.IsOpen;
             link.IsChecked = _settings.LinkWindows;
         };
         bar.Add(new NativeMenuItem("Window") { Menu = window });
