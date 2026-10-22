@@ -48,8 +48,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
   <key>NSMicrophoneUsageDescription</key><string>Lucent records from your audio interface, mixer or microphone when you use its Record window, and its visuals react to what you're recording. Recordings are saved only where you choose.</string>
   <key>NSAudioCaptureUsageDescription</key><string>Lucent listens to what other apps are playing so its visuals and analyzer can react to it. Nothing is recorded or sent anywhere.</string>
-  <!-- The music Lucent opens from the Finder (Open With, or as the default player). The same list is in
-       src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg, Opus, MKV or WebM, so they're declared below. -->
+  <!-- The music and videos Lucent opens from the Finder (Open With, or as the default player). The same
+       list, with the common movie types, is in src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg, Opus, MKV or WebM, so they're declared below. -->
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>
