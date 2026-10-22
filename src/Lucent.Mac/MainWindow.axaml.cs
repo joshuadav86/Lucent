@@ -1352,6 +1352,10 @@ public partial class MainWindow : Window
         ShowOptionValues();
         UpdateHdrHint();
         BuildClassicSkinSwatches();
+        if (UpdatesTab.IsVisible)
+        {
+            ShowDefaultPlayerState();
+        }
 
         // The panel's right edge lines up with the button's (Placement and HorizontalOffset in the XAML
         // allow for the panel's 16px margin, which makes room for its shadow).
@@ -1374,6 +1378,10 @@ public partial class MainWindow : Window
         SoundTab.IsVisible = tab == "Sound";
         ThemeTab.IsVisible = tab == "Theme";
         UpdatesTab.IsVisible = tab == "Updates";
+        if (tab == "Updates")
+        {
+            ShowDefaultPlayerState();
+        }
     }
 
     /// <summary>Opens Options on its Updates tab.</summary>

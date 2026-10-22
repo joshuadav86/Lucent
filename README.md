@@ -38,7 +38,7 @@ Winamp's soul, a 2026 graphics card's muscle: a player, editor, and analyzer for
 | 🎨 **Skins and themes** | Five skins change the shape, type, and finish of every window, and any skin goes with any of the eight themes. |
 | 🎚️ **Studio equalizer** | 4, 8, 16, 24, or 32 mixing-desk faders over the music's live spectrum. |
 | 🧲 **Snapping windows** | The player, equalizer, queue, library, and visuals snap together like Winamp's and move as one. |
-| ✂️ **Built-in tools** | An audio editor, a converter, and a tag editor, all a right-click away. |
+| ✂️ **Built-in tools** | A video and audio editor, a converter, and a tag editor, all a right-click away. |
 
 ## 201 visuals
 

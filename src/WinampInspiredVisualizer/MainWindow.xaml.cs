@@ -1208,6 +1208,10 @@ public partial class MainWindow : Window
         UpdateHdrHint();
 
         BuildClassicSkinSwatches();
+        if (UpdatesTab.Visibility == Visibility.Visible)
+        {
+            ShowDefaultPlayerState();
+        }
 
         // Line the panel's right edge up with the button's (the panel has a 16px margin for its shadow), or
         // with the classic player's.
@@ -1231,6 +1235,10 @@ public partial class MainWindow : Window
         SoundTab.Visibility = tab == "Sound" ? Visibility.Visible : Visibility.Collapsed;
         ThemeTab.Visibility = tab == "Theme" ? Visibility.Visible : Visibility.Collapsed;
         UpdatesTab.Visibility = tab == "Updates" ? Visibility.Visible : Visibility.Collapsed;
+        if (tab == "Updates")
+        {
+            ShowDefaultPlayerState();
+        }
     }
 
     /// <summary>A choice in one of the option rows (resolution, detail, glow, timing, skin, theme, updates).</summary>

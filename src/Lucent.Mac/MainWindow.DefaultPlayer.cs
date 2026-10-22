@@ -1,10 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Lucent.Mac.Interop;
+using WinampInspiredVisualizer.Library;
 
 namespace Lucent.Mac;
 
-// Lucent as the player that opens music from the Finder: songs macOS hands it (see App), and the
+// Lucent as the player that opens music and videos from the Finder: songs macOS hands it (see App), and the
 // Default player choice in Options > Updates.
 public partial class MainWindow
 {
@@ -40,11 +41,28 @@ public partial class MainWindow
         PlayDroppedPaths(paths);
     }
 
+    /// <summary>Says whether double-clicked music and videos open in Lucent now, as Options shows the Updates tab.</summary>
+    private void ShowDefaultPlayerState()
+    {
+        try
+        {
+            DefaultPlayerStatusText.Text = DefaultPlayerStatus.Describe(LaunchServices.TypesElsewhere());
+            DefaultPlayerStatusText.IsVisible = true;
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Checking the default player", ex);
+            DefaultPlayerStatusText.IsVisible = false;
+        }
+    }
+
     private void OnMakeDefaultPlayer(object? sender, RoutedEventArgs e)
     {
-        DefaultPlayerStatusText.Text = LaunchServices.MakeDefaultForMusic()
-            ? "Done: music you double-click in the Finder now opens in Lucent."
-            : "Couldn't make Lucent the default. In the Finder, choose a song, press ⌘I, pick Lucent under " +
+        // Says what macOS opens music and videos with afterwards, not just that it was asked, so a type that
+        // didn't take is named.
+        DefaultPlayerStatusText.Text = LaunchServices.MakeDefault()
+            ? DefaultPlayerStatus.Describe(LaunchServices.TypesElsewhere())
+            : "Couldn't make Lucent the default. In the Finder, choose a song or video, press ⌘I, pick Lucent under " +
               "Open with, and click Change All.";
         DefaultPlayerStatusText.IsVisible = true;
     }
