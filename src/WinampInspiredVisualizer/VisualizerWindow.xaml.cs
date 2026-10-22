@@ -203,7 +203,9 @@ public partial class VisualizerWindow : ToolWindow
     private void OnPresetListClick(object sender, MouseButtonEventArgs e)
     {
         // A click on a row's star stars it and leaves the picker open.
-        if (e.OriginalSource is not DependencyObject source || IsInsideButton(source))
+        // A click on a preset's name lands on a text Run, which isn't in the visual tree,
+        // so start from the TextBlock that holds it.
+        if (NearestVisual(e.OriginalSource as DependencyObject) is not { } source || IsInsideButton(source))
         {
             return;
         }
@@ -212,6 +214,16 @@ public partial class VisualizerWindow : ToolWindow
         {
             PickPreset(choice);
         }
+    }
+
+    private static DependencyObject? NearestVisual(DependencyObject? element)
+    {
+        while (element is not null and not Visual and not System.Windows.Media.Media3D.Visual3D)
+        {
+            element = LogicalTreeHelper.GetParent(element);
+        }
+
+        return element;
     }
 
     private bool IsInsideButton(DependencyObject source)
