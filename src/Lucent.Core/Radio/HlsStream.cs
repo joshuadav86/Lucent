@@ -21,7 +21,13 @@ internal sealed class HlsStream : Stream
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
 
-    /// <summary>How many segments back from the end of a live playlist playing starts, as HLS asks players to.</summary>
+    /// <summary>
+    /// How far back from the end of a live playlist playing starts. HLS asks for at least three segments; going back
+    /// further gives the player that much in hand (the segments are already there, so they come at once), and a
+    /// segment that's late to appear, or slow to fetch, plays through instead of being heard as a gap.
+    /// </summary>
+    private static readonly TimeSpan LiveStartBack = TimeSpan.FromSeconds(30);
+
     private const int LiveStartSegments = 3;
 
     private static readonly int[] CommonBitrates = { 32, 48, 64, 96, 128, 160, 192, 256, 320 };
@@ -275,7 +281,7 @@ internal sealed class HlsStream : Stream
             {
                 if (Uri.TryCreate(_playlist, line, out var address))
                 {
-                    found.Add(new Segment(sequence, address, TitleInExtinf(extinf)));
+                    found.Add(new Segment(sequence, address, TitleInExtinf(extinf), DurationInExtinf(extinf) ?? _targetDuration));
                 }
 
                 sequence++;
@@ -286,7 +292,14 @@ internal sealed class HlsStream : Stream
         var start = 0;
         if (starting && !_ended)
         {
+            // Back from the end until LiveStartBack is covered, and at least LiveStartSegments.
             start = Math.Max(0, found.Count - LiveStartSegments);
+            var back = found.Skip(start).Aggregate(TimeSpan.Zero, (total, segment) => total + segment.Duration);
+            while (start > 0 && back < LiveStartBack)
+            {
+                start--;
+                back += found[start].Duration;
+            }
         }
 
         var added = false;
@@ -384,6 +397,22 @@ internal sealed class HlsStream : Stream
         return false;
     }
 
+    // "#EXTINF:10.0,…": the segment's length in seconds.
+    private static TimeSpan? DurationInExtinf(string? extinf)
+    {
+        if (extinf is null)
+        {
+            return null;
+        }
+
+        var colon = extinf.IndexOf(':');
+        var comma = extinf.IndexOf(',');
+        var text = comma > colon ? extinf[(colon + 1)..comma] : extinf[(colon + 1)..];
+        return double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) && seconds is > 0 and < 120
+            ? TimeSpan.FromSeconds(seconds)
+            : null;
+    }
+
     // "#EXTINF:10.0,Artist - Title" names the song in some playlists; "title=" and the like are left alone.
     private static string? TitleInExtinf(string? extinf)
     {
@@ -467,7 +496,7 @@ internal sealed class HlsStream : Stream
         return attributes;
     }
 
-    private sealed record Segment(long Sequence, Uri Address, string? Title);
+    private sealed record Segment(long Sequence, Uri Address, string? Title, TimeSpan Duration);
 
     /// <summary>
     /// The audio in MPEG transport stream segments: 188-byte packets, each for one stream of the program, which the

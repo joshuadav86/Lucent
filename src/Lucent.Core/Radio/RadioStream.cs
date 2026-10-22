@@ -23,8 +23,11 @@ public sealed class RadioStream : WaveStream, ILiveStream
     /// <summary>How much audio is held in hand before playing starts, and again after the stream ran dry.</summary>
     private static readonly TimeSpan Prebuffer = TimeSpan.FromSeconds(1.5);
 
-    /// <summary>How much decoded audio is held at most. A live stream never gets this far ahead; HLS would.</summary>
-    private static readonly TimeSpan Hold = TimeSpan.FromSeconds(12);
+    /// <summary>
+    /// How much decoded audio is held at most. A live stream never gets this far ahead; HLS does, as it starts half a
+    /// minute back (see <see cref="HlsStream"/>), so a segment that's late or slow plays through rather than as a gap.
+    /// </summary>
+    private static readonly TimeSpan Hold = TimeSpan.FromSeconds(32);
 
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(15);
 
@@ -57,7 +60,7 @@ public sealed class RadioStream : WaveStream, ILiveStream
         var format = connection.Decoder.Format;
         _buffer = new BufferedWaveProvider(format)
         {
-            BufferDuration = TimeSpan.FromSeconds(20),
+            BufferDuration = TimeSpan.FromSeconds(40),
             DiscardOnBufferOverflow = true,
             ReadFully = true,
         };
