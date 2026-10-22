@@ -7,6 +7,8 @@ using WinampInspiredVisualizer.Layout;
 //   - every window it placed is on the screen, at its smallest size or more (the player and equalizer
 //     at exactly their own size), and none is over another or over a locked window;
 //   - a locked window isn't moved;
+//   - the space under the player and equalizer isn't left empty when the queue's closed and another
+//     window could fill it;
 //   - nothing is left out on a screen big enough for everything (the windows' smallest sizes say what
 //     that is), so each set of windows fits from the screens listed in Fits below.
 // Prints each layout, and exits with 1 if anything's wrong.
@@ -142,6 +144,22 @@ void Check(string name, TileRect area, IReadOnlyList<TileWindow> windows)
         }
     }
 
+    // With the queue closed, something else fills the space under the player and equalizer if it can.
+    if (windows.All(window => window.LockedAt is null && window.Kind != TileKind.Queue)
+        && result.Places.TryGetValue("Player", out var playerPlace)
+        && windows.Any(window => window.Kind is TileKind.Visuals or TileKind.Video or TileKind.Analyzer or TileKind.Radio or TileKind.Editor))
+    {
+        var top = playerPlace.Bottom + (result.Places.TryGetValue("Equalizer", out var eq) && eq.Left == playerPlace.Left ? eq.Height : 0);
+        var space = new TileRect(playerPlace.Left, top, playerPlace.Width, area.Bottom - top);
+        var couldFill = windows.Any(window => window.Kind is TileKind.Artwork or TileKind.Library or TileKind.Analyzer or TileKind.Video
+            && window.MinWidth <= space.Width + 0.5 && window.MinHeight <= space.Height + 0.5
+            && !(window.Kind == TileKind.Video && !windows.Any(other => other.Kind == TileKind.Visuals)));
+        if (couldFill && space.Height > 0.5 && !result.Places.Values.Any(place => place.Overlaps(space)))
+        {
+            problems.Add($"{name}: the space under the player and equalizer, {space}, was left empty.");
+        }
+    }
+
     if (result.LeftOut.Count > 0 && Fits(windows, area))
     {
         problems.Add($"{name}: {string.Join(", ", result.LeftOut)} left out, on a screen with room for everything.");
@@ -194,5 +212,8 @@ static List<(string Name, List<TileWindow> Windows)> Sets(double playerScale)
         ("everything", new() { player, equalizer, queue, library, artwork, visuals, analyzer, radio, editor }),
         ("player, queue, visuals and a video", new() { player, queue, visuals, video }),
         ("everything but the editor", new() { player, equalizer, queue, library, artwork, visuals, analyzer, radio }),
+        ("player, equalizer, library, visuals and analyzer, no queue", new() { player, equalizer, library, visuals, analyzer }),
+        ("player, equalizer, library and visuals, no queue", new() { player, equalizer, library, visuals }),
+        ("everything but the queue", new() { player, equalizer, library, artwork, visuals, analyzer, radio, editor }),
     };
 }
