@@ -24,6 +24,11 @@ public partial class MainWindow
     private string? _songCoverFor;
     private byte[]? _songCover;
     private CancellationTokenSource? _songCoverLookup;
+    private LiveShows? _liveShows;
+    private LiveShow? _liveShow;
+    private byte[]? _liveShowPicture;
+    private DateTime _liveShowCheckedAt;
+    private bool _liveShowChecking;
     private string? _shownStationArtwork;
     private Track? _stationTrack;
 
@@ -66,6 +71,9 @@ public partial class MainWindow
         ForgetUpNext();
         if (_station?.Id != station.Id)
         {
+            _liveShow = null;
+            _liveShowPicture = null;
+            _liveShowCheckedAt = default;
             _radioLogo = null;
             LoadStationLogo(station);
         }
@@ -265,6 +273,9 @@ public partial class MainWindow
         _songCoverLookup?.Cancel();
         _songCoverFor = null;
         _songCover = null;
+        _liveShow = null;
+        _liveShowPicture = null;
+        _liveShowCheckedAt = default;
         _stationTrack = null;
         StationChanged?.Invoke(this, EventArgs.Empty);
         UpdateTrackFavoriteButton();
@@ -313,7 +324,9 @@ public partial class MainWindow
             return;
         }
 
-        var song = _radioStream?.NowPlaying;
+        // The song the stream says is on, or else, on a live DJ station, the show that's on.
+        var streamSong = _radioStream?.NowPlaying;
+        var song = streamSong ?? _liveShow?.Title;
         var marquee = _tuning is not null ? $"Tuning in to {station.Name}…" : song ?? station.Name;
         // Set only when it changes, so a long title keeps scrolling smoothly.
         if (NowPlayingText.Text != marquee)
@@ -325,18 +338,18 @@ public partial class MainWindow
         TrackDetails.Text = StationDetails(station);
         TrackDetails.ToolTip = _radioProblem ?? $"{station.Name}, live: {station.StreamUrl}";
 
-        if (song != _songCoverFor)
+        if (streamSong != _songCoverFor)
         {
-            LookUpSongCover(station, song);
+            LookUpSongCover(station, streamSong);
         }
 
-        var artwork = $"{station.Id}\n{song}\n{_radioLogo?.Length}\n{_songCover?.Length}";
+        var artwork = $"{station.Id}\n{song}\n{_radioLogo?.Length}\n{_songCover?.Length}\n{_liveShowPicture?.Length}";
         if (artwork != _shownStationArtwork)
         {
             _shownStationArtwork = artwork;
             var (artist, title) = SplitSong(song);
             ArtworkWindow.ShowRemote(new RemoteTrack(station.Id, title ?? station.Name, artist ?? string.Empty, station.Name, TimeSpan.Zero),
-                _songCover ?? _radioLogo);
+                _songCover ?? _liveShowPicture ?? _radioLogo);
         }
     }
 
@@ -369,6 +382,8 @@ public partial class MainWindow
             {
                 TrackDetails.Text = details;
             }
+
+            CheckLiveShow(station);
         }
     }
 
@@ -380,7 +395,7 @@ public partial class MainWindow
             return null;
         }
 
-        var (artist, title) = SplitSong(_radioStream?.NowPlaying);
+        var (artist, title) = SplitSong(_radioStream?.NowPlaying ?? _liveShow?.Title);
         return _stationTrack ??= Track.ForStation(station.StreamUrl, title ?? station.Name, artist ?? string.Empty, station.Name, station.Bitrate);
     }
 
@@ -454,6 +469,55 @@ public partial class MainWindow
         catch (Exception)
         {
             // No cover: the logo stays.
+        }
+    }
+
+    /// <summary>
+    /// With the position timer: on a live DJ station (The Lot, NTS) whose stream doesn't say who's on, finds the show
+    /// that's on every couple of minutes, for the title and the artwork window.
+    /// </summary>
+    private async void CheckLiveShow(RadioStation station)
+    {
+        if (_liveShowChecking || DateTime.UtcNow - _liveShowCheckedAt < TimeSpan.FromMinutes(2) || !LiveShows.Knows(station))
+        {
+            return;
+        }
+
+        _liveShowChecking = true;
+        _liveShowCheckedAt = DateTime.UtcNow;
+        try
+        {
+            _liveShows ??= new LiveShows(StreamingHttp);
+            var show = await _liveShows.NowAsync(station, CancellationToken.None);
+            if (_station?.Id != station.Id || show == _liveShow)
+            {
+                return;
+            }
+
+            byte[]? picture = null;
+            if (show?.Picture is { } address)
+            {
+                picture = await StationArt.PictureAsync(address, CancellationToken.None);
+            }
+
+            if (_station?.Id != station.Id)
+            {
+                return;
+            }
+
+            _liveShow = show;
+            _liveShowPicture = picture;
+            _stationTrack = null;
+            ShowStation();
+            UpdateMediaControls();
+        }
+        catch (Exception)
+        {
+            // Not known this time; it's tried again in a couple of minutes.
+        }
+        finally
+        {
+            _liveShowChecking = false;
         }
     }
 

@@ -279,6 +279,9 @@ public sealed class StationArt
         return art;
     }
 
+    /// <summary>A picture at an address (a show's, say), or null when it can't be had or is too large.</summary>
+    public Task<byte[]?> PictureAsync(string address, CancellationToken cancel) => DownloadAsync(address, cancel);
+
     private async Task<byte[]?> DownloadAsync(string address, CancellationToken cancel)
     {
         using var response = await _http.GetAsync(address, HttpCompletionOption.ResponseHeadersRead, cancel);
