@@ -22,7 +22,7 @@ namespace Lucent.Mac;
 /// any machine, Linux included: <c>Lucent --screenshots out-folder [window names...]</c>. It uses Avalonia's
 /// headless renderer, so everything shows except the Metal visuals (drawn by the graphics chip).
 /// </summary>
-public static class Screenshots
+public static partial class Screenshots
 {
     /// <summary>
     /// Every window, by name, with what it needs to show something worth looking at. Each window's
@@ -84,6 +84,12 @@ public static class Screenshots
         ("RecordVideo", () => PreviewRecordVideo()),
         ("Record", RecordWindow.PreparePreview),
         ("Stems", () => PreviewStems()),
+        ("ArtworkCover", () => PreviewArtworkCover()),
+        ("VisualsLive", () => PreviewVisualsLive()),
+        ("PlayerRadio", () => PreviewPlayerRadio()),
+        ("RadioPlaying", () => PreviewRadioPlaying()),
+        ("RadioDesk", () => PreviewRadioDesk()),
+        ("FullScreen", () => PreviewFullScreen()),
     };
 
     public static int Run(string[] args)
@@ -138,9 +144,9 @@ public static class Screenshots
         player.PreviewSkin(skin);
         player.ShowPreview(new[]
         {
+            SampleTrack("Bicep", "Atlas", TimeSpan.FromSeconds(352), 1411, 44100, 2),
+            SampleTrack("Tomora", "Ring the Alarm", TimeSpan.FromSeconds(331), 1411, 44100, 2),
             SampleTrack("Boards of Canada", "Roygbiv", TimeSpan.FromSeconds(151), 320, 44100, 2),
-            SampleTrack("Aphex Twin", "Xtal", TimeSpan.FromSeconds(294), 1411, 44100, 2),
-            SampleTrack("Burial", "Archangel", TimeSpan.FromSeconds(238), 256, 48000, 2),
         }, TimeSpan.FromSeconds(83));
         return player;
     }
@@ -296,12 +302,14 @@ public static class Screenshots
 
     private static readonly (string Folder, string Title, string Artist, string Album, int Seconds, int DaysAgo)[] SampleSongs =
     {
-        ("Music / Boards of Canada / Music Has the Right to Children", "Roygbiv", "Boards of Canada", "Music Has the Right to Children", 151, 2),
-        ("Music / Boards of Canada / Music Has the Right to Children", "Aquarius", "Boards of Canada", "Music Has the Right to Children", 352, 2),
-        ("Music / Boards of Canada / Music Has the Right to Children", "Turquoise Hexagon Sun", "Boards of Canada", "Music Has the Right to Children", 307, 2),
-        ("Music / Aphex Twin / Selected Ambient Works 85-92", "Xtal", "Aphex Twin", "Selected Ambient Works 85-92", 291, 5),
-        ("Music / Aphex Twin / Selected Ambient Works 85-92", "Pulsewidth", "Aphex Twin", "Selected Ambient Works 85-92", 227, 5),
-        ("Music / Aphex Twin / Selected Ambient Works 85-92", "Ageispolis", "Aphex Twin", "Selected Ambient Works 85-92", 321, 5),
+        ("Music / Bicep / Isles", "Atlas", "Bicep", "Isles", 352, 2),
+        ("Music / Bicep / Isles", "Apricots", "Bicep", "Isles", 246, 2),
+        ("Music / Bicep / Isles", "Saku", "Bicep", "Isles", 297, 2),
+        ("Music / Tomora / Come Closer", "Ring the Alarm", "Tomora", "Come Closer", 331, 4),
+        ("Music / Tomora / Come Closer", "Come Closer", "Tomora", "Come Closer", 268, 4),
+        ("Music / Boards of Canada / Music Has the Right to Children", "Roygbiv", "Boards of Canada", "Music Has the Right to Children", 151, 5),
+        ("Music / Boards of Canada / Music Has the Right to Children", "Aquarius", "Boards of Canada", "Music Has the Right to Children", 352, 5),
+        ("Music / Boards of Canada / Music Has the Right to Children", "Turquoise Hexagon Sun", "Boards of Canada", "Music Has the Right to Children", 307, 5),
         ("Music / Mixes", "Late night set (live)", "", "", 3725, 9),
         ("Music / Mixes", "Sunday morning", "Four Tet", "", 2411, 12),
         ("Downloads", "Windowlicker", "Aphex Twin", "Windowlicker", 367, 20),
@@ -337,7 +345,7 @@ public static class Screenshots
     {
         var tracks = SampleSongs.Take(6).Select(song => SampleTrack(song.Title + ".flac", song.Title, song.Artist, song.Album, song.Seconds));
         var entries = new ObservableCollection<PlaylistEntry>(tracks.Select(track => new PlaylistEntry(track)));
-        entries[1].IsCurrent = true;
+        entries[0].IsCurrent = true;
         var queue = new QueueWindow();
         queue.PlaylistView.ItemsSource = entries;
         queue.EmptyPlaylistHint.IsVisible = false;
@@ -384,7 +392,8 @@ public static class Screenshots
         }
     }
 
-    private static Window PreviewEqualizer()
+    /// <param name="fitWidth">The player's width, to fit under it as it docks.</param>
+    private static Window PreviewEqualizer(double? fitWidth = null)
     {
         var player = new Lucent.Mac.Audio.AudioPlayer();
         var settings = new AppSettings();
@@ -394,7 +403,7 @@ public static class Screenshots
             .Sample(WinampInspiredVisualizer.Audio.EqualizerBands.ForCount(16)).ToList();
         settings.Equalizer.PreampDb = -2;
         player.Equalizer.Apply(settings.Equalizer);
-        var window = EqualizerWindow.Create(player, settings);
+        var window = EqualizerWindow.Create(player, settings, fitWidth);
         window.Opened += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             window.UpdateLayout();

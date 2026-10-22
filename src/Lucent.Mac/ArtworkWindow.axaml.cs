@@ -118,6 +118,15 @@ public partial class ArtworkWindow : Window
         return window;
     }
 
+    /// <summary>For the screenshots: a window showing a song (or a station) with the cover given, as a station's or streaming app's song shows.</summary>
+    internal static ArtworkWindow CreatePreview(AudioPlayer player, AppSettings settings, RemoteTrack track, byte[] cover)
+    {
+        var window = new ArtworkWindow(player, settings);
+        window.DisplayRemote(track, null);
+        window.ShowCover(CoverArt.Decode(cover, MaxDisplayPixels), animate: false);
+        return window;
+    }
+
     /// <summary>Shows the song another app is playing (see MainWindow.Streaming.cs), with the cover that app gave.</summary>
     public static void ShowRemote(RemoteTrack? track, byte[]? artwork) => _instance?.DisplayRemote(track, artwork);
 

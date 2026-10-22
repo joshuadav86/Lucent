@@ -46,6 +46,24 @@ public partial class MainWindow
         _meter.ShowSample();
     }
 
+    /// <summary>Shows <paramref name="station"/> as on, playing <paramref name="song"/>, for <paramref name="heard"/> so far.</summary>
+    internal void PreviewStation(WinampInspiredVisualizer.Radio.RadioStation station, string song, string details, TimeSpan heard)
+    {
+        _station = station;
+        _radioList = new[] { station };
+        SetMarquee(song);
+        TrackDetails.Text = details;
+        TimeText.Text = TimeFormat.Format(heard);
+        PlayStateIcon.Data = (Geometry)this.FindResource("PlaySmallIcon")!;
+        PlayPauseIcon.Data = (Geometry)this.FindResource("PauseIcon")!;
+        PlayPauseIcon.Margin = new Avalonia.Thickness(0);
+        SeekBar.IsEnabled = false;
+        _positionTimer.Stop();
+        _previewing = true;
+        _meter.ShowSample();
+        UpdateTrackFavoriteButton();
+    }
+
     /// <summary>Puts on a skin (with its own theme), as picking it in the options does.</summary>
     internal void PreviewSkin(string skin)
     {
