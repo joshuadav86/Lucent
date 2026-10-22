@@ -49,6 +49,16 @@ public sealed class VideoEdit
     public static bool IsEditableVideo(string path) => VideoFiles.IsVideo(path) && Mp4Cutter.CanCut(path);
 
     /// <summary>
+    /// What a menu item that opens <paramref name="path"/> in the editor says, and whether it can: "Edit video…" for a
+    /// video the editor cuts, a turned-off item saying which ones it cuts for any other video, and "Open in editor…"
+    /// for a sound.
+    /// </summary>
+    public static (string Header, bool CanOpen) EditorMenuItem(string path) =>
+        !VideoFiles.IsVideo(path) ? ("Open in editor…", true)
+        : IsEditableVideo(path) ? ("Edit video…", true)
+        : ("Edit video (MP4, M4V and MOV only, for now)", false);
+
+    /// <summary>
     /// Opens a video for editing: reads its index, then decodes its sound for the waveform. Throws
     /// <see cref="AudioFileException"/> with a message for the user.
     /// </summary>

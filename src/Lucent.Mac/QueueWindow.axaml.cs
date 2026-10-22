@@ -64,6 +64,7 @@ public partial class QueueWindow : ToolWindow
         }
 
         var tracks = entries.Select(entry => entry.Track).ToList();
+        ShowEditorItem(tracks[0].Path);
         _songMenuItems.Add(Player.FavoriteMenuItem(tracks.Select(track => track.Path).ToList()));
         _songMenuItems.Add(Player.AddToPlaylistMenu(this, () => Task.FromResult(tracks)));
         _songMenuItems.Add(new Separator());
@@ -101,6 +102,14 @@ public partial class QueueWindow : ToolWindow
 
     private void OnEditInfo(object? sender, RoutedEventArgs e) =>
         Player?.EditInfo(SelectedEntries().Select(entry => entry.Track.Path));
+
+    /// <summary>"Edit video…" when the first song picked is a video, as the Video window's menu says.</summary>
+    private void ShowEditorItem(string path)
+    {
+        var (header, canOpen) = WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(path);
+        OpenInEditorItem.Header = header;
+        OpenInEditorItem.IsEnabled = canOpen;
+    }
 
     private void OnOpenInEditor(object? sender, RoutedEventArgs e)
     {
