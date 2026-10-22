@@ -58,7 +58,8 @@ public sealed class TileResult
 /// nothing on top of anything. The player keeps its size at the top of a column, with the equalizer and
 /// the queue under it down to the bottom; the library (with the artwork under it) runs down the left;
 /// the visuals fill the rest, with the analyzer, the radio and the editor side by side under them.
-/// On a small screen (or a large scaling) whatever doesn't fit beside the player moves into the space
+/// With the queue closed, the artwork, the analyzer (or a video), or the library takes its place under
+/// the equalizer, so the column's filled to the bottom. On a small screen (or a large scaling) whatever doesn't fit beside the player moves into the space
 /// that's left: the library under the queue, the queue and the artwork under the visuals. A window that
 /// can't fit anywhere at its smallest size is left out rather than squashed or put over another.
 /// Shared by both apps so they lay out the same; tools/LayoutCheck checks it on many screens and scalings.
@@ -133,6 +134,16 @@ public static class FullScreenLayout
             under.Clear();
         }
 
+        if (under.Count == 0 && main.Count > 0 && Borrow(side, main, columnWidth, underHeight, keepOneSide: lockedLeft is not null) is { } filler)
+        {
+            // Nothing under the player (the queue's closed): another window fills the space there rather
+            // than leaving it empty. The artwork first, then one from under the visuals, then the library.
+            // Not with nothing in the big space, where the library and artwork fill the screen beside the player anyway.
+            side.Remove(filler);
+            main.Remove(filler);
+            under.Add(filler);
+        }
+
         TileRect sideRegion;
         TileRect mainRegion;
         double columnLeft;
@@ -199,6 +210,19 @@ public static class FullScreenLayout
 
     /// <summary>The narrowest a region can be and still take every one of these (each on a row of its own).</summary>
     private static double NeededWidth(IReadOnlyList<TileWindow> windows) => windows.Count == 0 ? 0 : windows.Max(window => window.MinWidth);
+
+    /// <summary>
+    /// A window to fill the space under the player when the queue isn't there: one that fits it at its
+    /// smallest, from the side column or from under the visuals (never the visuals themselves). Null if none does.
+    /// </summary>
+    /// <param name="keepOneSide">The player's locked, so the side column's space is there either way: leave it at least one window.</param>
+    private static TileWindow? Borrow(List<TileWindow> side, List<TileWindow> main, double columnWidth, double underHeight, bool keepOneSide)
+    {
+        bool Fits(TileWindow window) => window.MinWidth <= columnWidth + 0.5 && window.MinHeight <= underHeight + 0.5 && (!keepOneSide || side.Count > 1 || !side.Contains(window));
+        return side.FirstOrDefault(window => window.Kind == TileKind.Artwork && Fits(window))
+            ?? main.Skip(1).FirstOrDefault(window => window.Kind is TileKind.Analyzer or TileKind.Video && Fits(window))
+            ?? side.FirstOrDefault(window => window.Kind == TileKind.Library && Fits(window));
+    }
 
     /// <summary>
     /// The library column doesn't fit beside the player: the library goes under the queue if there's
