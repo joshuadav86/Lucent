@@ -730,14 +730,11 @@ jobs:
           .vpk/vpk "${args[@]}"
           ls -l releases-mac
 
-          # vpk signs the installer with productbuild, which can't be pointed at a keychain and hung for the whole
-          # job on CI, so vpk makes it unsigned and productsign, told which keychain to use, signs it here.
+          # vpk signs the installer with productbuild, which hung for the whole job on CI, so vpk makes it
+          # unsigned and productsign, told which keychain to use, signs it here.
           if [ -n "$SIGN_INSTALL_IDENTITY" ]; then
             pkg="releases-mac/Lucent-$RID-Setup.pkg"
-            perl -e 'alarm shift; exec @ARGV' 600 productsign --sign "$SIGN_INSTALL_IDENTITY" --keychain "$KEYCHAIN" \
-              --timestamp "$pkg" "$RUNNER_TEMP/Setup-signed.pkg"
-            mv "$RUNNER_TEMP/Setup-signed.pkg" "$pkg"
-            pkgutil --check-signature "$pkg"
+            tools/mac/sign-installer.sh "$pkg" "$SIGN_INSTALL_IDENTITY" "$KEYCHAIN"
             if [ -n "$NOTARY_PROFILE" ]; then
               xcrun notarytool submit "$pkg" --keychain-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN" --wait --timeout 40m
               xcrun stapler staple "$pkg"
