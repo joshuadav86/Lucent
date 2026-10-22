@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Path = Avalonia.Controls.Shapes.Path;
@@ -11,7 +12,7 @@ namespace Lucent.Mac.Windows;
 /// <summary>
 /// The lock in a window's title bar. Locked, the window stays exactly where it is: it can't be moved
 /// or resized, it doesn't move with the player, and docking or laying out the windows leaves it be.
-/// The padlock shuts while it's locked. See <see cref="WindowLocks"/>.
+/// The padlock shuts and lights up while it's locked, and is dimmed while it's open. See <see cref="WindowLocks"/>.
 /// </summary>
 public sealed class LockButton : ToggleButton
 {
@@ -69,10 +70,27 @@ public sealed class LockButton : ToggleButton
         }
     }
 
+    protected override void OnPointerEntered(PointerEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        Fade();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        Fade();
+    }
+
+    // An open padlock is dimmed, so the locked windows, with their shut padlock lit, stand out.
+    // Pointed at, it lights up again.
+    private void Fade() => _icon.Opacity = IsChecked == true || IsPointerOver ? 1 : 0.4;
+
     private void Show()
     {
         var locked = WindowLocks.IsLocked(_window);
         IsChecked = locked;
+        Fade();
         if (this.TryFindResource(locked ? "LockIcon" : "UnlockIcon", ActualThemeVariant, out var icon) && icon is Geometry geometry)
         {
             _icon.Data = geometry;
