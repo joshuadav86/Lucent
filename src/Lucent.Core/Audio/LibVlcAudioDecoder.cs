@@ -58,6 +58,21 @@ public static class LibVlcAudioDecoder
             }
         }
 
+        if (OggFlac.IsOggFlac(path))
+        {
+            // libVLC stops after the first packet of FLAC in Ogg, but reads the same frames from a .flac file whole.
+            var flac = Path.Combine(Path.GetTempPath(), $"Lucent-decode-{Guid.NewGuid():N}.flac");
+            try
+            {
+                OggFlac.Remux(path, flac);
+                return OpenDirectly(flac, cancellation);
+            }
+            finally
+            {
+                DeleteQuietly(flac);
+            }
+        }
+
         return OpenDirectly(path, cancellation);
     }
 

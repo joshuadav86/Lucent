@@ -15,6 +15,7 @@ internal static partial class LaunchServices
         "public.mp3", "com.microsoft.waveform-audio", "org.xiph.flac", "public.mpeg-4-audio", "com.apple.m4a-audio",
         "public.aac-audio", "com.microsoft.windows-media-wma", "public.aiff-audio", "public.aifc-audio",
         "org.xiph.ogg-audio", "org.xiph.opus", "com.apple.coreaudio-format", "public.ac3-audio", "public.enhanced-ac3-audio",
+        "com.wavpack.audio", "com.monkeysaudio.ape",
     ];
 
     /// <summary>

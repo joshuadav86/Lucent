@@ -201,6 +201,7 @@ public sealed class TrackTags
             ".mp3" => "MP3",
             ".flac" => "FLAC",
             ".ogg" or ".oga" when codec.Contains("Opus", StringComparison.OrdinalIgnoreCase) => "Opus (Ogg)",
+            ".ogg" or ".oga" when codec.Contains("FLAC", StringComparison.OrdinalIgnoreCase) => "FLAC (Ogg)",
             ".ogg" or ".oga" => "Ogg Vorbis",
             ".opus" => "Opus",
             ".m4a" or ".mp4" when codec.Contains("alac", StringComparison.OrdinalIgnoreCase) => "Apple Lossless (M4A)",
@@ -220,6 +221,8 @@ public sealed class TrackTags
             ".mka" => "Matroska audio",
             ".weba" => "WebM audio",
             ".tta" => "True Audio (TTA)",
+            ".wv" => "WavPack",
+            ".ape" => "Monkey's Audio",
             ".spx" => "Speex",
             var other => other.TrimStart('.').ToUpperInvariant(),
         };

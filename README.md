@@ -233,7 +233,7 @@ Lucent doesn't ship anyone else's skins: each belongs to whoever drew it. Lucent
 
 | | |
 |---|---|
-| 🎵 **Plays almost anything** | MP3, FLAC, WAV (any bit depth, RF64, and Wave64), AAC/M4A, ALAC, WMA, OGG Vorbis, Opus, AIFF and AIFF-C, CAF, Dolby Digital (AC-3 and E-AC-3), DTS, Matroska and WebM audio, MP2, TTA, and Speex |
+| 🎵 **Plays almost anything** | MP3, FLAC (also in Ogg), WAV (any bit depth, RF64, and Wave64), AAC/M4A, ALAC, WMA, OGG Vorbis, Opus, AIFF and AIFF-C, CAF, Dolby Digital (AC-3 and E-AC-3), DTS, Matroska and WebM audio, MP2, TTA, WavPack, Monkey's Audio (APE), and Speex |
 | 📚 **Library** | Link a folder and every sound shows up, searchable as you type |
 | 📻 **Online radio** | SomaFM, FRISKY, Radio Paradise, Nightride FM, and thousands more from Radio Browser, by genre, with search, sorting, and quality and country filters. The visuals play along |
 | 🛒 **Bandcamp and Beatport** | Music you download from either store files itself into the library, and Bandcamp purchases can sync by themselves |
@@ -425,5 +425,7 @@ The starter song (`StarterMusic/Kepler North - Self Actualize.mp3`) is © Kepler
 MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucent.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
 
 Videos play with [libVLC](https://www.videolan.org/vlc/libvlc.html), VLC's engine (LGPL 2.1 or later), through [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) (LGPL 2.1 or later). libVLC ships unchanged in the `libvlc` folder next to Lucent and can be swapped for your own build; its licence and where to get its source are in `Licenses/LICENSE-libVLC.txt`. VLC is a trademark of VideoLAN, which doesn't make or endorse Lucent.
+
+WavPack and Monkey's Audio files are decoded by Lucent's own C# ports of the [WavPack](https://github.com/dbry/WavPack) decoder by David Bryant ([BSD](assets/licenses/LICENSE-WavPack.txt)) and the [Monkey's Audio](https://www.monkeysaudio.com) decoder by Matthew T. Ashland ([BSD 3-Clause](assets/licenses/LICENSE-MonkeysAudio.txt)).
 
 The plugin helper (`LucentPluginHost.exe`) is built with the [VST 3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT). VST is a registered trademark of Steinberg Media Technologies GmbH.
