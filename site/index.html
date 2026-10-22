@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucent for Windows and Mac</title>
-<meta name="description" content="Lucent is a modern, Winamp-inspired music player built for audio nerds: a real video and audio editor, a studio analyzer, a 32-band equalizer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
+<meta name="description" content="Lucent is a spiritual successor to Winamp, a music player built for audio nerds: a real video and audio editor, a studio analyzer, a 32-band equalizer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
 <meta property="og:title" content="Lucent">
 <meta property="og:description" content="A music player built for audio nerds, with a video and audio editor, a studio analyzer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included.">
 <meta property="og:image" content="https://lucentaudio.net/img/full-screen.jpg">
@@ -124,20 +124,40 @@ kbd {
 .fine { font: 400 13px/1.5 var(--font-mono); color: var(--muted); }
 .hero-shot { margin: 0; min-width: 0; }
 .hero-shot .screen { box-shadow: 0 50px 120px -40px color-mix(in srgb, var(--a1) 65%, transparent), var(--glow); }
-/* The window tour: one tab per window, everything tiled first. */
-.tour-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-.tour-tabs .chip { padding: 6px 12px; font-size: 13px; }
-.screen.tour-stage {
-  aspect-ratio: 16 / 9; position: relative;
-  background: radial-gradient(80% 70% at 50% 100%, color-mix(in srgb, var(--a1) 22%, transparent), transparent 70%), #07070A;
+/* The window tour: Lucent full screen, built up a window at a time; each chip adds or takes away its window.
+   Layers sit where FullScreenLayout put them on a 2560 × 1440 screen, so they're placed in percentages of that. */
+.tour-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; }
+.tour-bar .chip { padding: 6px 12px 6px 10px; font-size: 13px; align-items: center; }
+.tour-bar .chip i { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; transition: background .2s; }
+.tour-bar .chip[aria-pressed="true"] i { background: var(--a2); box-shadow: none; }
+.tour-bar .tour-act { margin-left: auto; display: flex; gap: 6px; }
+.tour-bar .tour-act button { border: 0; background: transparent; color: var(--muted); font: 500 12px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; padding: 8px 6px; cursor: pointer; }
+.tour-bar .tour-act button:hover { color: var(--fg); }
+.desk-stage {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden; cursor: zoom-in;
+  background: radial-gradient(70% 80% at 60% 100%, color-mix(in srgb, var(--a1) 28%, transparent), transparent 70%),
+    radial-gradient(50% 60% at 15% 10%, color-mix(in srgb, var(--a2) 14%, transparent), transparent 70%), #07070A;
 }
-.tour-stage img { display: block; position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; width: auto; height: auto; transition: opacity .25s; }
-.tour-stage.window img { max-width: calc(100% - 48px); max-height: calc(100% - 48px); border-radius: 10px; box-shadow: 0 30px 70px -20px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06); }
-.tour-stage img.fading { opacity: 0; }
+.screen.desk-stage { background-color: #07070A; }
+.desk-stage .layer { position: absolute; display: block; max-width: none; transition: opacity .35s, transform .35s cubic-bezier(.2,.7,.2,1); }
+.desk-stage .layer.off { opacity: 0; transform: scale(.97); pointer-events: none; }
+.desk-stage .layer.float { border-radius: .6%; box-shadow: 0 2vw 5vw -1vw rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.08); }
+.desk-stage .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 400 13px var(--font-mono); text-align: center; padding: 16px; }
+.zoom-hint { position: absolute; right: 12px; bottom: 12px; padding: 6px 10px; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; font: 500 12px/1 var(--font-mono); pointer-events: none; display: flex; gap: 6px; align-items: center; }
+.zoom-hint svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
 .tour-note { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin-top: 14px; color: var(--muted); font-size: 15px; min-height: 2.6em; }
 .tour-note b { font: 500 12px/1.4 var(--font-mono); color: var(--fg); text-transform: uppercase; letter-spacing: .08em; padding-left: 10px; border-left: 1px solid var(--a2); }
-@media (prefers-reduced-motion: reduce) { .tour-stage img { transition: none; } }
-@media (max-width: 640px) { .tour-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; } .tour-tabs .chip { flex: none; } .tour-stage.window img { max-width: calc(100% - 20px); max-height: calc(100% - 20px); } }
+/* Zoomed: the same picture over the page, as large as fits; a click goes to full detail, and scrolling moves around. */
+.lightbox { position: fixed; inset: 0; z-index: 1000; background: rgba(4,4,8,.97); display: grid; place-items: center; overflow: auto; overscroll-behavior: contain; }
+.lightbox[hidden] { display: none; }
+.lightbox .desk-stage { width: min(96vw, 160vh); border-radius: 10px; cursor: zoom-in; box-shadow: 0 40px 120px rgba(0,0,0,.8); }
+.lightbox.detail { place-items: start; }
+.lightbox.detail .desk-stage { width: max(1600px, 200vw); cursor: zoom-out; border-radius: 0; }
+.lightbox-close { position: fixed; top: 14px; right: 14px; z-index: 1001; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; cursor: pointer; display: grid; place-items: center; }
+.lightbox-close svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
+.lightbox-tip { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 1001; white-space: nowrap; padding: 7px 12px; border-radius: 999px; background: rgba(0,0,0,.7); color: #fff; font: 500 12px/1 var(--font-mono); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .desk-stage .layer { transition: none; } }
+@media (max-width: 640px) { .tour-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; } .tour-bar .chip, .tour-bar .tour-act { flex: none; } }
 #heroBars { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 26%; z-index: -1; display: block; opacity: .4; }
 
 /* ---------- internet radio ---------- */
@@ -542,7 +562,7 @@ footer .credits a { text-decoration: underline; }
         <p class="eyebrow">Built for audio nerds · Windows and Mac</p>
         <h1 id="hero-title">The Media Player <span class="grad">You Didn't Know You Needed</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a free music player for Windows and Mac, a modern take on Winamp built for audio nerds. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 454 visuals drawn live on your graphics card.</p>
+          <p class="lede">Lucent is a free music player for Windows and Mac, a spiritual successor to Winamp built for audio nerds. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 454 visuals drawn live on your graphics card.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -557,12 +577,19 @@ footer .credits a { text-decoration: underline; }
         </div>
       </div>
       <figure class="hero-shot tour" aria-label="A tour of Lucent's windows">
-        <div class="tour-tabs" role="tablist" aria-label="Lucent's windows" id="tourTabs"></div>
-        <div class="screen tour-stage" id="tourStage" role="tabpanel" aria-labelledby="tourTab-0">
-          <img id="tourImg" src="img/full-screen.jpg" width="2560" height="1440" alt="Lucent full screen on a 2560 × 1440 display: the library, player, equalizer, queue, Bicep's Isles in the artwork window, the Cosmic Jellyfish visual, the analyzer, and online radio, all tiled edge to edge">
+        <div class="tour-bar" id="tourBar" role="group" aria-label="Show or hide each of Lucent's windows">
+          <span class="tour-act"><button type="button" id="tourReplay">Build it again</button></span>
+        </div>
+        <div class="screen desk-stage" id="tourStage" role="button" tabindex="0" aria-label="Lucent full screen. Open it larger to see the detail.">
+          <noscript><img src="img/full-screen.jpg" width="2560" height="1440" alt="Lucent full screen: the library, player, equalizer, queue, artwork, visuals, analyzer, and online radio windows tiled edge to edge" style="width:100%;height:auto"></noscript>
+          <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21M11 8v6M8 11h6"/></svg>Click to zoom</span>
         </div>
         <figcaption class="tour-note"><b id="tourName">Full screen</b><span id="tourNote">Shift+F11 lays every window edge to edge across your screen. Lock one in place and the rest fit around it.</span></figcaption>
       </figure>
+      <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Lucent's windows, larger">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        <span class="lightbox-tip" id="lightboxTip">Click for full detail</span>
+      </div>
     </div>
   </section>
 
@@ -759,7 +786,7 @@ footer .credits a { text-decoration: underline; }
         <h2 id="radio-title">The best of internet radio, in high quality.</h2>
         <p class="lede">Thousands of stations, with Lucent's EQ, meters, and visuals on every one. Here's SomaFM's Groove Salad, with the station's art in the Artwork window.</p>
       </div>
-      <div class="screen"><img src="img/radio-groove-salad.png" width="1340" height="600" alt="SomaFM's Groove Salad playing in Lucent: the player shows Thievery Corporation's Lebanese Blonde, the Artwork window shows Groove Salad's turntable art, and the Online radio window lists SomaFM's channels with Groove Salad highlighted" loading="lazy"></div>
+      <div class="screen"><img src="img/radio-groove-salad.jpg" width="1340" height="600" alt="SomaFM's Groove Salad playing in Lucent: the player shows Thievery Corporation's Lebanese Blonde, the Artwork window shows Groove Salad's turntable art, and the Online radio window lists SomaFM's channels with Groove Salad highlighted" loading="lazy"></div>
       <div class="radio-notes">
         <div class="support-card">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.4C1.5 7.8 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.5 3.3 4.3 6.6-1.8 4.8-9.3 9.4-9.3 9.4z"/></svg>
@@ -870,66 +897,112 @@ footer .credits a { text-decoration: underline; }
   const root = document.documentElement;
   const css = n => getComputedStyle(root).getPropertyValue(n).trim();
 
-  /* ---------- the window tour at the top: every window first, then one at a time ---------- */
-  const TOUR = [
-    ["Full screen", "full-screen.jpg", 2560, 1440, "Shift+F11 lays every window edge to edge across your screen. Lock one in place and the rest fit around it.",
-      "Lucent full screen on a 2560 × 1440 display: the library, player, equalizer, queue, Bicep's Isles in the artwork window, the Cosmic Jellyfish visual, the analyzer, and online radio, all tiled edge to edge"],
-    ["Player", "tour/player.png", 520, 207, "Bicep's Atlas in lossless, with a live level meter and one-click links to every other window.",
-      "The Lucent player playing Atlas by Bicep, 1:23 in, with its level meter and buttons for the other windows"],
-    ["Library", "tour/library.png", 380, 560, "Your music folders, newest first, with favorites and playlists a click away.",
-      "The library window with folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada's Music Has the Right to Children"],
-    ["Queue", "tour/queue.png", 520, 320, "What's up next. Drag to reorder, and save or load playlists.",
-      "The queue with Bicep, Tomora, and Boards of Canada songs, Atlas playing"],
-    ["Equalizer", "tour/equalizer.png", 626, 391, "4 to 32 bands, with the music's live spectrum behind the faders.",
-      "The 16-band equalizer on the Rock preset, with the live spectrum behind the curve"],
-    ["Artwork", "tour/artwork.png", 420, 456, "The cover of whatever's on: your files, a streaming app, or a radio station.",
-      "The artwork window showing the cover of Bicep's Isles"],
-    ["Visuals", "tour/visuals.jpg", 820, 560, "454 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.",
-      "The visuals window showing Cosmic Jellyfish, with its picker and Auto switch"],
-    ["Analyzer", "tour/analyzer.png", 760, 460, "A studio spectrogram, spectrum, waveform, and stereo scope, scrolling together.",
-      "The analyzer with a spectrogram, spectrum bars, a scrolling waveform, and a stereo scope"],
-    ["Radio", "tour/radio.png", 820, 600, "Thousands of stations, with SomaFM, FRISKY, Radio Paradise, Nightride FM, and NTS up front.",
-      "The online radio window with SomaFM's channels under Featured and Groove Salad playing"],
-    ["Video", "tour/video.png", 640, 396, "Music videos and video stations, in a window of their own.",
-      "The video window playing a synthwave sunset clip"],
-    ["Editor", "editor-video.png", 1240, 700, "Trim, fade, and crossfade audio or video, with VST3 effects, without leaving the player.",
-      "The video and audio editor with a music video open, its picture above the waveform, and markers"],
-    ["Record", "tour/record.png", 820, 833, "Record a DJ set or a record at up to 192 kHz, with each song marked and named.",
-      "The record window recording a DJ set at 48 kHz, 24-bit, with track marks named by ACRCloud"],
-    ["Stems", "tour/stems.png", 760, 420, "Split a song into drums, bass, vocals, and the rest on your graphics card.",
-      "The stems window with drums, bass, other, and vocals, each with its own level"],
+  /* ---------- the window tour at the top: Lucent full screen, a window at a time ---------- */
+  // [name, file, place on a 2560 × 1440 screen (x, y, width, height, from FullScreenLayout), what it is, alt text, floats over the rest]
+  const WINDOWS = [
+    ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with favorites and playlists a click away.", "The library, with folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada"],
+    ["Player", "tour/full/player.png", [380, 0, 520, 207], "Bicep's Atlas in lossless, with a live level meter and one-click links to every other window.", "The player, playing Atlas by Bicep"],
+    ["Equalizer", "tour/full/equalizer.png", [380, 207, 520, 391], "4 to 32 bands, with the music's live spectrum behind the faders.", "The 16-band equalizer on the Rock preset"],
+    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with Bicep, Tomora, and Boards of Canada songs"],
+    ["Artwork", "tour/full/artwork.jpg", [0, 1027.4, 380, 412.6], "The cover of whatever's on: your files, a streaming app, or a radio station.", "The artwork window with Bicep's Isles cover"],
+    ["Visuals", "tour/full/visuals.jpg", [900, 0, 1660, 840], "454 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.", "The visuals window showing Cosmic Jellyfish"],
+    ["Analyzer", "tour/full/analyzer.png", [900, 840, 729, 600], "A studio spectrogram, spectrum, waveform, and stereo scope, scrolling together.", "The analyzer"],
+    ["Radio", "tour/full/radio.png", [1628.6, 840, 931.4, 600], "Thousands of stations, with SomaFM, FRISKY, Radio Paradise, Nightride FM, and NTS up front.", "The online radio window with SomaFM's channels"],
+    ["Video", "tour/video.png", [1560, 150, 640, 396], "Music videos and video stations, in a window of their own.", "The video window playing a synthwave sunset clip", true],
+    ["Editor", "editor-video.png", [640, 560, 1240, 700], "Trim, fade, and crossfade audio or video, with VST3 effects, without leaving the player.", "The video and audio editor", true],
+    ["Record", "tour/record.png", [1180, 300, 820, 833], "Record a DJ set or a record at up to 192 kHz, with each song marked and named.", "The record window", true],
+    ["Stems", "tour/stems.png", [260, 860, 760, 420], "Split a song into drums, bass, vocals, and the rest on your graphics card.", "The stems window", true],
   ];
   {
-    const tabs = document.getElementById("tourTabs"), stage = document.getElementById("tourStage"), img = document.getElementById("tourImg");
+    const bar = document.getElementById("tourBar"), stage = document.getElementById("tourStage");
     const name = document.getElementById("tourName"), note = document.getElementById("tourNote");
-    let at = 0;
-    const show = (i, instant) => {
-      at = (i + TOUR.length) % TOUR.length;
-      const [label, file, w, h, text, alt] = TOUR[at];
-      tabs.querySelectorAll(".chip").forEach((b, j) => { b.setAttribute("aria-pressed", j === at); b.setAttribute("aria-selected", j === at); b.tabIndex = j === at ? 0 : -1; });
-      stage.setAttribute("aria-labelledby", `tourTab-${at}`);
-      stage.classList.toggle("window", at > 0);
-      name.textContent = label; note.textContent = text;
-      const swap = () => { img.src = `img/${file}`; img.width = w; img.height = h; img.alt = alt; img.classList.remove("fading"); };
-      if (reduce || instant) { swap(); return; }
-      img.classList.add("fading");
-      setTimeout(swap, 180);
+    const box = document.getElementById("lightbox"), boxClose = document.getElementById("lightboxClose"), boxTip = document.getElementById("lightboxTip");
+    // Out of the hero, which is a layer of its own, so the zoomed picture covers the bar at the top too.
+    document.body.append(box);
+    const on = WINDOWS.map(w => !w[5]);
+    let touched = false;
+    const pct = (v, of) => `${(v / of * 100).toFixed(3)}%`;
+    // Draws the windows that are on into a stage: the page's, or the larger one in the lightbox.
+    const paint = target => {
+      let layers = target.querySelectorAll(".layer");
+      if (!layers.length) {
+        WINDOWS.forEach(([label, file, [x, y, w, h], , alt, float]) => {
+          const img = document.createElement("img");
+          img.className = "layer off" + (float ? " float" : "");
+          img.src = `img/${file}`; img.alt = alt; img.decoding = "async"; img.draggable = false;
+          Object.assign(img.style, { left: pct(x, 2560), top: pct(y, 1440), width: pct(w, 2560), height: pct(h, 1440) });
+          target.append(img);
+        });
+        const empty = document.createElement("div");
+        empty.className = "empty"; empty.textContent = "Every window is off. Pick some above.";
+        target.append(empty);
+        layers = target.querySelectorAll(".layer");
+      }
+      layers.forEach((img, i) => img.classList.toggle("off", !on[i]));
+      target.querySelector(".empty").hidden = !touched || on.some(Boolean);
     };
-    TOUR.forEach(([label], i) => {
+    const chips = WINDOWS.map(([label], i) => {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "chip"; b.id = `tourTab-${i}`; b.textContent = label;
-      b.setAttribute("role", "tab"); b.setAttribute("aria-controls", "tourStage");
-      b.onclick = () => show(i);
-      tabs.append(b);
+      b.type = "button"; b.className = "chip"; b.innerHTML = `<i aria-hidden="true"></i>${label}`;
+      b.onclick = () => { building++; touched = true; on[i] = !on[i]; show(i); };
+      bar.insertBefore(b, bar.lastElementChild);
+      return b;
     });
-    tabs.addEventListener("keydown", e => {
-      const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
-      if (!step) return;
-      e.preventDefault(); show(at + step); tabs.children[at].focus();
+    const show = changed => {
+      chips.forEach((b, i) => b.setAttribute("aria-pressed", on[i]));
+      paint(stage);
+      if (!box.hidden) paint(box.querySelector(".desk-stage"));
+      if (changed != null) {
+        name.textContent = WINDOWS[changed][0];
+        note.textContent = on[changed] ? WINDOWS[changed][3] : `${WINDOWS[changed][0]} closed. The rest stay where they are.`;
+      }
+    };
+    // Builds the screen up a window at a time, the way you'd open them.
+    let building = 0;
+    const build = () => {
+      const run = ++building;
+      on.fill(false); show();
+      WINDOWS.forEach((w, i) => {
+        if (w[5]) return;
+        setTimeout(() => { if (run === building) { on[i] = true; show(); } }, 300 + i * 260);
+      });
+      name.textContent = "Full screen";
+      note.textContent = "Shift+F11 lays every window edge to edge across your screen. Lock one in place and the rest fit around it.";
+    };
+    document.getElementById("tourReplay").onclick = build;
+    show();
+    if (reduce || !("IntersectionObserver" in window)) on.forEach((_, i) => on[i] = !WINDOWS[i][5]), show();
+    else {
+      const seen = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { seen.disconnect(); build(); } }, { threshold: .3 });
+      on.fill(false); show(); seen.observe(stage);
+    }
+
+    // Click to zoom: the picture as large as fits, then a click for full detail (scroll to move around).
+    let returnTo = null;
+    const open = () => {
+      returnTo = document.activeElement;
+      let big = box.querySelector(".desk-stage");
+      if (!big) { big = document.createElement("div"); big.className = "desk-stage"; box.append(big); }
+      box.classList.remove("detail"); boxTip.textContent = "Click for full detail";
+      box.hidden = false; document.body.style.overflow = "hidden";
+      paint(big); boxClose.focus();
+    };
+    const close = () => { box.hidden = true; document.body.style.overflow = ""; returnTo?.focus(); };
+    stage.addEventListener("click", open);
+    stage.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+    boxClose.onclick = close;
+    box.addEventListener("click", e => {
+      const big = box.querySelector(".desk-stage");
+      if (!big.contains(e.target)) { close(); return; }
+      const r = big.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+      const detail = box.classList.toggle("detail");
+      boxTip.textContent = detail ? "Scroll to look around · click to fit" : "Click for full detail";
+      if (detail) {
+        const n = big.getBoundingClientRect();
+        box.scrollTo(fx * n.width - innerWidth / 2, fy * n.height - innerHeight / 2);
+      }
     });
-    show(0, true);
-    // Fetch the other windows once the page has settled, so switching is instant.
-    addEventListener("load", () => setTimeout(() => TOUR.slice(1).forEach(([, file]) => { new Image().src = `img/${file}`; }), 1500));
+    addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
   }
 
   /* ---------- synthetic music: a 120 bpm loop the demos all listen to ---------- */

@@ -18,7 +18,8 @@ namespace Lucent.Mac;
 /// radio. Each window is drawn on its own at the size it'd have, then put together into one picture.
 /// Two settings fill in what the headless renderer can't: LUCENT_PREVIEW_COVERS, a folder of covers named by artist
 /// or station ("Bicep.png", "Groove Salad.jpg"; made-up covers without it), and LUCENT_PREVIEW_VISUAL, a picture of a
-/// visual to show in the visuals window (the visuals themselves need the graphics chip).
+/// visual to show in the visuals window (the visuals themselves need the graphics chip). LUCENT_PREVIEW_LAYERS, a folder,
+/// also saves each of FullScreen's windows on its own with places.json saying where each goes.
 /// </summary>
 public static partial class Screenshots
 {
@@ -142,14 +143,28 @@ public static partial class Screenshots
             {
                 var place = layout.Places[entry.Kind.ToString()];
                 var fixedSize = entry.Kind is TileKind.Player or TileKind.Equalizer;
-                return (Draw(entry.Window, fixedSize ? null : new Size(place.Width, place.Height)), new Point(place.Left, place.Top));
+                return (Kind: entry.Kind, Picture: Draw(entry.Window, fixedSize ? null : new Size(place.Width, place.Height)),
+                    At: new Point(place.Left, place.Top));
             }).ToList();
         foreach (var (window, _) in windows)
         {
             window.Close();
         }
 
-        return Compose(new Size(screen.Width, screen.Height), shots);
+        // For the website's tour, which adds and takes away windows one at a time: each window on its own, and where it goes.
+        if (Environment.GetEnvironmentVariable("LUCENT_PREVIEW_LAYERS") is { Length: > 0 } layers)
+        {
+            Directory.CreateDirectory(layers);
+            foreach (var shot in shots)
+            {
+                shot.Picture.Save(Path.Combine(layers, $"{shot.Kind}.png"));
+            }
+
+            File.WriteAllText(Path.Combine(layers, "places.json"), "{" + string.Join(",", shots.Select(shot =>
+                $"\"{shot.Kind}\":[{shot.At.X},{shot.At.Y},{shot.Picture.Size.Width},{shot.Picture.Size.Height}]")) + "}");
+        }
+
+        return Compose(new Size(screen.Width, screen.Height), shots.Select(shot => (shot.Picture, shot.At)));
     }
 
     /// <summary>Draws a window, at <paramref name="size"/> if given, the way the catalog draws one.</summary>
@@ -164,7 +179,7 @@ public static partial class Screenshots
         window.Show();
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-        var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException($"{window.GetType().Name} drew nothing.");
+        var frame = Capture(window) ?? throw new InvalidOperationException($"{window.GetType().Name} drew nothing.");
         if (close)
         {
             window.Close();
@@ -173,17 +188,45 @@ public static partial class Screenshots
         return frame;
     }
 
+    /// <summary>
+    /// How many pixels each window point is drawn with: LUCENT_PREVIEW_SCALE, 1 if not set. The website's shots use 2,
+    /// as a Retina screen shows them, so their text stays sharp when they're shown large.
+    /// </summary>
+    private static readonly double Scale =
+        double.TryParse(Environment.GetEnvironmentVariable("LUCENT_PREVIEW_SCALE"), System.Globalization.CultureInfo.InvariantCulture, out var scale) && scale > 0 ? scale : 1;
+
+    /// <summary>
+    /// A shown window's picture, at <see cref="Scale"/>. The analyzer draws its pictures a pixel per point (the headless
+    /// screen's scale), so they'd come out a quarter size: it's drawn at 1, and shown larger where it's put together.
+    /// </summary>
+    private static Bitmap? Capture(Window window)
+    {
+        if (Scale == 1 || window is AnalyzerWindow)
+        {
+            return window.CaptureRenderedFrame();
+        }
+
+        var size = window.Bounds.Size;
+        var picture = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(size.Width * Scale), (int)Math.Ceiling(size.Height * Scale)),
+            new Vector(96 * Scale, 96 * Scale));
+        picture.Render(window);
+        return picture;
+    }
+
     /// <summary>A window showing the pictures put together, so the catalog saves it like any other.</summary>
     private static Window Compose(Size size, IEnumerable<(Bitmap Picture, Point At)> pictures)
     {
-        var canvas = new RenderTargetBitmap(new PixelSize((int)size.Width, (int)size.Height));
-        using (var context = canvas.CreateDrawingContext())
+        var canvas = new Canvas { Width = size.Width, Height = size.Height, Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0B, 0x10)) };
+        foreach (var (picture, at) in pictures)
         {
-            context.FillRectangle(new SolidColorBrush(Color.FromRgb(0x0B, 0x0B, 0x10)), new Rect(size));
-            foreach (var (picture, at) in pictures)
-            {
-                context.DrawImage(picture, new Rect(at, picture.Size));
-            }
+            // Drawn from a decoded copy: a drawn-at-2x picture shown as it is comes out twice too big when drawn at 2x again.
+            using var png = new MemoryStream();
+            picture.Save(png);
+            png.Position = 0;
+            var image = new Image { Source = new Bitmap(png), Width = picture.Size.Width, Height = picture.Size.Height, Stretch = Stretch.Fill };
+            Canvas.SetLeft(image, at.X);
+            Canvas.SetTop(image, at.Y);
+            canvas.Children.Add(image);
         }
 
         return new Window
@@ -191,7 +234,7 @@ public static partial class Screenshots
             Width = size.Width,
             Height = size.Height,
             SystemDecorations = SystemDecorations.None,
-            Content = new Image { Source = canvas, Width = size.Width, Height = size.Height },
+            Content = canvas,
         };
     }
 }
