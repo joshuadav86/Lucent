@@ -701,8 +701,14 @@ jobs:
           if [ -n "$NOTARY_PROFILE" ]; then
             # Notarize the plain app too, and staple the ticket so it opens without going online.
             ditto -c -k --keepParent out/Lucent.app "$RUNNER_TEMP/notarize.zip"
-            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --keychain "$MAC_KEYCHAIN" --wait --timeout 50m
-            xcrun stapler staple out/Lucent.app
+            # Apple can take an hour to answer, and the runner's network has dropped mid-wait, so neither fails
+            # the build: the app is signed either way, and once Apple accepts it Macs that are online let it open.
+            if xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" \
+              --keychain "$MAC_KEYCHAIN" --wait --timeout 50m; then
+              xcrun stapler staple out/Lucent.app
+            else
+              echo "::warning::Apple hadn't finished notarizing Lucent.app, so this zip isn't stapled."
+            fi
           fi
           ditto -c -k --keepParent out/Lucent.app "Lucent-mac-${{ matrix.arch }}.zip"
 
@@ -732,7 +738,6 @@ jobs:
             args+=(--signAppIdentity adhoc)
           else
             args+=(--signAppIdentity "$SIGN_IDENTITY" --keychain "$KEYCHAIN")
-            if [ -n "$NOTARY_PROFILE" ]; then args+=(--notaryProfile "$NOTARY_PROFILE"); fi
           fi
           .vpk/vpk "${args[@]}"
           ls -l releases-mac
@@ -743,8 +748,14 @@ jobs:
             pkg="releases-mac/Lucent-$RID-Setup.pkg"
             tools/mac/sign-installer.sh "$pkg" "$SIGN_INSTALL_IDENTITY" "$KEYCHAIN"
             if [ -n "$NOTARY_PROFILE" ]; then
-              xcrun notarytool submit "$pkg" --keychain-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN" --wait --timeout 40m
-              xcrun stapler staple "$pkg"
+              # Notarizing the installer covers the app inside it, which is the same signed app as the update
+              # package's; as above, a slow answer from Apple leaves it signed but not stapled.
+              if xcrun notarytool submit "$pkg" --keychain-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN" \
+                --wait --timeout 40m; then
+                xcrun stapler staple "$pkg"
+              else
+                echo "::warning::Apple hadn't finished notarizing the installer, so it isn't stapled."
+              fi
             fi
           fi
 
