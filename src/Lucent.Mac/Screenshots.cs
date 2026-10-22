@@ -121,7 +121,7 @@ public static partial class Screenshots
                 window.Show();
                 Dispatcher.UIThread.RunJobs();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-                var frame = window.CaptureRenderedFrame();
+                var frame = Capture(window);
                 var path = Path.Combine(folder, $"{name}.png");
                 frame?.Save(path);
                 Console.WriteLine($"{name}: {(frame is null ? "nothing drawn" : path)}");
