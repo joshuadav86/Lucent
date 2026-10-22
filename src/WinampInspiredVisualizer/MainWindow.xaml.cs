@@ -80,6 +80,7 @@ public partial class MainWindow : Window
         SnapEveryWindow();
         SizeChanged += OnPlayerWidthChanged;
         StateChanged += OnPlayerStateChanged;
+        SourceInitialized += (_, _) => (PresentationSource.FromVisual(this) as HwndSource)?.AddHook(RefuseMaximize);
 
         _queue.PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -106,7 +107,28 @@ public partial class MainWindow
         }, DispatcherPriority.Background);
     }
 
-    /// <summary>The player is never maximized (a double-click on its title bar would); it grows by its edges instead.</summary>
+    private const int WM_SYSCOMMAND = 0x0112;
+    private const int WM_NCLBUTTONDBLCLK = 0x00A3;
+    private const int SC_MAXIMIZE = 0xF030;
+    private const int HTCAPTION = 2;
+
+    /// <summary>
+    /// The player is never maximized; it grows by its edges instead. A double-click on its title bar (or
+    /// Maximize from its window menu) is turned away before Windows maximizes it, so it doesn't fill the
+    /// screen for a moment and then jump back.
+    /// </summary>
+    private static IntPtr RefuseMaximize(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if ((msg == WM_NCLBUTTONDBLCLK && wParam.ToInt64() == HTCAPTION)
+            || (msg == WM_SYSCOMMAND && (wParam.ToInt64() & 0xFFF0) == SC_MAXIMIZE))
+        {
+            handled = true;
+        }
+
+        return IntPtr.Zero;
+    }
+
+    /// <summary>Anything that still maximizes the player (Win+Up, dragging it to the top of the screen) is undone.</summary>
     private void OnPlayerStateChanged(object? sender, EventArgs e)
     {
         if (WindowState == WindowState.Maximized)
