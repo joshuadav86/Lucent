@@ -792,7 +792,8 @@ jobs:
             # the build: the app is signed either way, and once Apple accepts it Macs that are online let it open.
             if xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" \
               --keychain "$MAC_KEYCHAIN" --wait --timeout 50m; then
-              xcrun stapler staple out/Lucent.app
+              # Retries, and only warns, when Apple's ticket server drops the connection.
+              tools/mac/staple.sh out/Lucent.app
             else
               echo "::warning::Apple hadn't finished notarizing Lucent.app, so this zip isn't stapled."
             fi
@@ -840,7 +841,7 @@ jobs:
               # package's; as above, a slow answer from Apple leaves it signed but not stapled.
               if xcrun notarytool submit "$pkg" --keychain-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN" \
                 --wait --timeout 40m; then
-                xcrun stapler staple "$pkg"
+                tools/mac/staple.sh "$pkg"
               else
                 echo "::warning::Apple hadn't finished notarizing the installer, so it isn't stapled."
               fi
