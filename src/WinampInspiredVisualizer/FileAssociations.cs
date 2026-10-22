@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Video;
@@ -109,13 +111,72 @@ public static class FileAssociations
 
     /// <summary>
     /// Opens Settings at Lucent's page in Default apps (on Windows 10, Default apps itself), where
-    /// people choose it for their music. Registers Lucent first, so it's there to choose.
+    /// people choose it for their music and videos. Registers Lucent first, so it's there to choose.
     /// </summary>
     public static void OpenDefaultAppsSettings()
     {
         Register();
         Process.Start(new ProcessStartInfo($"ms-settings:defaultapps?registeredAppUser={AppName}") { UseShellExecute = true });
     }
+
+    /// <summary>
+    /// Each music and video type that opens in another app when it's double-clicked, with that app's name.
+    /// Asks Windows what it would open each type with, so it's true whatever was chosen where.
+    /// </summary>
+    public static IReadOnlyList<(string Extension, string? App)> TypesElsewhere()
+    {
+        var elsewhere = new List<(string, string?)>();
+        foreach (var (extension, _) in AllTypes)
+        {
+            // Nothing opens it yet: no other app to report.
+            if (Query(extension, AssocStrFriendlyAppName) is not { } app)
+            {
+                continue;
+            }
+
+            if (!IsLucent(Query(extension, AssocStrExecutable)))
+            {
+                elsewhere.Add((extension, app));
+            }
+        }
+
+        return elsewhere;
+    }
+
+    private static bool IsLucent(string? exe)
+    {
+        try
+        {
+            return exe is not null && Environment.ProcessPath is { } lucent
+                && string.Equals(Path.GetFullPath(exe), Path.GetFullPath(lucent), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            // Not a file path (Windows names a Store app some other way): not Lucent.
+            return false;
+        }
+    }
+
+    // Text Windows has for an extension's "open" (the app's name, or its .exe), or null for none.
+    private static string? Query(string extension, int what)
+    {
+        uint length = 1024;
+        var text = new StringBuilder((int)length);
+        if (AssocQueryString(AssocFInitIgnoreUnknown | AssocFNoTruncate, what, extension, "open", text, ref length) != 0)
+        {
+            return null;
+        }
+
+        return text.Length > 0 ? text.ToString() : null;
+    }
+
+    private const int AssocFNoTruncate = 0x20;
+    private const int AssocFInitIgnoreUnknown = 0x400;
+    private const int AssocStrExecutable = 2;
+    private const int AssocStrFriendlyAppName = 4;
+
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+    private static extern int AssocQueryString(int flags, int what, string association, string? extra, StringBuilder output, ref uint length);
 
     private const int ShcneAssocChanged = 0x08000000;
 
