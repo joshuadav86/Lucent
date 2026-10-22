@@ -462,11 +462,11 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// The first layout, like Winamp's: the equalizer (if it's open) and the queue under the player,
-    /// the visuals beside them all, and the library (if it's open) on the other side, centred on the screen.
+    /// the visuals beside them all, and the library (if it's open) on the other side, centred on the screen the player is on.
     /// </summary>
     private void ArrangeFirstTime()
     {
-        var work = Placement.PrimaryWorkArea(this);
+        var work = Placement.WorkArea(this);
         var playerWidth = ActualWidth;
         var playerHeight = ActualHeight;
         var equalizer = OpenEqualizerWindow;
@@ -528,7 +528,7 @@ public partial class MainWindow : Window
         }
 
         // Never placed before (the library, usually): beside the player where there's room.
-        var work = Placement.PrimaryWorkArea(this);
+        var work = Placement.WorkArea(this);
         window.WindowStartupLocation = WindowStartupLocation.Manual;
         var size = Placement.SizeOf(window);
         var height = Math.Max(size.Height, ColumnTop - Top + (_queue.IsVisible ? _queue.ActualHeight() : 0));

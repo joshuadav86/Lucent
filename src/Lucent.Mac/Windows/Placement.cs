@@ -77,10 +77,6 @@ public static class Placement
         return InUnits(window, screen?.WorkingArea ?? new PixelRect(0, 0, 1440, 900));
     }
 
-    /// <summary>The main screen's usable area (WPF's SystemParameters.WorkArea).</summary>
-    public static Rect PrimaryWorkArea(Window window) =>
-        InUnits(window, window.Screens.Primary?.WorkingArea ?? new PixelRect(0, 0, 1440, 900));
-
     /// <summary>All the screens together (WPF's SystemParameters.VirtualScreen...).</summary>
     public static Rect VirtualScreen(Window window)
     {
