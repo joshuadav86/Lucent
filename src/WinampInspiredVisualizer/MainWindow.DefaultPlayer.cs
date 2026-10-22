@@ -1,8 +1,9 @@
 using System.Windows;
+using WinampInspiredVisualizer.Library;
 
 namespace WinampInspiredVisualizer;
 
-// Lucent as the player that opens music from Explorer: songs it's started with or handed by
+// Lucent as the player that opens music and videos from Explorer: songs it's started with or handed by
 // another Lucent, and the Default player choice in Options > Updates.
 public partial class MainWindow
 {
@@ -46,18 +47,34 @@ public partial class MainWindow
         PlayDroppedPaths(paths);
     }
 
+    /// <summary>Says whether double-clicked music and videos open in Lucent now, as Options shows the Updates tab.</summary>
+    private void ShowDefaultPlayerState()
+    {
+        try
+        {
+            ShowDefaultPlayerStatus(DefaultPlayerStatus.Describe(FileAssociations.TypesElsewhere()));
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Checking the default player", ex);
+            DefaultPlayerStatusText.Visibility = Visibility.Collapsed;
+        }
+    }
+
     private void OnMakeDefaultPlayer(object sender, RoutedEventArgs e)
     {
         try
         {
             FileAssociations.OpenDefaultAppsSettings();
-            ShowDefaultPlayerStatus("In the Settings window that opened, choose Lucent for your music files " +
-                "(MP3, FLAC and the rest). Windows has you make this choice there yourself.");
+            // Windows only lets people choose the default themselves, so this can't be reported as done
+            // yet: Options checks again the next time it's opened.
+            ShowDefaultPlayerStatus("In the Settings window that opened, click Set default at the top of Lucent's page " +
+                "(on Windows 10, choose Lucent for each type, WAV, MP3, and MP4 among them). Then open Options again to check it took.");
         }
         catch (Exception ex)
         {
             ErrorLog.Write("Opening Default apps", ex);
-            ShowDefaultPlayerStatus("Couldn't open Settings. Go to Settings > Apps > Default apps and choose Lucent there.");
+            ShowDefaultPlayerStatus("Couldn't open Settings. Go to Settings > Apps > Default apps, find Lucent, and click Set default.");
         }
     }
 

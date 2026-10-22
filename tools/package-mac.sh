@@ -48,8 +48,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
   <key>NSMicrophoneUsageDescription</key><string>Lucent records from your audio interface, mixer or microphone when you use its Record window, and its visuals react to what you're recording. Recordings are saved only where you choose.</string>
   <key>NSAudioCaptureUsageDescription</key><string>Lucent listens to what other apps are playing so its visuals and analyzer can react to it. Nothing is recorded or sent anywhere.</string>
-  <!-- The music Lucent opens from the Finder (Open With, or as the default player). The same list is in
-       src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg, Opus, MKV or WebM, so they're declared below. -->
+  <!-- The music and videos Lucent opens from the Finder (Open With, or as the default player). The same
+       list, with the common movie types, is in src/Lucent.Mac/Interop/LaunchServices.cs. macOS doesn't know Ogg, Opus, MKV or WebM, so they're declared below. -->
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>
@@ -72,6 +72,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
         <string>com.apple.coreaudio-format</string>
         <string>public.ac3-audio</string>
         <string>public.enhanced-ac3-audio</string>
+        <string>com.wavpack.audio</string>
+        <string>com.monkeysaudio.ape</string>
       </array>
     </dict>
     <dict>
@@ -107,6 +109,26 @@ cat > "$app/Contents/Info.plist" <<PLIST
       <dict>
         <key>public.filename-extension</key><array><string>opus</string></array>
         <key>public.mime-type</key><array><string>audio/opus</string></array>
+      </dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key><string>com.wavpack.audio</string>
+      <key>UTTypeDescription</key><string>WavPack audio</string>
+      <key>UTTypeConformsTo</key><array><string>public.audio</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>wv</string></array>
+        <key>public.mime-type</key><array><string>audio/x-wavpack</string></array>
+      </dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key><string>com.monkeysaudio.ape</string>
+      <key>UTTypeDescription</key><string>Monkey's Audio</string>
+      <key>UTTypeConformsTo</key><array><string>public.audio</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>ape</string></array>
+        <key>public.mime-type</key><array><string>audio/x-ape</string></array>
       </dict>
     </dict>
     <dict>

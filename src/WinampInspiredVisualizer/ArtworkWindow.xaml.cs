@@ -6,6 +6,7 @@ using System.Windows.Media.Animation;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Radio;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 using Track = WinampInspiredVisualizer.Playlist.Track;
@@ -176,7 +177,22 @@ public partial class ArtworkWindow : Window
         SaveMenuItem.IsEnabled = _cover is not null;
         EditMenuItem.IsEnabled = _track is not null;
         OnTopMenuItem.IsChecked = Topmost;
+
+        // While a station plays, its website, support page and today's shows are a right-click away here too.
+        foreach (var added in ArtMenu.Items.OfType<Control>().Where(item => item.Tag == MainWindow.StationItemMark).ToList())
+        {
+            ArtMenu.Items.Remove(added);
+        }
+
+        if (PlayingStation is not null && Owner is MainWindow player)
+        {
+            player.AddStationItems(ArtMenu, ArtMenu.Items.IndexOf(SaveMenuItem) + 1);
+        }
     }
+
+    /// <summary>The station on, when this window is showing it (not a song from the queue or another app).</summary>
+    private RadioStation? PlayingStation =>
+        _remote is { } remote && (Owner as MainWindow)?.CurrentStation is { } station && station.Id == remote.Id ? station : null;
 
     private void OnCopyImage(object sender, RoutedEventArgs e) => CopyImage();
 

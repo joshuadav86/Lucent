@@ -49,10 +49,10 @@ public static class SelfTest
     // so a heavy visual may not reach FramesPerVisual in this time; that's a warning, not a failure.
     private static readonly TimeSpan TimePerVisual = TimeSpan.FromSeconds(60);
 
-    // The formats NAudio reads itself. Everything else, MP3 included, goes through Media Foundation.
+    // The formats NAudio or Lucent reads itself. Everything else, MP3 included, goes through Media Foundation.
     private static readonly HashSet<string> ReadWithoutMediaFoundation = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".wav", ".aif", ".aiff", ".ogg", ".oga", ".opus",
+        ".wav", ".aif", ".aiff", ".ogg", ".oga", ".opus", ".wv", ".ape",
     };
 
     public static int Run(string[] args)

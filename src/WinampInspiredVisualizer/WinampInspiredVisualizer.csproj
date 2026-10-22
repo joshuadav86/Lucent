@@ -85,6 +85,11 @@
   <ItemGroup>
     <None Include="..\..\assets\licenses\LICENSE-libVLC.txt" Link="Licenses\LICENSE-libVLC.txt"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <!-- The WavPack and Monkey's Audio decoders are ports of theirs (BSD licences). -->
+    <None Include="..\..\assets\licenses\LICENSE-WavPack.txt" Link="Licenses\LICENSE-WavPack.txt"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\assets\licenses\LICENSE-MonkeysAudio.txt" Link="Licenses\LICENSE-MonkeysAudio.txt"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <!-- The song a first start puts in the library (see StarterMusic), beside Lucent.exe so it can be copied out. -->

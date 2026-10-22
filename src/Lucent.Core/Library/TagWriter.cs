@@ -123,7 +123,8 @@ public static class TagWriter
 
     /// <summary>Extensions TagLib can write tags to.</summary>
     public static bool CanWrite(string path) => System.IO.Path.GetExtension(path).ToLowerInvariant() is
-        ".mp3" or ".flac" or ".ogg" or ".oga" or ".opus" or ".m4a" or ".mp4" or ".aac" or ".wma" or ".wav" or ".aif" or ".aiff" or ".aifc";
+        ".mp3" or ".flac" or ".ogg" or ".oga" or ".opus" or ".m4a" or ".mp4" or ".aac" or ".wma" or ".wav" or ".aif" or ".aiff" or ".aifc"
+        or ".wv" or ".ape";
 
     /// <summary>
     /// The type name TagLib uses for a file. It's passed explicitly so the temporary copy, whose name ends
@@ -299,6 +300,9 @@ public static class TagWriter
                 break;
             case ".wma":
                 file.GetTag(TagTypes.Asf, true);
+                break;
+            case ".wv" or ".ape":
+                file.GetTag(TagTypes.Ape, true);
                 break;
         }
     }
