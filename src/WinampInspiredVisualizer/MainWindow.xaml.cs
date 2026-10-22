@@ -271,12 +271,13 @@ public partial class MainWindow : Window
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
         {
-            UpdateButton.ToolTip = $"Lucent {version} is ready. Click to see what's new and restart into it, or it installs when you close Lucent.";
+            UpdateButton.ToolTip = UpdateButtonTip(version);
             UpdateButton.Visibility = Visibility.Visible;
             ShowUpdateStatus(ReadyStatus(version), readyToInstall: true);
         });
         _updater.Downloading += version => Dispatcher.BeginInvoke(() => ShowUpdateStatus($"Downloading Lucent {version}…", readyToInstall: false));
         _updater.EveryBuild = _settings.EveryBuild;
+        _updater.InstallAutomatically = _settings.InstallUpdatesAutomatically;
         _ = _updater.RunAsync();
         AddStarterMusic();
         StartOpeningFiles();
@@ -1321,6 +1322,19 @@ public partial class MainWindow : Window
             _settings.AvsVisuals = on;
             _visuals.ShowAvs(on);
         }
+        else if (sender == AutoInstallUpdatesSwitch)
+        {
+            _settings.InstallUpdatesAutomatically = on;
+            _updater.InstallAutomatically = on;
+            _settings.Save();
+            if (_updater.ReadyVersion is { } ready)
+            {
+                UpdateButton.ToolTip = UpdateButtonTip(ready);
+                ShowUpdateStatus(ReadyStatus(ready), readyToInstall: true);
+            }
+
+            return;
+        }
         else if (sender == CrashReportsSwitch)
         {
             _settings.SendCrashReports = on;
@@ -1375,6 +1389,7 @@ public partial class MainWindow : Window
         ModernAvsSwitch.IsChecked = _settings.ModernAvs;
         ModernMilkDropSwitch.IsChecked = _settings.ModernMilkDrop;
         CrashReportsSwitch.IsChecked = _settings.SendCrashReports;
+        AutoInstallUpdatesSwitch.IsChecked = _settings.InstallUpdatesAutomatically;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
     }

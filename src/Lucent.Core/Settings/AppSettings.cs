@@ -106,6 +106,12 @@ public sealed class AppSettings
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
 
+    /// <summary>
+    /// Install a downloaded update when Lucent closes (or on its next start). Off, Lucent still downloads
+    /// it and says it's ready, but installs it only when Restart and install is chosen.
+    /// </summary>
+    public bool InstallUpdatesAutomatically { get; set; } = true;
+
     /// <summary>Send a report to Lucent's developer when Lucent crashes, with nothing personal in it.</summary>
     public bool SendCrashReports { get; set; } = true;
 

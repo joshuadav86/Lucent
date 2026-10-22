@@ -21,7 +21,11 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        VelopackApp.Build().Run();
+        // Velopack installs an update that downloaded but didn't install on close the next time Lucent
+        // starts, unless updates are set to install only when asked.
+        VelopackApp.Build()
+            .SetAutoApplyOnStartup(AppSettings.Load().InstallUpdatesAutomatically)
+            .Run();
 
         // The shared code leaves file decoding to each platform. On the Mac, Core Audio decodes
         // everything that isn't Ogg or Opus (those are decoded in Lucent.Core on every platform).

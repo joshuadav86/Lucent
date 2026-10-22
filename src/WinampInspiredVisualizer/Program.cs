@@ -16,7 +16,10 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        // Velopack installs an update that downloaded but didn't install on close the next time Lucent
+        // starts, unless updates are set to install only when asked.
         VelopackApp.Build()
+            .SetAutoApplyOnStartup(AppSettings.Load().InstallUpdatesAutomatically)
             .OnBeforeUninstallFastCallback(_ => FileAssociations.Unregister())
             .Run();
 

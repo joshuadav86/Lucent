@@ -407,6 +407,10 @@
                     </Border>
                     <TextBlock Theme="{StaticResource OptionHint}"
                                Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
+                    <CheckBox x:Name="AutoInstallUpdatesSwitch" Theme="{StaticResource SwitchToggle}"
+                              Content="Install updates automatically" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="On, Lucent downloads updates in the background and installs them when you close it. Off, it still downloads them and tells you one is ready, but installs it only when you choose Restart and install." />
                     <TextBlock x:Name="VersionText" Theme="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" />
                     <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
                     <TextBlock x:Name="UpdateStatusText" Theme="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" IsVisible="False" />
