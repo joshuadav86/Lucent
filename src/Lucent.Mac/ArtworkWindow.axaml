@@ -33,6 +33,9 @@
                 <ContextMenu x:Name="ArtMenu" Opening="OnArtContextMenuOpening">
                     <MenuItem x:Name="CopyMenuItem" Header="Copy image" Click="OnCopyImage" />
                     <MenuItem x:Name="SaveMenuItem" Header="Save image…" Click="OnSaveImage" />
+                    <Separator x:Name="StationSeparator" IsVisible="False" />
+                    <MenuItem x:Name="StationWebsiteMenuItem" Header="Open the station's website" Click="OnStationWebsite" IsVisible="False" />
+                    <MenuItem x:Name="StationSupportMenuItem" Header="Support the station…" Click="OnStationSupport" IsVisible="False" />
                     <Separator />
                     <MenuItem x:Name="EditMenuItem" Click="OnEditInfo">
                         <MenuItem.Header>

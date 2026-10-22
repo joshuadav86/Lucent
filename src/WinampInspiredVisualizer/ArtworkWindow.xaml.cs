@@ -6,6 +6,7 @@ using System.Windows.Media.Animation;
 using Microsoft.Win32;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Radio;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 using Track = WinampInspiredVisualizer.Playlist.Track;
@@ -176,6 +177,35 @@ public partial class ArtworkWindow : Window
         SaveMenuItem.IsEnabled = _cover is not null;
         EditMenuItem.IsEnabled = _track is not null;
         OnTopMenuItem.IsChecked = Topmost;
+
+        // While a station plays, its website and support page are a right-click away here too.
+        var station = PlayingStation;
+        var shown = station is not null ? Visibility.Visible : Visibility.Collapsed;
+        StationSeparator.Visibility = shown;
+        StationWebsiteMenuItem.Visibility = shown;
+        StationSupportMenuItem.Visibility = shown;
+        StationWebsiteMenuItem.IsEnabled = station?.Homepage is { } homepage && RadioGuide.IsStreamAddress(homepage);
+        StationSupportMenuItem.IsEnabled = station is not null && FeaturedStations.SupportPage(station) is not null;
+    }
+
+    /// <summary>The station on, when this window is showing it (not a song from the queue or another app).</summary>
+    private RadioStation? PlayingStation =>
+        _remote is { } remote && (Owner as MainWindow)?.CurrentStation is { } station && station.Id == remote.Id ? station : null;
+
+    private void OnStationWebsite(object sender, RoutedEventArgs e)
+    {
+        if (PlayingStation is { } station)
+        {
+            (Owner as MainWindow)?.OpenStationWebsite(station);
+        }
+    }
+
+    private void OnStationSupport(object sender, RoutedEventArgs e)
+    {
+        if (PlayingStation is { } station)
+        {
+            (Owner as MainWindow)?.OpenStationSupport(station);
+        }
     }
 
     private void OnCopyImage(object sender, RoutedEventArgs e) => CopyImage();

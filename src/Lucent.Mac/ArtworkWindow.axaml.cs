@@ -10,6 +10,7 @@ using Lucent.Mac.Audio;
 using Lucent.Mac.Library;
 using Lucent.Mac.Windows;
 using WinampInspiredVisualizer.Library;
+using WinampInspiredVisualizer.Radio;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 using Track = WinampInspiredVisualizer.Playlist.Track;
@@ -232,6 +233,34 @@ public partial class ArtworkWindow : Window
         SaveMenuItem.IsEnabled = _cover is not null;
         EditMenuItem.IsEnabled = _track is not null;
         OnTopMenuItem.IsChecked = Topmost;
+
+        // While a station plays, its website and support page are a right-click away here too.
+        var station = PlayingStation;
+        StationSeparator.IsVisible = station is not null;
+        StationWebsiteMenuItem.IsVisible = station is not null;
+        StationSupportMenuItem.IsVisible = station is not null;
+        StationWebsiteMenuItem.IsEnabled = station?.Homepage is { } homepage && RadioGuide.IsStreamAddress(homepage);
+        StationSupportMenuItem.IsEnabled = station is not null && FeaturedStations.SupportPage(station) is not null;
+    }
+
+    /// <summary>The station on, when this window is showing it (not a song from the queue or another app).</summary>
+    private RadioStation? PlayingStation =>
+        _remote is { } remote && (Owner as MainWindow)?.CurrentStation is { } station && station.Id == remote.Id ? station : null;
+
+    private void OnStationWebsite(object? sender, RoutedEventArgs e)
+    {
+        if (PlayingStation is { } station)
+        {
+            (Owner as MainWindow)?.OpenStationWebsite(station);
+        }
+    }
+
+    private void OnStationSupport(object? sender, RoutedEventArgs e)
+    {
+        if (PlayingStation is { } station)
+        {
+            (Owner as MainWindow)?.OpenStationSupport(station);
+        }
     }
 
     private void OnCopyImage(object? sender, RoutedEventArgs e) => _ = CopyImageAsync();
