@@ -48,7 +48,7 @@
         <Grid x:Name="ArtArea" Grid.Row="1" Margin="10,0,10,10" Background="Transparent"
               MouseLeftButtonDown="OnArtMouseDown" ContextMenuOpening="OnArtContextMenuOpening">
             <Grid.ContextMenu>
-                <ContextMenu>
+                <ContextMenu x:Name="ArtMenu">
                     <MenuItem x:Name="CopyMenuItem" Header="Copy image" Click="OnCopyImage" />
                     <MenuItem x:Name="SaveMenuItem" Header="Save image…" Click="OnSaveImage" />
                     <Separator />

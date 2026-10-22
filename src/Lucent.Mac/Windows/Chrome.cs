@@ -30,10 +30,12 @@ public static class Chrome
             if (e.NewValue is true)
             {
                 control.AddHandler(InputElement.PointerPressedEvent, OnCaptionPressed, RoutingStrategies.Bubble, handledEventsToo: false);
+                control.AddHandler(Control.ContextRequestedEvent, OnCaptionContext, RoutingStrategies.Bubble, handledEventsToo: false);
             }
             else
             {
                 control.RemoveHandler(InputElement.PointerPressedEvent, OnCaptionPressed);
+                control.RemoveHandler(Control.ContextRequestedEvent, OnCaptionContext);
             }
         });
     }
@@ -52,6 +54,16 @@ public static class Chrome
         window.ExtendClientAreaChromeHints = Avalonia.Platform.ExtendClientAreaChromeHints.NoChrome;
         window.ExtendClientAreaTitleBarHeightHint = 0;
         window.SystemDecorations = SystemDecorations.Full;
+    }
+
+    /// <summary>A right-click on a title bar, on nothing with a menu of its own: Lucent's menu, with "Full screen Lucent".</summary>
+    private static void OnCaptionContext(object? sender, ContextRequestedEventArgs e)
+    {
+        if (!e.Handled && sender is Control caption && caption.GetVisualRoot() is Window window
+            && LucentFullScreen.ShowWindowMenu(window, caption))
+        {
+            e.Handled = true;
+        }
     }
 
     private static void OnCaptionPressed(object? sender, PointerPressedEventArgs e)

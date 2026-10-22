@@ -128,6 +128,7 @@ public partial class VisualizerWindow
             player.AddGraphicsItems(menu);
         }
 
+        Windows.LucentFullScreen.AddTo(menu);
         menu.Open(VisualizerFrame);
     }
 

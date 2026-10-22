@@ -124,6 +124,15 @@ public sealed class AppSettings
     /// <summary>Every window moves with the player when it's dragged, docked to it or not (J).</summary>
     public bool LinkWindows { get; set; }
 
+    /// <summary>
+    /// Lucent full screen (Shift+F11): every open window tiled across the player's screen. Lucent opens
+    /// that way again if it was closed that way.
+    /// </summary>
+    public bool LucentFullScreen { get; set; }
+
+    /// <summary>Where each window was before Lucent went full screen, by name: where they go back to when it's switched off.</summary>
+    public Dictionary<string, WindowBounds> WindowsBeforeFullScreen { get; set; } = new();
+
     // ---- Graphics ----
 
     public RenderResolution Resolution { get; set; } = RenderResolution.Auto;

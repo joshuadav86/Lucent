@@ -15,6 +15,7 @@ public partial class QueueWindow : ToolWindow
     {
         InitializeComponent();
         PlacementName = "Queue";
+        LucentFullScreen.AddTo(QueueMenu);
     }
 
     /// <summary>Music dropped on the queue goes on the end of it, as on Winamp's playlist.</summary>

@@ -31,6 +31,8 @@ public sealed class WindowSnapper
     private const int WM_EXITSIZEMOVE = 0x0232;
     private const int WM_DPICHANGED = 0x02E0;
     private const int WM_SYSCOMMAND = 0x0112;
+    private const int WM_NCRBUTTONUP = 0x00A5;
+    private const int HTCAPTION = 2;
 
     private const int SC_SIZE = 0xF000;
     private const int SC_MOVE = 0xF010;
@@ -127,6 +129,11 @@ public sealed class WindowSnapper
     {
         switch (msg)
         {
+            // A right-click on a title bar: Lucent's own menu, with "Full screen Lucent", instead of Windows' one.
+            case WM_NCRBUTTONUP when wParam.ToInt64() == HTCAPTION
+                && HwndSource.FromHwnd(hwnd)?.RootVisual is Window titled && LucentFullScreen.ShowWindowMenu(titled):
+                handled = true;
+                break;
             // A locked window doesn't start moving or resizing at all (its title bar and edges do nothing).
             case WM_SYSCOMMAND when (wParam.ToInt64() & 0xFFF0) is SC_MOVE or SC_SIZE && IsLocked(hwnd):
                 handled = true;

@@ -16,6 +16,7 @@ public partial class QueueWindow : ToolWindow
         InitializeComponent();
         Chrome.UseLucentFrame(this);
         PlacementName = "Queue";
+        LucentFullScreen.AddTo(QueueMenu);
 
         // Runs before the list's menu opens, to fill in the items that depend on what's selected.
         PlaylistView.AddHandler(ContextRequestedEvent, OnQueueMenuOpening, RoutingStrategies.Tunnel);

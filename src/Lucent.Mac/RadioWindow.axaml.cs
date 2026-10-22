@@ -78,6 +78,9 @@ public partial class RadioWindow : Window
         LoadDirectoryExtras();
     }
 
+    /// <summary>The radio window, while it's open.</summary>
+    public static Window? Current => _instance;
+
     /// <summary>Opens the window, or brings it forward if it's already open.</summary>
     public static void Open(MainWindow owner, AppSettings settings)
     {
@@ -553,6 +556,7 @@ public partial class RadioWindow : Window
             }
         };
         menu.Items.Add(copy);
+        Windows.LucentFullScreen.AddTo(menu);
         menu.Open(row);
     }
 
