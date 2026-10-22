@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Velopack;
 using Velopack.Sources;
@@ -31,9 +32,12 @@ public sealed class AppUpdater
     // The changes between two commits.
     private const string CompareUrl = "https://api.github.com/repos/joshuadav86/Lucid/compare/";
 
-    // A file on each release listing the changes to main that were only to the website (build.yml makes
-    // it), left out of what's new. Downloading a release's file doesn't count against GitHub's API limit.
-    private const string WebsiteChangesFile = "website-changes.txt";
+    // Files on each release (build.yml makes them): the commit this Mac's build was made from, and lists of
+    // the changes to main that weren't to this app (only the website, or only the Windows app), left out
+    // of what's new. Downloading a release's file doesn't count against GitHub's API limit.
+    private static readonly string BuildCommitFile =
+        $"commit-osx-{(RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64")}.txt";
+    private static readonly string[] OtherChangesFiles = ["website-changes.txt", "windows-changes.txt"];
 
     // Stable releases only, and every release: the "Latest build" release is a pre-release, so
     // following it means including pre-releases. Velopack never moves to an older version, so someone
@@ -212,8 +216,8 @@ public sealed class AppUpdater
 
     /// <summary>
     /// What's new in the downloaded build since this one: the title of each change merged in between,
-    /// newest first, leaving out changes only to the website. Empty when there's nothing downloaded, or
-    /// GitHub can't say.
+    /// newest first, leaving out changes only to the website or to the other platform's app. Empty when
+    /// there's nothing downloaded, or GitHub can't say.
     /// </summary>
     public async Task<IReadOnlyList<string>> WhatsNewAsync()
     {
@@ -232,9 +236,9 @@ public sealed class AppUpdater
             using var response = await Http.GetAsync(CompareUrl + commit + "..." + from).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
-            var websiteOnly = await WebsiteChangesAsync(_downloadedRelease).ConfigureAwait(false);
+            var notThisApp = await OtherChangesAsync(_downloadedRelease).ConfigureAwait(false);
             var changes = json.RootElement.GetProperty("commits").EnumerateArray()
-                .Where(entry => !websiteOnly.Contains(entry.GetProperty("sha").GetString() ?? ""))
+                .Where(entry => !notThisApp.Contains(entry.GetProperty("sha").GetString() ?? ""))
                 .Select(entry => entry.GetProperty("commit").GetProperty("message").GetString() ?? "")
                 .Select(ChangeTitle)
                 .OfType<string>()
@@ -252,28 +256,42 @@ public sealed class AppUpdater
     }
 
     /// <summary>
-    /// The merge commits of changes only to the website, from the release's list. Empty if the release
-    /// has none (builds from before it was added) or it can't be read; those changes are shown then.
+    /// The merge commits of changes that weren't to this app, from the release's lists. Empty if the
+    /// release has none (builds from before they were added) or they can't be read; those changes show then.
     /// </summary>
-    private static async Task<IReadOnlySet<string>> WebsiteChangesAsync(string? release)
+    private static async Task<IReadOnlySet<string>> OtherChangesAsync(string? release)
     {
+        var commits = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (release is null)
         {
-            return new HashSet<string>();
+            return commits;
         }
 
+        foreach (var file in OtherChangesFiles)
+        {
+            if (await ReleaseFileAsync(release, file).ConfigureAwait(false) is { } text)
+            {
+                commits.UnionWith(text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+            }
+        }
+
+        return commits;
+    }
+
+    /// <summary>A small text file on a release, or null if it isn't there or can't be read.</summary>
+    private static async Task<string?> ReleaseFileAsync(string release, string file)
+    {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{RepositoryUrl}/releases/download/{Uri.EscapeDataString(release)}/{WebsiteChangesFile}");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{RepositoryUrl}/releases/download/{Uri.EscapeDataString(release)}/{file}");
             request.Headers.Accept.ParseAdd("application/octet-stream");
             using var response = await Http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            var text = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
         catch (Exception)
         {
-            return new HashSet<string>();
+            return null;
         }
     }
 
@@ -293,11 +311,19 @@ public sealed class AppUpdater
     }
 
     /// <summary>
-    /// The commit the "Latest build" release was made from, or the newest stable release's tag. Null if
+    /// The commit this app's build on the "Latest build" release was made from, or the newest stable
+    /// release's tag. A change only to the other platform's app doesn't rebuild this one, so the release
+    /// says which commit each build is from; older releases only name the one they were made from. Null if
     /// GitHub can't say; what's new is left out then.
     /// </summary>
     private static async Task<string?> ReleaseSourceAsync(bool everyBuild)
     {
+        if (everyBuild && await ReleaseFileAsync("latest", BuildCommitFile).ConfigureAwait(false) is { } built
+            && built.Trim() is { Length: 40 } commit)
+        {
+            return commit;
+        }
+
         try
         {
             using var response = await Http.GetAsync(everyBuild ? EveryBuildReleaseUrl : StableReleaseUrl).ConfigureAwait(false);

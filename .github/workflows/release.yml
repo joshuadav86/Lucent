@@ -4,9 +4,11 @@ name: Release
 # people have been trying, not a fresh build. Installed copies on stable releases (the default) update
 # to it; the download buttons can point at it with GitHub's releases/latest/download/<file> links.
 #
-# Run it from the Actions tab once the Windows and both Mac builds of the commit have reached
-# "Latest build". Afterwards, raise the first two numbers of LUCENT_VERSION in build.yml (1.0 to 1.1,
-# say) so later builds count up from the new release.
+# Run it from the Actions tab once every build of main has finished. A change only to one platform's app
+# doesn't rebuild the other, so the Windows and Mac builds on "Latest build" can be from different
+# commits (and versions); each is the newest of its own app, and the release is tagged at the newest.
+# Afterwards, raise the first two numbers of LUCENT_VERSION in build.yml (1.0 to 1.1, say) so later
+# builds count up from the new release.
 on:
   workflow_dispatch:
     inputs:
@@ -19,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release
@@ -35,39 +38,47 @@ jobs:
           NOTES: ${{ inputs.notes }}
         run: |
           set -euo pipefail
-          # The Windows build names the release "Latest build (<version>)" and points it at its commit.
-          IFS=$'\t' read -r name commit < <(gh release view latest --json name,targetCommitish --jq '[.name, .targetCommitish] | @tsv')
-          version=$(sed -n 's/^Latest build (\(.*\))$/\1/p' <<< "$name")
-          if [ -z "$version" ]; then
-            echo "::error::Couldn't read the version from the latest build's name: $name"
-            exit 1
-          fi
-          tag="v$version"
-          if gh release view "$tag" > /dev/null 2>&1; then
-            echo "::error::$version is already released as $tag."
+          # Builds still running would replace files on "Latest build" while they're copied.
+          running=$(gh run list --workflow build.yml --branch main --event push --json status --jq '[.[] | select(.status != "completed")] | length')
+          if [ "$running" -ne 0 ]; then
+            echo "::error::A build of main is still running. Try again once it has finished."
             exit 1
           fi
 
           mkdir files
           gh release download latest -D files
 
-          # Every platform's update feed must be for this same build: the Mac builds finish after the
-          # Windows one, and until they do, "Latest build" still has the previous Mac files.
           missing=0
           for feed in releases.win.json releases.osx-arm64.json releases.osx-x64.json; do
-            if [ ! -f "files/$feed" ]; then
-              echo "::error::$feed isn't on the latest build yet."
-              missing=1
-            elif ! jq -e --arg v "$version" '.Assets | any(.Version == $v)' "files/$feed" > /dev/null; then
-              echo "::error::$feed is for an older build than $version: its build hasn't finished yet."
-              missing=1
-            fi
+            [ -f "files/$feed" ] || { echo "::error::$feed isn't on the latest build."; missing=1; }
           done
           for file in Lucent-Setup.exe Lucent-win-x64.zip Lucent-Setup-mac-arm64.pkg Lucent-Setup-mac-x64.pkg Lucent-mac-arm64.zip Lucent-mac-x64.zip; do
             [ -f "files/$file" ] || { echo "::error::$file isn't on the latest build."; missing=1; }
           done
+          # Both Macs are built together, so their builds must be from the same commit.
+          if [ -f files/commit-osx-arm64.txt ] && [ -f files/commit-osx-x64.txt ] && ! cmp -s files/commit-osx-arm64.txt files/commit-osx-x64.txt; then
+            echo "::error::The Apple silicon and Intel Mac builds on the latest build are from different commits: one of them failed."
+            missing=1
+          fi
           if [ "$missing" -ne 0 ]; then
-            echo "Try again once every build of $commit has finished."
+            exit 1
+          fi
+
+          # The newest of the builds' versions, and the newest commit they're from (each build says which;
+          # the release itself names the Windows one). Every build is from main, so the newest commit is
+          # the one the others are ancestors of.
+          version=$(jq -r '.Assets[].Version' files/releases.*.json | sort -V | tail -n 1)
+          commit=$(gh release view latest --json targetCommitish --jq .targetCommitish)
+          for file in files/commit-*.txt; do
+            [ -f "$file" ] || continue
+            candidate=$(tr -d '[:space:]' < "$file")
+            if [ "$(gh api "repos/$GH_REPO/compare/$commit...$candidate" --jq .status)" = ahead ]; then
+              commit=$candidate
+            fi
+          done
+          tag="v$version"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "::error::$version is already released as $tag."
             exit 1
           fi
 
