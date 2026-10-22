@@ -11,7 +11,7 @@ namespace WinampInspiredVisualizer.Streaming;
 /// takes those buttons from Premium accounts; on a free account Lucent can still show what's playing.
 /// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, IRemoteDevices
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -132,7 +132,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         }
 
         var track = webTrack with { Duration = app.Track!.Duration > TimeSpan.Zero ? app.Track.Duration : webTrack.Duration };
-        return app with { Track = track, ListId = web.ListId, Device = web.Device, Volume = web.Volume };
+        return app with { Track = track, ListId = web.ListId, Device = web.Device, Volume = web.Volume, IsElsewhere = web.IsElsewhere };
     }
 
     // The app and the Web API name a song the same way, or by the same spotify:track: URI on a Mac.
@@ -148,7 +148,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
             // No device is playing for the account: Spotify was just opened, was quit and opened again, or has sat
             // paused long enough to let go. The song read last stays, paused, as Spotify's own app still shows it,
             // and Play picks it up again (see PlayOnSomeDeviceAsync).
-            return _last is { } last ? last with { IsPlaying = false, ReadAt = DateTime.UtcNow, Device = null, Volume = null } : null;
+            return _last is { } last ? last with { IsPlaying = false, ReadAt = DateTime.UtcNow, Device = null, Volume = null, IsElsewhere = false } : null;
         }
 
         await ThrowIfFailedAsync(response, cancel);
@@ -223,9 +223,11 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         // their volume changed from elsewhere (supports_volume false).
         string? device = null;
         double? volume = null;
+        var elsewhere = false;
         if (root.TryGetProperty("device", out var deviceJson) && deviceJson.ValueKind == JsonValueKind.Object)
         {
             device = Text(deviceJson, "name") is { Length: > 0 } name ? name : null;
+            elsewhere = !IsThisComputer(deviceJson, Environment.MachineName);
             var canSet = !deviceJson.TryGetProperty("supports_volume", out var supports) || supports.ValueKind != JsonValueKind.False;
             if (canSet && deviceJson.TryGetProperty("volume_percent", out var percent) && percent.ValueKind == JsonValueKind.Number)
             {
@@ -233,7 +235,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
             }
         }
 
-        return new RemoteState(track, playing, position, readAt, context, device, volume);
+        return new RemoteState(track, playing, position, readAt, context, device, volume, elsewhere);
     }
 
     // A track or podcast episode. An album's own list of tracks leaves the album out, so it's passed in.
@@ -362,6 +364,45 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
         }
     }
 
+    /// <summary>
+    /// Moves the account's playback to this computer's Spotify (from a TV or speaker, say), playing, so the sound comes
+    /// through this computer and the visuals hear it.
+    /// </summary>
+    public async Task PlayHereAsync(CancellationToken cancel)
+    {
+        string? device;
+        using (var devices = await GetJsonAsync(Api + "/devices", null, cancel))
+        {
+            device = ThisComputer(devices.RootElement, Environment.MachineName);
+        }
+
+        if (device is null)
+        {
+            throw new RemoteProblem("Spotify isn't open on this computer. Open it here, then press Play here again.");
+        }
+
+        await CommandAsync(HttpMethod.Put, string.Empty, cancel,
+            JsonSerializer.Serialize(new Dictionary<string, object> { ["device_ids"] = new[] { device }, ["play"] = true }));
+    }
+
+    /// <summary>The ID of this computer's Spotify, from GET /me/player/devices, or null when it isn't open here.</summary>
+    internal static string? ThisComputer(JsonElement root, string machineName) =>
+        root.TryGetProperty("devices", out var list) && list.ValueKind == JsonValueKind.Array
+            && list.EnumerateArray().FirstOrDefault(device => Text(device, "id").Length > 0 && IsThisComputer(device, machineName)) is
+                { ValueKind: JsonValueKind.Object } mine
+            ? Text(mine, "id")
+            : null;
+
+    /// <summary>
+    /// Whether a Spotify Connect device is this computer. Spotify names a computer's device after the computer, which macOS
+    /// and Windows write with spaces and apostrophes ("Joshua's MacBook Pro") where the machine name has hyphens
+    /// ("Joshuas-MacBook-Pro").
+    /// </summary>
+    internal static bool IsThisComputer(JsonElement device, string machineName) =>
+        Text(device, "type").Equals("Computer", StringComparison.OrdinalIgnoreCase) && Plain(Text(device, "name")) == Plain(machineName);
+
+    private static string Plain(string text) => new(text.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+
     /// <summary>The ID of the device to play on, from GET /me/player/devices, or null when none is on.</summary>
     internal static string? PickDevice(JsonElement root, string machineName)
     {
@@ -374,11 +415,8 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
             .Where(device => Text(device, "id").Length > 0
                 && !(device.TryGetProperty("is_restricted", out var restricted) && restricted.ValueKind == JsonValueKind.True))
             .ToList();
-        // Spotify names a computer's device after the computer, which macOS and Windows write with spaces and
-        // apostrophes ("Joshua's MacBook Pro") where the machine name has hyphens ("Joshuas-MacBook-Pro").
-        static string Plain(string text) => new(text.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
         var computers = devices.Where(device => Text(device, "type").Equals("Computer", StringComparison.OrdinalIgnoreCase)).ToList();
-        var mine = computers.Where(device => Plain(Text(device, "name")) == Plain(machineName)).ToList();
+        var mine = computers.Where(device => IsThisComputer(device, machineName)).ToList();
         var pick = mine.Count > 0 ? mine[0] : devices.Count == 1 ? devices[0] : computers.Count > 0 ? computers[0] : devices.FirstOrDefault();
         return pick.ValueKind == JsonValueKind.Object ? Text(pick, "id") : null;
     }

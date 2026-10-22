@@ -10,7 +10,7 @@
 
     <Border x:Name="Frame" BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}">
-        <Grid x:Name="WindowRoot" RowDefinitions="Auto,*,Auto">
+        <Grid x:Name="WindowRoot" RowDefinitions="Auto,*,Auto,Auto">
 
             <!-- Title bar -->
             <Grid x:Name="TitleBar" Grid.Row="0" Height="34" ColumnDefinitions="*,Auto,Auto" Background="{DynamicResource TitleBarBrush}"
@@ -49,8 +49,22 @@
             <!-- The Metal view is placed in here from code. Double-click it for fullscreen. -->
             <Border x:Name="VisualizerFrame" Grid.Row="1" Background="Black" />
 
+            <!-- Why the visuals hear nothing, when the controlled app plays on another device (Spotify on a TV, say). It sits
+                 under the picture, not over it, as nothing can be drawn over the Metal view. -->
+            <Border x:Name="ElsewhereBar" Grid.Row="2" Margin="8,6,8,0" Padding="12,6" IsVisible="False"
+                    CornerRadius="{DynamicResource CardCorner}" Background="{DynamicResource SurfaceRaisedBrush}"
+                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                <DockPanel>
+                    <Button x:Name="PlayHereButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Margin="12,0,0,0"
+                            Content="PLAY ON THIS MAC" VerticalAlignment="Center" Click="OnPlayHere"
+                            ToolTip.Tip="Move Spotify's playback to this Mac, so the visuals hear it. To keep listening on the TV or speaker, send the Mac's sound there with AirPlay (Control Center, Sound)." />
+                    <TextBlock x:Name="ElsewhereText" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </DockPanel>
+            </Border>
+
             <!-- Visuals bar -->
-            <Grid x:Name="BottomBar" Grid.Row="2" Margin="8,6,8,6" ColumnDefinitions="*,Auto,*" SizeChanged="OnBottomBarSizeChanged">
+            <Grid x:Name="BottomBar" Grid.Row="3" Margin="8,6,8,6" ColumnDefinitions="*,Auto,*" SizeChanged="OnBottomBarSizeChanged">
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Button x:Name="PreviousButton" Theme="{StaticResource IconButton}" Width="32" Height="32" ToolTip.Tip="Previous visual (B)" Click="OnPreviousPreset">

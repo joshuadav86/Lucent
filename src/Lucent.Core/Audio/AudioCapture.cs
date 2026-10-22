@@ -26,6 +26,7 @@ public sealed class AudioCapture
     private readonly float[] _rightRing = new float[Capacity];
     private readonly object _lock = new();
     private readonly Stopwatch _sinceLastWrite = Stopwatch.StartNew();
+    private readonly Stopwatch _sinceSound = Stopwatch.StartNew();
     private long _written;
     private int _lastBlock;
     private bool _external;
@@ -40,6 +41,12 @@ public sealed class AudioCapture
 
     /// <summary>True when no audio has arrived recently (paused, stopped, or nothing loaded).</summary>
     public bool IsSilent => _sinceLastWrite.Elapsed > TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// True when nothing above a whisper (-60 dB) has arrived for <paramref name="time"/>, written or not: another app's
+    /// sound keeps arriving as silence while that app plays somewhere else (Spotify on a TV, say).
+    /// </summary>
+    public bool HeardNothingFor(TimeSpan time) => _sinceSound.Elapsed > time;
 
     /// <summary>True while it's listening to every app's sound rather than the player's.</summary>
     public bool IsExternal => _external;
@@ -166,8 +173,10 @@ public sealed class AudioCapture
     // Call while holding the lock.
     private void Append(ReadOnlySpan<float> samples, ReadOnlySpan<float> left, ReadOnlySpan<float> right)
     {
+        var loudest = 0f;
         for (var i = 0; i < samples.Length; i++)
         {
+            loudest = Math.Max(loudest, Math.Abs(samples[i]));
             var at = _written % Capacity;
             _ring[at] = samples[i];
             _leftRing[at] = left[i];
@@ -177,6 +186,10 @@ public sealed class AudioCapture
 
         _lastBlock = Math.Min(samples.Length, Capacity / 4);
         _sinceLastWrite.Restart();
+        if (loudest > 0.001f)
+        {
+            _sinceSound.Restart();
+        }
     }
 
     /// <summary>
