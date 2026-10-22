@@ -37,7 +37,7 @@ public partial class MainWindow
         ShowUpdateStatus(UpdateStatus(result), readyToInstall: result.Outcome == UpdateCheckOutcome.Ready);
     }
 
-    private static string UpdateStatus(UpdateCheckResult result) => result.Outcome switch
+    private string UpdateStatus(UpdateCheckResult result) => result.Outcome switch
     {
         UpdateCheckOutcome.Ready => ReadyStatus(result.Version!),
         UpdateCheckOutcome.UpToDate => $"You're up to date: Lucent {AppInfo.Version} is the newest.",
@@ -45,8 +45,14 @@ public partial class MainWindow
         _ => "Couldn't check for updates. Check your internet connection and try again.",
     };
 
-    private static string ReadyStatus(string version) =>
-        $"Lucent {version} is ready. Restart to install it now, or it installs when you close Lucent.";
+    private string ReadyStatus(string version) => _settings.InstallUpdatesAutomatically
+        ? $"Lucent {version} is ready. Restart to install it now, or it installs when you close Lucent."
+        : $"Lucent {version} is ready. It installs only when you choose Restart and install.";
+
+    /// <summary>The title bar's UPDATE button's tip, for the update that's ready.</summary>
+    private string UpdateButtonTip(string version) => _settings.InstallUpdatesAutomatically
+        ? $"Lucent {version} is ready. Click to see what's new and restart into it, or it installs when you close Lucent."
+        : $"Lucent {version} is ready. Click to see what's new and restart into it when you choose.";
 
     /// <summary>Shows what a check found under the Updates tab, or clears it when <paramref name="status"/> is null.</summary>
     private void ShowUpdateStatus(string? status, bool readyToInstall)

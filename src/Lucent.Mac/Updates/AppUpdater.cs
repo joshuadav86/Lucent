@@ -10,7 +10,8 @@ namespace Lucent.Mac.Updates;
 /// "Lucent 1.0" and so on), or, for people who choose every build, the "Latest build" release that
 /// each change to main replaces. Until there's a stable release, everyone follows the latest build.
 /// It checks shortly after startup and then every hour while Lucent runs, downloads a newer build in
-/// the background, and installs it when Lucent closes, or straight away with a restart if asked. Options
+/// the background, and installs it when Lucent closes, or straight away with a restart if asked. With
+/// <see cref="InstallAutomatically"/> off it only installs with that restart. Options
 /// can also check on demand with <see cref="CheckNowAsync"/>. The Mac builds are
 /// their own Velopack channels (osx-arm64 and osx-x64, set when CI packs them), so each Mac gets the
 /// build for its own chip. Lucent.app from the plain zip isn't installed and never updates.
@@ -49,6 +50,9 @@ public sealed class AppUpdater
 
     /// <summary>Follow every build on main rather than stable releases only.</summary>
     public bool EveryBuild { get; set; }
+
+    /// <summary>Install a downloaded build when Lucent closes. Off, only a restart asked for installs it.</summary>
+    public bool InstallAutomatically { get; set; } = true;
 
     // GitHub allows 60 unsigned requests an hour from one address, and a check uses two or three.
     private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(1);
@@ -176,11 +180,12 @@ public sealed class AppUpdater
 
     /// <summary>
     /// Hands the downloaded build to Velopack's updater (UpdateMac, inside Lucent.app), which waits for Lucent to exit, replaces the app with it
-    /// and, if <paramref name="restart"/>, opens Lucent again. Does nothing if there's nothing to install.
+    /// and, if <paramref name="restart"/>, opens Lucent again. Does nothing if there's nothing to install,
+    /// or when updates don't install automatically and no restart was asked for.
     /// </summary>
     public void InstallOnExit(bool restart)
     {
-        if (_downloaded is null || _downloadedWith is null || _applying)
+        if (_downloaded is null || _downloadedWith is null || _applying || (!restart && !InstallAutomatically))
         {
             return;
         }
@@ -192,7 +197,8 @@ public sealed class AppUpdater
         }
         catch (Exception ex)
         {
-            // The update stays downloaded; Velopack installs it the next time Lucent starts.
+            // The update stays downloaded; Velopack installs it the next time Lucent starts (unless
+            // updates don't install automatically, when it waits to be asked again).
             ErrorLog.Write("Installing the update", ex);
         }
     }
