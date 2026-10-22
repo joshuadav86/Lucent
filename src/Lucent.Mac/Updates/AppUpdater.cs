@@ -31,6 +31,10 @@ public sealed class AppUpdater
     // The changes between two commits.
     private const string CompareUrl = "https://api.github.com/repos/joshuadav86/Lucid/compare/";
 
+    // A file on each release listing the changes to main that were only to the website (build.yml makes
+    // it), left out of what's new. Downloading a release's file doesn't count against GitHub's API limit.
+    private const string WebsiteChangesFile = "website-changes.txt";
+
     // Stable releases only, and every release: the "Latest build" release is a pre-release, so
     // following it means including pre-releases. Velopack never moves to an older version, so someone
     // who goes back to stable from a newer build stays on it until a stable release passes it.
@@ -42,6 +46,7 @@ public sealed class AppUpdater
 
     // Where the downloaded build was made from (a commit or a release's tag), for what's new in it.
     private string? _downloadedFrom;
+    private string? _downloadedRelease;
     private (string From, IReadOnlyList<string> Changes)? _whatsNew;
     private bool _applying;
 
@@ -106,6 +111,7 @@ public sealed class AppUpdater
         _downloaded = null;
         _downloadedWith = null;
         _downloadedFrom = null;
+        _downloadedRelease = null;
         _ = CheckOnceAsync();
     }
 
@@ -169,6 +175,7 @@ public sealed class AppUpdater
             _downloaded = update.TargetFullRelease;
             _downloadedWith = manager;
             _downloadedFrom = await ReleaseSourceAsync(manager == _everyBuild).ConfigureAwait(false);
+            _downloadedRelease = manager == _everyBuild ? "latest" : _downloadedFrom;
             UpdateReady?.Invoke(version);
             return version;
         }
@@ -205,7 +212,8 @@ public sealed class AppUpdater
 
     /// <summary>
     /// What's new in the downloaded build since this one: the title of each change merged in between,
-    /// newest first. Empty when there's nothing downloaded, or GitHub can't say.
+    /// newest first, leaving out changes only to the website. Empty when there's nothing downloaded, or
+    /// GitHub can't say.
     /// </summary>
     public async Task<IReadOnlyList<string>> WhatsNewAsync()
     {
@@ -224,7 +232,9 @@ public sealed class AppUpdater
             using var response = await Http.GetAsync(CompareUrl + commit + "..." + from).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            var websiteOnly = await WebsiteChangesAsync(_downloadedRelease).ConfigureAwait(false);
             var changes = json.RootElement.GetProperty("commits").EnumerateArray()
+                .Where(entry => !websiteOnly.Contains(entry.GetProperty("sha").GetString() ?? ""))
                 .Select(entry => entry.GetProperty("commit").GetProperty("message").GetString() ?? "")
                 .Select(ChangeTitle)
                 .OfType<string>()
@@ -238,6 +248,32 @@ public sealed class AppUpdater
         {
             ErrorLog.Write("Finding what's new in an update", ex);
             return [];
+        }
+    }
+
+    /// <summary>
+    /// The merge commits of changes only to the website, from the release's list. Empty if the release
+    /// has none (builds from before it was added) or it can't be read; those changes are shown then.
+    /// </summary>
+    private static async Task<IReadOnlySet<string>> WebsiteChangesAsync(string? release)
+    {
+        if (release is null)
+        {
+            return new HashSet<string>();
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{RepositoryUrl}/releases/download/{Uri.EscapeDataString(release)}/{WebsiteChangesFile}");
+            request.Headers.Accept.ParseAdd("application/octet-stream");
+            using var response = await Http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var text = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            return new HashSet<string>();
         }
     }
 
