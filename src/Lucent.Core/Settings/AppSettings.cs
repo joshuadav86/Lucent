@@ -124,6 +124,15 @@ public sealed class AppSettings
     /// <summary>Every window moves with the player when it's dragged, docked to it or not (J).</summary>
     public bool LinkWindows { get; set; }
 
+    /// <summary>
+    /// Lucent full screen (Shift+F11): every open window tiled across the player's screen. Lucent opens
+    /// that way again if it was closed that way.
+    /// </summary>
+    public bool LucentFullScreen { get; set; }
+
+    /// <summary>Where each window was before Lucent went full screen, by name: where they go back to when it's switched off.</summary>
+    public Dictionary<string, WindowBounds> WindowsBeforeFullScreen { get; set; } = new();
+
     // ---- Graphics ----
 
     public RenderResolution Resolution { get; set; } = RenderResolution.Auto;
@@ -366,17 +375,24 @@ public sealed class AppSettings
         ["Midnight Snowfall"] = "Julia Dust",
     };
 
+    /// <summary>Visuals that were taken out with nothing in their place.</summary>
+    private static readonly HashSet<string> RemovedVisuals = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Cornell Box",
+    };
+
     /// <summary>
     /// Points favourites, lists, recent picks and the last visual saved under a replaced visual's name at its
-    /// replacement, so nothing is left pointing at a visual that isn't there any more.
+    /// replacement, and drops removed visuals, so nothing is left pointing at a visual that isn't there any more.
     /// </summary>
     private void CarryOverReplacedVisuals()
     {
         static string Replace(string name) => ReplacedVisuals.TryGetValue(name, out var replacement) ? replacement : name;
         static List<string> ReplaceAll(List<string>? names) =>
-            (names ?? new()).Select(Replace).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            (names ?? new()).Where(name => !RemovedVisuals.Contains(name))
+                .Select(Replace).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
-        LastVisual = LastVisual is null ? null : Replace(LastVisual);
+        LastVisual = LastVisual is null || RemovedVisuals.Contains(LastVisual) ? null : Replace(LastVisual);
         FavoriteVisuals = ReplaceAll(FavoriteVisuals);
         RecentVisuals = ReplaceAll(RecentVisuals);
         VisualLists ??= new();

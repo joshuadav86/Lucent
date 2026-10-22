@@ -35,6 +35,7 @@ public partial class ArtworkWindow : Window
         InitializeComponent();
         _player = player;
         _settings = settings;
+        Windows.LucentFullScreen.AddTo(ArtMenu);
 
         Width = Math.Max(MinWidth, settings.ArtworkWindowWidth);
         Height = Math.Max(MinHeight, settings.ArtworkWindowHeight);

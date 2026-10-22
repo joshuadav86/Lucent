@@ -63,6 +63,9 @@ public partial class RadioWindow : Window
         LoadDirectoryExtras();
     }
 
+    /// <summary>The radio window, while it's open.</summary>
+    public static Window? Current => _instance;
+
     /// <summary>Opens the window, or brings it forward if it's already open.</summary>
     public static void Open(MainWindow owner, AppSettings settings)
     {
@@ -521,6 +524,7 @@ public partial class RadioWindow : Window
         var copy = new MenuItem { Header = "Copy the stream's address" };
         copy.Click += (_, _) => Clipboard.SetText(station.StreamUrl);
         menu.Items.Add(copy);
+        Windows.LucentFullScreen.AddTo(menu);
         menu.IsOpen = true;
     }
 

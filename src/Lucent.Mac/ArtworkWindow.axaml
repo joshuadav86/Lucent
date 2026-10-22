@@ -30,7 +30,7 @@
         <!-- The cover, as big as fits, letterboxed to keep its shape. Drag it to move the window. -->
         <Grid x:Name="ArtArea" Grid.Row="1" Margin="10,0,10,10" Background="Transparent" PointerPressed="OnArtPointerPressed">
             <Grid.ContextMenu>
-                <ContextMenu Opening="OnArtContextMenuOpening">
+                <ContextMenu x:Name="ArtMenu" Opening="OnArtContextMenuOpening">
                     <MenuItem x:Name="CopyMenuItem" Header="Copy image" Click="OnCopyImage" />
                     <MenuItem x:Name="SaveMenuItem" Header="Save image…" Click="OnSaveImage" />
                     <Separator />

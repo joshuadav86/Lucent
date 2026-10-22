@@ -166,6 +166,9 @@ public partial class MainWindow
         window.Add(new NativeMenuItemSeparator());
         window.Add(Item("Dock All Windows to the Player", ArrangeWindows));
         window.Add(Item("Fill the Screen", FillScreen));
+        var fullScreen = Check("Full Screen Lucent", ToggleLucentFullScreen);
+        fullScreen.Gesture = LucentFullScreen.Gesture;
+        window.Add(fullScreen);
         window.Add(Item("Shrink Everything", ShrinkWindows));
         var link = Check("Move Every Window with the Player", ToggleLink);
         window.Add(link);
@@ -181,6 +184,7 @@ public partial class MainWindow
             showAnalyzer.IsChecked = AnalyzerWindow.IsOpen;
             showVideo.IsChecked = VideoWindow.IsOpen;
             link.IsChecked = _settings.LinkWindows;
+            fullScreen.IsChecked = _settings.LucentFullScreen;
         };
         bar.Add(new NativeMenuItem("Window") { Menu = window });
 

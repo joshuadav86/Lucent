@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucent for Windows and Mac</title>
-<meta name="description" content="Lucent is a modern, Winamp-inspired music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer, and 455 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
+<meta name="description" content="Lucent is a modern, Winamp-inspired music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
 <meta property="og:title" content="Lucent">
-<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer, and 455 live GPU visuals, MilkDrop and Winamp AVS presets included.">
+<meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included.">
 <meta property="og:image" content="https://lucentaudio.net/img/player-layout.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#09090C">
@@ -331,7 +331,7 @@ footer a:hover { color: var(--fg); }
         <p class="eyebrow">Built for audio nerds · Windows and Mac</p>
         <h1 id="hero-title">The Media Player <span class="grad">You Didn't Know You Needed</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a free music player for Windows and Mac, a modern take on Winamp built for audio nerds. It plays your library, streaming apps, and internet radio, with an audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 455 visuals drawn live on your graphics card.</p>
+          <p class="lede">Lucent is a free music player for Windows and Mac, a modern take on Winamp built for audio nerds. It plays your library, streaming apps, and internet radio, with an audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 454 visuals drawn live on your graphics card.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -356,10 +356,10 @@ footer a:hover { color: var(--fg); }
 
   <div class="readout">
     <div class="wrap" aria-label="Lucent in numbers">
-      <span><b>455</b>live visuals</span>
+      <span><b>454</b>live visuals</span>
       <span><b>219</b>MilkDrop presets</span>
       <span><b>34</b>Winamp AVS presets</span>
-      <span><b>31</b>ray traced</span>
+      <span><b>30</b>ray traced</span>
       <span><b>57</b>particle</span>
       <span><b>4–32</b>EQ bands</span>
     </div>
@@ -407,7 +407,7 @@ footer a:hover { color: var(--fg); }
   <section class="band" id="visuals" aria-labelledby="visuals-title">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">455 visuals</p>
+        <p class="eyebrow">454 visuals</p>
         <h2 id="visuals-title">Every frame is drawn live on your graphics card.</h2>
         <p class="lede">Every visual reacts to the bass, mids, treble, and beat. Ray-traced scenes, particle storms, fractals, and Winamp's own spectrum, plus 219 MilkDrop and 34 AVS presets in the same picker.</p>
       </div>
@@ -709,7 +709,7 @@ footer a:hover { color: var(--fg); }
 
   /* ---------- visuals gallery ---------- */
   const V = {
-    rt: ["Ray traced", 31, [["diamond-fire","Diamond Fire"],["blue-marble","Blue Marble"],["cornell-box","Cornell Box"],["cathedral-light","Cathedral Light"],["crystal-organ","Crystal Organ"],["cloud-sea","Cloud Sea"],["ringed-world","Ringed World"],["chrome-equalizer","Chrome Equalizer"],["forest-light","Forest Light"],["disco-ball","Disco Ball"]]],
+    rt: ["Ray traced", 30, [["diamond-fire","Diamond Fire"],["blue-marble","Blue Marble"],["cathedral-light","Cathedral Light"],["crystal-organ","Crystal Organ"],["cloud-sea","Cloud Sea"],["ringed-world","Ringed World"],["chrome-equalizer","Chrome Equalizer"],["forest-light","Forest Light"],["disco-ball","Disco Ball"]]],
     pa: ["Particles", 57, [["phoenix-rising","Phoenix Rising"],["galaxy-collision","Galaxy Collision"],["volcanic-eruption","Volcanic Eruption"],["strange-attractors","Strange Attractors"],["solar-flare","Solar Flare"],["iron-filings","Iron Filings"],["magnetosphere","Magnetosphere"],["silk-currents","Silk Currents"],["ember-storm","Ember Storm"],["knot-stream","Knot Stream"],["dyson-swarm","Dyson Swarm"],["murmuration","Murmuration"],["buddhabrot","Buddhabrot"],["physarum","Physarum"],["barnsley-fern","Barnsley Fern"]]],
     ge: ["Geometric", 15, [["quasicrystal","Quasicrystal"],["girih-tiles","Girih Tiles"],["voronoi-glass","Voronoi Glass"],["hex-pulse","Hex Pulse"],["spirograph","Spirograph"]]],
     mi: ["Minimal", 14, [["enso","Enso"],["eclipse","Eclipse"],["harmonograph","Harmonograph"]]],
@@ -729,7 +729,7 @@ footer a:hover { color: var(--fg); }
     b.onclick = () => { chips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); showFam(key); };
     chips.append(b);
   };
-  famBtn("all", "Lucent originals", 202);
+  famBtn("all", "Lucent originals", 201);
   for (const k in V) famBtn(k, V[k][0], V[k][1]);
   function showFam(key) {
     const items = key === "all" ? ALL.map(([f, i]) => [f, V[f][2][i]]) : V[key][2].map(x => [key, x]);

@@ -35,6 +35,7 @@ public partial class AnalyzerWindow : Window
         Chrome.UseLucentFrame(this);
         TitleIcon.Source = EqualizerWindow.LucentIcon();
         _settings = settings;
+        LucentFullScreen.AddTo(DisplayMenu);
         Width = Math.Max(MinWidth, settings.AnalyzerWindowWidth);
         Height = Math.Max(MinHeight, settings.AnalyzerWindowHeight);
         _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
