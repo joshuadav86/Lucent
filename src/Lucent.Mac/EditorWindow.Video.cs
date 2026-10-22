@@ -31,6 +31,9 @@ public partial class EditorWindow
 
     private bool IsVideo => _videoEdit is not null;
 
+    /// <summary>For screenshots: true once the video's picture is up.</summary>
+    internal bool HasVideoPicture => VideoPicture.Source is not null;
+
     /// <summary>Starts editing a video that's just been opened: shows its picture above the waveform.</summary>
     private void OpenVideo(VideoEdit video)
     {

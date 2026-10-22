@@ -72,6 +72,7 @@ public static class Screenshots
         ("VideoEmpty", () => PreviewVideo(playing: false)),
         ("Editor", () => PreviewEditor(EditorView.Waveform)),
         ("EditorSpectrogram", () => PreviewEditor(EditorView.Spectrogram)),
+        ("EditorVideo", () => PreviewEditorVideo()),
         ("EditorEffects", () => PreviewEditorEffects()),
         ("EditorBeats", () => PreviewEditorBeats()),
         ("EditorLoopMaker", () => PreviewLoopMaker()),
@@ -584,9 +585,30 @@ public static class Screenshots
         };
     }
 
-    private static EditorWindow OpenPreviewEditor()
+    /// <summary>
+    /// The editor with a video open: the file in LUCENT_PREVIEW_VIDEO (or the self-test's clip in tools/test-media),
+    /// with a few markers and a selection, and its picture shown above the waveform where libVLC is installed or shipped.
+    /// </summary>
+    private static Window PreviewEditorVideo()
     {
-        var path = Path.Combine(SampleFolder(), "Night Drive.wav");
+        var path = Environment.GetEnvironmentVariable("LUCENT_PREVIEW_VIDEO")
+            ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "tools", "test-media", "sync-test.mp4");
+        var editor = OpenPreviewEditor(path);
+        editor.ShowPreviewVideoEdits();
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (!editor.HasVideoPicture && waited.Elapsed < TimeSpan.FromSeconds(10))
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(30);
+        }
+
+        Dispatcher.UIThread.RunJobs();
+        return editor;
+    }
+
+    private static EditorWindow OpenPreviewEditor(string? path = null)
+    {
+        path ??= Path.Combine(SampleFolder(), "Night Drive.wav");
         if (!File.Exists(path))
         {
             WriteSampleSong(path);
