@@ -650,13 +650,16 @@ jobs:
           security set-keychain-settings -lut 21600 "$keychain"
           security unlock-keychain -p "$keychain_password" "$keychain"
           echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/app.p12"
-          security import "$RUNNER_TEMP/app.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          # The app and installer certificates share one private key, and the key keeps the access list from
+          # this first import, so it names productsign too; without it, signing the installer waits forever on
+          # an "allow access" prompt.
+          security import "$RUNNER_TEMP/app.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/productsign
           rm -f "$RUNNER_TEMP/app.p12"
           if [ -n "$MACOS_INSTALLER_CERTIFICATE_P12" ] && [ -n "$MACOS_SIGN_INSTALL_IDENTITY" ]; then
             echo "$MACOS_INSTALLER_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
-            # productbuild has no --keychain option and, on a runner with no one to answer, waits forever on the
-            # "allow access to this key" prompt, so this throwaway keychain lets any tool use the installer key.
-            security import "$RUNNER_TEMP/installer.p12" -k "$keychain" -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" -A
+            security import "$RUNNER_TEMP/installer.p12" -k "$keychain" -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" \
+              -T /usr/bin/productsign
             rm -f "$RUNNER_TEMP/installer.p12"
             echo "install_identity=$MACOS_SIGN_INSTALL_IDENTITY" >> "$GITHUB_OUTPUT"
           fi
@@ -666,7 +669,16 @@ jobs:
           echo "identity=$MACOS_SIGN_APP_IDENTITY" >> "$GITHUB_OUTPUT"
           echo "keychain=$keychain" >> "$GITHUB_OUTPUT"
 
-          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
+          # A space or line break picked up when pasting a secret makes Apple turn the sign-in down, and none of
+          # these can hold one.
+          APPLE_ID="$(printf %s "$APPLE_ID" | tr -d '[:space:]')"
+          APPLE_TEAM_ID="$(printf %s "$APPLE_TEAM_ID" | tr -d '[:space:]')"
+          APPLE_APP_PASSWORD="$(printf %s "$APPLE_APP_PASSWORD" | tr -d '[:space:]')"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            # Apple can take an hour or more to notarize, which would hold every pull request up; the builds
+            # people download (from main) are notarized, and pull requests still check the signing.
+            echo "::notice::Pull request build, so Lucent is signed but not notarized."
+          elif [ -n "$APPLE_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
             # Apple turning the sign-in down (a wrong Apple ID or app-specific password) shouldn't hold back the
             # Mac download: it still goes out signed, just not notarized, and the warning says what to fix.
             if xcrun notarytool store-credentials lucent-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
@@ -689,14 +701,14 @@ jobs:
           if [ -n "$NOTARY_PROFILE" ]; then
             # Notarize the plain app too, and staple the ticket so it opens without going online.
             ditto -c -k --keepParent out/Lucent.app "$RUNNER_TEMP/notarize.zip"
-            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --keychain "$MAC_KEYCHAIN" --wait
+            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --keychain "$MAC_KEYCHAIN" --wait --timeout 50m
             xcrun stapler staple out/Lucent.app
           fi
           ditto -c -k --keepParent out/Lucent.app "Lucent-mac-${{ matrix.arch }}.zip"
 
       - name: Build the installer and update package
-        # A few minutes normally; fail rather than sit on a stuck signing prompt for hours.
-        timeout-minutes: 45
+        # A few minutes normally, plus Apple notarizing the installer; fail rather than hang for hours.
+        timeout-minutes: 60
         env:
           SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
           SIGN_INSTALL_IDENTITY: ${{ steps.signing.outputs.install_identity }}
@@ -720,11 +732,21 @@ jobs:
             args+=(--signAppIdentity adhoc)
           else
             args+=(--signAppIdentity "$SIGN_IDENTITY" --keychain "$KEYCHAIN")
-            if [ -n "$SIGN_INSTALL_IDENTITY" ]; then args+=(--signInstallIdentity "$SIGN_INSTALL_IDENTITY"); fi
             if [ -n "$NOTARY_PROFILE" ]; then args+=(--notaryProfile "$NOTARY_PROFILE"); fi
           fi
           .vpk/vpk "${args[@]}"
           ls -l releases-mac
+
+          # vpk signs the installer with productbuild, which hung for the whole job on CI, so vpk makes it
+          # unsigned and productsign, told which keychain to use, signs it here.
+          if [ -n "$SIGN_INSTALL_IDENTITY" ]; then
+            pkg="releases-mac/Lucent-$RID-Setup.pkg"
+            tools/mac/sign-installer.sh "$pkg" "$SIGN_INSTALL_IDENTITY" "$KEYCHAIN"
+            if [ -n "$NOTARY_PROFILE" ]; then
+              xcrun notarytool submit "$pkg" --keychain-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN" --wait --timeout 40m
+              xcrun stapler staple "$pkg"
+            fi
+          fi
 
           # Check the installable app is signed, and gather what the release needs.
           mkdir -p check mac-release
