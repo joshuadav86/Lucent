@@ -34,7 +34,14 @@ public sealed record RadioStation
     public string Codec { get; init; } = string.Empty;
 
     /// <summary>Kilobits per second, or 0 when it isn't known.</summary>
-    public int Bitrate { get; init; }
+    /// <remarks>Some directory listings give bits per second (320000 for 320); those are taken as kilobits, saved ones too.</remarks>
+    public int Bitrate
+    {
+        get => _bitrate;
+        init => _bitrate = value >= 10_000 ? (int)Math.Round(value / 1000.0) : Math.Max(0, value);
+    }
+
+    private readonly int _bitrate;
 
     /// <summary>How many Radio Browser users voted for it.</summary>
     public int Votes { get; init; }
