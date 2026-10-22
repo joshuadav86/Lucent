@@ -79,6 +79,30 @@ public partial class VisualizerWindow : ToolWindow
 
     private void OnNextPreset(object sender, RoutedEventArgs e) => ChangePreset(+1);
 
+    // Why the visuals hear nothing (the controlled app playing on another device), or null.
+    private string? _elsewhere;
+
+    /// <summary>Raised when "Play on this PC" is pressed, to move the controlled app's playback here.</summary>
+    public event EventHandler? PlayHereRequested;
+
+    /// <summary>
+    /// Says, under the picture, why the visuals hear nothing: the controlled app is playing on another device
+    /// (<paramref name="note"/>), with a button to move it here when <paramref name="canPlayHere"/>. Null hides it.
+    /// </summary>
+    public void ShowElsewhere(string? note, bool canPlayHere)
+    {
+        _elsewhere = note;
+        ElsewhereText.Text = note ?? string.Empty;
+        PlayHereButton.Visibility = canPlayHere ? Visibility.Visible : Visibility.Collapsed;
+        UpdateElsewhereBar();
+    }
+
+    // Hidden in full screen, with the rest of the window's bars.
+    private void UpdateElsewhereBar() =>
+        ElsewhereBar.Visibility = _elsewhere is not null && !_isFullscreen ? Visibility.Visible : Visibility.Collapsed;
+
+    private void OnPlayHere(object sender, RoutedEventArgs e) => PlayHereRequested?.Invoke(this, EventArgs.Empty);
+
     private void OnPreviousPreset(object sender, RoutedEventArgs e) => PreviousPreset();
 
     /// <summary>Previous visual (B): back to the one shown before, or up the list, as picked in Options.</summary>
@@ -203,7 +227,9 @@ public partial class VisualizerWindow : ToolWindow
     private void OnPresetListClick(object sender, MouseButtonEventArgs e)
     {
         // A click on a row's star stars it and leaves the picker open.
-        if (e.OriginalSource is not DependencyObject source || IsInsideButton(source))
+        // A click on a preset's name lands on a text Run, which isn't in the visual tree,
+        // so start from the TextBlock that holds it.
+        if (NearestVisual(e.OriginalSource as DependencyObject) is not { } source || IsInsideButton(source))
         {
             return;
         }
@@ -212,6 +238,16 @@ public partial class VisualizerWindow : ToolWindow
         {
             PickPreset(choice);
         }
+    }
+
+    private static DependencyObject? NearestVisual(DependencyObject? element)
+    {
+        while (element is not null and not Visual and not System.Windows.Media.Media3D.Visual3D)
+        {
+            element = LogicalTreeHelper.GetParent(element);
+        }
+
+        return element;
     }
 
     private bool IsInsideButton(DependencyObject source)
@@ -960,6 +996,7 @@ public partial class VisualizerWindow : ToolWindow
         var chrome = _isFullscreen ? Visibility.Collapsed : Visibility.Visible;
         TitleBar.Visibility = chrome;
         BottomBar.Visibility = chrome;
+        UpdateElsewhereBar();
         Frame.BorderThickness = new Thickness(_isFullscreen ? 0 : 1);
         PresetPopup.IsOpen = false;
 

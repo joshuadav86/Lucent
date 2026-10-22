@@ -281,7 +281,7 @@ jobs:
         run: |
           # Lucent.exe is a windowed program: piping its output makes PowerShell wait for it, shows what it
           # writes and sets $LASTEXITCODE. The runner has no graphics card, so Direct3D draws in software.
-          publish/Lucent.exe --self-test --sheet windows-visuals.png --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --formats tools/test-media/formats test.wav test.aiff test.mp3 | Out-Host
+          publish/Lucent.exe --self-test --sheet windows-visuals.png --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 --formats tools/test-media/formats test.wav test.aiff test.mp3 | Out-Host
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - uses: actions/upload-artifact@v4
@@ -619,7 +619,7 @@ jobs:
             && test -f "publish-mac/libvlc/$RID/lib/vlc/plugins/libmux_wav_plugin.dylib" \
             || { echo "::error::libVLC is missing from the published app"; exit 1; }
           publish-mac/Lucent --self-test --sheet mac-visuals-${{ matrix.arch }}.png \
-            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --formats tools/test-media/formats \
+            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 --formats tools/test-media/formats \
             test.wav test.m4a test-alac.m4a test.flac test.aiff
 
       - name: Set up signing
@@ -854,7 +854,7 @@ jobs:
             && test -f built/Lucent.app/Contents/MacOS/libvlc/osx-arm64/lib/vlc/plugins/libavcodec_plugin.dylib \
             || { echo "::error::libVLC is missing from Lucent.app"; exit 1; }
           built/Lucent.app/Contents/MacOS/Lucent --self-test --sheet mac-visuals-arm64.png \
-            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --formats tools/test-media/formats \
+            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 --formats tools/test-media/formats \
             test.wav test.m4a test-alac.m4a test.flac test.aiff
 
       - name: Check Lucent.app opens and lays out its windows

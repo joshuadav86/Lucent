@@ -127,6 +127,7 @@ public partial class MainWindow
         _remote.Changed += OnRemoteChanged;
         UpdateListening();
         ShowRemote();
+        ShowWhereItPlays();
     }
 
     /// <summary>Goes back to Lucent's own music, pausing the other app first when <paramref name="pause"/> says to.</summary>
@@ -139,6 +140,7 @@ public partial class MainWindow
 
         _remote = null;
         remote.Changed -= OnRemoteChanged;
+        ShowWhereItPlays();
         if (pause)
         {
             // It shuts down once the pause has gone, so it isn't cut off on the way.
@@ -228,6 +230,7 @@ public partial class MainWindow
         ShowRemote();
         ShowRemoteList();
         UpdateListening();
+        ShowWhereItPlays();
         UpdatePlayPauseButton();
         UpdatePosition();
     }
@@ -267,6 +270,17 @@ public partial class MainWindow
             _shownRemoteArtwork = remote.Artwork;
             ArtworkWindow.ShowRemote(track, remote.Artwork);
         }
+    }
+
+    /// <summary>
+    /// Says in the visuals window when the controlled app plays on another device (Spotify on a TV, say), whose sound
+    /// never reaches this computer, so the visuals hear nothing; with a button to move it here, where the app can.
+    /// </summary>
+    private void ShowWhereItPlays()
+    {
+        // Only while nothing is heard: a computer the app names differently from this one may still be this one.
+        var note = _remote is { } remote && _player.Capture.HeardNothingFor(TimeSpan.FromSeconds(2)) ? remote.ElsewhereNote : null;
+        _visuals.ShowElsewhere(note, _remote?.CanPlayHere == true);
     }
 
     // Set while the volume bar is being moved to show a volume, so that isn't taken as the user changing it.
@@ -426,6 +440,7 @@ public partial class MainWindow
         _signingIn?.Cancel();
         _remote?.Dispose();
         _remote = null;
+        ShowWhereItPlays();
         _systemAudio?.Dispose();
         _systemAudio = null;
     }

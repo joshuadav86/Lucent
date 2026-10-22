@@ -80,6 +80,7 @@ public partial class MainWindow : Window
         SnapEveryWindow();
         SizeChanged += OnPlayerWidthChanged;
         StateChanged += OnPlayerStateChanged;
+        SourceInitialized += (_, _) => (PresentationSource.FromVisual(this) as HwndSource)?.AddHook(RefuseMaximize);
 
         _queue.PlaylistView.ItemsSource = _playlist;
         _playlist.CollectionChanged += (_, _) =>
@@ -124,6 +125,7 @@ public partial class MainWindow : Window
         };
         _visualizer.StartPresetName = _settings.LastVisual;
         _visuals.Attach(_visualizer, _settings);
+        _visuals.PlayHereRequested += (_, _) => RemoteTakes(remote => remote.PlayHereAsync());
         ApplyVisualizerSettings();
 
         ApplyLook();

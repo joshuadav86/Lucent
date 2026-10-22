@@ -76,6 +76,22 @@ public sealed class GifEncoder
         _delays.Add(Math.Max(2, centiseconds));
     }
 
+    /// <summary>Drops the pictures added after the first <paramref name="count"/>.</summary>
+    public void KeepFirst(int count)
+    {
+        for (var i = _frames.Count - 1; i >= count; i--)
+        {
+            var rgb = _frames[i];
+            for (var at = 0; at < rgb.Length; at += 3)
+            {
+                _histogram[Bin(rgb[at], rgb[at + 1], rgb[at + 2])]--;
+            }
+
+            _frames.RemoveAt(i);
+            _delays.RemoveAt(i);
+        }
+    }
+
     /// <summary>Writes the GIF: once round, or looping forever.</summary>
     public void Write(Stream target, bool loop, bool dither, IProgress<double>? progress = null, CancellationToken cancellation = default)
     {

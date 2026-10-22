@@ -107,6 +107,15 @@ public sealed class CrashReport
             ["level"] = "fatal",
             ["release"] = $"lucent@{Version}",
             ["environment"] = "production",
+            // Sentry otherwise looks up a rough location (city) from the IP the report came from.
+            // An empty IP and infer_ip "never" tell it not to use the sender's address at all.
+            ["user"] = new JsonObject { ["ip_address"] = null },
+            ["sdk"] = new JsonObject
+            {
+                ["name"] = "lucent",
+                ["version"] = Version,
+                ["settings"] = new JsonObject { ["infer_ip"] = "never" },
+            },
             ["tags"] = new JsonObject
             {
                 ["platform"] = host.Platform,
