@@ -6,22 +6,42 @@ using System.Text.RegularExpressions;
 
 namespace WinampInspiredVisualizer.Radio;
 
-/// <summary>A show on a live station: its name ("Razor-N-Tape with JKriv"), and its picture's address when it has one.</summary>
-public sealed record LiveShow(string Title, string? Picture);
+/// <summary>
+/// A show on a live station: its name ("Razor-N-Tape with JKriv"), and its picture's address when it has one. For a
+/// station whose site says the song rather than the show (SomaFM), <paramref name="IsSong"/> is true and the title is
+/// "Artist - Title", as a stream would say it.
+/// </summary>
+public sealed record LiveShow(string Title, string? Picture, bool IsSong = false);
 
 /// <summary>
 /// Who's on now, for live DJ stations whose streams don't say: The Lot Radio, from its published schedule, and NTS,
-/// from the now-playing feed its own site uses. Other stations give null.
+/// from the now-playing feed its own site uses. For SomaFM, whose HLS streams don't name the song, the song on, from
+/// SomaFM's list of each channel's songs. Other stations give null.
 /// </summary>
 /// <remarks>
-/// Neither needs a key. The Lot's schedule page is read at most every ten minutes and each show's page once; NTS's
-/// feed is small and read each time it's asked (the player asks every couple of minutes).
+/// None needs a key. The Lot's schedule page is read at most every ten minutes and each show's page once; NTS's
+/// feed is small and read each time it's asked (the player asks every couple of minutes), and SomaFM's song list
+/// every <see cref="SongsEvery"/>.
 /// </remarks>
 public sealed class LiveShows
 {
     private const string LotSchedule = "https://www.thelotradio.com/calendar";
     private const string LotSite = "https://www.thelotradio.com";
     private const string NtsLive = "https://www.nts.live/api/v2/live";
+    private const string SomaSongs = "https://api.somafm.com/songs/";
+
+    /// <summary>How often a station that names songs this way is asked again: songs change every few minutes.</summary>
+    public static readonly TimeSpan SongsEvery = TimeSpan.FromSeconds(20);
+
+    /// <summary>How often a station that names shows is asked again.</summary>
+    public static readonly TimeSpan ShowsEvery = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// How far behind SomaFM's song list an HLS stream plays: Lucent starts HLS half a minute back, plus what's held
+    /// (see HlsStream). Icecast streams play only a few seconds behind.
+    /// </summary>
+    private static readonly TimeSpan HlsBehind = TimeSpan.FromSeconds(35);
+    private static readonly TimeSpan StreamBehind = TimeSpan.FromSeconds(5);
 
     /// <summary>How long The Lot's schedule is used before it's read again.</summary>
     private static readonly TimeSpan ScheduleKept = TimeSpan.FromMinutes(10);
@@ -45,7 +65,13 @@ public sealed class LiveShows
     }
 
     /// <summary>True for stations Lucent can say the show on for.</summary>
-    public static bool Knows(RadioStation station) => IsTheLot(station) || NtsChannel(station) is not null;
+    public static bool Knows(RadioStation station) => IsTheLot(station) || NtsChannel(station) is not null || SaysSongs(station);
+
+    /// <summary>True for stations Lucent finds the song on for (SomaFM's), rather than the show.</summary>
+    public static bool SaysSongs(RadioStation station) => StationArt.SomaChannel(station) is not null;
+
+    /// <summary>How long to wait before asking about <paramref name="station"/> again.</summary>
+    public static TimeSpan CheckEvery(RadioStation station) => SaysSongs(station) ? SongsEvery : ShowsEvery;
 
     /// <summary>The show on now, or null when it isn't known (between shows, a restream, or the schedule can't be read).</summary>
     public async Task<LiveShow?> NowAsync(RadioStation station, CancellationToken cancel)
@@ -59,6 +85,13 @@ public sealed class LiveShows
         {
             var json = await _http.GetStringAsync(NtsLive, cancel);
             return NtsNow(json, channel);
+        }
+
+        if (StationArt.SomaChannel(station) is { } soma)
+        {
+            var json = await _http.GetStringAsync(SomaSongs + Uri.EscapeDataString(soma) + ".json", cancel);
+            var behind = station.StreamUrl.Contains(".m3u8", StringComparison.OrdinalIgnoreCase) ? HlsBehind : StreamBehind;
+            return SomaSongNow(json, DateTimeOffset.UtcNow - behind);
         }
 
         return null;
@@ -127,6 +160,47 @@ public sealed class LiveShows
 
         return null;
     }
+
+    // ---- SomaFM ----
+
+    /// <summary>
+    /// The song on at <paramref name="at"/>, from a SomaFM channel's song list: songs[], newest first, each with artist,
+    /// title and date (when it started, in Unix seconds, written as a string or a number).
+    /// </summary>
+    internal static LiveShow? SomaSongNow(string json, DateTimeOffset at)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("songs", out var songs) || songs.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var when = at.ToUnixTimeSeconds();
+        (long Start, string Song)? latest = null;
+        foreach (var song in songs.EnumerateArray())
+        {
+            if (song.ValueKind != JsonValueKind.Object
+                || !song.TryGetProperty("title", out var title) || title.GetString() is not { } name || Clean(name) is not { Length: > 0 } clean
+                || !song.TryGetProperty("date", out var date) || UnixSeconds(date) is not { } start
+                || start > when || (latest is { } found && found.Start >= start))
+            {
+                continue;
+            }
+
+            var artist = song.TryGetProperty("artist", out var by) ? Clean(by.GetString() ?? string.Empty) : string.Empty;
+            latest = (start, artist.Length > 0 ? $"{artist} - {clean}" : clean);
+        }
+
+        // A song that started hours ago means the list has stopped, not that the song is still on.
+        return latest is { } now && when - now.Start < 30 * 60 ? new LiveShow(now.Song, null, IsSong: true) : null;
+    }
+
+    private static long? UnixSeconds(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.Number when value.TryGetInt64(out var number) => number,
+        JsonValueKind.String when long.TryParse(value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) => number,
+        _ => null,
+    };
 
     // ---- The Lot Radio ----
 

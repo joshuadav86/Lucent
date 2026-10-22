@@ -342,8 +342,9 @@ public partial class MainWindow
             return;
         }
 
-        // The song the stream says is on, or else, on a live DJ station, the show that's on.
-        var streamSong = _radioStream?.NowPlaying;
+        // The song the stream says is on (or SomaFM's site, for its HLS streams that don't), or else, on a live DJ
+        // station, the show that's on.
+        var streamSong = _radioStream?.NowPlaying ?? (_liveShow is { IsSong: true } listed ? listed.Title : null);
         var song = streamSong ?? _liveShow?.Title;
         var marquee = _tuning is not null ? $"Tuning in to {station.Name}…" : song ?? station.Name;
         // Set only when it changes, so a long title keeps scrolling smoothly.
@@ -492,11 +493,13 @@ public partial class MainWindow
 
     /// <summary>
     /// With the position timer: on a live DJ station (The Lot, NTS) whose stream doesn't say who's on, finds the show
-    /// that's on every couple of minutes, for the title and the artwork window.
+    /// that's on every couple of minutes, for the title and the artwork window; on a SomaFM stream that doesn't name
+    /// its songs (its HLS ones), finds the song from SomaFM's site every 20 seconds.
     /// </summary>
     private async void CheckLiveShow(RadioStation station)
     {
-        if (_liveShowChecking || DateTime.UtcNow - _liveShowCheckedAt < TimeSpan.FromMinutes(2) || !LiveShows.Knows(station))
+        if (_liveShowChecking || DateTime.UtcNow - _liveShowCheckedAt < LiveShows.CheckEvery(station) || !LiveShows.Knows(station)
+            || (LiveShows.SaysSongs(station) && _radioStream?.NowPlaying is not null))
         {
             return;
         }
