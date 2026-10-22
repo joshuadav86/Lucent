@@ -231,7 +231,7 @@ public partial class VideoWindow : Window
         }
     }
 
-    /// <summary>Full screen, the player's controls, editing the video and keeping on top, at the mouse.</summary>
+    /// <summary>Full screen, the player's controls, the station's links, editing the video and keeping on top, at the mouse.</summary>
     private void ShowMenu()
     {
         var menu = new ContextMenu { PlacementTarget = Picture, Placement = PlacementMode.MousePoint };
@@ -240,6 +240,11 @@ public partial class VideoWindow : Window
         {
             menu.Items.Add(new Separator());
             player.AddPlaybackItems(menu);
+            if (_video is { IsLive: true })
+            {
+                // A station's website, support page and today's shows.
+                player.AddStationItems(menu);
+            }
             if (_video is { IsLive: false } video)
             {
                 // The editor cuts MP4, M4V and MOV files without re-encoding; other videos only play for now.

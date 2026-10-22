@@ -13,6 +13,7 @@ public static class RadioGuide
     public const string Favorites = "Favorites";
     public const string Recent = "Recently played";
     public const string AllStations = "All stations";
+    public const string LiveAndVideo = "Live DJs and video";
 
     /// <summary>How many recently played stations are remembered.</summary>
     public const int RecentLimit = 30;
@@ -20,8 +21,15 @@ public static class RadioGuide
     /// <summary>The bitrates the quality filter offers, in kbps (0 for any).</summary>
     public static readonly IReadOnlyList<int> Qualities = new[] { 0, 128, 192, 256, 320 };
 
-    /// <summary>True for sections whose stations are Lucent's own (featured, favorites, recent) rather than the directory's.</summary>
-    public static bool IsLocal(string section) => section is Featured or Favorites or Recent;
+    /// <summary>True for sections whose stations are Lucent's own (featured, favorites, recent, live and video) rather than the directory's.</summary>
+    public static bool IsLocal(string section) => section is Featured or Favorites or Recent or LiveAndVideo;
+
+    /// <summary>
+    /// True for stations that play live DJ sets and say who's on (The Lot, NTS), or that the directory tags as DJ sets.
+    /// </summary>
+    public static bool IsLiveDj(RadioStation station) =>
+        (LiveShows.Knows(station) && !LiveShows.SaysSongs(station))
+        || station.Tags.Any(tag => tag.Equals("dj sets", StringComparison.OrdinalIgnoreCase) || tag.Equals("live dj", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The genre a section is, or null for the other sections.</summary>
     public static Genre? GenreOf(string section) => Genres.All.FirstOrDefault(genre => genre.Name == section);
@@ -116,6 +124,11 @@ public static class RadioGuide
         {
             Featured => featured,
             Favorites => settings.RadioFavorites,
+            // The featured ones first, then any others played or starred that turned out to have video.
+            LiveAndVideo => featured.Concat(settings.RadioFavorites).Concat(settings.RadioRecent)
+                .Where(station => IsLiveDj(station) || HasVideo(settings, station))
+                .DistinctBy(station => station.Id)
+                .ToList(),
             _ => settings.RadioRecent,
         };
         var shown = stations

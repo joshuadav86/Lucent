@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using WinampInspiredVisualizer.Radio;
 using WinampInspiredVisualizer.Streaming;
 using WinampInspiredVisualizer.Video;
@@ -307,6 +309,79 @@ public partial class MainWindow
         StationChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Marks the items <see cref="AddStationItems"/> put in a menu, so a menu that's kept can take them out again.</summary>
+    public static readonly object StationItemMark = new();
+
+    /// <summary>
+    /// Adds, while a station is on, its website, the page to support it, and today's shows (The Lot, NTS) with a link
+    /// to its full schedule, after a separator, at <paramref name="index"/> (the end when null). Adds nothing otherwise.
+    /// </summary>
+    public void AddStationItems(ItemsControl menu, int? index = null)
+    {
+        if (_station is not { } station)
+        {
+            return;
+        }
+
+        var items = new List<Control> { new Separator { Tag = StationItemMark } };
+        var website = new MenuItem
+        {
+            Header = "Open the station's website",
+            Tag = StationItemMark,
+            IsEnabled = station.Homepage is { } homepage && RadioGuide.IsStreamAddress(homepage),
+        };
+        website.Click += (_, _) => OpenStationWebsite(station);
+        items.Add(website);
+        var support = new MenuItem { Header = "Support the station…", Tag = StationItemMark, IsEnabled = FeaturedStations.SupportPage(station) is not null };
+        support.Click += (_, _) => OpenStationSupport(station);
+        items.Add(support);
+
+        var shows = _liveShows?.Upcoming(station) ?? Array.Empty<ScheduledShow>();
+        var schedule = LiveShows.ScheduleAddress(station);
+        if (shows.Count > 0 || schedule is not null)
+        {
+            var today = new MenuItem { Header = "Today's schedule", Tag = StationItemMark };
+            var now = DateTimeOffset.Now;
+            foreach (var show in shows.Take(14))
+            {
+                var when = show.Start <= now ? "Now" : show.Start.ToLocalTime().ToString("t", CultureInfo.CurrentCulture);
+                today.Items.Add(new MenuItem { Header = new TextBlock { Text = $"{when}   {show.Title}" }, IsEnabled = false });
+            }
+
+            if (schedule is not null)
+            {
+                if (shows.Count > 0)
+                {
+                    today.Items.Add(new Separator());
+                }
+
+                var full = new MenuItem { Header = "Full schedule on the website" };
+                full.Click += (_, _) => OpenPage(schedule, "the station's schedule");
+                today.Items.Add(full);
+            }
+
+            items.Add(today);
+        }
+
+        var at = Math.Min(index ?? menu.Items.Count, menu.Items.Count);
+        foreach (var item in items)
+        {
+            menu.Items.Insert(at++, item);
+        }
+    }
+
+    private void OpenPage(string address, string what)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(address) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Couldn't open {what}.", ex);
+        }
+    }
+
     /// <summary>Opens the station's website in the browser.</summary>
     public void OpenStationWebsite(RadioStation station)
     {
@@ -342,8 +417,9 @@ public partial class MainWindow
             return;
         }
 
-        // The song the stream says is on, or else, on a live DJ station, the show that's on.
-        var streamSong = _radioStream?.NowPlaying;
+        // The song the stream says is on (or SomaFM's site, for its HLS streams that don't), or else, on a live DJ
+        // station, the show that's on.
+        var streamSong = _radioStream?.NowPlaying ?? (_liveShow is { IsSong: true } listed ? listed.Title : null);
         var song = streamSong ?? _liveShow?.Title;
         var marquee = _tuning is not null ? $"Tuning in to {station.Name}…" : song ?? station.Name;
         // Set only when it changes, so a long title keeps scrolling smoothly.
@@ -492,11 +568,13 @@ public partial class MainWindow
 
     /// <summary>
     /// With the position timer: on a live DJ station (The Lot, NTS) whose stream doesn't say who's on, finds the show
-    /// that's on every couple of minutes, for the title and the artwork window.
+    /// that's on every couple of minutes, for the title and the artwork window; on a SomaFM stream that doesn't name
+    /// its songs (its HLS ones), finds the song from SomaFM's site every 20 seconds.
     /// </summary>
     private async void CheckLiveShow(RadioStation station)
     {
-        if (_liveShowChecking || DateTime.UtcNow - _liveShowCheckedAt < TimeSpan.FromMinutes(2) || !LiveShows.Knows(station))
+        if (_liveShowChecking || DateTime.UtcNow - _liveShowCheckedAt < LiveShows.CheckEvery(station) || !LiveShows.Knows(station)
+            || (LiveShows.SaysSongs(station) && _radioStream?.NowPlaying is not null))
         {
             return;
         }

@@ -133,6 +133,8 @@ public partial class RadioWindow : Window
     {
         Sections.Children.Clear();
         Sections.Children.Add(SectionButton(RadioGuide.Featured, _featured.Count));
+        Sections.Children.Add(SectionButton(RadioGuide.LiveAndVideo,
+            RadioGuide.Local(RadioGuide.LiveAndVideo, _settings, _featured, string.Empty, _settings.RadioSort).Count));
         Sections.Children.Add(SectionButton(RadioGuide.Favorites, _settings.RadioFavorites.Count));
         Sections.Children.Add(SectionButton(RadioGuide.Recent, _settings.RadioRecent.Count));
         Sections.Children.Add(SectionButton(RadioGuide.AllStations, null));
@@ -287,6 +289,7 @@ public partial class RadioWindow : Window
         var filtered = _settings.RadioMinBitrate > 0 || _settings.RadioCountry is not null || _settings.RadioVideoOnly;
         return Section switch
         {
+            RadioGuide.LiveAndVideo => "No live DJ or video stations match. To find more video stations, open All stations and switch the filter to VIDEO ONLY.",
             RadioGuide.Favorites when SearchText.Length == 0 && !filtered => "No favorites yet. Click the star beside a station to keep it here.",
             RadioGuide.Recent when SearchText.Length == 0 && !filtered => "Stations you play show up here.",
             _ when _settings.RadioVideoOnly => "No video stations match. Try fewer words, look in All stations, or turn off the video filter.",

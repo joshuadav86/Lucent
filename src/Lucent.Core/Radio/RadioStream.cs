@@ -395,7 +395,10 @@ public sealed class RadioStream : WaveStream, ILiveStream
             Decoder = decoder;
             StationName = Header(response, "icy-name");
             Genre = Header(response, "icy-genre");
-            Bitrate = int.TryParse(Header(response, "icy-br")?.Split(',')[0], out var kbps) && kbps > 0 ? kbps : decoder.Bitrate;
+            // A few servers send bits per second (320000), as some directory listings do.
+            Bitrate = int.TryParse(Header(response, "icy-br")?.Split(',')[0], out var kbps) && kbps > 0
+                ? (kbps >= 10_000 ? (int)Math.Round(kbps / 1000.0) : kbps)
+                : decoder.Bitrate;
         }
 
         private Connection(HlsStream hls, IcyStream audio, RadioDecoder decoder)
