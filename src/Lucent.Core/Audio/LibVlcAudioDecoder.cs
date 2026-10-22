@@ -43,6 +43,26 @@ public static class LibVlcAudioDecoder
     /// </summary>
     public static WaveStream Open(string path, CancellationToken cancellation = default)
     {
+        if (Ac3Matroska.IsRawAc3(path))
+        {
+            // Windows' libVLC reads only the start of a raw Dolby Digital file, but all of it from Matroska.
+            var wrapped = Path.Combine(Path.GetTempPath(), $"Lucent-decode-{Guid.NewGuid():N}.mka");
+            try
+            {
+                Ac3Matroska.Wrap(path, wrapped);
+                return OpenDirectly(wrapped, cancellation);
+            }
+            finally
+            {
+                DeleteQuietly(wrapped);
+            }
+        }
+
+        return OpenDirectly(path, cancellation);
+    }
+
+    private static WaveStream OpenDirectly(string path, CancellationToken cancellation)
+    {
         var libVlc = VideoEngine.Get();
         var temp = TempPath();
         try

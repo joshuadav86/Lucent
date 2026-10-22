@@ -62,7 +62,8 @@ public static class AudioReaderFactory
         catch (Exception) when (VideoEngine.MayWork && File.Exists(path))
         {
             // libVLC's reasons are less use than the first decoder's, so that's the one passed on if libVLC fails too.
-            var stream = PlayWithLibVlc(path);
+            // Raw Dolby Digital is decoded first instead (quickly), since Windows' libVLC plays only its start.
+            WaveStream? stream = Ac3Matroska.IsRawAc3(path) ? DecodeWithLibVlc(path) : PlayWithLibVlc(path);
             if (stream is null)
             {
                 throw;
