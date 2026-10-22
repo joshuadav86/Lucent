@@ -76,9 +76,9 @@ public partial class MainWindow
         return true;
     }
 
-    /// <summary>The equalizer, the analyzer and the artwork, whichever are open: their places are remembered too.</summary>
+    /// <summary>The equalizer, the analyzer, the artwork and the video, whichever are open: their places are remembered too.</summary>
     private static IEnumerable<Window> SmallWindows =>
-        new Window?[] { EqualizerWindow.Current, AnalyzerWindow.Current, ArtworkWindow.Current }.OfType<Window>();
+        new Window?[] { EqualizerWindow.Current, AnalyzerWindow.Current, ArtworkWindow.Current, VideoWindow.Current }.OfType<Window>();
 
     /// <summary>
     /// The player and the shown windows docked to it (touching it, or touching a window that's docked to

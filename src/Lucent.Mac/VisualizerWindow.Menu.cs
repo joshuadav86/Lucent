@@ -26,24 +26,6 @@ public partial class VisualizerWindow
         var menu = new ContextMenu();
         menu.Items.Add(Item(_isFullscreen ? "Leave fullscreen" : "Fullscreen",
             _isFullscreen ? new KeyGesture(Key.Escape) : FullscreenGesture, ToggleFullscreen));
-        if (_video is { HasPicture: true })
-        {
-            // While a video plays: its picture, or the visuals to its sound.
-            var visualsInstead = Item("Show visuals instead of the video", null, ToggleVisualsInsteadOfVideo);
-            visualsInstead.ToggleType = MenuItemToggleType.CheckBox;
-            visualsInstead.IsChecked = _visualsInsteadOfVideo;
-            menu.Items.Add(visualsInstead);
-            if (!_video.IsLive && Player is { } owner)
-            {
-                // The editor cuts MP4, M4V and MOV files without re-encoding; other videos only play for now.
-                var path = _video.Source;
-                var editable = WinampInspiredVisualizer.Editor.VideoEdit.IsEditableVideo(path);
-                var edit = Item(editable ? "Edit video…" : "Edit video (MP4, M4V and MOV only, for now)", null, () => owner.OpenInEditor(owner, path));
-                edit.IsEnabled = editable;
-                menu.Items.Add(edit);
-            }
-        }
-
         menu.Items.Add(new Separator());
         if (_isFullscreen && Player is { } playback)
         {

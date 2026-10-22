@@ -255,6 +255,13 @@ public sealed class AppSettings
 
     public bool ArtworkWindowOnTop { get; set; }
 
+    // ---- Video ----
+
+    /// <summary>The video window's size. It opens docked to the player's group, wherever there's room.</summary>
+    public double VideoWindowWidth { get; set; } = 640;
+
+    public double VideoWindowHeight { get; set; } = 396;
+
     // ---- Analyzer ----
 
     /// <summary>The analyzer window's size. It opens docked to the player's group, wherever there's room.</summary>

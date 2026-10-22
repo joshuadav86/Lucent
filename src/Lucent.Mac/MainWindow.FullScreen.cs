@@ -184,7 +184,7 @@ public partial class MainWindow
         var windows = new List<(string, Window)> { ("Player", this) };
         var others = new Window?[]
         {
-            OpenEqualizerWindow, _queue, _libraryWindow, ArtworkWindow.Current, _visuals, AnalyzerWindow.Current, RadioWindow.Current,
+            OpenEqualizerWindow, _queue, _libraryWindow, ArtworkWindow.Current, _visuals, AnalyzerWindow.Current, RadioWindow.Current, VideoWindow.Current,
         };
         foreach (var window in others.OfType<Window>())
         {
@@ -226,6 +226,7 @@ public partial class MainWindow
         ArtworkWindow => TileKind.Artwork,
         VisualizerWindow => TileKind.Visuals,
         AnalyzerWindow => TileKind.Analyzer,
+        VideoWindow => TileKind.Video,
         RadioWindow => TileKind.Radio,
         EditorWindow => TileKind.Editor,
         _ => null,

@@ -68,7 +68,8 @@ public static class Screenshots
         ("ImportDone", () => PreviewImport(done: true)),
         ("Visuals", () => PreviewVisuals()),
         ("VisualsPicker", () => PreviewVisualsPicker()),
-        ("VisualsVideo", () => PreviewVisualsVideo()),
+        ("Video", () => PreviewVideo(playing: true)),
+        ("VideoEmpty", () => PreviewVideo(playing: false)),
         ("Editor", () => PreviewEditor(EditorView.Waveform)),
         ("EditorSpectrogram", () => PreviewEditor(EditorView.Spectrogram)),
         ("EditorEffects", () => PreviewEditorEffects()),
@@ -221,12 +222,18 @@ public static class Screenshots
     }
 
     /// <summary>
-    /// A video playing in the visuals window: the file in LUCENT_PREVIEW_VIDEO (or the self-test's clip in
-    /// tools/test-media), a second in. It needs libVLC, so it's drawn only where libVLC is installed or shipped.
+    /// The video window, empty or with a video playing: the file in LUCENT_PREVIEW_VIDEO (or the self-test's clip in
+    /// tools/test-media), a second in. The video needs libVLC, so it's drawn only where libVLC is installed or shipped.
     /// </summary>
-    private static VisualizerWindow PreviewVisualsVideo()
+    private static Window PreviewVideo(bool playing)
     {
-        var window = PreviewVisuals();
+        var window = VideoWindow.Create(new AppSettings());
+        if (!playing)
+        {
+            VideoWindow.ShowVideo(null, null);
+            return window;
+        }
+
         var path = Environment.GetEnvironmentVariable("LUCENT_PREVIEW_VIDEO")
             ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "tools", "test-media", "sync-test.mp4");
         var video = new WinampInspiredVisualizer.Video.VideoStream(path);
@@ -239,8 +246,12 @@ public static class Screenshots
         }
 
         video.Paused();
-        window.ShowVideo(video);
-        window.Closed += (_, _) => video.Dispose();
+        VideoWindow.ShowVideo(video, null);
+        window.Closed += (_, _) =>
+        {
+            VideoWindow.ShowVideo(null, null);
+            video.Dispose();
+        };
         return window;
     }
 

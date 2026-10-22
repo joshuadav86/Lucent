@@ -35,6 +35,7 @@ public static class WindowLocks
         EqualizerWindow => "Equalizer",
         AnalyzerWindow => "Analyzer",
         ArtworkWindow => "Artwork",
+        VideoWindow => "Video",
         _ => null,
     };
 
