@@ -105,7 +105,7 @@ internal static class TrackInfoPreviews
     }
 
     /// <summary>A square cover: a diagonal gradient, a low sun and the album's name.</summary>
-    private static byte[] Cover(int size, SKColor from, SKColor to, string text)
+    internal static byte[] Cover(int size, SKColor from, SKColor to, string text)
     {
         using var bitmap = new SKBitmap(size, size);
         using (var canvas = new SKCanvas(bitmap))

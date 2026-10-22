@@ -7,7 +7,7 @@
 <meta name="description" content="Lucent is a modern, Winamp-inspired music player built for audio nerds: a real audio editor, a studio analyzer, a 32-band equalizer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
 <meta property="og:title" content="Lucent">
 <meta property="og:description" content="A music player built for audio nerds, with an audio editor, a studio analyzer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included.">
-<meta property="og:image" content="https://lucentaudio.net/img/player-layout.jpg">
+<meta property="og:image" content="https://lucentaudio.net/img/full-screen.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#09090C">
 <link rel="icon" type="image/png" href="img/icon.png">
@@ -122,12 +122,34 @@ kbd {
 @media (max-width: 900px) { .hero-copy { grid-template-columns: 1fr; } }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .fine { font: 400 13px/1.5 var(--font-mono); color: var(--muted); }
-.hero-shot { margin: 0; }
+.hero-shot { margin: 0; min-width: 0; }
 .hero-shot .screen { box-shadow: 0 50px 120px -40px color-mix(in srgb, var(--a1) 65%, transparent), var(--glow); }
-.callouts { position: relative; height: 22px; margin-top: 14px; font: 400 12px/1.4 var(--font-mono); color: var(--muted); }
-.callouts span { position: absolute; top: 0; padding-left: 10px; border-left: 1px solid var(--a2); }
-@media (max-width: 640px) { .callouts { display: none; } }
+/* The window tour: one tab per window, everything tiled first. */
+.tour-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.tour-tabs .chip { padding: 6px 12px; font-size: 13px; }
+.screen.tour-stage {
+  aspect-ratio: 16 / 9; position: relative;
+  background: radial-gradient(80% 70% at 50% 100%, color-mix(in srgb, var(--a1) 22%, transparent), transparent 70%), #07070A;
+}
+.tour-stage img { display: block; position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; width: auto; height: auto; transition: opacity .25s; }
+.tour-stage.window img { max-width: calc(100% - 48px); max-height: calc(100% - 48px); border-radius: 10px; box-shadow: 0 30px 70px -20px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06); }
+.tour-stage img.fading { opacity: 0; }
+.tour-note { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin-top: 14px; color: var(--muted); font-size: 15px; min-height: 2.6em; }
+.tour-note b { font: 500 12px/1.4 var(--font-mono); color: var(--fg); text-transform: uppercase; letter-spacing: .08em; padding-left: 10px; border-left: 1px solid var(--a2); }
+@media (prefers-reduced-motion: reduce) { .tour-stage img { transition: none; } }
+@media (max-width: 640px) { .tour-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; } .tour-tabs .chip { flex: none; } .tour-stage.window img { max-width: calc(100% - 20px); max-height: calc(100% - 20px); } }
 #heroBars { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 26%; z-index: -1; display: block; opacity: .4; }
+
+/* ---------- internet radio ---------- */
+.radio-notes { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(28px, 4vw, 56px); margin-top: 40px; align-items: start; }
+@media (max-width: 900px) { .radio-notes { grid-template-columns: 1fr; } }
+.support-card {
+  display: flex; gap: 16px; align-items: flex-start; padding: 22px; border-radius: var(--r);
+  background: color-mix(in srgb, var(--a1) 12%, var(--bg)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a1) 45%, transparent);
+}
+.support-card svg { width: 30px; height: 30px; flex: none; fill: #FF5C8A; margin-top: 2px; }
+.support-card h3 { font-size: 19px; margin: 0 0 8px; }
+.support-card p { color: var(--muted); font-size: 15px; margin: 0; }
 
 /* ---------- audio editor ---------- */
 #editor .screen + .analyzer-notes, .analyzer + .analyzer-notes { margin-top: 32px; }
@@ -487,6 +509,8 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: 
 footer nav { display: flex; gap: 20px; flex-wrap: wrap; }
 footer a { text-decoration: none; }
 footer a:hover { color: var(--fg); }
+footer .credits { flex-basis: 100%; font-size: 12px; opacity: .8; }
+footer .credits a { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -532,11 +556,12 @@ footer a:hover { color: var(--fg); }
           <p class="fine">Windows 10 and 11 · macOS 12 or later · Updates itself</p>
         </div>
       </div>
-      <figure class="hero-shot">
-        <div class="screen"><img src="img/player-layout.jpg" width="1740" height="962" alt="The Lucent player with its library, equalizer, queue, and the Cosmic Jellyfish visual docked together"></div>
-        <figcaption class="callouts" aria-hidden="true">
-          <span style="left:2%">Library</span><span style="left:23%">Player and equalizer</span><span style="left:52%">Visuals, docked beside</span>
-        </figcaption>
+      <figure class="hero-shot tour" aria-label="A tour of Lucent's windows">
+        <div class="tour-tabs" role="tablist" aria-label="Lucent's windows" id="tourTabs"></div>
+        <div class="screen tour-stage" id="tourStage" role="tabpanel" aria-labelledby="tourTab-0">
+          <img id="tourImg" src="img/full-screen.jpg" width="2560" height="1440" alt="Lucent full screen on a 2560 × 1440 display: the library, player, equalizer, queue, Bicep's Isles in the artwork window, the Cosmic Jellyfish visual, the analyzer, and online radio, all tiled edge to edge">
+        </div>
+        <figcaption class="tour-note"><b id="tourName">Full screen</b><span id="tourNote">Shift+F11 lays every window edge to edge across your screen. Lock one in place and the rest fit around it.</span></figcaption>
       </figure>
     </div>
   </section>
@@ -728,20 +753,29 @@ footer a:hover { color: var(--fg); }
   </section>
 
   <section class="band alt" id="radio" aria-labelledby="radio-title">
-    <div class="wrap split">
-      <div class="stack">
+    <div class="wrap">
+      <div class="section-head">
         <p class="eyebrow">Internet radio</p>
-        <h2 id="radio-title">Listen to the best of internet radio.</h2>
-        <p class="lede">Thousands of stations, with Lucent's EQ, meters, and visuals on every one.</p>
+        <h2 id="radio-title">The best of internet radio, in high quality.</h2>
+        <p class="lede">Thousands of stations, with Lucent's EQ, meters, and visuals on every one. Here's SomaFM's Groove Salad, with the station's art in the Artwork window.</p>
+      </div>
+      <div class="screen"><img src="img/radio-groove-salad.png" width="1340" height="600" alt="SomaFM's Groove Salad playing in Lucent: the player shows Thievery Corporation's Lebanese Blonde, the Artwork window shows Groove Salad's turntable art, and the Online radio window lists SomaFM's channels with Groove Salad highlighted" loading="lazy"></div>
+      <div class="radio-notes">
+        <div class="support-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.4C1.5 7.8 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.5 3.3 4.3 6.6-1.8 4.8-9.3 9.4-9.3 9.4z"/></svg>
+          <div>
+            <h3>Keep your favorite stations on the air.</h3>
+            <p>SomaFM, Radio Paradise, Nightride FM, and NTS run on their listeners. Press the heart next to a station and Lucent opens that station's own donation page (or The Lot Radio's shop). Every cent goes to the station: Lucent takes no payments and no cut.</p>
+          </div>
+        </div>
         <ul class="ticks">
-          <li><b>The good stuff, up front.</b> SomaFM, FRISKY, Radio Paradise, and Nightride FM.</li>
+          <li><b>High quality streams.</b> MP3, AAC, HE-AAC, and HLS up to 320 kbps, buffered so a shaky connection doesn't drop out.</li>
+          <li><b>Station art and song covers.</b> The station's art fills the Artwork window, and Lucent finds the cover of each song that comes on.</li>
+          <li><b>The good stuff, up front.</b> SomaFM, FRISKY, Radio Paradise, Nightride FM, and NTS.</li>
           <li><b>Video stations.</b> Watch live sets from The Lot Radio, or filter to Video only.</li>
-          <li><b>Every genre.</b> 31 genres, search, and filters.</li>
-          <li><b>Favorites and history.</b> Star stations and find recent ones.</li>
-          <li><b>Just works.</b> MP3 and AAC streams, now-playing info, and auto-reconnect.</li>
+          <li><b>Every genre.</b> 31 genres, search, filters, favorites, and history.</li>
         </ul>
       </div>
-      <div class="screen"><img src="img/radio.png" width="820" height="600" alt="Lucent's Online radio window, with SomaFM's channels under Featured and a list of genres down the side" loading="lazy"></div>
     </div>
   </section>
 
@@ -826,6 +860,7 @@ footer a:hover { color: var(--fg); }
       <a href="#player">Player</a><a href="#visuals">Visuals</a><a href="#editor">Editor</a><a href="#analyzer">Analyzer</a><a href="https://buymeacoffee.com/joshuadav86" target="_blank" rel="noopener">Buy me a coffee</a><a href="https://github.com/joshuadav86/Lucid/issues/new?template=bug_report.yml" target="_blank" rel="noopener">Report a bug</a><a href="#download">Download</a>
     </nav>
     <span>Free and open source under the <a href="https://github.com/joshuadav86/Lucid/blob/main/LICENSE">MIT license</a>. <a href="https://github.com/joshuadav86/Lucid">Source on GitHub</a>.</span>
+    <span class="credits">Isles cover art © Bicep. Groove Salad art © <a href="https://somafm.com/groovesalad/" target="_blank" rel="noopener">SomaFM</a>. Shown to illustrate Lucent playing them; all rights stay with their owners.</span>
   </div>
 </footer>
 
@@ -834,6 +869,68 @@ footer a:hover { color: var(--fg); }
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const root = document.documentElement;
   const css = n => getComputedStyle(root).getPropertyValue(n).trim();
+
+  /* ---------- the window tour at the top: every window first, then one at a time ---------- */
+  const TOUR = [
+    ["Full screen", "full-screen.jpg", 2560, 1440, "Shift+F11 lays every window edge to edge across your screen. Lock one in place and the rest fit around it.",
+      "Lucent full screen on a 2560 × 1440 display: the library, player, equalizer, queue, Bicep's Isles in the artwork window, the Cosmic Jellyfish visual, the analyzer, and online radio, all tiled edge to edge"],
+    ["Player", "tour/player.png", 520, 207, "Bicep's Atlas in lossless, with a live level meter and one-click links to every other window.",
+      "The Lucent player playing Atlas by Bicep, 1:23 in, with its level meter and buttons for the other windows"],
+    ["Library", "tour/library.png", 380, 560, "Your music folders, newest first, with favorites and playlists a click away.",
+      "The library window with folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada's Music Has the Right to Children"],
+    ["Queue", "tour/queue.png", 520, 320, "What's up next. Drag to reorder, and save or load playlists.",
+      "The queue with Bicep, Tomora, and Boards of Canada songs, Atlas playing"],
+    ["Equalizer", "tour/equalizer.png", 626, 391, "4 to 32 bands, with the music's live spectrum behind the faders.",
+      "The 16-band equalizer on the Rock preset, with the live spectrum behind the curve"],
+    ["Artwork", "tour/artwork.png", 420, 456, "The cover of whatever's on: your files, a streaming app, or a radio station.",
+      "The artwork window showing the cover of Bicep's Isles"],
+    ["Visuals", "tour/visuals.jpg", 820, 560, "454 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.",
+      "The visuals window showing Cosmic Jellyfish, with its picker and Auto switch"],
+    ["Analyzer", "tour/analyzer.png", 760, 460, "A studio spectrogram, spectrum, waveform, and stereo scope, scrolling together.",
+      "The analyzer with a spectrogram, spectrum bars, a scrolling waveform, and a stereo scope"],
+    ["Radio", "tour/radio.png", 820, 600, "Thousands of stations, with SomaFM, FRISKY, Radio Paradise, Nightride FM, and NTS up front.",
+      "The online radio window with SomaFM's channels under Featured and Groove Salad playing"],
+    ["Video", "tour/video.png", 640, 396, "Music videos and video stations, in a window of their own.",
+      "The video window playing a synthwave sunset clip"],
+    ["Editor", "editor.png", 1240, 700, "Cut, fade, and crossfade, with VST3 effects, without leaving the player.",
+      "The audio editor with three clips, fades, a crossfade, markers, and the Inserts strip"],
+    ["Record", "tour/record.png", 820, 833, "Record a DJ set or a record at up to 192 kHz, with each song marked and named.",
+      "The record window recording a DJ set at 48 kHz, 24-bit, with track marks named by ACRCloud"],
+    ["Stems", "tour/stems.png", 760, 420, "Split a song into drums, bass, vocals, and the rest on your graphics card.",
+      "The stems window with drums, bass, other, and vocals, each with its own level"],
+  ];
+  {
+    const tabs = document.getElementById("tourTabs"), stage = document.getElementById("tourStage"), img = document.getElementById("tourImg");
+    const name = document.getElementById("tourName"), note = document.getElementById("tourNote");
+    let at = 0;
+    const show = (i, instant) => {
+      at = (i + TOUR.length) % TOUR.length;
+      const [label, file, w, h, text, alt] = TOUR[at];
+      tabs.querySelectorAll(".chip").forEach((b, j) => { b.setAttribute("aria-pressed", j === at); b.setAttribute("aria-selected", j === at); b.tabIndex = j === at ? 0 : -1; });
+      stage.setAttribute("aria-labelledby", `tourTab-${at}`);
+      stage.classList.toggle("window", at > 0);
+      name.textContent = label; note.textContent = text;
+      const swap = () => { img.src = `img/${file}`; img.width = w; img.height = h; img.alt = alt; img.classList.remove("fading"); };
+      if (reduce || instant) { swap(); return; }
+      img.classList.add("fading");
+      setTimeout(swap, 180);
+    };
+    TOUR.forEach(([label], i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.id = `tourTab-${i}`; b.textContent = label;
+      b.setAttribute("role", "tab"); b.setAttribute("aria-controls", "tourStage");
+      b.onclick = () => show(i);
+      tabs.append(b);
+    });
+    tabs.addEventListener("keydown", e => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+      if (!step) return;
+      e.preventDefault(); show(at + step); tabs.children[at].focus();
+    });
+    show(0, true);
+    // Fetch the other windows once the page has settled, so switching is instant.
+    addEventListener("load", () => setTimeout(() => TOUR.slice(1).forEach(([, file]) => { new Image().src = `img/${file}`; }), 1500));
+  }
 
   /* ---------- synthetic music: a 120 bpm loop the demos all listen to ---------- */
   const N = 96;
@@ -1207,13 +1304,13 @@ footer a:hover { color: var(--fg); }
     `<div class="lw-title"><i class="lw-logo"></i><b>${name}</b>${note ? `<span>${note}</span>` : ""}<span class="x">${extra}${I.min}${I.close}</span></div>`;
   const playerWin = () => `<div class="lw">${title("Lucent", "", I.plus + I.gear)}<div class="lw-body">
       <div class="lw-display"><div class="lw-time">1:23</div>
-        <div class="lw-track"><b>Roygbiv</b><span>Boards of Canada · 320 kbps</span></div>
+        <div class="lw-track"><b>Atlas</b><span>Bicep · 1411 kbps</span></div>
         <div class="lw-meter">${meter}</div><div class="lw-vol">VOL<i></i></div></div>
       <div class="lw-seek"><i></i></div>
       <div class="lw-row"><span class="lw-b">${I.prev}</span><span class="lw-play">${I.play}</span><span class="lw-b">${I.stop}</span><span class="lw-b">${I.next}</span><span class="lw-b">${I.eject}</span><span class="lw-b">${I.shuffle}</span><span class="lw-b">${I.repeat}</span>
         <span class="lw-links"><span>Visuals</span><span>Queue</span><span>EQ</span><span>Library</span></span></div>
     </div></div>`;
-  const SONGS = [["Roygbiv", "Boards of Canada", "2:31"], ["Aquarius", "Boards of Canada", "5:52"], ["Turquoise Hexagon Sun", "Boards of Canada", "5:07"], ["Xtal", "Aphex Twin", "4:51"], ["Pulsewidth", "Aphex Twin", "3:47"]];
+  const SONGS = [["Atlas", "Bicep", "5:52"], ["Ring the Alarm", "Tomora", "5:31"], ["Roygbiv", "Boards of Canada", "2:31"], ["Aquarius", "Boards of Canada", "5:52"], ["Apricots", "Bicep", "4:06"]];
   const queueWin = n => `<div class="lw">${title("Queue", `${n} tracks`)}<div class="lw-list">${SONGS.slice(0, n).map((x, i) =>
       `<div class="lw-item${i === 0 ? " on" : ""}"><b>${x[0]}</b><span>${x[1]}</span><em>${x[2]}</em></div>`).join("")}</div></div>`;
   const EQ = [.3, .26, .36, .5, .58, .55, .45, .34, .28, .24];
