@@ -149,6 +149,16 @@ public static class AudioFileLoader
                 bits = Math.Min(32, pcm.SourceBits);
                 isFloat = pcm.IsSourceFloat;
             }
+            else if (Path.GetExtension(path).ToLowerInvariant() is ".wv" or ".ape"
+                && AudioReaderFactory.OpenQuickly(path) is BlockAudioReader { SourceBits: > 0 } block)
+            {
+                // TagLib can't tell float WavPack from 32-bit integer either.
+                using (block)
+                {
+                    bits = Math.Min(32, block.SourceBits);
+                    isFloat = block.IsSourceFloat;
+                }
+            }
             else
             {
                 using var file = TagLib.File.Create(path);

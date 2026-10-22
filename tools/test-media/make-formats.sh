@@ -1,7 +1,8 @@
 #!/bin/bash
 # Makes tools/test-media/formats: half a second of a 440 Hz tone with a quiet sweep (so no two moments are alike), in
 # each format and codec people's music comes in. The self-test decodes every one on Windows and the Mac
-# (Lucent.Core's Audio/FormatSelfTest.cs). Needs FFmpeg built with libmp3lame, libopus, libvorbis and libspeex.
+# (Lucent.Core's Audio/FormatSelfTest.cs). Needs FFmpeg built with libmp3lame, libopus, libvorbis and
+# libspeex, and Monkey's Audio's mac command (monkeysaudio.com).
 # Usage: tools/test-media/make-formats.sh
 set -euo pipefail
 cd "$(dirname "$0")/formats"
@@ -51,6 +52,11 @@ make ac3.ac3 -c:a ac3 -b:a 96k -ar 48000
 make eac3.eac3 -c:a eac3 -b:a 96k -ar 48000
 make dts.dts -strict -2 -c:a dca -b:a 768k -ar 48000
 make tta.tta -c:a tta
+make wavpack.wv -c:a wavpack -sample_fmt s16p
+make wavpack-float.wv -c:a wavpack -sample_fmt fltp
+make ogg-flac.oga -c:a flac -f ogg
+# FFmpeg doesn't write Monkey's Audio, so the tone goes through mac (it takes only plain 16-bit WAV).
+make ape.wav -c:a pcm_s16le && mac ape.wav ape.ape -c2000 >/dev/null && rm ape.wav
 make speex.spx -c:a libspeex -ar 32000 -compression_level 10 -q:a 10 -f ogg
 make mp4-flac.mp4 -c:a flac
 make mp4-opus.mp4 -c:a libopus -b:a 48k

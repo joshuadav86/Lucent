@@ -27,6 +27,8 @@ public static class AudioReaderFactory
         ".wave", ".bwf", ".rf64", ".w64", ".caf",
         // Read by the system's decoders where they can, otherwise by libVLC.
         ".m4b", ".mp2", ".ac3", ".eac3", ".ec3", ".dts", ".mka", ".weba", ".tta", ".spx",
+        // Read by Lucent's own WavPack and Monkey's Audio decoders.
+        ".wv", ".ape",
     };
 
     /// <summary>Extensions <see cref="PcmFileReader"/> is tried on first.</summary>
@@ -62,8 +64,8 @@ public static class AudioReaderFactory
         catch (Exception) when (VideoEngine.MayWork && File.Exists(path))
         {
             // libVLC's reasons are less use than the first decoder's, so that's the one passed on if libVLC fails too.
-            // Raw Dolby Digital is decoded first instead (quickly), since Windows' libVLC plays only its start.
-            WaveStream? stream = Ac3Matroska.IsRawAc3(path) ? DecodeWithLibVlc(path) : PlayWithLibVlc(path);
+            // Raw Dolby Digital and FLAC in Ogg are decoded first instead (quickly), since libVLC plays only their start.
+            WaveStream? stream = Ac3Matroska.IsRawAc3(path) || OggFlac.IsOggFlac(path) ? DecodeWithLibVlc(path) : PlayWithLibVlc(path);
             if (stream is null)
             {
                 throw;
@@ -144,6 +146,8 @@ public static class AudioReaderFactory
         {
             ".ogg" or ".oga" => OpenOgg(path),
             ".opus" => new OpusWaveStream(path),
+            ".wv" => WavPackReader.TryOpen(path) ?? throw new InvalidDataException("This isn't a WavPack file."),
+            ".ape" => ApeReader.TryOpen(path) ?? throw new InvalidDataException("This isn't a Monkey's Audio file."),
             _ => OpenWithSystemDecoder?.Invoke(path)
                 ?? throw new NotSupportedException($"No decoder for {Path.GetExtension(path)} files on this platform."),
         };
@@ -151,7 +155,13 @@ public static class AudioReaderFactory
 
     private static WaveStream OpenOgg(string path)
     {
-        // .ogg files usually hold Vorbis audio but can also hold Opus.
+        // .ogg files usually hold Vorbis audio but can also hold Opus, or FLAC (read by the system's FLAC decoder).
+        if (OggFlac.IsOggFlac(path))
+        {
+            return OggFlac.Open(path, OpenWithSystemDecoder
+                ?? throw new NotSupportedException("No FLAC decoder on this platform."));
+        }
+
         try
         {
             return new VorbisWaveReader(path);
