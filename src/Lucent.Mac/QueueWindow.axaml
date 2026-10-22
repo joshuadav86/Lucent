@@ -109,7 +109,7 @@
                         <MenuItem Header="Remove from the queue" InputGesture="Back" Click="OnRemoveSelected" />
                         <Separator x:Name="SongMenuItemsStart" />
                         <MenuItem Header="Edit info…" InputGesture="Cmd+I" Click="OnEditInfo" />
-                        <MenuItem Header="Open in editor…" Click="OnOpenInEditor" />
+                        <MenuItem x:Name="OpenInEditorItem" Header="Open in editor…" Click="OnOpenInEditor" />
                         <MenuItem Header="Convert to…" Click="OnConvert" />
                         <MenuItem Header="Show in Finder" Click="OnShowInExplorer" />
                     </ContextMenu>

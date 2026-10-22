@@ -280,8 +280,8 @@ public partial class VideoWindow : Window
             {
                 // The editor cuts MP4, M4V and MOV files without re-encoding; other videos only play for now.
                 var path = video.Source;
-                var editable = WinampInspiredVisualizer.Editor.VideoEdit.IsEditableVideo(path);
-                var edit = Item(editable ? "Edit video…" : "Edit video (MP4, M4V and MOV only, for now)", null, () => player.OpenInEditor(player, path));
+                var (header, editable) = WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(path);
+                var edit = Item(header, null, () => player.OpenInEditor(player, path));
                 edit.IsEnabled = editable;
                 menu.Items.Add(new Separator());
                 menu.Items.Add(edit);

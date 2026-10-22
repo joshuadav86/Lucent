@@ -116,7 +116,7 @@
                         <MenuItem Header="Play this folder" Click="OnLibraryPlayFolder" />
                         <Separator x:Name="SongMenuItemsStart" />
                         <MenuItem Header="Edit info…" InputGesture="Cmd+I" Click="OnLibraryEditInfo" />
-                        <MenuItem Header="Open in editor…" Click="OnLibraryOpenInEditor" />
+                        <MenuItem x:Name="OpenInEditorItem" Header="Open in editor…" Click="OnLibraryOpenInEditor" />
                         <MenuItem Header="Convert to…" Click="OnLibraryConvert" />
                         <MenuItem Header="Show in Finder" Click="OnLibraryShowInExplorer" />
                     </ContextMenu>

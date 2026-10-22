@@ -1028,6 +1028,10 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
+        // "Edit video…" when the first one picked is a video, as the Video window's menu says.
+        var (editHeader, canEdit) = WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(items[0].Path);
+        OpenInEditorItem.Header = editHeader;
+        OpenInEditorItem.IsEnabled = canEdit;
         _songMenuItems.Add(Player.FavoriteMenuItem(items.Select(item => item.Path).ToList()));
         _songMenuItems.Add(RatingMenu(items));
         _songMenuItems.Add(Player.AddToPlaylistMenu(this, () => Task.Run(() => items.Select(item => item.ToTrack()).ToList())));

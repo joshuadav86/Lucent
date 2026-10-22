@@ -263,7 +263,8 @@ public partial class QueueWindow
             case ClassicPlaylistCommand.Misc:
                 ShowClassicMenu(
                     ("Edit info…", () => OnEditInfo(this, new RoutedEventArgs())),
-                    ("Open in editor…", () => OnOpenInEditor(this, new RoutedEventArgs())),
+                    (SelectedEntries().FirstOrDefault() is { } first ? WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(first.Track.Path).Header : "Open in editor…",
+                        () => OnOpenInEditor(this, new RoutedEventArgs())),
                     ("Show in Finder", () => OnShowInExplorer(this, new RoutedEventArgs())));
                 break;
             case ClassicPlaylistCommand.List:
