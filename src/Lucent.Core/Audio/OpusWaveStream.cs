@@ -22,6 +22,13 @@ public sealed class OpusWaveStream : WaveStream
     public OpusWaveStream(string path)
     {
         _file = File.OpenRead(path);
+        if (!StartsAsOpus(_file))
+        {
+            // An Ogg file holding something else (FLAC, Speex): the Opus reader would take it and never end.
+            _file.Dispose();
+            throw new InvalidDataException("This Ogg file doesn't hold Opus sound.");
+        }
+
         _ogg = new OpusOggReadStream(OpusCodecFactory.CreateDecoder(SampleRate, Channels), _file);
         _length = AlignToBlock((long)(_ogg.TotalTime.TotalSeconds * _format.AverageBytesPerSecond));
     }
@@ -78,6 +85,15 @@ public sealed class OpusWaveStream : WaveStream
         }
 
         base.Dispose(disposing);
+    }
+
+    /// <summary>True when the file's first Ogg page carries an Opus header ("OpusHead").</summary>
+    private static bool StartsAsOpus(Stream stream)
+    {
+        var start = new byte[512];
+        var read = stream.Read(start, 0, start.Length);
+        stream.Position = 0;
+        return read > 36 && start.AsSpan(0, 4).SequenceEqual("OggS"u8) && start.AsSpan(0, read).IndexOf("OpusHead"u8) >= 0;
     }
 
     private long AlignToBlock(long bytes) => bytes - bytes % _format.BlockAlign;

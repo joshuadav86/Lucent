@@ -61,6 +61,7 @@ public static class SelfTest
         string? sheetPath = null;
         var music = new List<string>();
         var videos = new List<string>();
+        string? formatsFolder = null;
         for (var i = 0; i < args.Length; i++)
         {
             if (args[i] == "--sheet" && i + 1 < args.Length)
@@ -70,6 +71,10 @@ public static class SelfTest
             else if (args[i] == "--video" && i + 1 < args.Length)
             {
                 videos.Add(args[++i]);
+            }
+            else if (args[i] == "--formats" && i + 1 < args.Length)
+            {
+                formatsFolder = args[++i];
             }
             else
             {
@@ -82,6 +87,10 @@ public static class SelfTest
         {
             failures += TestDecoding(path) ? 0 : 1;
         }
+
+        // Every format and codec in tools/test-media/formats, decoded as the editor does.
+
+        failures += Audio.FormatSelfTest.Run(Console.WriteLine, formatsFolder);
 
         failures += WinampInspiredVisualizer.Video.VideoSelfTest.Run(Console.WriteLine, videos);
 

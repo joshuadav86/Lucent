@@ -233,7 +233,7 @@ Lucent doesn't ship anyone else's skins: each belongs to whoever drew it. Lucent
 
 | | |
 |---|---|
-| 🎵 **Plays almost anything** | MP3, FLAC, WAV, AAC/M4A, ALAC, WMA, OGG Vorbis, Opus, and AIFF |
+| 🎵 **Plays almost anything** | MP3, FLAC, WAV (any bit depth, RF64, and Wave64), AAC/M4A, ALAC, WMA, OGG Vorbis, Opus, AIFF and AIFF-C, CAF, Dolby Digital (AC-3 and E-AC-3), DTS, Matroska and WebM audio, MP2, TTA, and Speex |
 | 📚 **Library** | Link a folder and every sound shows up, searchable as you type |
 | 📻 **Online radio** | SomaFM, FRISKY, Radio Paradise, Nightride FM, and thousands more from Radio Browser, by genre, with search, sorting, and quality and country filters. The visuals play along |
 | 🛒 **Bandcamp and Beatport** | Music you download from either store files itself into the library, and Bandcamp purchases can sync by themselves |

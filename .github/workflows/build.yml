@@ -182,7 +182,7 @@ jobs:
           # loads its plugins from its own folder. They must sit beside Lucent.exe, not inside the single-file
           # bundle, to be found.
           Get-ChildItem publish | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
-          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll", "LucentPluginHost.exe", "WebView2Loader.dll", "onnxruntime.dll", "DirectML.dll", "libvlc/win-x64/libvlc.dll", "libvlc/win-x64/libvlccore.dll", "libvlc/win-x64/plugins/codec/libavcodec_plugin.dll") {
+          foreach ($dll in "libmp3lame.64.dll", "libmp3lame.32.dll", "LucentPluginHost.exe", "WebView2Loader.dll", "onnxruntime.dll", "DirectML.dll", "libvlc/win-x64/libvlc.dll", "libvlc/win-x64/libvlccore.dll", "libvlc/win-x64/plugins/codec/libavcodec_plugin.dll", "libvlc/win-x64/plugins/stream_out/libstream_out_transcode_plugin.dll", "libvlc/win-x64/plugins/stream_out/libstream_out_standard_plugin.dll", "libvlc/win-x64/plugins/access_output/libaccess_output_file_plugin.dll", "libvlc/win-x64/plugins/mux/libmux_wav_plugin.dll") {
             if (-not (Test-Path "publish/$dll")) { Write-Host "::error::$dll is missing from the published app"; exit 1 }
           }
 
@@ -281,7 +281,7 @@ jobs:
         run: |
           # Lucent.exe is a windowed program: piping its output makes PowerShell wait for it, shows what it
           # writes and sets $LASTEXITCODE. The runner has no graphics card, so Direct3D draws in software.
-          publish/Lucent.exe --self-test --sheet windows-visuals.png --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 test.wav test.aiff test.mp3 | Out-Host
+          publish/Lucent.exe --self-test --sheet windows-visuals.png --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 --formats tools/test-media/formats test.wav test.aiff test.mp3 | Out-Host
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - uses: actions/upload-artifact@v4
@@ -618,9 +618,11 @@ jobs:
         run: |
           # libVLC (videos) ships in its own folder for this chip, with its plugins.
           test -f "publish-mac/libvlc/$RID/lib/libvlc.dylib" && test -f "publish-mac/libvlc/$RID/lib/vlc/plugins/libavcodec_plugin.dylib" \
+            && test -f "publish-mac/libvlc/$RID/lib/vlc/plugins/libstream_out_transcode_plugin.dylib" \
+            && test -f "publish-mac/libvlc/$RID/lib/vlc/plugins/libmux_wav_plugin.dylib" \
             || { echo "::error::libVLC is missing from the published app"; exit 1; }
           publish-mac/Lucent --self-test --sheet mac-visuals-${{ matrix.arch }}.png \
-            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 \
+            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 --formats tools/test-media/formats \
             test.wav test.m4a test-alac.m4a test.flac test.aiff
 
       - name: Set up signing
@@ -866,7 +868,7 @@ jobs:
             && test -f built/Lucent.app/Contents/MacOS/libvlc/osx-arm64/lib/vlc/plugins/libavcodec_plugin.dylib \
             || { echo "::error::libVLC is missing from Lucent.app"; exit 1; }
           built/Lucent.app/Contents/MacOS/Lucent --self-test --sheet mac-visuals-arm64.png \
-            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 \
+            --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 --formats tools/test-media/formats \
             test.wav test.m4a test-alac.m4a test.flac test.aiff
 
       - name: Check Lucent.app opens and lays out its windows

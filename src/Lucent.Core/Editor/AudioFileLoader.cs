@@ -141,14 +141,13 @@ public static class AudioFileLoader
         var bitrate = 0;
         try
         {
-            if (Path.GetExtension(path).Equals(".wav", StringComparison.OrdinalIgnoreCase))
+            // TagLib can't tell 32-bit float from 32-bit integer WAV (and doesn't read Wave64 or CAF), so the PCM
+            // reader is asked for uncompressed files.
+            using var pcm = PcmFileReader.TryOpen(path);
+            if (pcm is not null)
             {
-                // TagLib can't tell 32-bit float from 32-bit integer WAV, so ask the WAV reader.
-                using var wav = new WaveFileReader(path);
-                bits = wav.WaveFormat.BitsPerSample;
-                isFloat = wav.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat
-                    || (wav.WaveFormat is WaveFormatExtensible extensible
-                        && extensible.SubFormat == NAudio.Dmo.AudioMediaSubtypes.MEDIASUBTYPE_IEEE_FLOAT);
+                bits = Math.Min(32, pcm.SourceBits);
+                isFloat = pcm.IsSourceFloat;
             }
             else
             {

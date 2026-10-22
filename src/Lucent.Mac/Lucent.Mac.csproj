@@ -83,11 +83,12 @@
 
   <!--
     libVLC's plugins that Lucent never uses, left out to keep the download smaller (as on Windows): streaming out,
-    saving to files, and the web remote control. A Mac's plugins sit in one folder, named for what they are.
+    saving to files, and the web remote control. A Mac's plugins sit in one folder, named for what they are. Four are
+    kept, which decode music only libVLC reads to a WAV for the editor (Lucent.Core's Audio/LibVlcAudioDecoder.cs).
   -->
   <Target Name="LeaveOutUnusedVlcPlugins" BeforeTargets="AssignTargetPaths">
     <ItemGroup>
-      <Content Remove="@(Content)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Content.Link)', '^libvlc[\\/][^\\/]+[\\/]lib[\\/]vlc[\\/](plugins[\\/]lib(access_output|stream_out|mux)_|share[\\/]lua[\\/]http[\\/])'))" />
+      <Content Remove="@(Content)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Content.Link)', '^libvlc[\\/][^\\/]+[\\/]lib[\\/]vlc[\\/](plugins[\\/]lib(?!(access_output_file|stream_out_transcode|stream_out_standard|mux_wav)_plugin)(access_output|stream_out|mux)_|share[\\/]lua[\\/]http[\\/])'))" />
     </ItemGroup>
   </Target>
 
