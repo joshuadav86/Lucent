@@ -227,6 +227,24 @@ public partial class EditorWindow : Window
         ShowStatus("The clips overlap, with a crossfade. Right-click it to change its shape, or slide the clip away to take it out.");
     }
 
+    /// <summary>For screenshots: once a video has loaded, adds a few markers and selects part of it.</summary>
+    internal void ShowPreviewVideoEdits()
+    {
+        if (_session is not { } session)
+        {
+            return;
+        }
+
+        var frames = session.Audio.Frames;
+        session.AddMarker((int)(frames * 0.08), "Intro");
+        session.AddMarker((int)(frames * 0.31), "Verse");
+        session.AddMarker((int)(frames * 0.63), "Chorus");
+        ShowAudio();
+        Waveform.Selection = new FrameRange((int)(frames * 0.31), (int)(frames * 0.32));
+        Waveform.CursorFrame = (int)(frames * 0.31);
+        ShowStatus("Select part of the video, then Delete cuts it out or Trim keeps only it. Saving copies the pictures and sound as they are, without re-encoding.");
+    }
+
     private void LoadTitleIcon()
     {
         try
