@@ -51,6 +51,18 @@ public static class VideoSelfTest
             return 1;
         }
 
+        // The first play after libVLC loads can start cold: on GitHub's Windows machines its first beep has come 0.4 s
+        // ahead of its flash, while every play after was in step. So one untimed play warms it up before any is timed.
+        try
+        {
+            using var warmUp = new VideoStream(videos[0]);
+            Play(warmUp, pauseAt: null);
+        }
+        catch (Exception)
+        {
+            // The timed plays below say what's wrong.
+        }
+
         var problems = 0;
         foreach (var path in videos)
         {
