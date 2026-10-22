@@ -47,13 +47,13 @@ make mp2.mp2 -c:a mp2 -b:a 128k
 make opus.opus -c:a libopus -b:a 48k
 make vorbis.ogg -c:a libvorbis -q:a 2
 make wma.wma -c:a wmav2 -b:a 96k
-make ac3.ac3 -c:a ac3 -b:a 96k
-make eac3.eac3 -c:a eac3 -b:a 96k
+make ac3.ac3 -c:a ac3 -b:a 96k -ar 48000
+make eac3.eac3 -c:a eac3 -b:a 96k -ar 48000
 make dts.dts -strict -2 -c:a dca -b:a 768k -ar 48000
 make tta.tta -c:a tta
 make speex.spx -c:a libspeex -ar 32000 -compression_level 10 -q:a 10 -f ogg
 make mp4-flac.mp4 -c:a flac
 make mp4-opus.mp4 -c:a libopus -b:a 48k
 make mka-flac.mka -c:a flac
-make mka-ac3.mka -c:a ac3
+make mka-ac3.mka -c:a ac3 -ar 48000
 make webm-opus.weba -c:a libopus -f webm
