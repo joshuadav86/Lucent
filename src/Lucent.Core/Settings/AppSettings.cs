@@ -103,6 +103,9 @@ public sealed class AppSettings
     /// <summary>Show MilkDrop presets in Lucent's light, with its glow and tone-mapping; off shows them as MilkDrop did.</summary>
     public bool ModernMilkDrop { get; set; } = true;
 
+    /// <summary>Visuals tense up through a song's build-ups and burst on its drops (see SongLook).</summary>
+    public bool BuildUpsAndDrops { get; set; } = true;
+
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
 

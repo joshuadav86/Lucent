@@ -309,6 +309,10 @@
                         </UniformGrid>
                     </Border>
 
+                    <CheckBox x:Name="BuildUpsSwitch" Style="{StaticResource SwitchToggle}" Content="Build-ups and drops"
+                              Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}" Text="Visuals close in and change colour through a build-up, then burst on the drop." />
+
                     <CheckBox x:Name="HdrSwitch" Style="{StaticResource SwitchToggle}" Content="HDR" Margin="0,18,0,0"
                               Click="OnOptionSwitched" />
                     <TextBlock x:Name="HdrHint" Style="{StaticResource OptionHint}" />

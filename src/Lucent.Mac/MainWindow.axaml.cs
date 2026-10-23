@@ -1316,6 +1316,7 @@ public partial class MainWindow : Window
         _visualizer.BloomStrength = GraphicsOptions.BloomStrength(_settings.Glow);
         AvsVisual.ModernLook = _settings.ModernAvs;
         MilkDropLook.Modern = _settings.ModernMilkDrop;
+        WinampInspiredVisualizer.Visualizer.SongLook.On = _settings.BuildUpsAndDrops;
         _visualizer.Hdr = _settings.Hdr;
         _visualizer.AutoCycle = _settings.AutoCycle;
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
@@ -1468,6 +1469,10 @@ public partial class MainWindow : Window
         {
             _settings.ShowFrameRate = on;
         }
+        else if (sender == BuildUpsSwitch)
+        {
+            _settings.BuildUpsAndDrops = on;
+        }
         else if (sender == AutoCycleSwitch)
         {
             _settings.AutoCycle = on;
@@ -1546,6 +1551,7 @@ public partial class MainWindow : Window
 
         HdrSwitch.IsChecked = _settings.Hdr;
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
+        BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
         MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;

@@ -7,7 +7,7 @@ namespace WinampInspiredVisualizer;
 /// <summary>The graphics options, as items for the visuals' right-click menu. Kept in its own file.</summary>
 public partial class MainWindow
 {
-    /// <summary>Adds Resolution, Detail and Glow submenus, the HDR and frame rate switches, and a way to all the options.</summary>
+    /// <summary>Adds Resolution, Detail and Glow submenus, the build-up, HDR and frame rate switches, and a way to all the options.</summary>
     public void AddGraphicsItems(ItemsControl menu)
     {
         menu.Items.Add(Choices("Resolution", new[]
@@ -32,6 +32,10 @@ public partial class MainWindow
             (GlowLevel.Normal, "Normal"),
             (GlowLevel.Strong, "Strong"),
         }, _settings.Glow, value => _settings.Glow = value));
+
+        var buildUps = new MenuItem { Header = "Build-ups and drops", IsChecked = _settings.BuildUpsAndDrops };
+        buildUps.Click += (_, _) => ChangeGraphics(() => _settings.BuildUpsAndDrops = !_settings.BuildUpsAndDrops);
+        menu.Items.Add(buildUps);
 
         var hdr = new MenuItem
         {

@@ -677,7 +677,8 @@ public sealed partial class Renderer : IDisposable
         _constants[13] = _transitionStyle;
         // The glow swells through a build-up and flares on the drop.
         var moment = _songFollower.Moment;
-        _constants[14] = _bloomStrength * (1f + 0.35f * moment.BuildUp + 0.5f * moment.Drop);
+        var (buildUp, drop) = SongLook.Of(_songFollower);
+        _constants[14] = _bloomStrength * (1f + 0.6f * buildUp + 1f * drop);
         _constants[15] = (float)_renderWidth / _windowWidth;
         _constants[16] = _hdrActive ? 1f : 0f;
         _constants[17] = _display.SdrWhiteNits / 80f;
@@ -688,8 +689,8 @@ public sealed partial class Renderer : IDisposable
         _constants[25] = moment.BeatPhase;
         _constants[26] = moment.BarPhase;
         _constants[27] = moment.Intensity;
-        _constants[28] = moment.BuildUp;
-        _constants[29] = moment.Drop;
+        _constants[28] = buildUp;
+        _constants[29] = drop;
         _constants[30] = moment.SectionPhase;
         _constants[31] = _songFollower.Mapped ? 1f : _songFollower.Live ? 0.5f : 0f;
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);

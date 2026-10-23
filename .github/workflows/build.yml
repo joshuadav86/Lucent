@@ -34,10 +34,11 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Which apps the changes in a range of commits touch; both if the range can't be read.
+          # Which apps the changes in a range of commits touch; both if the range can't be read. A second
+          # argument (--shipped) counts only what people install, for deciding whether main publishes.
           apps_in() {
             if [ -n "$1" ] && files=$(git diff --name-only "$1"); then
-              echo "$files" | tools/ci/apps-changed.sh
+              echo "$files" | tools/ci/apps-changed.sh ${2:-}
             else
               echo "windows mac"
             fi
@@ -50,10 +51,12 @@ jobs:
             pull_request)
               windows_apps=$(apps_in "$BASE...$HEAD"); mac_apps=$windows_apps ;;
             # On main, compare with the builds installed copies have now, not only the last push, so an
-            # app change whose build was cancelled by a newer push is still built.
+            # app change whose build was cancelled by a newer push is still built. Only changes to what
+            # people install count: each build of main is an update every installed copy downloads and
+            # offers, so docs, CI checks and screenshot code wait for the next real change instead.
             push)
-              windows_apps=$(apps_in "$(built_from "$(gh release view latest --json targetCommitish --jq .targetCommitish 2> /dev/null)")")
-              mac_apps=$(apps_in "$(built_from "$(gh release download latest -p commit-osx-x64.txt -O - 2> /dev/null)")") ;;
+              windows_apps=$(apps_in "$(built_from "$(gh release view latest --json targetCommitish --jq .targetCommitish 2> /dev/null)")" --shipped)
+              mac_apps=$(apps_in "$(built_from "$(gh release download latest -p commit-osx-x64.txt -O - 2> /dev/null)")" --shipped) ;;
             *) windows_apps="windows mac"; mac_apps="windows mac" ;;
           esac
           windows=false; mac=false
@@ -73,7 +76,7 @@ jobs:
         run: |
           : > website-changes.txt; : > windows-changes.txt; : > mac-changes.txt
           git log --first-parent --merges --format=%H -n 500 "$GITHUB_SHA" | while read -r merge; do
-            case "$(git diff --name-only "$merge^1" "$merge" | tools/ci/apps-changed.sh)" in
+            case "$(git diff --name-only "$merge^1" "$merge" | tools/ci/apps-changed.sh --shipped)" in
               "") echo "$merge" >> website-changes.txt ;;
               windows) echo "$merge" >> windows-changes.txt ;;
               mac) echo "$merge" >> mac-changes.txt ;;
