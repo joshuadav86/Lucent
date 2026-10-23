@@ -10,6 +10,7 @@ namespace WinampInspiredVisualizer.Audio;
 /// It can also listen to every app's sound instead (see each app's Audio/SystemAudio.cs). While it does,
 /// what the player writes is left out, since the player's own sound is part of what's heard anyway.
 /// A live input being recorded (see Recording/LiveRecorder.cs) comes before both while it's open.
+/// While the editor plays (see <see cref="EditorFeed"/>), its sound is shown instead of the player's or other apps'.
 /// </remarks>
 /// <remarks>
 /// The audio thread writes in blocks (one sound card buffer, about 75 ms, at a time), so reading
@@ -31,6 +32,9 @@ public sealed class AudioCapture
     private int _lastBlock;
     private bool _external;
     private bool _live;
+    private int _editors;
+    private int _editorRate = 44100;
+    private int _editorLatencyMs;
     private int _playerRate = 44100;
     private int _externalRate = 44100;
 
@@ -54,11 +58,17 @@ public sealed class AudioCapture
     /// <summary>True while a live input (an audio interface being recorded) is what's shown.</summary>
     public bool IsLive => _live;
 
+    /// <summary>True while the editor's playback is what's shown.</summary>
+    public bool IsEditor => _editors > 0 && !_live;
+
     /// <summary>
     /// How many of the newest samples the speakers haven't played yet, for <see cref="ReadLatest"/>. The
-    /// player decodes ahead of the speakers; other apps' sound is caught as it's played, so there's no wait.
+    /// player and the editor decode ahead of the speakers; other apps' sound is caught as it's played, so there's no wait.
     /// </summary>
-    public int DelaySamples => _external || _live ? 0 : SampleRate * OutputLatencyMs / 1000 * 2 / 3;
+    public int DelaySamples => _live ? 0
+        : _editors > 0 ? SampleRate * _editorLatencyMs / 1000 * 2 / 3
+        : _external ? 0
+        : SampleRate * OutputLatencyMs / 1000 * 2 / 3;
 
     public void Reset(int sampleRate)
     {
@@ -66,7 +76,7 @@ public sealed class AudioCapture
         {
             // Kept for later while other apps are being listened to.
             _playerRate = sampleRate;
-            if (!_external && !_live)
+            if (!_external && !_live && _editors == 0)
             {
                 Clear(sampleRate);
             }
@@ -80,7 +90,7 @@ public sealed class AudioCapture
         {
             _external = true;
             _externalRate = sampleRate;
-            if (!_live)
+            if (!_live && _editors == 0)
             {
                 Clear(sampleRate);
             }
@@ -93,7 +103,7 @@ public sealed class AudioCapture
         lock (_lock)
         {
             _external = false;
-            if (!_live)
+            if (!_live && _editors == 0)
             {
                 Clear(_playerRate);
             }
@@ -116,7 +126,38 @@ public sealed class AudioCapture
         lock (_lock)
         {
             _live = false;
-            Clear(_external ? _externalRate : _playerRate);
+            Clear(_editors > 0 ? _editorRate : _external ? _externalRate : _playerRate);
+        }
+    }
+
+    /// <summary>
+    /// Starts taking the editor's sound, at <paramref name="sampleRate"/>, through <see cref="WriteEditor"/>.
+    /// <paramref name="latencyMs"/> is how far ahead of its speakers the editor's audio is read.
+    /// </summary>
+    public void BeginEditor(int sampleRate, int latencyMs)
+    {
+        lock (_lock)
+        {
+            _editors++;
+            _editorRate = sampleRate;
+            _editorLatencyMs = latencyMs;
+            if (!_live)
+            {
+                Clear(sampleRate);
+            }
+        }
+    }
+
+    /// <summary>Goes back to what was shown before the editor played.</summary>
+    public void EndEditor()
+    {
+        lock (_lock)
+        {
+            _editors = Math.Max(0, _editors - 1);
+            if (!_live && _editors == 0)
+            {
+                Clear(_external ? _externalRate : _playerRate);
+            }
         }
     }
 
@@ -128,7 +169,7 @@ public sealed class AudioCapture
     {
         lock (_lock)
         {
-            if (!_external && !_live)
+            if (!_external && !_live && _editors == 0)
             {
                 Append(samples, left, right);
             }
@@ -140,7 +181,19 @@ public sealed class AudioCapture
     {
         lock (_lock)
         {
-            if (_external && !_live)
+            if (_external && !_live && _editors == 0)
+            {
+                Append(samples, left, right);
+            }
+        }
+    }
+
+    /// <summary>Adds the editor's sound, as <see cref="Write(ReadOnlySpan{float}, ReadOnlySpan{float}, ReadOnlySpan{float})"/> does the player's.</summary>
+    public void WriteEditor(ReadOnlySpan<float> samples, ReadOnlySpan<float> left, ReadOnlySpan<float> right)
+    {
+        lock (_lock)
+        {
+            if (_editors > 0 && !_live)
             {
                 Append(samples, left, right);
             }

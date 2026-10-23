@@ -3,6 +3,7 @@ using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Editor.Dsp;
 
@@ -20,10 +21,17 @@ public sealed class EditorPlayer : IDisposable
     /// <summary>The number of buffers <see cref="AudioQueueOutput"/> splits that between.</summary>
     private const int Buffers = 3;
 
+    private readonly AudioCapture? _capture;
     private AudioQueueOutput? _output;
     private RangeSampleProvider? _provider;
+    private EditorFeed? _feed;
     private PlayedCounter? _counter;
     private int _startFrame;
+
+    /// <param name="capture">
+    /// Where the visuals, meter, and analyzer look (the main player's), so they follow the editor while it plays.
+    /// </param>
+    public EditorPlayer(AudioCapture? capture = null) => _capture = capture;
 
     /// <summary>Raised on the UI thread when playback stops by itself or fails.</summary>
     public event EventHandler<Exception?>? Stopped;
@@ -93,6 +101,12 @@ public sealed class EditorPlayer : IDisposable
         _provider = new RangeSampleProvider(audio, from, to) { Loop = loop && to - from > audio.SampleRate / 20 };
         Meter = new LiveMeter(audio.ChannelCount, audio.SampleRate);
         var processed = through is null ? _provider : through(_provider);
+        if (_capture is not null)
+        {
+            // What's heard, before the listening volume, as the player's music is captured.
+            processed = _feed = new EditorFeed(processed, _capture, LatencyMs);
+        }
+
         _counter = new PlayedCounter(new MeteredOutput(processed, Meter, this), LatencyFrames(audio.SampleRate, audio.ChannelCount));
         var output = new AudioQueueOutput(LatencyMs);
         _output = output;
@@ -111,6 +125,8 @@ public sealed class EditorPlayer : IDisposable
 
     public void Stop()
     {
+        _feed?.Dispose();
+        _feed = null;
         if (_output is not { } output)
         {
             return;

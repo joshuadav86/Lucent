@@ -41,7 +41,7 @@ public partial class EditorWindow : Window
 
     /// <summary>The main player: paused while the editor plays, and asked to let go of a file being saved over.</summary>
     private readonly AudioPlayer _mainPlayer;
-    private readonly EditorPlayer _player = new();
+    private readonly EditorPlayer _player;
     private readonly DispatcherTimer _playheadTimer;
     private readonly EditorSettings _settings = EditorSettings.Load();
     private string _path = string.Empty;
@@ -70,6 +70,7 @@ public partial class EditorWindow : Window
         LoadTitleIcon();
         _path = path;
         _mainPlayer = mainPlayer;
+        _player = new EditorPlayer(mainPlayer.Capture);
         ShowFileName();
         _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
         _fullScreen.Changed += (_, _) => UpdateMaximizeButton();
