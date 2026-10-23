@@ -531,6 +531,11 @@
 
                 <CheckBox x:Name="ListenSwitch" Style="{StaticResource SwitchToggle}" Content="Visuals for every app's sound"
                           Margin="0,18,0,0" Click="OnListenSwitched" />
+                <Button x:Name="ListenSourceButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                        Visibility="Collapsed" Click="OnChooseListenSource"
+                        ToolTip="What the visuals listen to: every app's sound, or an input of your audio interface (for a DAW like Ableton on ASIO)">
+                    <TextBlock x:Name="ListenSourceName" MaxWidth="270" TextTrimming="CharacterEllipsis" />
+                </Button>
                 <TextBlock x:Name="ListenHint" Style="{StaticResource OptionHint}" />
             </StackPanel>
         </Border>

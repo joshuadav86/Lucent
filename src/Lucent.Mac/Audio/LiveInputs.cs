@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Lucent.Mac.Interop;
+using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Recording;
 using WinampInspiredVisualizer.Settings;
 using static Lucent.Mac.Interop.CoreAudio;
@@ -56,6 +57,9 @@ public static unsafe class LiveInputs
             return Array.Empty<RecordingInput>();
         }
     }
+
+    /// <summary>The inputs the visuals can follow: every input, as for recording (Core Audio lets several apps share one).</summary>
+    public static IReadOnlyList<RecordingInput> ListForVisuals() => List();
 
     /// <summary>The input with this id, or macOS's default input when it's gone or none was chosen.</summary>
     public static RecordingInput? Find(string? id, IReadOnlyList<RecordingInput> inputs)
@@ -178,16 +182,17 @@ public static unsafe class LiveInputs
 }
 
 /// <summary>
-/// One input being listened to, handing its sound to a <see cref="LiveRecorder"/>, through an Audio Queue
-/// (the recording side of what AudioQueueOutput plays with). The device is switched to the recording's
-/// sample rate when it can run at it, and back afterwards; otherwise macOS converts the rate.
+/// One input being listened to, handing its sound to a <see cref="LiveRecorder"/> (or, for the visuals, an
+/// <see cref="InputFeed"/>), through an Audio Queue (the recording side of what AudioQueueOutput plays with).
+/// For a recording, the device is switched to the recording's sample rate when it can run at it, and back
+/// afterwards; otherwise macOS converts the rate.
 /// </summary>
 public sealed unsafe class LiveInput : IDisposable
 {
     private const int BufferCount = 4;
     private const int BufferMs = 20;
 
-    private readonly LiveRecorder _recorder;
+    private readonly ILiveInputSink _recorder;
     private readonly int _firstChannel;
     private readonly object _lock = new();
     private GCHandle _self;
@@ -197,7 +202,7 @@ public sealed unsafe class LiveInput : IDisposable
     private double _previousRate;
     private float[] _samples = Array.Empty<float>();
 
-    private LiveInput(LiveRecorder recorder, int firstChannel)
+    private LiveInput(ILiveInputSink recorder, int firstChannel)
     {
         _recorder = recorder;
         _firstChannel = firstChannel;
@@ -207,7 +212,7 @@ public sealed unsafe class LiveInput : IDisposable
     public int InputRate { get; private set; }
 
     /// <summary>Starts listening, with the recorder's channels starting at <paramref name="firstChannel"/>.</summary>
-    public static LiveInput Start(RecordingInput input, LiveRecorder recorder, int firstChannel)
+    public static LiveInput Start(RecordingInput input, ILiveInputSink recorder, int firstChannel)
     {
         var live = new LiveInput(recorder, firstChannel);
         try
@@ -226,10 +231,10 @@ public sealed unsafe class LiveInput : IDisposable
     private void Open(RecordingInput input)
     {
         // An interface that can run at the recording's rate is set to it, so nothing is converted.
-        // It's put back as it was when the window closes.
+        // It's put back as it was when the window closes. The visuals never change it: a DAW may be using it.
         var rate = _recorder.SampleRate;
         var was = ExclusiveDevice.ReadRate(input.ObjectId);
-        if (Math.Abs(was - rate) > 1
+        if (_recorder is LiveRecorder && Math.Abs(was - rate) > 1
             && ExclusiveDevice.AvailableRates(input.ObjectId).Any(range => rate >= range.Minimum - 1 && rate <= range.Maximum + 1)
             && ExclusiveDevice.WriteRate(input.ObjectId, rate))
         {

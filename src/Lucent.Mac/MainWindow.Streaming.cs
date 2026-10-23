@@ -343,6 +343,12 @@ public partial class MainWindow
     /// </summary>
     private void UpdateListening()
     {
+        // An input chosen for the visuals (Ableton through TotalMix's loopback, say) comes first.
+        if (UpdateInputListening())
+        {
+            return;
+        }
+
         List<uint>? processes = null;
         string? wanted;
         if (!SystemAudio.IsSupported)
@@ -443,5 +449,6 @@ public partial class MainWindow
         ShowWhereItPlays();
         _systemAudio?.Dispose();
         _systemAudio = null;
+        StopInputListening();
     }
 }

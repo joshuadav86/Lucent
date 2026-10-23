@@ -30,7 +30,7 @@ public sealed record RecordingTarget(string Path, string Title, string? DryPath,
 /// marking go through the same queue, so each lands exactly where the sound was when it was asked for,
 /// and a split loses not a single sample.
 /// </remarks>
-public sealed class LiveRecorder : IDisposable
+public sealed class LiveRecorder : ILiveInputSink, IDisposable
 {
     /// <summary>How much sound can wait for the recorder's thread before the oldest is let go.</summary>
     public const int QueueSeconds = 20;

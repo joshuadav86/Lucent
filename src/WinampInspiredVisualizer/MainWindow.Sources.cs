@@ -81,6 +81,7 @@ public partial class MainWindow
         ListenHint.Text = _remote is not null && !_settings.ListenToOtherApps
             ? $"While Lucent controls {_remote.Player.Name}, the visuals hear only {_remote.Player.Name}. Turn this on to have them hear every app."
             : $"The visuals, meter, and analyzer react to whatever is playing on {SystemAudio.DefaultOutputName() ?? "this PC"}: Spotify, a browser, a game.";
+        UpdateListenSource();
     }
 
     private void OnSourcesAddFiles(object sender, RoutedEventArgs e)

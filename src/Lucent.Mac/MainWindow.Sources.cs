@@ -90,6 +90,7 @@ public partial class MainWindow
             : _remote is not null && !_settings.ListenToOtherApps
                 ? $"While Lucent controls {_remote.Player.Name}, the visuals hear only {_remote.Player.Name}. Turn this on to have them hear every app."
             : $"The visuals, meter, and analyzer react to whatever is playing on {SystemAudio.DefaultOutputName() ?? "this Mac"}: Spotify, a browser, a game. macOS asks once whether Lucent may record the Mac's sound.";
+        UpdateListenSource();
     }
 
     private void OnSourcesAddFiles(object? sender, RoutedEventArgs e)
