@@ -11,10 +11,10 @@ namespace WinampInspiredVisualizer.Settings;
 public static class FreshStart
 {
     /// <summary>
-    /// Raise this to give everyone a fresh start again on their next update. Set it to 0 for 1.0, which stops
-    /// fresh starts for good (anyone already past this one is left alone either way).
+    /// 0 keeps everyone's settings between updates (Joshua's call, 2026-10-23). Raising it above 0 would give
+    /// everyone a fresh start once on their next update.
     /// </summary>
-    public const int Generation = 1;
+    public const int Generation = 0;
 
     /// <summary>What a fresh start leaves in the data folder: sign-ins and downloads, not preferences.</summary>
     private static readonly string[] Kept =
