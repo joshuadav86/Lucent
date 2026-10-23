@@ -106,6 +106,34 @@ public static partial class Screenshots
         });
     }
 
+    private static RadioStation TheLot => FeaturedStations.Stations.First(station => station.Name == FeaturedStations.TheLot);
+
+    /// <summary>
+    /// A live set on The Lot Radio: the station's video (LUCENT_PREVIEW_VIDEO, a clip of the stream) beside the player
+    /// and the radio, filtered to video stations.
+    /// </summary>
+    private static Window PreviewRadioVideo()
+    {
+        var player = new MainWindow();
+        player.PreviewSkin("Lucent");
+        var station = TheLot;
+        player.PreviewStation(station, "Four Tet", $"{station.Name} · live", TimeSpan.FromMinutes(83.2));
+        var playerShot = Draw(player, null);
+        var settings = new AppSettings { RadioSection = RadioGuide.Featured, RadioVideoOnly = true };
+        RadioGuide.SetFavorite(settings, station, true);
+        RadioGuide.Remember(settings, station);
+        var radio = new RadioWindow(player, settings);
+        const double sideWidth = 640, height = 666;
+        var radioShot = Draw(radio, new Size(sideWidth, height - playerShot.Size.Height));
+        var videoShot = Draw(PreviewVideo(playing: true, station.Name), new Size(1120, height));
+        return Compose(new Size(videoShot.Size.Width + sideWidth, height), new[]
+        {
+            (videoShot, new Point(0, 0)),
+            (playerShot, new Point(videoShot.Size.Width + (sideWidth - playerShot.Size.Width) / 2, 0)),
+            (radioShot, new Point(videoShot.Size.Width, playerShot.Size.Height)),
+        });
+    }
+
     /// <summary>Every window, laid out by Lucent full screen on a 2560 × 1440 screen, with Bicep playing.</summary>
     private static Window PreviewFullScreen()
     {

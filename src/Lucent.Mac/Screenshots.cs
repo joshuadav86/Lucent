@@ -88,6 +88,8 @@ public static partial class Screenshots
         ("VisualsLive", () => PreviewVisualsLive()),
         ("PlayerRadio", () => PreviewPlayerRadio()),
         ("RadioPlaying", () => PreviewRadioPlaying()),
+        ("VideoStation", () => PreviewVideo(playing: true, WinampInspiredVisualizer.Radio.FeaturedStations.TheLot)),
+        ("RadioVideo", () => PreviewRadioVideo()),
         ("RadioDesk", () => PreviewRadioDesk()),
         ("FullScreen", () => PreviewFullScreen()),
     };
@@ -232,7 +234,7 @@ public static partial class Screenshots
     /// The video window, empty or with a video playing: the file in LUCENT_PREVIEW_VIDEO (or the self-test's clip in
     /// tools/test-media), a second in. The video needs libVLC, so it's drawn only where libVLC is installed or shipped.
     /// </summary>
-    private static Window PreviewVideo(bool playing)
+    private static Window PreviewVideo(bool playing, string? title = null)
     {
         var window = VideoWindow.Create(new AppSettings());
         if (!playing)
@@ -253,7 +255,7 @@ public static partial class Screenshots
         }
 
         video.Paused();
-        VideoWindow.ShowVideo(video, null);
+        VideoWindow.ShowVideo(video, title);
         window.Closed += (_, _) =>
         {
             VideoWindow.ShowVideo(null, null);
