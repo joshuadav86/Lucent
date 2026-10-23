@@ -253,6 +253,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
         var artist = string.Empty;
         var album = string.Empty;
         string? artwork = null;
+        string? thumbnail = null;
         if (item.TryGetProperty("artists", out var artists) && artists.ValueKind == JsonValueKind.Array)
         {
             artist = string.Join(", ", artists.EnumerateArray().Select(entry => Text(entry, "name")).Where(name => name.Length > 0));
@@ -263,6 +264,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
         {
             album = Text(albumObject, "name");
             artwork = LargestImage(albumObject);
+            thumbnail = SmallestImage(albumObject);
         }
         else if (item.TryGetProperty("show", out var show) && show.ValueKind == JsonValueKind.Object)
         {
@@ -270,11 +272,12 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
             artist = Text(show, "publisher");
             album = Text(show, "name");
             artwork = LargestImage(show);
+            thumbnail = SmallestImage(show);
         }
 
         var id = Text(item, "id") is { Length: > 0 } value ? value : $"{artist}|{title}";
         var uri = Text(item, "uri") is { Length: > 0 } itemUri ? itemUri : null;
-        return new RemoteTrack(id, title, artist, album, duration, artwork, uri);
+        return new RemoteTrack(id, title, artist, album, duration, artwork, uri, thumbnail);
     }
 
     public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel)
@@ -548,6 +551,22 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
             .OrderByDescending(image => image.Width)
             .Select(image => image.Url)
             .FirstOrDefault();
+    }
+
+    // The smallest cover Spotify lists that's still sharp beside a song in a list (they're usually 640, 300 and 64 pixels).
+    private static string? SmallestImage(JsonElement owner, int atLeast = 64)
+    {
+        if (!owner.TryGetProperty("images", out var images) || images.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var sized = images.EnumerateArray()
+            .Select(image => (Url: Text(image, "url"), Width: image.TryGetProperty("width", out var width) && width.ValueKind == JsonValueKind.Number ? width.GetInt32() : 0))
+            .Where(image => image.Url.Length > 0)
+            .ToList();
+        return sized.Where(image => image.Width >= atLeast).OrderBy(image => image.Width).Select(image => image.Url).FirstOrDefault()
+            ?? sized.OrderByDescending(image => image.Width).Select(image => image.Url).FirstOrDefault();
     }
 
     private async Task CommandAsync(HttpMethod method, string path, CancellationToken cancel, string? json = null)

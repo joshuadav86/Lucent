@@ -187,16 +187,20 @@
                     <DataTemplate>
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Margin="2,0,8,0">
+                            <!-- An empty playlist's stand-in row is just words, with no cover. -->
+                            <local:TrackThumb Margin="2,0,0,0" Path="{Binding Path}"
+                                              Visibility="{Binding ShowsCover, Converter={StaticResource VisibleWhenTrue}}" />
+                            <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextBrush}" />
                                 <TextBlock Text="{Binding Details}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Text="{Binding DurationText}" FontSize="11"
+                            <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="11"
                                        VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
                         </Grid>
                     </DataTemplate>
