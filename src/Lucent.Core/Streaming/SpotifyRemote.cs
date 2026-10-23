@@ -14,7 +14,7 @@ namespace WinampInspiredVisualizer.Streaming;
 /// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window, its shuffle and
 /// repeat, which the player's own buttons change, and lists the account's playlists for the library.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteDevices, IRemoteModes
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -463,7 +463,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         var playlists = new List<RemotePlaylist>();
         if (me.Length > 0 && _tokens?.Scope?.Split(' ').Contains("user-library-read") != false)
         {
-            playlists.Add(new RemotePlaylist($"spotify:user:{me}:collection", "Liked Songs"));
+            playlists.Add(new RemotePlaylist($"spotify:user:{me}:collection", "Liked Songs", CanAdd: true));
         }
 
         for (string? page = $"{Root}/me/playlists?limit=50"; page is not null && playlists.Count < MostPlaylists;)
@@ -506,12 +506,55 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
             owner = Text(by, "display_name") is { Length: > 0 } shown ? shown : Text(by, "id") is { Length: > 0 } id ? id : null;
         }
 
+        // Spotify only lets other apps add to playlists the account made or collaborates on.
+        var collaborative = item.TryGetProperty("collaborative", out var shared) && shared.ValueKind == JsonValueKind.True;
         var title = Text(item, "name");
-        return new RemotePlaylist(uri, title.Length > 0 ? title : "Untitled playlist", songs, owner);
+        return new RemotePlaylist(uri, title.Length > 0 ? title : "Untitled playlist", songs, owner, owner is null || collaborative);
     }
 
     public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) =>
         PlayOnSomeDeviceAsync(JsonSerializer.Serialize(new Dictionary<string, object> { ["context_uri"] = playlist.Uri }), cancel);
+
+    /// <summary>
+    /// Adds the song to the end of a playlist (POST /playlists/{id}/items), or saves it to Liked Songs (PUT /me/library).
+    /// A sign-in from before Lucent added songs doesn't allow either, so it says to sign in again rather than ask.
+    /// </summary>
+    public async Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
+    {
+        var song = track.Uri ?? $"spotify:track:{track.Id}";
+        var liked = playlist.IsLiked;
+        try
+        {
+            await RequireScopeAsync(liked ? "user-library-modify" : "playlist-modify-private", AddSignInNote, cancel);
+        }
+        catch (Refused refused)
+        {
+            throw new RemoteProblem(refused.Note);
+        }
+
+        using var response = liked
+            ? await SendAsync(HttpMethod.Put, $"{Root}/me/library?uris={Uri.EscapeDataString(song)}", cancel)
+            : await SendAsync(HttpMethod.Post, $"{Root}/playlists/{playlist.Uri.Split(':')[^1]}/items", cancel,
+                JsonSerializer.Serialize(new Dictionary<string, object> { ["uris"] = new[] { song } }));
+        if (response.StatusCode == HttpStatusCode.Forbidden)
+        {
+            throw new RemoteProblem($"Spotify wouldn't let Lucent add songs to {playlist.Name}. It only allows playlists you made or collaborate on.");
+        }
+
+        await ThrowIfFailedAsync(response, cancel);
+    }
+
+    /// <summary>
+    /// The song's open.spotify.com link, which opens it in Spotify or a browser for whoever it's sent to, or null when
+    /// Spotify didn't say which song it is.
+    /// </summary>
+    public static string? LinkOf(RemoteTrack track) =>
+        (track.Uri ?? $"spotify:track:{track.Id}").Split(':') is ["spotify", var kind and ("track" or "episode"), var id]
+            && id.Length > 0 && id.All(char.IsLetterOrDigit)
+            ? $"https://open.spotify.com/{kind}/{id}"
+            : null;
+
+    string? IRemoteLinks.WebLink(RemoteTrack track) => LinkOf(track);
 
     /// <summary>
     /// Plays (what's loaded, or <paramref name="json"/>'s songs). With no device playing for the account, Spotify
@@ -678,6 +721,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
 
     private const string PlaylistSignInNote =
         "To show your playlists here, sign out of Spotify and back in from the Add music menu. Until then, this is what's up next.";
+
+    private const string AddSignInNote =
+        "To add songs to your Spotify playlists, sign out of Spotify and back in from the Add music menu.";
 
     private const string PlaylistsSignInNote =
         "To see your Spotify playlists here, sign out of Spotify and back in from the Add music menu.";

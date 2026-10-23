@@ -127,10 +127,16 @@
                                 MouseLeftButtonUp="OnMeterClick" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent"
+                                ContextMenuOpening="OnNowPlayingMenuOpening">
                         <StackPanel.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                                <MenuItem x:Name="NowPlayingEditItem" Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                                <MenuItem x:Name="NowPlayingAddItem" Header="Add to playlist" />
+                                <MenuItem x:Name="NowPlayingShareItem" Header="Share">
+                                    <MenuItem Header="Copy song link" Click="OnNowPlayingCopyLink" />
+                                    <MenuItem Header="Copy song and link" Click="OnNowPlayingCopySongAndLink" />
+                                </MenuItem>
                             </ContextMenu>
                         </StackPanel.ContextMenu>
                         <DockPanel>

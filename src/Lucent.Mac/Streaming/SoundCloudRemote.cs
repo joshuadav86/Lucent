@@ -47,6 +47,10 @@ public sealed class SoundCloudRemote : BrowserTabRemote
 
     protected override string NotOpen => "Play something on SoundCloud";
 
+    // The badge's link, /artist/song, without what follows it (?in=a playlist).
+    protected override string? LinkFor(string id) =>
+        id.StartsWith('/') && id.Split('?')[0] is var page && page.Count(c => c == '/') >= 2 ? $"https://soundcloud.com{page}" : null;
+
     protected override string ReadPlayer => ReadBar;
 
     protected override string FindPlayer => FindBar;
