@@ -524,7 +524,7 @@
                     <Button x:Name="DeleteButton" Style="{StaticResource ToolButton}" Content="Delete" Click="OnDelete"
                             ToolTip="Cut out the selected part (Delete)" />
                     <Button x:Name="SavePicturesButton" Style="{StaticResource ToolButton}" Click="OnSavePicturesMenu" Visibility="Collapsed"
-                            ToolTip="Save the selection's frames as images, or as an animated GIF (the whole video when nothing's selected)">
+                            ToolTip="Save the selection as images, an animated GIF, or a smaller copy in another format (the whole video when nothing's selected)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Export" VerticalAlignment="Center" />
                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}" Margin="8,1,0,0" />

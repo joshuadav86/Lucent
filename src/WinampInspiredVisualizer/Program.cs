@@ -29,6 +29,8 @@ public static class Program
         AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
         // A video's frames saved as JPEG, by WPF's encoder.
         Editor.VideoExport.EncodeJpeg = Library.CoverArt.EncodeJpeg;
+        // Smaller copies of a video, by Media Foundation's encoders.
+        Editor.VideoCopy.CreateWriter = VideoCopyWriter.Create;
 
         // Checks decoding and every visual without opening a window, for CI (see SelfTest.cs).
         if (args.Length > 0 && args[0] == "--self-test")

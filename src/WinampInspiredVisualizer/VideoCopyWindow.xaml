@@ -1,0 +1,108 @@
+<Window x:Class="WinampInspiredVisualizer.VideoCopyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Save a copy - Lucent"
+        Width="460" SizeToContent="Height" ResizeMode="NoResize"
+        Background="{DynamicResource SurfaceBrush}"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="0" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <!-- The same look as Save frames' (FrameExportWindow.xaml). -->
+        <Style x:Key="DialogButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <!-- Saves a copy of a video in the editor, smaller or in another format (EditorWindow.Video.cs). -->
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <StackPanel>
+            <!-- Title bar -->
+            <Grid Height="40">
+                <TextBlock Text="SAVE A COPY" Margin="20,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <Button Style="{StaticResource CloseCaptionButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip="Close" WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCancel">
+                    <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <StackPanel x:Name="OptionsArea" Margin="20,0,20,0">
+                <TextBlock x:Name="RangeText" FontSize="13" TextWrapping="Wrap" Margin="2,4,0,0"
+                           Foreground="{DynamicResource TextBrush}" />
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Format" />
+                <Border Style="{StaticResource SegmentBar}">
+                    <UniformGrid Rows="1">
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Format" Tag="H264" Content="H.264" Click="OnOptionChosen" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Format" Tag="Hevc" Content="HEVC" Click="OnOptionChosen" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Format" Tag="Mp3" Content="MP3" Click="OnOptionChosen" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Format" Tag="Flac" Content="FLAC" Click="OnOptionChosen" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Format" Tag="Wav" Content="WAV" Click="OnOptionChosen" />
+                    </UniformGrid>
+                </Border>
+                <TextBlock x:Name="FormatHint" Style="{StaticResource OptionHint}" />
+
+                <StackPanel x:Name="PicturePanel">
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Size" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton x:Name="FullSizeChoice" Style="{StaticResource SegmentButton}" GroupName="Size" Tag="0" Content="Full" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Size" Tag="1080" Content="1080p" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Size" Tag="720" Content="720p" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Size" Tag="480" Content="480p" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Frame rate" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton x:Name="FullRateChoice" Style="{StaticResource SegmentButton}" GroupName="FrameRate" Tag="0" Content="Full" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="FrameRate" Tag="30" Content="30 fps" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="FrameRate" Tag="24" Content="24 fps" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                </StackPanel>
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Quality" />
+                <Border Style="{StaticResource SegmentBar}">
+                    <UniformGrid Rows="1">
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Quality" Tag="High" Content="High" Click="OnOptionChosen" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Quality" Tag="Medium" Content="Medium" Click="OnOptionChosen" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="Quality" Tag="Small" Content="Small" Click="OnOptionChosen" />
+                    </UniformGrid>
+                </Border>
+                <TextBlock x:Name="SizeHint" Style="{StaticResource OptionHint}" />
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Save as" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource PillButton}" Content="CHANGE" Margin="10,0,0,0"
+                            Click="OnChooseFile" />
+                    <TextBlock x:Name="FileText" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource TextBrush}" />
+                </DockPanel>
+            </StackPanel>
+
+            <DockPanel Margin="20,18,20,18" LastChildFill="False">
+                <Button x:Name="SaveButton" DockPanel.Dock="Right" Style="{StaticResource DialogButton}" Margin="8,0,0,0"
+                        Foreground="{DynamicResource AccentBrush}" Click="OnSave">
+                    <TextBlock Text="Save" FontWeight="SemiBold" />
+                </Button>
+                <Button DockPanel.Dock="Right" Style="{StaticResource DialogButton}" Content="Cancel" Click="OnCancel" />
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</Window>
