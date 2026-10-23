@@ -32,6 +32,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public bool IsPlaceholder => Path.Length == 0;
 
+    /// <summary>Whether its row has a little cover beside it: every song does, a playlist's stand-in row doesn't.</summary>
+    public bool ShowsCover => !IsPlaceholder;
+
     public string Path { get; }
 
     public string FileName { get; }

@@ -16,9 +16,13 @@ public enum RemoteApp
 /// <param name="Id">Tells one song from the next, so its artwork is only fetched once.</param>
 /// <param name="ArtworkUrl">Where its cover can be downloaded, when the app gives one as a web address.</param>
 /// <param name="Uri">What the app calls the song when asked to play it (Spotify's spotify:track:…), when that isn't its ID.</param>
+/// <param name="ThumbnailUrl">A small copy of its cover, for the little picture beside it in a list, when the app gives one.</param>
 public sealed record RemoteTrack(string Id, string Title, string Artist, string Album, TimeSpan Duration, string? ArtworkUrl = null,
-    string? Uri = null)
+    string? Uri = null, string? ThumbnailUrl = null)
 {
+    /// <summary>The cover to show beside it in a list: the small copy, or the full one when there's no small one.</summary>
+    public string? ListArtUrl => ThumbnailUrl ?? ArtworkUrl;
+
     public string DurationText => Duration > TimeSpan.Zero ? Playlist.TimeFormat.Format(Duration) : string.Empty;
 }
 
