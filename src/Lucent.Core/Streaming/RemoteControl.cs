@@ -1,3 +1,5 @@
+using WinampInspiredVisualizer.Settings;
+
 namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>
@@ -27,6 +29,12 @@ public sealed class RemoteControl : IDisposable
 
     // Until when a button's problem stays shown, though the app reads fine again.
     private DateTime _problemHeldUntil;
+
+    // Shuffle and repeat just asked for, and until when reads keep showing them, as the app (Spotify's Web API
+    // especially) can take a moment to report them.
+    private bool? _shuffleWanted;
+    private RepeatMode? _repeatWanted;
+    private DateTime _modesHeldUntil;
 
     // Until when reads keep the position just sought to, rather than where the app was before it caught up.
     private DateTime _positionHeldUntil;
@@ -169,6 +177,92 @@ public sealed class RemoteControl : IDisposable
         }
     }
 
+    /// <summary>True when the app says whether it's shuffling and Lucent can change it (<see cref="RemoteState.Shuffle"/>).</summary>
+    public bool HasShuffle => Player is IRemoteModes && State?.Shuffle is not null;
+
+    /// <summary>True when the app says what it repeats and Lucent can change it (<see cref="RemoteState.Repeat"/>).</summary>
+    public bool HasRepeat => Player is IRemoteModes && State?.Repeat is not null;
+
+    /// <summary>Turns the app's shuffle on or off.</summary>
+    public Task ToggleShuffleAsync()
+    {
+        if (Player is not IRemoteModes modes || State?.Shuffle is not { } shuffle)
+        {
+            return CantChange("shuffle");
+        }
+
+        var on = !shuffle;
+        _shuffleWanted = on;
+        _modesHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await modes.SetShuffleAsync(on, cancel);
+                }
+                catch (Exception)
+                {
+                    _shuffleWanted = null;
+                    throw;
+                }
+            },
+            state => state with { Shuffle = on });
+    }
+
+    /// <summary>Moves the app's repeat on, as the player's own does: off, the whole list, this song, off again.</summary>
+    public Task CycleRepeatAsync()
+    {
+        if (Player is not IRemoteModes modes || State?.Repeat is not { } repeat)
+        {
+            return CantChange("repeat");
+        }
+
+        var next = repeat switch
+        {
+            RepeatMode.Off => RepeatMode.All,
+            RepeatMode.All => RepeatMode.One,
+            _ => RepeatMode.Off,
+        };
+        _repeatWanted = next;
+        _modesHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await modes.SetRepeatAsync(next, cancel);
+                }
+                catch (Exception)
+                {
+                    _repeatWanted = null;
+                    throw;
+                }
+            },
+            state => state with { Repeat = next });
+    }
+
+    /// <summary>The shuffle button's tip, while it's the app's shuffle.</summary>
+    public string ShuffleTip => !HasShuffle ? $"{Player.Name} doesn't let Lucent change its shuffle"
+        : State!.Shuffle == true ? $"{Player.Name} is shuffling. Click to turn it off (S)"
+        : $"Shuffle {Player.Name} (S)";
+
+    /// <summary>The repeat button's tip, while it's the app's repeat.</summary>
+    public string RepeatTip => !HasRepeat ? $"{Player.Name} doesn't let Lucent change its repeat" : State!.Repeat switch
+    {
+        RepeatMode.All => $"{Player.Name} repeats the whole playlist. Click to repeat just this song (R)",
+        RepeatMode.One => $"{Player.Name} repeats this song. Click to stop repeating (R)",
+        _ => $"Repeat is off in {Player.Name}. Click to repeat the whole playlist (R)",
+    };
+
+    private Task CantChange(string what)
+    {
+        Report(new RemoteProblem(State is null
+            ? $"Wait a moment for {Player.Name} to connect, then try {what} again."
+            : $"{Player.Name} doesn't let Lucent change its {what}. Change it in {Player.Name} itself."), fromButton: true);
+        return Task.CompletedTask;
+    }
+
     public Task SeekAsync(TimeSpan position)
     {
         // The app can take a moment to report the new place (Spotify especially), so the bar doesn't jump back meanwhile.
@@ -250,6 +344,24 @@ public sealed class RemoteControl : IDisposable
         if (state is { Volume: not null } && State is { Volume: { } asked } && (_sendingVolume || DateTime.UtcNow < _volumeHeldUntil))
         {
             state = state with { Volume = asked };
+        }
+
+        if (DateTime.UtcNow < _modesHeldUntil)
+        {
+            if (state is { Shuffle: not null } && _shuffleWanted is { } shuffle)
+            {
+                state = state with { Shuffle = shuffle };
+            }
+
+            if (state is { Repeat: not null } && _repeatWanted is { } repeat)
+            {
+                state = state with { Repeat = repeat };
+            }
+        }
+        else
+        {
+            _shuffleWanted = null;
+            _repeatWanted = null;
         }
 
         if (state is { Track: { } song } && State is { Track: { } shown } && song.Id == shown.Id && DateTime.UtcNow < _positionHeldUntil)

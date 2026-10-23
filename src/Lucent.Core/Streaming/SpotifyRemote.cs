@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer.Streaming;
 
@@ -9,9 +10,10 @@ namespace WinampInspiredVisualizer.Streaming;
 /// Spotify, through its Web API: what's playing on whichever device the account is playing on (the
 /// Spotify app on this computer, a phone, a speaker), and its play, pause, skip and seek. Spotify only
 /// takes those buttons from Premium accounts; on a free account Lucent can still show what's playing.
-/// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window.
+/// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window, and its
+/// shuffle and repeat, which the player's own buttons change.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, IRemoteDevices
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, IRemoteDevices, IRemoteModes
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -37,6 +39,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
     private bool _usingApp;
     private RemoteState? _web;
     private DateTime _webReadAt;
+
+    // What the app here said last time it was read, or null when it couldn't be.
+    private RemoteState? _appRead;
 
     // How often the Web API is asked while the app on this computer says what's playing, and how soon after a new
     // song (for its playlist), as Spotify limits how often all of Lucent's users together may ask.
@@ -65,6 +70,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
     public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
         var app = await ReadAppAsync(cancel);
+        _appRead = app;
         if (app is { IsPlaying: true, Track: not null })
         {
             _usingApp = true;
@@ -123,9 +129,11 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
     }
 
     // The app's song and where it's up to, with what the Web API knows about the same song: its Spotify ID (so the
-    // queue window marks it), cover, playlist, device and volume.
+    // queue window marks it), cover, playlist, device and volume. Shuffle and repeat are the account's, whatever the
+    // song: the app's when it says (it's read more often), otherwise the Web API's.
     private static RemoteState Combine(RemoteState app, RemoteState? web)
     {
+        app = app with { Shuffle = app.Shuffle ?? web?.Shuffle, Repeat = CombineRepeat(app.Repeat, web?.Repeat) };
         if (web?.Track is not { } webTrack || !SameSong(webTrack, app.Track))
         {
             return app with { Volume = null };
@@ -134,6 +142,10 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
         var track = webTrack with { Duration = app.Track!.Duration > TimeSpan.Zero ? app.Track.Duration : webTrack.Duration };
         return app with { Track = track, ListId = web.ListId, Device = web.Device, Volume = web.Volume, IsElsewhere = web.IsElsewhere };
     }
+
+    // The Mac app only says whether it repeats at all, so repeating one song comes from the Web API.
+    private static RepeatMode? CombineRepeat(RepeatMode? app, RepeatMode? web) =>
+        app is RepeatMode.All && web is RepeatMode.One ? RepeatMode.One : app ?? web;
 
     // The app and the Web API name a song the same way, or by the same spotify:track: URI on a Mac.
     private static bool SameSong(RemoteTrack? a, RemoteTrack? b) =>
@@ -205,6 +217,67 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
     public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
         CommandAsync(HttpMethod.Put, $"/volume?volume_percent={(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
 
+    /// <summary>
+    /// Shuffle on or off: through the app here when it can (no Premium needed), otherwise through the Web API.
+    /// </summary>
+    public async Task SetShuffleAsync(bool on, CancellationToken cancel)
+    {
+        if (_appRead?.Shuffle is null || !await AppSetsAsync(app => app.SetShuffleAsync(on, cancel)))
+        {
+            await CommandAsync(HttpMethod.Put, $"/shuffle?state={(on ? "true" : "false")}", cancel);
+        }
+
+        Remember(state => state with { Shuffle = on });
+    }
+
+    /// <summary>Repeat: through the app here when it can, otherwise (or for one song on a Mac) through the Web API.</summary>
+    public async Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel)
+    {
+        if (_appRead?.Repeat is null || !await AppSetsAsync(app => app.SetRepeatAsync(mode, cancel)))
+        {
+            var state = mode switch
+            {
+                RepeatMode.One => "track",
+                RepeatMode.All => "context",
+                _ => "off",
+            };
+            await CommandAsync(HttpMethod.Put, $"/repeat?state={state}", cancel);
+        }
+
+        Remember(state => state with { Repeat = mode });
+    }
+
+    // The app here sets it, when it's the device Spotify plays on (a phone or speaker keeps its own).
+    private async Task<bool> AppSetsAsync(Func<IRemoteModes, Task> set)
+    {
+        if (_app is not IRemoteModes modes || (_web ?? _last) is { IsElsewhere: true })
+        {
+            return false;
+        }
+
+        try
+        {
+            await set(modes);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // It can't (repeat one song on a Mac) or didn't take it: the Web API, then.
+            return false;
+        }
+    }
+
+    // A change just made shows in the Web API's last reading too, which may not be read again for half a minute.
+    private void Remember(Func<RemoteState, RemoteState> change)
+    {
+        _web = _web is { } web ? change(web) : null;
+        _last = _last is { } last ? change(last) : null;
+    }
+
     // The Web API's playback state (GET /me/player).
     private static RemoteState? ParseState(JsonElement root, DateTime readAt)
     {
@@ -235,7 +308,17 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
             }
         }
 
-        return new RemoteState(track, playing, position, readAt, context, device, volume, elsewhere);
+        bool? shuffle = root.TryGetProperty("shuffle_state", out var shuffling) && shuffling.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? shuffling.GetBoolean()
+            : null;
+        RepeatMode? repeat = Text(root, "repeat_state") switch
+        {
+            "off" => RepeatMode.Off,
+            "context" => RepeatMode.All,
+            "track" => RepeatMode.One,
+            _ => null,
+        };
+        return new RemoteState(track, playing, position, readAt, context, device, volume, elsewhere, shuffle, repeat);
     }
 
     // A track or podcast episode. An album's own list of tracks leaves the album out, so it's passed in.

@@ -1,3 +1,5 @@
+using WinampInspiredVisualizer.Settings;
+
 namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>Which other app's player Lucent shows and controls.</summary>
@@ -30,8 +32,10 @@ public sealed record RemoteTrack(string Id, string Title, string Artist, string 
 /// True when <paramref name="Device"/> isn't this computer (a phone, speaker or TV), so the sound never passes through
 /// it and the visuals can't hear it.
 /// </param>
+/// <param name="Shuffle">Whether the app is shuffling, or null when Lucent can't read or change it.</param>
+/// <param name="Repeat">What the app repeats, or null when Lucent can't read or change it.</param>
 public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Position, DateTime ReadAt, string? ListId = null,
-    string? Device = null, double? Volume = null, bool IsElsewhere = false)
+    string? Device = null, double? Volume = null, bool IsElsewhere = false, bool? Shuffle = null, RepeatMode? Repeat = null)
 {
     /// <summary>Where the song is now: the position it was read at, moved on by the time since while it plays.</summary>
     public TimeSpan PositionNow
@@ -55,6 +59,15 @@ public interface IRemoteVolume
 {
     /// <param name="volume">From 0 to 1.</param>
     Task SetVolumeAsync(double volume, CancellationToken cancel);
+}
+
+/// <summary>An app whose shuffle and repeat Lucent can change (<see cref="RemoteState.Shuffle"/>, <see cref="RemoteState.Repeat"/>).</summary>
+public interface IRemoteModes
+{
+    Task SetShuffleAsync(bool on, CancellationToken cancel);
+
+    /// <exception cref="NotSupportedException">When the app can't repeat that way (Spotify's Mac app can't repeat one song).</exception>
+    Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel);
 }
 
 /// <summary>An app that can play on one of several devices (Spotify Connect), and can be moved to this computer.</summary>
