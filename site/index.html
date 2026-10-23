@@ -627,7 +627,7 @@ footer .credits a { text-decoration: underline; }
       <div class="stack">
         <p class="eyebrow">The player</p>
         <h2 id="player-title">Your music, laid out your way.</h2>
-        <p class="lede">The player, library, queue, equalizer, analyzer, artwork, and visuals each get their own resizable window. They snap together and move as one. Lucent remembers where you left each one, a lock keeps any of them in place, and the link button takes them all along with the player.</p>
+        <p class="lede">The player, library, queue, equalizer, analyzer, artwork, and visuals each get their own resizable window. They snap together, move as one, and swap places when you drag one onto another. Lucent remembers where you left each one, a lock keeps any of them in place, and the link button takes them all along with the player.</p>
         <div class="keys">
           <div><kbd>D</kbd> Tidy every window into one neat rectangle</div>
           <div><kbd>G</kbd> Fill the screen</div>
@@ -913,10 +913,10 @@ footer .credits a { text-decoration: underline; }
   /* ---------- the window tour at the top: Lucent full screen, a window at a time ---------- */
   // [name, file, place on a 2560 × 1440 screen (x, y, width, height, from FullScreenLayout), what it is, alt text, floats over the rest]
   const WINDOWS = [
-    ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with favorites and playlists a click away.", "The library, with folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada"],
+    ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with favorites and playlists a click away.", "The library, with album covers beside each song in folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada"],
     ["Player", "tour/full/player.png", [380, 0, 520, 207], "Bicep's Atlas in lossless, with a live level meter and one-click links to every other window.", "The player, playing Atlas by Bicep"],
     ["Equalizer", "tour/full/equalizer.png", [380, 207, 520, 391], "4 to 32 bands, with the music's live spectrum behind the faders.", "The 16-band equalizer on the Rock preset"],
-    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with Bicep, Tomora, and Boards of Canada songs"],
+    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with album covers beside Bicep, Tomora, and Boards of Canada songs"],
     ["Artwork", "tour/full/artwork.jpg", [0, 1027.4, 380, 412.6], "The cover of whatever's on: your files, a streaming app, or a radio station.", "The artwork window with Bicep's Isles cover"],
     ["Visuals", "tour/full/visuals.jpg", [900, 0, 1660, 840], "454 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.", "The visuals window showing Cosmic Jellyfish"],
     ["Analyzer", "tour/full/analyzer.png", [900, 840, 729, 600], "A studio spectrogram, spectrum, waveform, and stereo scope, scrolling together.", "The analyzer"],

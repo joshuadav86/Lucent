@@ -66,6 +66,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
     /// <summary>The other app's playlist this row plays (<see cref="RemotePlaylistRows"/>), or null for any other row.</summary>
     public RemotePlaylist? RemotePlaylist { get; private init; }
 
+    /// <summary>Whether its row has a little cover beside it: every song does, a playlist's stand-in row doesn't.</summary>
+    public bool ShowsCover => !IsPlaceholder;
+
     public string Path { get; }
 
     public string FileName { get; }

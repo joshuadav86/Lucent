@@ -1,11 +1,12 @@
 using System.Diagnostics;
 using System.Globalization;
+using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 
 namespace Lucent.Mac.Streaming;
 
 /// <summary>
-/// The Mac's Music app, through AppleScript: what's playing, its cover, and play, pause, skip and seek.
+/// The Mac's Music app, through AppleScript: what's playing, its cover, and play, pause, skip, seek, shuffle and repeat.
 /// No Apple sign-in is needed; whoever is signed in to the Music app is who's playing, Apple Music
 /// subscription and library alike. macOS asks once whether Lucent may control Music (Privacy &amp; Security,
 /// Automation), with the reason in Info.plist's NSAppleEventsUsageDescription.
@@ -15,12 +16,13 @@ namespace Lucent.Mac.Streaming;
 /// than controlling the Music app, so Lucent talks to the Music app the way Mac apps always have. Windows
 /// uses Windows' media controls to reach the Apple Music app (see Windows' Streaming/AppleMusicRemote.cs).
 /// </remarks>
-public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
+public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, IRemoteModes
 {
     private const string Osascript = "/usr/bin/osascript";
 
     // Fields between tabs: state, then the song's ID, name, artist, album, length and the position, in seconds, and
-    // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station), and Music's volume (0 to 100).
+    // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station), Music's volume (0 to 100),
+    // then whether it shuffles (true or false) and what it repeats (off, one or all), empty when it won't say.
     // "is running" doesn't open Music, so Lucent never starts it by itself.
     private const string ReadScript = """
         if application "Music" is not running then return "closed"
@@ -33,7 +35,11 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolum
                 try
                     set playlistId to persistent ID of current playlist
                 end try
-                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId & tab & sound volume
+                set modes to "" & tab & ""
+                try
+                    set modes to (shuffle enabled as string) & tab & (song repeat as string)
+                end try
+                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId & tab & sound volume & tab & modes
             on error
                 return playerState
             end try
@@ -101,8 +107,21 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolum
         double? volume = fields.Length > 8 && int.TryParse(fields[8], NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent)
             ? Math.Clamp(percent / 100.0, 0, 1)
             : null;
-        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist, Volume: volume);
+        bool? shuffle = fields.Length > 9 ? fields[9] switch { "true" => true, "false" => false, _ => null } : null;
+        RepeatMode? repeat = fields.Length > 10
+            ? fields[10] switch { "off" => RepeatMode.Off, "all" => RepeatMode.All, "one" => RepeatMode.One, _ => null }
+            : null;
+        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist, Volume: volume, Shuffle: shuffle, Repeat: repeat);
     }
+
+    public Task SetShuffleAsync(bool on, CancellationToken cancel) => TellAsync($"set shuffle enabled to {(on ? "true" : "false")}", cancel);
+
+    public Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel) => TellAsync(mode switch
+    {
+        RepeatMode.One => "set song repeat to one",
+        RepeatMode.All => "set song repeat to all",
+        _ => "set song repeat to off",
+    }, cancel);
 
     public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel) =>
         state.ListId is null ? null : ParseList(state.ListId, await RunAsync(ListScript, cancel));
