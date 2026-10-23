@@ -56,16 +56,75 @@ float3 intoLucentLight(float3 shown)
     return light * (1.0 + 0.9 * smoothstep(0.7, 1.0, peak));
 }
 
+// Turns a colour around the grey axis: its hue shifts by angle radians, its brightness stays.
+float3 turnHue(float3 colour, float angle)
+{
+    const float3 grey = float3(0.57735, 0.57735, 0.57735);
+    float s, c;
+    sincos(angle, s, c);
+    return colour * c + cross(grey, colour) * s + grey * dot(grey, colour) * (1.0 - c);
+}
+
+// How a build-up and its drop move the whole picture, whatever the visual. BuildUp and DropPulse come from the
+// song's map (worked out ahead, so the build-up is seen coming) or, more gently, from following the music by ear.
+// Through a build-up the picture is drawn in towards the centre, faster and faster on the beat like a snare roll,
+// as the edges close in and the colour drains and turns; on the drop it bursts back out in a shock wave.
+// Returns where to read the picture from.
+float2 songMotion(float2 uv, float buildUp, float drop)
+{
+    float tension = buildUp * buildUp * (3.0 - 2.0 * buildUp);
+    float2 fromCentre = (uv - 0.5) * float2(Aspect, 1.0);
+
+    // Hits once a beat, then twice, then four times a beat over the last quarter, each faster one smaller. Only
+    // the picture's size moves this fast, never its brightness.
+    float hits = buildUp < 0.5 ? 1.0 : buildUp < 0.75 ? 2.0 : 4.0;
+    float hit = pow(1.0 - frac(BeatPhase * hits), 3.0);
+    float zoom = 1.0 - 0.09 * tension - 0.03 * tension * hit / hits;
+
+    // The shock wave: a ring rushing out from the centre, pushing the picture outwards as it passes.
+    float since = -log(max(drop, 1e-4)) / 1.5;
+    float ring = length(fromCentre) - since * 1.6;
+    float wave = exp(-ring * ring * 60.0) * 0.05 * drop;
+    zoom *= 1.0 - wave - 0.06 * drop;
+
+    return 0.5 + (uv - 0.5) * zoom;
+}
+
 float4 PSPresent(VSOut input) : SV_Target
 {
-    float2 uv = input.uv;
+    // Classic presets shown as they first looked (MilkDrop's or Winamp's finished picture for a plain 8-bit
+    // screen) skip the sharpening, glow, tone-mapping and vignette (all of it, or partly mid-transition), and
+    // the build-ups and drops.
+    float lucentLook = 1.0 - saturate(PlainOutput);
+    float buildUp = saturate(BuildUp) * lucentLook;
+    float drop = saturate(DropPulse) * lucentLook;
+    float tension = buildUp * buildUp * (3.0 - 2.0 * buildUp);
+
+    float2 uv = songMotion(input.uv, buildUp, drop);
     float2 pixel = RenderScale / Resolution;            // one screen pixel, in uv units
     float2 texel = max(RenderScale, 1.0) / Resolution;  // one pixel of the image being shown
     float3 colour = previous(uv);
 
-    // Classic presets shown as they first looked (MilkDrop's or Winamp's finished picture for a plain 8-bit
-    // screen) skip the sharpening, glow, tone-mapping and vignette (all of it, or partly mid-transition).
-    float lucentLook = 1.0 - saturate(PlainOutput);
+    // The colours splitting apart late in a build-up and on the drop, and streaks rushing towards the centre.
+    float2 inwards = 0.5 - uv;
+    float split = 0.012 * drop + 0.004 * tension * tension;
+    if (split > 0.0005)
+    {
+        colour.r = previous(uv - inwards * split).r;
+        colour.b = previous(uv + inwards * split).b;
+    }
+
+    float rush = 0.06 * tension * tension;
+    if (rush > 0.001)
+    {
+        float3 streaks = 0.0;
+        for (int r = 1; r <= 6; r++)
+        {
+            streaks += previous(uv + inwards * rush * r / 6.0);
+        }
+
+        colour = lerp(colour, streaks / 6.0, 0.6);
+    }
 
     // Sharpen: push each pixel away from its neighbours' average. This undoes the slight blur
     // that builds up as the feedback buffer is re-sampled; supersampled images need less.
@@ -85,12 +144,18 @@ float4 PSPresent(VSOut input) : SV_Target
     }
     colour += bloom / 24.0 * 0.6 * BloomStrength * lucentLook;
 
-    // A little extra saturation, and a light vignette.
+    // The drop lands brighter, settling over a second or two.
+    colour *= 1.0 + 0.35 * drop;
+
+    // A little extra saturation, and a light vignette. Through a build-up the colour drains and turns and the
+    // edges close in; the drop brings the colour back stronger than before, and opens the edges right up.
     float3 display = lerp(saturate(colour), toneMap(colour), lucentLook);
+    display = saturate(turnHue(display, 1.2 * tension));
     float luminance = dot(display, float3(0.2126, 0.7152, 0.0722));
-    display = saturate(lerp(luminance.xxx, display, 1.0 + 0.15 * lucentLook));
-    float2 fromCentre = uv - 0.5;
-    display *= 1.0 - dot(fromCentre, fromCentre) * 0.35 * lucentLook;
+    display = saturate(lerp(luminance.xxx, display, 1.0 + 0.15 * lucentLook - 0.45 * tension + 0.6 * drop));
+    float2 fromCentre = input.uv - 0.5;
+    float edges = (0.35 + 1.3 * tension) * (1.0 - drop);
+    display *= saturate(1.0 - dot(fromCentre, fromCentre) * edges * lucentLook);
 
     if (HdrOutput < 0.5)
     {

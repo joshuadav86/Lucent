@@ -80,6 +80,26 @@ public sealed class SongFollower
     }
 }
 
+/// <summary>
+/// How strongly the screen pass shows the song's build-ups and drops, over whatever visual is up (see songMotion
+/// in Engine.hlsl): the picture closing in and its colour turning through a build-up, and a shock wave on the drop.
+/// </summary>
+public static class SongLook
+{
+    /// <summary>The "Build-ups and drops" option.</summary>
+    public static bool On { get; set; } = true;
+
+    /// <summary>
+    /// The build-up and drop to show this frame. A mapped song's are shown in full, because they were worked out
+    /// ahead; music followed by ear at half strength, because a rising breakdown can look like a build-up there.
+    /// </summary>
+    public static (float BuildUp, float Drop) Of(SongFollower follower)
+    {
+        var strength = !On ? 0f : follower.Mapped ? 1f : follower.Live ? 0.5f : 0f;
+        return (follower.Moment.BuildUp * strength, follower.Moment.Drop * strength);
+    }
+}
+
 /// <summary>When Auto mode should next change visual, for a song whose bars and drops are known.</summary>
 public static class AutoLanding
 {
