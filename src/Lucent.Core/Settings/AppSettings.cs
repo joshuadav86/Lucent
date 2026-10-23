@@ -325,6 +325,16 @@ public sealed class AppSettings
     /// </summary>
     public bool ListenToOtherApps { get; set; }
 
+    /// <summary>
+    /// With <see cref="ListenToOtherApps"/> on, the input the visuals listen to instead of every app's sound (its id in
+    /// each app's Audio/LiveInputs.cs), or null for every app's sound. It's for a DAW that plays through its own
+    /// driver (Ableton on ASIO), which the interface's mixer loops back to an input.
+    /// </summary>
+    public string? ListenInput { get; set; }
+
+    /// <summary>The first of the two channels of <see cref="ListenInput"/> the visuals listen to, from 0.</summary>
+    public int ListenInputChannel { get; set; }
+
     /// <summary>The other app the player shows and controls instead of Lucent's own music, if any.</summary>
     public RemoteApp RemoteApp { get; set; }
 

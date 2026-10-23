@@ -64,6 +64,13 @@ public static class LiveInputs
         return inputs;
     }
 
+    /// <summary>
+    /// The inputs the visuals can follow: Windows' recording devices. An interface's ASIO driver is left out:
+    /// most drivers serve one app at a time, so opening it would take the interface away from the DAW using it,
+    /// while its Windows inputs (RME's "Analog (1+2)", say) can be listened to alongside.
+    /// </summary>
+    public static IReadOnlyList<RecordingInput> ListForVisuals() => List().Where(input => !input.IsAsio).ToList();
+
     /// <summary>The input with this id, or Windows' default recording device when it's gone or none was chosen.</summary>
     public static RecordingInput? Find(string? id, IReadOnlyList<RecordingInput> inputs)
     {
@@ -117,19 +124,20 @@ public static class LiveInputs
 }
 
 /// <summary>
-/// One input being listened to, handing its sound to a <see cref="LiveRecorder"/>. Through ASIO the
+/// One input being listened to, handing its sound to a <see cref="LiveRecorder"/> (or, for the visuals, an
+/// <see cref="InputFeed"/>). Through ASIO the
 /// interface runs at the chosen rate and only the chosen channels arrive; through WASAPI, Windows hands
 /// over every channel at the rate set in its Sound settings, and the recorder converts the rate if needed.
 /// </summary>
 public sealed class LiveInput : IDisposable
 {
-    private readonly LiveRecorder _recorder;
+    private readonly ILiveInputSink _recorder;
     private readonly int _firstChannel;
     private WasapiCapture? _wasapi;
     private AsioOut? _asio;
     private float[] _samples = Array.Empty<float>();
 
-    private LiveInput(LiveRecorder recorder, int firstChannel)
+    private LiveInput(ILiveInputSink recorder, int firstChannel)
     {
         _recorder = recorder;
         _firstChannel = firstChannel;
@@ -145,7 +153,7 @@ public sealed class LiveInput : IDisposable
     /// Starts listening, with the recorder's channels starting at <paramref name="firstChannel"/>. ASIO drivers
     /// must be started and stopped on the same thread (the Record window's).
     /// </summary>
-    public static LiveInput Start(RecordingInput input, LiveRecorder recorder, int firstChannel)
+    public static LiveInput Start(RecordingInput input, ILiveInputSink recorder, int firstChannel)
     {
         var live = new LiveInput(recorder, firstChannel);
         try

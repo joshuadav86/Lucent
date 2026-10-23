@@ -335,6 +335,12 @@ public partial class MainWindow
     /// </summary>
     private void UpdateListening()
     {
+        // An input chosen for the visuals (Ableton through TotalMix's loopback, say) comes first.
+        if (UpdateInputListening())
+        {
+            return;
+        }
+
         int? wanted;
         if (_settings.ListenToOtherApps || (_remote is not null && (!SystemAudio.CanListenToOneApp || _oneAppFailed)))
         {
@@ -457,5 +463,6 @@ public partial class MainWindow
         ShowWhereItPlays();
         _systemAudio?.Dispose();
         _systemAudio = null;
+        StopInputListening();
     }
 }
