@@ -166,7 +166,22 @@ else
   if [ -n "${MAC_KEYCHAIN:-}" ]; then
     keychain=(--keychain "$MAC_KEYCHAIN")
   fi
-  codesign --force --deep --timestamp --options runtime --entitlements "$root/tools/mac/Lucent.entitlements" \
-    ${keychain[@]+"${keychain[@]}"} --sign "$identity" "$app"
+  # The secure timestamp comes from Apple's timestamp server, which sometimes doesn't answer from GitHub's
+  # Mac runners ("A timestamp was expected but was not found"), so try a few times with a growing wait.
+  # Notarization needs the timestamp, so after the last try the build fails rather than going out without one.
+  wait_s=15
+  for attempt in 1 2 3 4 5; do
+    if codesign --force --deep --timestamp --options runtime --entitlements "$root/tools/mac/Lucent.entitlements" \
+      ${keychain[@]+"${keychain[@]}"} --sign "$identity" "$app"; then
+      break
+    fi
+    if [ "$attempt" -eq 5 ]; then
+      echo "::error::codesign couldn't sign Lucent.app after 5 tries (Apple's timestamp server may be down)."
+      exit 1
+    fi
+    echo "Signing Lucent.app failed (attempt $attempt); trying again in $wait_s s."
+    sleep "$wait_s"
+    wait_s=$((wait_s * 2))
+  done
 fi
 echo "Made $app"
