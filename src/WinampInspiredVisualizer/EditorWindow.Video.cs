@@ -274,7 +274,78 @@ public partial class EditorWindow
 
         Add("Frames as images…", "Every frame, or so many a second, as PNG or JPEG files", gif: false);
         Add("GIF…", "An animated GIF, to share", gif: true);
+        var copy = new MenuItem { Header = "Smaller copy or other format…", ToolTip = "Re-encoded smaller (H.264 or HEVC), or just the sound as MP3, FLAC or WAV" };
+        copy.Click += async (_, _) => await SaveCopyAsync();
+        menu.Items.Add(copy);
         menu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// Saves a copy of the selection (or the whole video), re-encoded smaller or in another format, after asking how.
+    /// The pictures are the original video's and follow the edit, as the frames and GIFs do.
+    /// </summary>
+    private async Task SaveCopyAsync()
+    {
+        if (_videoEdit is not { } video || _session is not { } session || IsBusy)
+        {
+            return;
+        }
+
+        var audio = session.Audio;
+        var rate = (double)audio.SampleRate;
+        var selection = Selection;
+        var (from, to) = selection.IsEmpty ? (0.0, video.Length) : (selection.Start / rate, selection.End / rate);
+        (int Width, int Height) size;
+        try
+        {
+            size = VideoExport.PictureSize(video);
+        }
+        catch (NotSupportedException)
+        {
+            size = (0, 0);
+        }
+
+        if (size.Width == 0)
+        {
+            ShowStatus("This video's pictures couldn't be read, so it can't be copied.");
+            return;
+        }
+
+        if (VideoCopyWindow.Ask(this, video, audio, from, to, size) is not { } choice)
+        {
+            return;
+        }
+
+        string? note = null;
+        string? problem = null;
+        var ok = await RunBusyAsync($"Saving {Path.GetFileName(choice.Path)}…", async (progress, token) =>
+        {
+            try
+            {
+                note = await Task.Run(() => VideoCopy.Save(video, audio, from, to, choice, size, progress, token), token);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or VideoCutException or IOException
+                or UnauthorizedAccessException or SharpGen.Runtime.SharpGenException)
+            {
+                problem = ex.Message;
+            }
+        });
+
+        if (problem is not null)
+        {
+            ShowStatus("That didn't work.");
+            MessageBox.Show(this, problem, "Save a copy", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!ok || !File.Exists(choice.Path))
+        {
+            return;
+        }
+
+        _lastSavedPath = choice.Path;
+        ShowFileButton.Visibility = Visibility.Visible;
+        ShowStatus($"Saved \"{Path.GetFileName(choice.Path)}\": {VideoExport.DescribeBytes(new FileInfo(choice.Path).Length)}. {note}".TrimEnd());
     }
 
     /// <summary>

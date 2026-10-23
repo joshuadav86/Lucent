@@ -7,7 +7,7 @@ using static Lucent.Mac.Interop.CoreMedia;
 namespace Lucent.Mac.Export;
 
 /// <summary>
-/// Writes an MP4 file of H.264 video and AAC audio with the encoders built into macOS (AVFoundation's
+/// Writes an MP4 file of H.264 (or HEVC) video and AAC audio with the encoders built into macOS (AVFoundation's
 /// AVAssetWriter, which encodes the video with VideoToolbox). The Mac's video encoder hardware (Apple
 /// silicon's media engine, or an Intel Mac's) is used when there is one, and macOS's software encoder
 /// otherwise. Pictures go in as BGRA (VideoToolbox turns them into the encoder's YUV) and sound as 16-bit
@@ -52,16 +52,17 @@ public sealed unsafe class Mp4Writer : IDisposable
     /// <summary>
     /// Starts an MP4 file at <paramref name="path"/> (written in place, so give it a temporary name that
     /// isn't taken). <paramref name="sampleRate"/> must be 44100 or 48000. With <paramref name="allowHardware"/>
-    /// off, or if the hardware encoder won't take these settings, macOS's software encoder is used.
+    /// off, or if the hardware encoder won't take these settings, macOS's software encoder is used. With
+    /// <paramref name="hevc"/>, the video is HEVC, which every Mac since 2017 encodes.
     /// </summary>
     public static Mp4Writer Create(string path, int width, int height, int frameRate, int videoBitrate,
-        int sampleRate, int audioBitrate, bool allowHardware)
+        int sampleRate, int audioBitrate, bool allowHardware, bool hevc = false)
     {
         if (allowHardware)
         {
             try
             {
-                return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: true);
+                return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: true, hevc);
             }
             catch (VideoEncoderException)
             {
@@ -70,17 +71,17 @@ public sealed unsafe class Mp4Writer : IDisposable
             }
         }
 
-        return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: false);
+        return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: false, hevc);
     }
 
     private static Mp4Writer Open(string path, int width, int height, int frameRate, int videoBitrate,
-        int sampleRate, int audioBitrate, bool hardware)
+        int sampleRate, int audioBitrate, bool hardware, bool hevc)
     {
         var writer = new Mp4Writer(frameRate, sampleRate);
         try
         {
             using var pool = AutoreleasePool.Begin();
-            writer.Begin(path, width, height, videoBitrate, audioBitrate, hardware);
+            writer.Begin(path, width, height, videoBitrate, audioBitrate, hardware, hevc);
             return writer;
         }
         catch (Exception)
@@ -90,7 +91,7 @@ public sealed unsafe class Mp4Writer : IDisposable
         }
     }
 
-    private void Begin(string path, int width, int height, int videoBitrate, int audioBitrate, bool hardware)
+    private void Begin(string path, int width, int height, int videoBitrate, int audioBitrate, bool hardware, bool hevc)
     {
         _writer = NewMp4Writer(Path.GetFullPath(path), out var problem);
         if (_writer == IntPtr.Zero)
@@ -98,11 +99,11 @@ public sealed unsafe class Mp4Writer : IDisposable
             throw new VideoEncoderException($"macOS couldn't start the video file. {problem}");
         }
 
-        // Video: H.264 at the bitrate asked for, saying which colours the numbers mean, so players
+        // Video: H.264 (or HEVC) at the bitrate asked for, saying which colours the numbers mean, so players
         // show them as they looked on screen.
         var compression = Dictionary(
             (Constant("AVVideoAverageBitRateKey"), Number(videoBitrate)),
-            (Constant("AVVideoProfileLevelKey"), Constant("AVVideoProfileLevelH264HighAutoLevel")),
+            (Constant("AVVideoProfileLevelKey"), Constant(hevc ? "kVTProfileLevel_HEVC_Main_AutoLevel" : "AVVideoProfileLevelH264HighAutoLevel")),
             (Constant("AVVideoExpectedSourceFrameRateKey"), Number(_frameRate)),
             // A key frame every two seconds, so players can jump about the video quickly.
             (Constant("AVVideoMaxKeyFrameIntervalKey"), Number(_frameRate * 2)));
@@ -117,7 +118,7 @@ public sealed unsafe class Mp4Writer : IDisposable
         IntPtr VideoSettings(IntPtr choice)
         {
             var settings = Dictionary(
-                (Constant("AVVideoCodecKey"), Constant("AVVideoCodecTypeH264")),
+                (Constant("AVVideoCodecKey"), Constant(hevc ? "AVVideoCodecTypeHEVC" : "AVVideoCodecTypeH264")),
                 (Constant("AVVideoWidthKey"), Number(width)),
                 (Constant("AVVideoHeightKey"), Number(height)),
                 (Constant("AVVideoCompressionPropertiesKey"), compression),

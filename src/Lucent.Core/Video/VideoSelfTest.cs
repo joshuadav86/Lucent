@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using LibVLCSharp.Shared;
 using WinampInspiredVisualizer.Editor;
 
 namespace WinampInspiredVisualizer.Video;
@@ -182,6 +183,72 @@ public static class VideoSelfTest
         return problems;
     }
 
+    // The pictures from just before the flash at 1 s to just after it, as read for saving.
+    private const string FlashExpected = "dark dark dark flash flash flash dark dark dark";
+
+    // Whether each picture between two moments (seconds of the edit) is a flash or dark, as read for saving.
+    private static string FlashColours(LibVLC libVlc, VideoEdit video, double from, double to)
+    {
+        var pictures = VideoExport.Pictures(video, from, to);
+        var seen = new List<string>();
+        VideoExport.Read(libVlc, video, pictures, 64, 36, (_, pixels, stride) =>
+        {
+            var middle = new byte[4];
+            Marshal.Copy(pixels + 18 * stride + 32 * 4, middle, 0, 4);
+            seen.Add(middle[0] > 200 || middle[1] > 200 || middle[2] > 200 ? "flash" : "dark");
+        }, CancellationToken.None);
+        return string.Join(" ", seen);
+    }
+
+    // A copy re-encoded smaller (where the app has an encoder, as on the Mac): it's whole, as long as the video, and
+    // its flash is where it was, the same three pictures, so its pictures went in in order and on time.
+    private static int TestCopy(Action<string> log, string name, VideoEdit video, AudioBuffer audio)
+    {
+        if (VideoCopy.CreateWriter is null)
+        {
+            return 0;
+        }
+
+        var copy = Path.Combine(Path.GetTempPath(), $"lucent-copy-{Guid.NewGuid():N}.mp4");
+        try
+        {
+            var choice = new VideoCopyChoice { Format = VideoCopyFormat.H264, Size = 0, FrameRate = 0, Quality = VideoCopyQuality.Medium, Path = copy };
+            var note = VideoCopy.Save(video, audio, 0, video.Length, choice, VideoExport.PictureSize(video), null, CancellationToken.None);
+            var (copied, _, _, _) = VideoEdit.Load(copy, null, CancellationToken.None);
+            if (Math.Abs(copied.Length - video.Length) > 0.1)
+            {
+                log($"::error::Video: the copy of {name} is {copied.Length:0.00} s long, not {video.Length:0.00} s.");
+                return 1;
+            }
+
+            using var libVlc = VideoEngine.CreateForFrames();
+            var flash = FlashColours(libVlc, copied, 0.9, 1.2);
+            if (flash != FlashExpected)
+            {
+                log($"::error::Video: in the copy of {name}, the frames from 0.9 s to 1.2 s were {flash}, not {FlashExpected}.");
+                return 1;
+            }
+
+            log($"Video: a copy of {name} re-encoded is {new FileInfo(copy).Length} bytes, with its flash in place. {note}");
+            return 0;
+        }
+        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IOException or AudioFileException)
+        {
+            log($"::error::Video: {name} couldn't be copied: {ex.Message}");
+            return 1;
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(copy);
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
     // Saving frames: every picture from just before a flash to just after it comes out in order, the flash's three
     // and no more, and the same across a cut (with 1.5-2.5 s deleted, the last flash is 2 s into the edit). Then a
     // short GIF is made.
@@ -190,35 +257,25 @@ public static class VideoSelfTest
         var name = Path.GetFileName(path);
         var (video, audio, _, _) = VideoEdit.Load(path, null, CancellationToken.None);
         using var libVlc = VideoEngine.CreateForFrames();
-        string Colours(double from, double to)
-        {
-            var pictures = VideoExport.Pictures(video, from, to);
-            var seen = new List<string>();
-            VideoExport.Read(libVlc, video, pictures, 64, 36, (_, pixels, stride) =>
-            {
-                var middle = new byte[4];
-                Marshal.Copy(pixels + 18 * stride + 32 * 4, middle, 0, 4);
-                seen.Add(middle[0] > 200 || middle[1] > 200 || middle[2] > 200 ? "flash" : "dark");
-            }, CancellationToken.None);
-            return string.Join(" ", seen);
-        }
+        string Colours(double from, double to) => FlashColours(libVlc, video, from, to);
 
-        const string expected = "dark dark dark flash flash flash dark dark dark";
         var problems = 0;
         var flash = Colours(0.9, 1.2);
-        if (flash != expected)
+        if (flash != FlashExpected)
         {
             problems++;
-            log($"::error::Video: saving the frames from 0.9 s to 1.2 s of {name} gave {flash}, not {expected}.");
+            log($"::error::Video: saving the frames from 0.9 s to 1.2 s of {name} gave {flash}, not {FlashExpected}.");
         }
+
+        problems += TestCopy(log, name, video, audio);
 
         var rate = audio.SampleRate;
         video.Delete(new FrameRange((int)(1.5 * rate), rate), 1);
         var cut = Colours(1.9, 2.2);
-        if (cut != expected)
+        if (cut != FlashExpected)
         {
             problems++;
-            log($"::error::Video: with 1.5-2.5 s of {name} cut, saving the frames from 1.9 s to 2.2 s gave {cut}, not {expected}.");
+            log($"::error::Video: with 1.5-2.5 s of {name} cut, saving the frames from 1.9 s to 2.2 s gave {cut}, not {FlashExpected}.");
         }
 
         var gif = Path.Combine(Path.GetTempPath(), $"lucent-gif-{Guid.NewGuid():N}.gif");
