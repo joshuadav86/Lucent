@@ -1831,6 +1831,12 @@ public partial class MainWindow : Window
 
     private void ToggleShuffle()
     {
+        // While another app is controlled, it's that app's shuffle.
+        if (RemoteTakes(remote => remote.ToggleShuffleAsync()))
+        {
+            return;
+        }
+
         _settings.Shuffle = !_settings.Shuffle;
         _shuffleHistory.Clear();
         if (_current is not null)
@@ -1847,6 +1853,11 @@ public partial class MainWindow : Window
 
     private void CycleRepeat()
     {
+        if (RemoteTakes(remote => remote.CycleRepeatAsync()))
+        {
+            return;
+        }
+
         _settings.Repeat = _settings.Repeat switch
         {
             RepeatMode.Off => RepeatMode.All,
@@ -1860,10 +1871,17 @@ public partial class MainWindow : Window
 
     private void UpdateShuffleRepeatButtons()
     {
-        ShuffleButton.IsChecked = _settings.Shuffle;
+        ShuffleButton.IsChecked = ShownShuffle;
+        RepeatButton.IsChecked = ShownRepeat != RepeatMode.Off;
+        RepeatOneBadge.Visibility = ShownRepeat == RepeatMode.One ? Visibility.Visible : Visibility.Collapsed;
+        if (_remote is { } remote)
+        {
+            ShuffleButton.ToolTip = remote.ShuffleTip;
+            RepeatButton.ToolTip = remote.RepeatTip;
+            return;
+        }
+
         ShuffleButton.ToolTip = _settings.Shuffle ? "Shuffle is on (S)" : "Shuffle (S)";
-        RepeatButton.IsChecked = _settings.Repeat != RepeatMode.Off;
-        RepeatOneBadge.Visibility = _settings.Repeat == RepeatMode.One ? Visibility.Visible : Visibility.Collapsed;
         RepeatButton.ToolTip = _settings.Repeat switch
         {
             RepeatMode.All => "Repeating the whole queue. Click to repeat just this track (R)",
@@ -1880,6 +1898,9 @@ public partial class MainWindow : Window
 
     private void StopPlayback()
     {
+        // Stop means stop: a song or video playing in the editor stops too.
+        AudioTools.StopEditors();
+
         if (RemoteTakes(remote => remote.StopAsync()))
         {
             return;

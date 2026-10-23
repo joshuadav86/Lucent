@@ -127,10 +127,16 @@
                                 MouseLeftButtonUp="OnMeterClick" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent"
+                                ContextMenuOpening="OnNowPlayingMenuOpening">
                         <StackPanel.ContextMenu>
                             <ContextMenu x:Name="NowPlayingMenu">
-                                <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                                <MenuItem x:Name="NowPlayingEditItem" Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                                <MenuItem x:Name="NowPlayingAddItem" Header="Add to playlist" />
+                                <MenuItem x:Name="NowPlayingShareItem" Header="Share">
+                                    <MenuItem Header="Copy song link" Click="OnNowPlayingCopyLink" />
+                                    <MenuItem Header="Copy song and link" Click="OnNowPlayingCopySongAndLink" />
+                                </MenuItem>
                             </ContextMenu>
                         </StackPanel.ContextMenu>
                         <DockPanel>
@@ -439,7 +445,7 @@
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="On, Lucent downloads updates in the background and installs them when you close it. Off, it still downloads them and tells you one is ready, but installs it only when you choose Restart and install." />
                     <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" />
-                    <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
+                    <!-- Lucent checks on its own every four hours; this checks now and says what it found. -->
                     <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed" />
                     <StackPanel x:Name="WhatsNewPanel" Visibility="Collapsed">
                         <TextBlock Style="{StaticResource OptionLabel}" Text="What's new" />
@@ -451,7 +457,7 @@
                         <Button x:Name="RestartToUpdateButton" Style="{StaticResource PillButton}" Content="Restart and install" Margin="0,0,8,0"
                                 Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Click="OnInstallUpdate" />
                         <Button x:Name="CheckUpdatesButton" Style="{StaticResource PillButton}" Content="Check for updates"
-                                ToolTip="Looks for a newer Lucent now instead of waiting for the hourly check" Click="OnCheckForUpdates" />
+                                ToolTip="Looks for a newer Lucent now instead of waiting for the next regular check" Click="OnCheckForUpdates" />
                     </StackPanel>
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Default player" />

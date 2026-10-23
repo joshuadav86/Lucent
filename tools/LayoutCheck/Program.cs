@@ -11,6 +11,7 @@ using WinampInspiredVisualizer.Layout;
 //     window could fill it;
 //   - nothing is left out on a screen big enough for everything (the windows' smallest sizes say what
 //     that is), so each set of windows fits from the screens listed in Fits below.
+//   - windows swapped while full screen only trade places that fit them, and the player never moves.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
@@ -57,6 +58,42 @@ foreach (var playerScale in new[] { 1.0, 1.5 })
                 var queueAt = new TileRect(area.Right - 520, area.Bottom - 320, 520, 320);
                 Check($"{areaName}, player at {playerScale:P0}, {setName}, queue locked", area,
                     windows.Select(window => window.Kind == TileKind.Queue ? window with { LockedAt = queueAt } : window).ToList());
+            }
+        }
+    }
+}
+
+// Windows swapped while full screen (dragged onto each other, WindowSwap) trade the places the layout gave
+// them, but only when each fits the other's place: so nothing ends up below its smallest size, the player
+// and equalizer keep theirs, and the places are the same ones, just traded, so nothing overlaps.
+var swaps = new List<List<string>> { new() { "Artwork", "Library" }, new() { "Queue", "Visuals" }, new() { "Analyzer", "Artwork" }, new() { "Player", "Queue" } };
+foreach (var (setName, windows) in Sets(1.0))
+{
+    foreach (var (areaName, area) in areas)
+    {
+        checkedCount++;
+        var swapped = FullScreenLayout.Arrange(area, windows);
+        var placesBefore = swapped.Places.Values.OrderBy(place => place.Left).ThenBy(place => place.Top).ToList();
+        var playerPlace = swapped.Places.GetValueOrDefault("Player");
+        WindowSwap.Apply(swapped, windows, swaps);
+        var placesAfter = swapped.Places.Values.OrderBy(place => place.Left).ThenBy(place => place.Top).ToList();
+        var swapName = $"{areaName}, {setName}, swapped";
+        if (!placesBefore.SequenceEqual(placesAfter))
+        {
+            problems.Add($"{swapName}: swapping changed the places instead of trading them.");
+        }
+
+        if (swapped.Places.GetValueOrDefault("Player") != playerPlace)
+        {
+            problems.Add($"{swapName}: the player was swapped, but it sizes itself.");
+        }
+
+        foreach (var (key, place) in swapped.Places)
+        {
+            var window = windows.Single(candidate => candidate.Key == key);
+            if (place.Width < window.MinWidth - 0.5 || place.Height < window.MinHeight - 0.5)
+            {
+                problems.Add($"{swapName}: {key} is {place.Width:0}x{place.Height:0}, smaller than its smallest, {window.MinWidth}x{window.MinHeight}.");
             }
         }
     }

@@ -240,8 +240,8 @@ public sealed class RadioDirectory
             ? (uri.Host + uri.AbsolutePath.TrimEnd('/')).ToLowerInvariant()
             : address.Trim().ToLowerInvariant();
 
-    // "SomaFM Groove Salad (256k MP3)" and "Soma FM Groove Salad 256K MP3" are both "somafmgroovesalad".
-    private static string NameKey(string name)
+    /// <summary>A station's name without the quality written in it: "SomaFM Groove Salad (256k MP3)" and "Soma FM Groove Salad 256K MP3" are both "somafmgroovesalad".</summary>
+    public static string NameKey(string name)
     {
         var plain = QualityInName.Replace(name.ToLowerInvariant(), " ");
         var key = new string(plain.Where(char.IsLetterOrDigit).ToArray());

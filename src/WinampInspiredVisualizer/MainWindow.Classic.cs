@@ -167,8 +167,8 @@ public partial class MainWindow
         classic.Channels = track?.Channels ?? (hasTrack ? 2 : 0);
         classic.Volume = VolumeSlider.Value;
         classic.Balance = _settings.Balance;
-        classic.Shuffle = _settings.Shuffle;
-        classic.Repeat = _settings.Repeat != RepeatMode.Off;
+        classic.Shuffle = ShownShuffle;
+        classic.Repeat = ShownRepeat != RepeatMode.Off;
         classic.EqualizerOpen = OpenEqualizerWindow is not null;
         classic.PlaylistOpen = _queue.IsVisible;
         classic.AlwaysOnTop = Topmost;

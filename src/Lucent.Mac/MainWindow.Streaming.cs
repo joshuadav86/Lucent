@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Streaming;
+using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 
 namespace Lucent.Mac;
@@ -29,6 +30,11 @@ public partial class MainWindow
 
     private TimeSpan ShownDuration => _remote is not null ? _remote.State?.Track?.Duration ?? TimeSpan.Zero : _player.Duration;
 
+    // Shuffle and repeat as the player shows them: the other app's own while one is being controlled.
+    private bool ShownShuffle => _remote is not null ? _remote.State?.Shuffle == true : _settings.Shuffle;
+
+    private RepeatMode ShownRepeat => _remote is not null ? _remote.State?.Repeat ?? RepeatMode.Off : _settings.Repeat;
+
     /// <summary>Picks up where the last run left off: listening to other apps, and the app being controlled.</summary>
     private void StartStreaming()
     {
@@ -54,6 +60,9 @@ public partial class MainWindow
     /// <summary>Starts showing and controlling <paramref name="app"/>, signing in first when it needs it and <paramref name="signIn"/> allows.</summary>
     private async void ControlRemote(RemoteApp app, bool signIn)
     {
+        // A Spotify playlist double-clicked in the library while Spotify wasn't being controlled plays once it is.
+        var playlist = _playWhenConnected;
+        _playWhenConnected = null;
         IRemotePlayer player;
         try
         {
@@ -81,6 +90,7 @@ public partial class MainWindow
                         }
 
                         SpotifyAccount.Save(refreshToken);
+                        SpotifyAccountChanged();
                         Activate();
                     }
 
@@ -125,9 +135,15 @@ public partial class MainWindow
         _settings.Save();
         _remote = new RemoteControl(player);
         _remote.Changed += OnRemoteChanged;
+        if (playlist is not null && app == RemoteApp.Spotify)
+        {
+            _ = _remote.PlayPlaylistAsync(playlist);
+        }
+
         UpdateListening();
         ShowRemote();
         ShowWhereItPlays();
+        UpdateShuffleRepeatButtons();
     }
 
     /// <summary>Goes back to Lucent's own music, pausing the other app first when <paramref name="pause"/> says to.</summary>
@@ -160,6 +176,7 @@ public partial class MainWindow
         UpdateListening();
         ShowNowPlaying(_current?.Track);
         UpdatePlayPauseButton();
+        UpdateShuffleRepeatButtons();
         UpdatePosition();
     }
 
@@ -220,6 +237,81 @@ public partial class MainWindow
     /// <summary>Plays one of the songs from the other app's playlist, in that app.</summary>
     public void PlayFromRemoteList(RemoteTrack track) => RemoteTakes(remote => remote.PlayFromListAsync(track));
 
+    private RemotePlaylist? _playWhenConnected;
+
+    /// <summary>
+    /// The Spotify account's playlists for the library, or null when Lucent isn't signed in to Spotify. While Spotify is
+    /// being controlled its connection asks; otherwise one is made just for this, from the saved sign-in (which Spotify
+    /// renews with each use, so two connections at once would sign each other out).
+    /// </summary>
+    /// <exception cref="RemoteProblem">When Spotify won't list them, worded for the user.</exception>
+    public async Task<IReadOnlyList<RemotePlaylist>?> SpotifyPlaylistsAsync()
+    {
+        var playlists = await WithSpotifyAsync(spotify => spotify.PlaylistsAsync(CancellationToken.None));
+        _spotifyPlaylists = playlists;
+        _spotifyPlaylistsReadAt = DateTime.UtcNow;
+        return playlists;
+    }
+
+    // The playlists last read, for the song menus' Add to playlist, as Spotify limits how often all of Lucent's users may ask.
+    private IReadOnlyList<RemotePlaylist>? _spotifyPlaylists;
+    private DateTime _spotifyPlaylistsReadAt;
+
+    /// <summary>Called when Lucent signs in to or out of Spotify, as the playlists are then another account's, or none.</summary>
+    private void SpotifyAccountChanged()
+    {
+        _spotifyPlaylists = null;
+        _libraryWindow.SpotifyChanged();
+    }
+
+    /// <summary>
+    /// The Spotify playlists a song can be added to (Liked Songs, and the ones the account made or collaborates on), from
+    /// the last read when that was under ten minutes ago.
+    /// </summary>
+    /// <exception cref="RemoteProblem">When Spotify won't list them, worded for the user.</exception>
+    public async Task<IReadOnlyList<RemotePlaylist>> SpotifyPlaylistsToAddToAsync()
+    {
+        var playlists = _spotifyPlaylists is not null && DateTime.UtcNow - _spotifyPlaylistsReadAt < TimeSpan.FromMinutes(10)
+            ? _spotifyPlaylists
+            : await SpotifyPlaylistsAsync();
+        return playlists?.Where(playlist => playlist.CanAdd).ToList() ?? new List<RemotePlaylist>();
+    }
+
+    /// <summary>
+    /// Asks Spotify through the connection controlling it, or, when Spotify isn't being controlled, one made just for this
+    /// from the saved sign-in (which Spotify renews with each use, so two connections at once would sign each other out).
+    /// Null when Lucent isn't signed in to Spotify.
+    /// </summary>
+    private async Task<T?> WithSpotifyAsync<T>(Func<SpotifyRemote, Task<T>> ask)
+        where T : class
+    {
+        if (_remote?.Player is SpotifyRemote controlling)
+        {
+            return await ask(controlling);
+        }
+
+        if (SpotifyAccount.Load() is not { } refreshToken)
+        {
+            return null;
+        }
+
+        using var spotify = new SpotifyRemote(StreamingHttp, refreshToken, SpotifyAccount.Save);
+        return await ask(spotify);
+    }
+
+    /// <summary>Plays one of the account's Spotify playlists in Spotify, starting to control Spotify first when it isn't.</summary>
+    public void PlaySpotifyPlaylist(RemotePlaylist playlist)
+    {
+        if (_remote is { Player: SpotifyRemote } remote)
+        {
+            RemoteTakes(control => control.PlayPlaylistAsync(playlist));
+            return;
+        }
+
+        _playWhenConnected = playlist;
+        ControlRemote(RemoteApp.Spotify, signIn: true);
+    }
+
     private void OnRemoteChanged(object? sender, EventArgs e)
     {
         if (sender != _remote)
@@ -232,6 +324,7 @@ public partial class MainWindow
         UpdateListening();
         ShowWhereItPlays();
         UpdatePlayPauseButton();
+        UpdateShuffleRepeatButtons();
         UpdatePosition();
     }
 
@@ -259,7 +352,7 @@ public partial class MainWindow
 
         // Spotify says which of the account's devices it's playing on, which may not be this computer.
         var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
-        TrackDetails.Text = remote.Problem
+        TrackDetails.Text = SongNotice ?? remote.Problem
             ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {where}" : $"{track.Album} · in {where}");
         ToolTip.SetTip(TrackDetails, remote.Problem ?? $"The sound comes from {where}. Lucent shows it and presses its buttons.");
         ShowVolume();

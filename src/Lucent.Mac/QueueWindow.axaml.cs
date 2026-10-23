@@ -20,6 +20,7 @@ public partial class QueueWindow : ToolWindow
 
         // Runs before the list's menu opens, to fill in the items that depend on what's selected.
         PlaylistView.AddHandler(ContextRequestedEvent, OnQueueMenuOpening, RoutingStrategies.Tunnel);
+        RemoteListView.AddHandler(ContextRequestedEvent, OnRemoteMenuOpening, RoutingStrategies.Tunnel);
     }
 
     /// <summary>Music dropped on the queue goes on the end of it, as on Winamp's playlist.</summary>
@@ -163,8 +164,11 @@ public partial class QueueWindow : ToolWindow
         if (!ReferenceEquals(list, _remoteList))
         {
             _remoteList = list;
+            var chosen = (RemoteListView.SelectedItem as RemoteListEntry)?.Track.Id;
             _remoteEntries = list?.Tracks.Select(track => new RemoteListEntry(track)).ToList() ?? new List<RemoteListEntry>();
             RemoteListView.ItemsSource = _remoteEntries;
+            // The song chosen stays chosen when the list is read again (what's up next is, with every song).
+            RemoteListView.SelectedItem = _remoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
             _remotePlaying = null;
             var showing = list is not null;
             PlaylistView.IsVisible = !showing;
@@ -175,8 +179,7 @@ public partial class QueueWindow : ToolWindow
                 EmptyPlaylistHint.IsVisible = false;
             }
 
-            RemoteListNote.Text = list?.Note ?? string.Empty;
-            RemoteListNote.IsVisible = list?.Note is not null;
+            ShowRemoteNote(list?.Note);
             RemotePlayItem.Header = $"Play in {appName}";
             QueueTitle.Text = list is null ? "QUEUE" : appName.ToUpperInvariant();
             if (list is not null)
@@ -230,5 +233,57 @@ public partial class QueueWindow : ToolWindow
             PlayChosenRemoteSong();
             e.Handled = true;
         }
+    }
+
+    // ---- Adding the app's songs to its playlists, and sharing them ----
+
+    private void OnRemoteMenuOpening(object? sender, ContextRequestedEventArgs e)
+    {
+        // The row right-clicked is the one the menu is for.
+        if ((e.Source as Control)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: RemoteListEntry row })
+        {
+            RemoteListView.SelectedItem = row;
+        }
+
+        var track = (RemoteListView.SelectedItem as RemoteListEntry)?.Track;
+        var canAdd = track is not null && Player?.CanAddToRemotePlaylists == true;
+        RemoteSongSeparator.IsVisible = RemoteShareItem.IsVisible = track is not null;
+        RemoteAddItem.IsVisible = canAdd;
+        if (canAdd && track is not null)
+        {
+            Player?.FillAddToPlaylistMenu(RemoteAddItem, track, ShowRemoteNotice);
+        }
+    }
+
+    private void OnCopySongLink(object? sender, RoutedEventArgs e) => CopySong(withTitle: false);
+
+    private void OnCopySongAndLink(object? sender, RoutedEventArgs e) => CopySong(withTitle: true);
+
+    private void CopySong(bool withTitle)
+    {
+        if ((RemoteListView.SelectedItem as RemoteListEntry)?.Track is { } track)
+        {
+            Player?.CopySongLink(track, withTitle, ShowRemoteNotice);
+        }
+    }
+
+    private int _notice;
+
+    /// <summary>Shows <paramref name="text"/> under the list for a few seconds, then the list's own note again.</summary>
+    private async void ShowRemoteNotice(string text)
+    {
+        var notice = ++_notice;
+        ShowRemoteNote(text);
+        await Task.Delay(TimeSpan.FromSeconds(4));
+        if (notice == _notice)
+        {
+            ShowRemoteNote(_remoteList?.Note);
+        }
+    }
+
+    private void ShowRemoteNote(string? text)
+    {
+        RemoteListNote.Text = text ?? string.Empty;
+        RemoteListNote.IsVisible = text is not null;
     }
 }

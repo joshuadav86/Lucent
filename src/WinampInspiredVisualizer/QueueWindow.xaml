@@ -126,20 +126,22 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="3" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
                                     Background="{DynamicResource AccentGradientBrush}"
                                     Visibility="{Binding IsCurrent, Converter={StaticResource VisibleWhenTrue}}" />
-                            <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                            <local:TrackThumb Grid.Column="1" Margin="8,0,0,0" Path="{Binding Track.Path}" />
+                            <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextBrush}" />
                                 <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                            <TextBlock Grid.Column="3" Text="{Binding Track.DurationText}" FontSize="11"
                                        VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
                         </Grid>
                     </DataTemplate>
@@ -151,10 +153,17 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionMode="Single"
                      MouseDoubleClick="OnRemoteListDoubleClick"
-                     KeyDown="OnRemoteListKeyDown">
+                     KeyDown="OnRemoteListKeyDown"
+                     ContextMenuOpening="OnRemoteMenuOpening">
                 <ListBox.ContextMenu>
                     <ContextMenu>
                         <MenuItem x:Name="RemotePlayItem" Header="Play" Click="OnRemoteListPlay" />
+                        <Separator x:Name="RemoteSongSeparator" />
+                        <MenuItem x:Name="RemoteAddItem" Header="Add to playlist" />
+                        <MenuItem x:Name="RemoteShareItem" Header="Share">
+                            <MenuItem Header="Copy song link" Click="OnCopySongLink" />
+                            <MenuItem Header="Copy song and link" Click="OnCopySongAndLink" />
+                        </MenuItem>
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
@@ -162,20 +171,22 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="3" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
                                     Background="{DynamicResource AccentGradientBrush}"
                                     Visibility="{Binding IsCurrent, Converter={StaticResource VisibleWhenTrue}}" />
-                            <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                            <local:TrackThumb Grid.Column="1" Margin="8,0,0,0" Url="{Binding Track.ListArtUrl}" />
+                            <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextBrush}" />
                                 <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                            <TextBlock Grid.Column="3" Text="{Binding Track.DurationText}" FontSize="11"
                                        VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
                         </Grid>
                     </DataTemplate>

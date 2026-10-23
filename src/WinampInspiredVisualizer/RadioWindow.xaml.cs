@@ -102,11 +102,7 @@ public partial class RadioWindow : Window
             try
             {
                 var found = await _player.RadioDirectory.SearchAsync(new RadioQuery(name, null, null, 0, RadioSort.Votes, 40), cancel.Token);
-                var stations = found
-                    .Where(station => station.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-                    .DistinctBy(station => station.Name.ToLowerInvariant())
-                    .Select(station => station with { Network = network })
-                    .ToList();
+                var stations = FeaturedStations.BestStations(found, name, network);
                 _featured = _featured.Where(station => station.Network != network).Concat(stations).ToList();
                 ShowSections();
                 if (Section == RadioGuide.Featured)

@@ -24,6 +24,7 @@ public partial class MainWindow
         LucentFullScreen.IsOn = () => _settings.LucentFullScreen;
         LucentFullScreen.Toggle = ToggleLucentFullScreen;
         LucentFullScreen.Covers = window => TileKindOf(window) is not null;
+        _snapper.Swapped += RememberSwap;
         if (WindowToggles.ContextMenu is { } menu)
         {
             LucentFullScreen.AddTo(menu, this);
@@ -89,6 +90,7 @@ public partial class MainWindow
         }
 
         _settings.LucentFullScreen = true;
+        _settings.FullScreenSwaps.Clear();
         TileWindows();
     }
 
@@ -128,6 +130,7 @@ public partial class MainWindow
         }
 
         _settings.WindowsBeforeFullScreen.Clear();
+        _settings.FullScreenSwaps.Clear();
         SavePlacements();
     }
 
@@ -156,7 +159,9 @@ public partial class MainWindow
     {
         var area = Placement.WorkArea(this);
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
-        var layout = FullScreenLayout.Arrange(new TileRect(area.X, area.Y, area.Width, area.Height), windows.Select(entry => entry.Tile).ToList());
+        var tiles = windows.Select(entry => entry.Tile).ToList();
+        var layout = FullScreenLayout.Arrange(new TileRect(area.X, area.Y, area.Width, area.Height), tiles);
+        WindowSwap.Apply(layout, tiles, _settings.FullScreenSwaps);
         // The player first: macOS moves the windows that belong to it along with it, and they're placed after.
         foreach (var (window, tile) in windows)
         {
@@ -182,6 +187,25 @@ public partial class MainWindow
         }
 
         SavePlacements();
+    }
+
+    /// <summary>
+    /// A window dragged onto another swapped places with it. While Lucent's full screen, that's remembered,
+    /// so laying the windows out again (as one opens or closes) keeps the two where they were swapped to.
+    /// </summary>
+    private void RememberSwap(Window dragged, Window other)
+    {
+        if (!_settings.LucentFullScreen)
+        {
+            return;
+        }
+
+        var tiled = TiledWindows();
+        if (tiled.FirstOrDefault(entry => entry.Window == dragged).Name is { } first
+            && tiled.FirstOrDefault(entry => entry.Window == other).Name is { } second)
+        {
+            WindowSwap.Remember(_settings.FullScreenSwaps, first, second);
+        }
     }
 
     /// <summary>The shown windows Lucent full screen lays out, the player first, by the names their places are kept under.</summary>

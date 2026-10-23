@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucent for Windows and Mac</title>
-<meta name="description" content="Lucent is a spiritual successor to Winamp, a music player built for audio nerds: a real video and audio editor, a studio analyzer, a 32-band equalizer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
+<meta name="description" content="Lucent is a spiritual successor to Winamp, a music player built for audio nerds: a real video and audio editor, a studio analyzer, a 32-band equalizer, and 453 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
 <meta property="og:title" content="Lucent">
-<meta property="og:description" content="A music player built for audio nerds, with a video and audio editor, a studio analyzer, and 454 live GPU visuals, MilkDrop and Winamp AVS presets included.">
+<meta property="og:description" content="A music player built for audio nerds, with a video and audio editor, a studio analyzer, and 453 live GPU visuals, MilkDrop and Winamp AVS presets included.">
 <meta property="og:image" content="https://lucentaudio.net/img/full-screen.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#09090C">
@@ -400,8 +400,8 @@ html[data-light] .desk { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
 .lw-vis img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .lw-vis span { position: absolute; left: 8px; bottom: 8px; font-size: 10.5px; color: #fff; background: rgba(0,0,0,.55); padding: 3px 8px; border-radius: var(--k-round); }
 
-/* Classic: raised bevels around a sunken black LCD with scan lines. */
-[data-skin="Classic"] .desk {
+/* Retro: raised bevels around a sunken black LCD with scan lines. */
+[data-skin="Retro"] .desk {
   --k-wr: 0px; --k-cr: 0px; --k-round: 2px;
   --k-ui: Tahoma, Verdana, var(--font-body); --k-disp: "VT323", "Lucida Console", var(--font-mono); --k-dw: 400; --k-case: uppercase; --k-track: .04em;
   --k-win: var(--surface); --k-shadow: 0 30px 60px -30px rgba(0,0,0,.7), inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--lo);
@@ -414,10 +414,10 @@ html[data-light] .desk { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
   --k-face: linear-gradient(180deg, var(--raised), var(--surface)); --k-blight: var(--hi); --k-bdark: var(--lo); --k-glyph: var(--fg);
   --k-pglow: none;
 }
-[data-skin="Classic"] .lw-time { font-size: 38px; }
-[data-skin="Classic"] .desk { --k-knob: var(--k-face); --k-kr: 0; --k-kw: 14px; --k-kh: 11px; --k-track-in: inset 1px 1px 0 rgba(0,0,0,.6); }
-[data-skin="Classic"] .lw-seek, [data-skin="Classic"] .lw-vol i { border-radius: 0; box-shadow: inset 1px 1px 0 var(--lo); }
-[data-skin="Classic"] .lw-play { width: 30px; height: 26px; }
+[data-skin="Retro"] .lw-time { font-size: 38px; }
+[data-skin="Retro"] .desk { --k-knob: var(--k-face); --k-kr: 0; --k-kw: 14px; --k-kh: 11px; --k-track-in: inset 1px 1px 0 rgba(0,0,0,.6); }
+[data-skin="Retro"] .lw-seek, [data-skin="Retro"] .lw-vol i { border-radius: 0; box-shadow: inset 1px 1px 0 var(--lo); }
+[data-skin="Retro"] .lw-play { width: 30px; height: 26px; }
 /* Glass: frosted, see-through panes, light along the top, glossy round buttons. */
 [data-skin="Glass"] .desk {
   --k-wr: 19px; --k-cr: 13px;
@@ -564,7 +564,7 @@ footer .credits a { text-decoration: underline; }
         <p class="eyebrow">Built for audio nerds · Windows and Mac</p>
         <h1 id="hero-title">The Media Player <span class="grad">You Didn't Know You Needed</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a free music player for Windows and Mac, a spiritual successor to Winamp built for audio nerds. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 454 visuals drawn live on your graphics card.</p>
+          <p class="lede">Lucent is a free music player for Windows and Mac, a spiritual successor to Winamp built for audio nerds. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 453 visuals drawn live on your graphics card.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -597,8 +597,8 @@ footer .credits a { text-decoration: underline; }
 
   <div class="readout">
     <div class="wrap" aria-label="Lucent in numbers">
-      <span><b>454</b>live visuals</span>
-      <span><b>219</b>MilkDrop presets</span>
+      <span><b>453</b>live visuals</span>
+      <span><b>218</b>MilkDrop presets</span>
       <span><b>34</b>Winamp AVS presets</span>
       <span><b>30</b>ray traced</span>
       <span><b>57</b>particle</span>
@@ -627,7 +627,7 @@ footer .credits a { text-decoration: underline; }
       <div class="stack">
         <p class="eyebrow">The player</p>
         <h2 id="player-title">Your music, laid out your way.</h2>
-        <p class="lede">The player, library, queue, equalizer, analyzer, artwork, and visuals each get their own resizable window. They snap together and move as one. Lucent remembers where you left each one, a lock keeps any of them in place, and the link button takes them all along with the player.</p>
+        <p class="lede">The player, library, queue, equalizer, analyzer, artwork, and visuals each get their own resizable window. They snap together, move as one, and swap places when you drag one onto another. Lucent remembers where you left each one, a lock keeps any of them in place, and the link button takes them all along with the player.</p>
         <div class="keys">
           <div><kbd>D</kbd> Tidy every window into one neat rectangle</div>
           <div><kbd>G</kbd> Fill the screen</div>
@@ -642,14 +642,14 @@ footer .credits a { text-decoration: underline; }
   <section class="band" id="visuals" aria-labelledby="visuals-title">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">454 visuals</p>
+        <p class="eyebrow">453 visuals</p>
         <h2 id="visuals-title">Every frame is drawn live on your graphics card.</h2>
-        <p class="lede">Every visual reacts to the bass, mids, treble, and beat. Ray-traced scenes, particle storms, fractals, and Winamp's own spectrum, plus 219 MilkDrop and 34 AVS presets in the same picker.</p>
+        <p class="lede">Every visual reacts to the bass, mids, treble, and beat. Ray-traced scenes, particle storms, fractals, and Winamp's own spectrum, plus 218 MilkDrop and 34 AVS presets in the same picker.</p>
       </div>
       <div class="chips" role="group" aria-label="Filter visuals by family" id="chips"></div>
       <div class="gallery" id="gallery" aria-live="polite"></div>
       <div class="visual-notes">
-        <div><h3>MilkDrop and AVS, built in</h3><p>219 MilkDrop and 34 Winamp AVS presets, each credited to its artist. Your own .milk and .avs files import too, with a modern glow.</p></div>
+        <div><h3>MilkDrop and AVS, built in</h3><p>218 MilkDrop and 34 Winamp AVS presets, each credited to its artist. Your own .milk and .avs files import too, with a modern glow.</p></div>
         <div><h3>Visuals that know the song</h3><p>Lucent finds each song's build-ups and drops, even on radio and streaming. The glow builds into a drop, and Auto cuts to a new visual as it hits.</p></div>
         <div><h3>Find one in seconds</h3><p>Press <kbd>V</kbd> and type. Filter by tag, sort, and star favorites.</p></div>
         <div><h3>Up to 4K, with HDR</h3><p>Automatic resolution keeps it smooth. Up to 4K, Ultra detail, and HDR highlights.</p></div>
@@ -913,12 +913,12 @@ footer .credits a { text-decoration: underline; }
   /* ---------- the window tour at the top: Lucent full screen, a window at a time ---------- */
   // [name, file, place on a 2560 × 1440 screen (x, y, width, height, from FullScreenLayout), what it is, alt text, floats over the rest]
   const WINDOWS = [
-    ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with favorites and playlists a click away.", "The library, with folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada"],
+    ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with favorites and playlists a click away.", "The library, with album covers beside each song in folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada"],
     ["Player", "tour/full/player.png", [380, 0, 520, 207], "Bicep's Atlas in lossless, with a live level meter and one-click links to every other window.", "The player, playing Atlas by Bicep"],
     ["Equalizer", "tour/full/equalizer.png", [380, 207, 520, 391], "4 to 32 bands, with the music's live spectrum behind the faders.", "The 16-band equalizer on the Rock preset"],
-    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with Bicep, Tomora, and Boards of Canada songs"],
+    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with album covers beside Bicep, Tomora, and Boards of Canada songs"],
     ["Artwork", "tour/full/artwork.jpg", [0, 1027.4, 380, 412.6], "The cover of whatever's on: your files, a streaming app, or a radio station.", "The artwork window with Bicep's Isles cover"],
-    ["Visuals", "tour/full/visuals.jpg", [900, 0, 1660, 840], "454 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.", "The visuals window showing Cosmic Jellyfish"],
+    ["Visuals", "tour/full/visuals.jpg", [900, 0, 1660, 840], "453 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.", "The visuals window showing Cosmic Jellyfish"],
     ["Analyzer", "tour/full/analyzer.png", [900, 840, 729, 600], "A studio spectrogram, spectrum, waveform, and stereo scope, scrolling together.", "The analyzer"],
     ["Radio", "tour/full/radio.png", [1628.6, 840, 931.4, 600], "Thousands of stations, with SomaFM, FRISKY, Radio Paradise, Nightride FM, and NTS up front.", "The online radio window with SomaFM's channels"],
     ["Video", "tour/video.png", [1560, 150, 640, 396], "Music videos and live video stations, like Four Tet on The Lot Radio, in a window of their own.", "The video window playing Four Tet's live set on The Lot Radio", true],
@@ -1344,7 +1344,7 @@ footer .credits a { text-decoration: underline; }
   };
   const SKINS = [
     ["Lucent", "Soft corners, hairlines, and calm, modern type", "Midnight", { r: "14px", glow: "0 0 0 transparent" }],
-    ["Classic", "Square corners, raised buttons, and a black LCD, like 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
+    ["Retro", "Square corners, raised buttons, and a black LCD, like 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
     ["Glass", "Frosted panes, soft light, and big round buttons", "Deep Ocean", { r: "24px", glow: "0 0 0 1px rgba(255,255,255,.06)" }],
     ["Neon", "Hard edges that glow, over scan lines", "Ultraviolet", { r: "0px", glow: "0 0 18px -2px var(--a1)" }],
     ["Studio", "Brushed metal and an inset display, like hi-fi gear", "Graphite", { r: "6px", glow: "inset 0 1px 0 rgba(255,255,255,.08)" }],
@@ -1427,7 +1427,7 @@ footer .credits a { text-decoration: underline; }
   function applySkin(name) {
     const s = SKINS.find(x => x[0] === name); cur.skin = name;
     if (!s[4]) lastShape = name;
-    root.dataset.skin = s[4] ? "Classic" : name;
+    root.dataset.skin = s[4] ? "Retro" : name;
     root.style.setProperty("--r", s[3].r); root.style.setProperty("--glow", s[3].glow);
     skinList.querySelectorAll(".skin").forEach(x => x.setAttribute("aria-pressed", x.dataset.s === name));
     themeList.querySelectorAll(".swatch").forEach(x => x.setAttribute("aria-pressed", x.dataset.t === cur.theme && !s[4]));
@@ -1438,6 +1438,7 @@ footer .credits a { text-decoration: underline; }
     : `Theme: ${cur.theme} · Skin: ${cur.skin}`;
   const save = () => { try { localStorage.setItem("lucent-look", JSON.stringify(cur)); } catch (e) {} };
   try { const s = JSON.parse(localStorage.getItem("lucent-look") || "null"); if (s && THEMES[s.theme]) cur = s; } catch (e) {}
+  if (cur.skin === "Classic") cur.skin = "Retro"; // Retro was called Classic before
   applySkin(SKINS.some(s => s[0] === cur.skin) ? cur.skin : "Lucent"); applyTheme(cur.theme);
 
   /* ---------- loop ---------- */
