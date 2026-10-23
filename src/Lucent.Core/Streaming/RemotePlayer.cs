@@ -53,7 +53,7 @@ public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Po
 }
 
 /// <summary>The songs another app is playing through: a playlist, an album, or what's up next.</summary>
-/// <param name="Id">The <see cref="RemoteState.ListId"/> it was read for.</param>
+/// <param name="Id">The <see cref="RemoteState.ListId"/> it was read for (for what's up next, the playlist or album it plays from, or null).</param>
 /// <param name="Note">Why it isn't the whole playlist, worded for the user, or null when it is.</param>
 /// <param name="FollowsSong">True for a list that changes with every song (what's up next), so it's read again when the song changes.</param>
 public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTrack> Tracks, string? Note = null, bool FollowsSong = false);

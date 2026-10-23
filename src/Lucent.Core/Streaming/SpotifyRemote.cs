@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -42,6 +43,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     private bool _usingApp;
     private RemoteState? _web;
     private DateTime _webReadAt;
+
+    // Playlists (and Liked Songs) Spotify wouldn't share, with why, so they aren't asked for again.
+    private readonly ConcurrentDictionary<string, string> _refused = new();
 
     // What the app here said last time it was read, or null when it couldn't be.
     private RemoteState? _appRead;
@@ -139,7 +143,8 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         app = app with { Shuffle = app.Shuffle ?? web?.Shuffle, Repeat = CombineRepeat(app.Repeat, web?.Repeat) };
         if (web?.Track is not { } webTrack || !SameSong(webTrack, app.Track))
         {
-            return app with { Volume = null };
+            // A new song, until the Web API is next read, is most likely from the same playlist.
+            return app with { Volume = null, ListId = web?.ListId };
         }
 
         var track = webTrack with { Duration = app.Track!.Duration > TimeSpan.Zero ? app.Track.Duration : webTrack.Duration };
@@ -368,6 +373,12 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
 
     public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel)
     {
+        // A playlist Spotify wouldn't share isn't asked for again with every song, only what's up next.
+        if (state.ListId is { } refusedList && _refused.TryGetValue(refusedList, out var refusedNote))
+        {
+            return await UpNextAsync(state.ListId, refusedNote, cancel);
+        }
+
         string? note = null;
         try
         {
@@ -386,24 +397,45 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         catch (Refused refused)
         {
             note = refused.Note;
+            _refused[state.ListId!] = note;
         }
 
         // An artist, a radio station, a mix Spotify doesn't share: show what's up next instead.
-        return await UpNextAsync(note, cancel);
+        return await UpNextAsync(state.ListId, note, cancel);
     }
 
-    public Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel)
+    public async Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel)
     {
         var song = track.Uri ?? $"spotify:track:{track.Id}";
-        // From a playlist or album, Spotify carries on through it; from what's up next, it plays just that song.
-        var body = list.Id is { } context && !list.FollowsSong
-            ? JsonSerializer.Serialize(new Dictionary<string, object>
-            {
-                ["context_uri"] = context,
-                ["offset"] = new Dictionary<string, string> { ["uri"] = song },
-            })
-            : JsonSerializer.Serialize(new Dictionary<string, object> { ["uris"] = new[] { song } });
-        return PlayOnSomeDeviceAsync(body, cancel);
+        var justTheSong = JsonSerializer.Serialize(new Dictionary<string, object> { ["uris"] = new[] { song } });
+        if (list.Id is not { } context)
+        {
+            await PlayOnSomeDeviceAsync(justTheSong, cancel);
+            return;
+        }
+
+        // From a playlist or album, Spotify carries on through it, so it's played from there.
+        var fromList = JsonSerializer.Serialize(new Dictionary<string, object>
+        {
+            ["context_uri"] = context,
+            ["offset"] = new Dictionary<string, string> { ["uri"] = song },
+        });
+        if (!list.FollowsSong)
+        {
+            await PlayOnSomeDeviceAsync(fromList, cancel);
+            return;
+        }
+
+        // What's up next can hold songs queued from elsewhere, which aren't in the playlist, and Spotify refuses those
+        // from it: they play on their own.
+        try
+        {
+            await PlayOnSomeDeviceAsync(fromList, cancel);
+        }
+        catch (RemoteProblem) when (DateTime.UtcNow >= _waitUntil)
+        {
+            await PlayOnSomeDeviceAsync(justTheSong, cancel);
+        }
     }
 
     /// <summary>
@@ -622,8 +654,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         return new RemoteList(context, "Liked Songs", tracks);
     }
 
-    // What Spotify plays next: the song now, then its queue (GET /me/player/queue).
-    private async Task<RemoteList> UpNextAsync(string? note, CancellationToken cancel)
+    // What Spotify plays next: the song now, then its queue (GET /me/player/queue). From a playlist or album, its songs
+    // are played from it (see PlayFromListAsync), so Spotify carries on through it rather than stopping after one.
+    private async Task<RemoteList> UpNextAsync(string? context, string? note, CancellationToken cancel)
     {
         using var queue = await GetJsonAsync($"{Api}/queue", null, cancel);
         var tracks = new List<RemoteTrack>();
@@ -637,7 +670,8 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
             tracks.AddRange(next.EnumerateArray().Select(item => ParseTrack(item, null)).OfType<RemoteTrack>());
         }
 
-        return new RemoteList(null, "Up next", tracks, note, FollowsSong: true);
+        var playable = context?.Split(':') is ["spotify", "playlist" or "album", _];
+        return new RemoteList(playable ? context : null, "Up next", tracks, note, FollowsSong: true);
     }
 
     private const string PlaylistNote = "Spotify only shares the songs of playlists you made or collaborate on, so this is what's up next.";
