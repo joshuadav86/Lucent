@@ -163,8 +163,11 @@ public partial class QueueWindow : ToolWindow
         if (!ReferenceEquals(list, _remoteList))
         {
             _remoteList = list;
+            var chosen = (RemoteListView.SelectedItem as RemoteListEntry)?.Track.Id;
             _remoteEntries = list?.Tracks.Select(track => new RemoteListEntry(track)).ToList() ?? new List<RemoteListEntry>();
             RemoteListView.ItemsSource = _remoteEntries;
+            // The song chosen stays chosen when the list is read again (what's up next is, with every song).
+            RemoteListView.SelectedItem = _remoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
             _remotePlaying = null;
             var showing = list is not null;
             PlaylistView.IsVisible = !showing;

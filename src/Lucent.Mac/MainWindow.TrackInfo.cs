@@ -75,6 +75,7 @@ public partial class MainWindow
     private async void OnTagsSaved(object? sender, TagsSavedEventArgs e)
     {
         var saved = new HashSet<string>(e.Paths, StringComparer.OrdinalIgnoreCase);
+        Windows.Thumbnails.Forget(saved);
         var entries = _playlist.Where(entry => saved.Contains(entry.Track.Path)).ToList();
         var tracks = await Task.Run(() => entries.Select(entry => Track.FromFile(entry.Track.Path)).ToList());
         for (var i = 0; i < entries.Count; i++)
