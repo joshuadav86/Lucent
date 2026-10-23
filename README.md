@@ -216,7 +216,7 @@ Skins decide the shape, type, and finish of every window. Themes decide the colo
 | Skin | Look | Made for |
 |---|---|---|
 | **Lucent** | Soft corners, hairlines, and calm, modern type | Midnight |
-| **Classic** | Square corners, raised buttons, and a black LCD, like the players of 1999 | Emerald |
+| **Retro** | Square corners, raised buttons, and a black LCD, like the players of 1999 | Emerald |
 | **Glass** | Frosted panes, soft light, and big round buttons | Deep Ocean |
 | **Neon** | Hard edges that glow in the accent colour, over scan lines | Ultraviolet |
 | **Studio** | Brushed metal and an inset display, like rack-mounted hi-fi gear | Graphite |

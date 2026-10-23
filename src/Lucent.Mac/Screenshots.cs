@@ -34,7 +34,7 @@ public static partial class Screenshots
     {
         ("Player", () => PreviewPlayer("Lucent")),
         ("Player-Lucent", () => PreviewPlayer("Lucent")),
-        ("Player-Classic", () => PreviewPlayer("Classic")),
+        ("Player-Retro", () => PreviewPlayer("Retro")),
         ("Player-Glass", () => PreviewPlayer("Glass")),
         ("Player-Neon", () => PreviewPlayer("Neon")),
         ("Player-Studio", () => PreviewPlayer("Studio")),
