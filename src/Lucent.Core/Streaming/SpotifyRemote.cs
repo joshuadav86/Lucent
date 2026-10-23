@@ -13,7 +13,7 @@ namespace WinampInspiredVisualizer.Streaming;
 /// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window, its shuffle and
 /// repeat, which the player's own buttons change, and lists the account's playlists for the library.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteDevices, IRemoteModes
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -490,7 +490,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     public async Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
     {
         var song = track.Uri ?? $"spotify:track:{track.Id}";
-        var liked = playlist.Uri.EndsWith(":collection", StringComparison.Ordinal);
+        var liked = playlist.IsLiked;
         try
         {
             await RequireScopeAsync(liked ? "user-library-modify" : "playlist-modify-private", AddSignInNote, cancel);
@@ -516,11 +516,13 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     /// The song's open.spotify.com link, which opens it in Spotify or a browser for whoever it's sent to, or null when
     /// Spotify didn't say which song it is.
     /// </summary>
-    public static string? WebLink(RemoteTrack track) =>
+    public static string? LinkOf(RemoteTrack track) =>
         (track.Uri ?? $"spotify:track:{track.Id}").Split(':') is ["spotify", var kind and ("track" or "episode"), var id]
             && id.Length > 0 && id.All(char.IsLetterOrDigit)
             ? $"https://open.spotify.com/{kind}/{id}"
             : null;
+
+    string? IRemoteLinks.WebLink(RemoteTrack track) => LinkOf(track);
 
     /// <summary>
     /// Plays (what's loaded, or <paramref name="json"/>'s songs). With no device playing for the account, Spotify

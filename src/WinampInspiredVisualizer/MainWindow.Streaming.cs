@@ -274,21 +274,6 @@ public partial class MainWindow
         return playlists?.Where(playlist => playlist.CanAdd).ToList() ?? new List<RemotePlaylist>();
     }
 
-    /// <summary>Adds a Spotify song to one of the account's playlists, or to Liked Songs.</summary>
-    /// <exception cref="RemoteProblem">When Spotify won't add it, worded for the user.</exception>
-    public async Task AddToSpotifyPlaylistAsync(RemotePlaylist playlist, RemoteTrack track)
-    {
-        var added = await WithSpotifyAsync(async spotify =>
-        {
-            await spotify.AddToPlaylistAsync(playlist, track, CancellationToken.None);
-            return playlist;
-        });
-        if (added is null)
-        {
-            throw new RemoteProblem("Sign in to Spotify from the Add music menu first.");
-        }
-    }
-
     /// <summary>
     /// Asks Spotify through the connection controlling it, or, when Spotify isn't being controlled, one made just for this
     /// from the saved sign-in (which Spotify renews with each use, so two connections at once would sign each other out).
@@ -364,7 +349,7 @@ public partial class MainWindow
 
         // Spotify says which of the account's devices it's playing on, which may not be this computer.
         var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
-        TrackDetails.Text = remote.Problem
+        TrackDetails.Text = SongNotice ?? remote.Problem
             ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {where}" : $"{track.Album} · in {where}");
         TrackDetails.ToolTip = remote.Problem ?? $"The sound comes from {where}. Lucent shows it and presses its buttons.";
         ShowVolume();
