@@ -61,7 +61,8 @@ public partial class EqualizerWindow
                 Eq.PreampDb = db;
                 ClassicChanged();
             };
-            _classicView = new ClassicSurfaceView(_classic);
+            _classicView = new ClassicSurfaceView(_classic) { ContextMenu = new ContextMenu() };
+            LucentFullScreen.AddTo(_classicView.ContextMenu, this);
             Activated += (_, _) => RefreshClassic();
             Deactivated += (_, _) => RefreshClassic();
         }

@@ -32,7 +32,7 @@ public partial class LibraryWindow : ToolWindow
     {
         InitializeComponent();
         PlacementName = "Library";
-        LucentFullScreen.AddTo(LibraryMenu);
+        LucentFullScreen.AddTo(LibraryMenu, this);
         _searchTimer.Tick += (_, _) => ApplySearch();
     }
 
@@ -411,7 +411,7 @@ public partial class LibraryWindow : ToolWindow
         var folders = new MenuItem { Header = "Back to library folders" };
         folders.Click += (_, _) => SetShowingPlaylists(false);
         menu.Items.Add(folders);
-        LucentFullScreen.AddTo(menu);
+        LucentFullScreen.AddTo(menu, this);
         menu.IsOpen = true;
     }
 
@@ -995,7 +995,7 @@ public partial class LibraryWindow : ToolWindow
             menu.Items.Add(show);
         }
 
-        LucentFullScreen.AddTo(menu);
+        LucentFullScreen.AddTo(menu, this);
         menu.IsOpen = true;
     }
 

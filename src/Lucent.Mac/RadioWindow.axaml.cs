@@ -596,7 +596,7 @@ public partial class RadioWindow : Window
             }
         };
         menu.Items.Add(copy);
-        Windows.LucentFullScreen.AddTo(menu);
+        Windows.LucentFullScreen.AddTo(menu, this);
         menu.Open(row);
     }
 

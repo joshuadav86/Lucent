@@ -129,7 +129,7 @@
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
                         <StackPanel.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu x:Name="NowPlayingMenu">
                                 <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
                             </ContextMenu>
                         </StackPanel.ContextMenu>
