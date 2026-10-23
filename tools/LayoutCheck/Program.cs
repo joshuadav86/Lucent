@@ -214,6 +214,7 @@ static List<(string Name, List<TileWindow> Windows)> Sets(double playerScale)
         ("everything but the editor", new() { player, equalizer, queue, library, artwork, visuals, analyzer, radio }),
         ("player, equalizer, library, visuals and analyzer, no queue", new() { player, equalizer, library, visuals, analyzer }),
         ("player, equalizer, library and visuals, no queue", new() { player, equalizer, library, visuals }),
+        ("player, equalizer, library, visuals, video and analyzer, no queue", new() { player, equalizer, library, visuals, video, analyzer }),
         ("everything but the queue", new() { player, equalizer, library, artwork, visuals, analyzer, radio, editor }),
     };
 }
