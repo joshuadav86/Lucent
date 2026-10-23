@@ -27,8 +27,14 @@ public partial class MainWindow
         _snapper.Swapped += RememberSwap;
         if (WindowToggles.ContextMenu is { } menu)
         {
-            LucentFullScreen.AddTo(menu);
+            LucentFullScreen.AddTo(menu, this);
         }
+
+        LucentFullScreen.AddTo(NowPlayingMenu, this);
+        // A right-click anywhere else on the player gets the two on their own.
+        var playerMenu = new ContextMenu();
+        LucentFullScreen.AddTo(playerMenu, this);
+        LucentPlayer.ContextMenu = playerMenu;
 
         // Every window it lays out, as it opens: the others are laid out again whenever it's shown, hidden or closed
         // while Lucent's full screen.

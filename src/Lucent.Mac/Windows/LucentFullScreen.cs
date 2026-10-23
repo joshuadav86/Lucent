@@ -7,8 +7,9 @@ namespace Lucent.Mac.Windows;
 /// <summary>
 /// "Full screen Lucent" in the right-click menus of Lucent's windows, which switches Lucent full screen
 /// (every open window tiled across the screen, see MainWindow.FullScreen.cs) from whichever window you're
-/// in, and on a right-click on any of their title bars. It's apart from the visuals' own fullscreen. Set
-/// up once by the player as Lucent starts, like <see cref="WindowLocks"/>.
+/// in, and on a right-click on any of their title bars. "Close" (<see cref="CloseItem"/>) goes in after it.
+/// It's apart from the visuals' own fullscreen. Set up once by the player as Lucent starts, like
+/// <see cref="WindowLocks"/>.
 /// </summary>
 public static class LucentFullScreen
 {
@@ -29,8 +30,8 @@ public static class LucentFullScreen
     /// <summary>Whether a window is one that Lucent full screen lays out, whose title bar gets the menu.</summary>
     public static Func<Window, bool>? Covers { get; set; }
 
-    /// <summary>Adds "Full screen Lucent" to the end of a right-click menu, ticked while it's on. A menu kept and opened again gets it once.</summary>
-    public static void AddTo(ContextMenu menu)
+    /// <summary>Adds "Full screen Lucent", ticked while it's on, and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
+    public static void AddTo(ContextMenu menu, Window window)
     {
         if (menu.Items.OfType<MenuItem>().Any(item => item.Tag == Marker))
         {
@@ -49,6 +50,7 @@ public static class LucentFullScreen
         };
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
+        menu.Items.Add(CloseItem.For(window));
         if (!Ticking.TryGetValue(menu, out _))
         {
             Ticking.Add(menu, Marker);
@@ -62,8 +64,8 @@ public static class LucentFullScreen
         }
     }
 
-    /// <summary>Adds "Full screen Lucent" to the end of a menu that's built afresh each time it opens (the classic player's).</summary>
-    public static void AddTo(MenuFlyout menu)
+    /// <summary>Adds "Full screen Lucent" and "Close" to the end of a menu that's built afresh each time it opens (the classic player's).</summary>
+    public static void AddTo(MenuFlyout menu, Window window)
     {
         if (menu.Items.Count > 0)
         {
@@ -76,18 +78,22 @@ public static class LucentFullScreen
         };
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
+        menu.Items.Add(CloseItem.For(window));
     }
 
-    /// <summary>Opens a menu with "Full screen Lucent" at the pointer, for a right-click on a window's title bar. False for a window it doesn't lay out (a dialog, say).</summary>
+    /// <summary>Opens a menu with "Full screen Lucent" and "Close" at the pointer, for a right-click on a window's title bar. A window it doesn't lay out (a dialog, say) gets just "Close".</summary>
     public static bool ShowWindowMenu(Window window, Control at)
     {
-        if (Covers?.Invoke(window) != true)
+        var menu = new ContextMenu { Placement = PlacementMode.Pointer };
+        if (Covers?.Invoke(window) == true)
         {
-            return false;
+            AddTo(menu, window);
+        }
+        else
+        {
+            menu.Items.Add(CloseItem.For(window));
         }
 
-        var menu = new ContextMenu { Placement = PlacementMode.Pointer };
-        AddTo(menu);
         menu.Open(at);
         return true;
     }

@@ -78,7 +78,9 @@ public partial class QueueWindow
             {
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                ContextMenu = new ContextMenu(),
             };
+            LucentFullScreen.AddTo(_classicView.ContextMenu, this);
             _classicLists = new Grid();
             _classicRoot = new Grid { Children = { _classicView, _classicLists } };
             _listsHome = (Panel)PlaylistView.Parent!;

@@ -322,7 +322,7 @@ public partial class MainWindow
         menu.Items.Add(MenuItemFor("Sources…", () => ToggleSources(SourcesButton)));
         menu.Items.Add(MenuItemFor("Options…", ShowOptions));
 
-        LucentFullScreen.AddTo(menu);
+        LucentFullScreen.AddTo(menu, this);
     }
 
     private static MenuItem MenuItemFor(string header, Action action)

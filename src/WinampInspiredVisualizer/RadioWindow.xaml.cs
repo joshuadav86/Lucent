@@ -555,7 +555,7 @@ public partial class RadioWindow : Window
         var copy = new MenuItem { Header = "Copy the stream's address" };
         copy.Click += (_, _) => Clipboard.SetText(station.StreamUrl);
         menu.Items.Add(copy);
-        Windows.LucentFullScreen.AddTo(menu);
+        Windows.LucentFullScreen.AddTo(menu, this);
         menu.IsOpen = true;
     }
 

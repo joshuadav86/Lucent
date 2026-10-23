@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using WinampInspiredVisualizer.Editor;
 using WinampInspiredVisualizer.Layout;
@@ -24,7 +25,11 @@ public partial class MainWindow
         LucentFullScreen.Toggle = ToggleLucentFullScreen;
         LucentFullScreen.Covers = window => TileKindOf(window) is not null;
         _snapper.Swapped += RememberSwap;
-        LucentFullScreen.AddTo(WindowToggles.ContextMenu);
+        LucentFullScreen.AddTo(WindowToggles.ContextMenu, this);
+        LucentFullScreen.AddTo(NowPlayingMenu, this);
+        // A right-click anywhere else on the player gets the two on their own.
+        LucentPlayer.ContextMenu = new ContextMenu();
+        LucentFullScreen.AddTo(LucentPlayer.ContextMenu, this);
         // Every window it lays out, as it first opens: the others are laid out again whenever it's shown or
         // hidden while Lucent's full screen.
         EventManager.RegisterClassHandler(typeof(Window), LoadedEvent, new RoutedEventHandler((sender, _) =>

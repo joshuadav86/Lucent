@@ -53,7 +53,7 @@ public partial class LibraryWindow : ToolWindow
         InitializeComponent();
         Chrome.UseLucentFrame(this);
         PlacementName = "Library";
-        LucentFullScreen.AddTo(LibraryMenu);
+        LucentFullScreen.AddTo(LibraryMenu, this);
         _searchTimer.Tick += (_, _) => ApplySearch();
         LibraryView.ItemsSource = _rows;
         LibraryView.ContainerPrepared += OnRowPrepared;
@@ -652,7 +652,7 @@ public partial class LibraryWindow : ToolWindow
         var folders = new MenuItem { Header = "Back to library folders" };
         folders.Click += (_, _) => SetShowingPlaylists(false);
         menu.Items.Add(folders);
-        Windows.LucentFullScreen.AddTo(menu);
+        Windows.LucentFullScreen.AddTo(menu, this);
         menu.Open(LibraryView);
     }
 
@@ -1240,7 +1240,7 @@ public partial class LibraryWindow : ToolWindow
             menu.Items.Add(show);
         }
 
-        Windows.LucentFullScreen.AddTo(menu);
+        Windows.LucentFullScreen.AddTo(menu, this);
         menu.Open(LibraryView);
     }
 
