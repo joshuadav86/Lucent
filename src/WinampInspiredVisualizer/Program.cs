@@ -46,6 +46,8 @@ public static class Program
 
         App.StartupPaths = paths;
         AppDataFolder.CopyFromOldName();
+        // Pre-1.0 builds can start everyone who updates from scratch (see FreshStart.Generation).
+        FreshStart.Apply();
 
         var app = new App();
         ErrorLog.Watch(app);

@@ -47,6 +47,8 @@ public static class Program
 
         // Settings, playlists and visuals from before Lucent was renamed come across on the first run.
         AppDataFolder.CopyFromOldName();
+        // Pre-1.0 builds can start everyone who updates from scratch (see FreshStart.Generation).
+        FreshStart.Apply();
         CrashReports.Start();
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
