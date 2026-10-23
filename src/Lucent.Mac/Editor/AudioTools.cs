@@ -58,6 +58,15 @@ public static class AudioTools
 
     internal static void NotifyEditorPlayingChanged() => EditorPlayingChanged?.Invoke(null, EventArgs.Empty);
 
+    /// <summary>Stops every editor that's playing; the player's Stop stops them too.</summary>
+    public static void StopEditors()
+    {
+        foreach (var editor in Editors.ToList())
+        {
+            editor.StopPlaying();
+        }
+    }
+
     internal static void NotifyFilesReplaced(IReadOnlyList<string> paths)
     {
         if (paths.Count > 0)
