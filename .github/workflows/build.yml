@@ -10,20 +10,23 @@ permissions:
   contents: write
 
 jobs:
-  # Changes to the website alone (site/, published by pages.yml) don't need the apps built, tested, or
-  # published again. Every other job still reports under its usual name, so the required checks pass,
-  # but does nothing: the jobs are skipped, and the Mac matrix (whose check names only exist once it
-  # runs) runs on Linux with every step skipped. Anything else in the change, and everything runs.
+  # Each app is only built, tested, and published when something it's made from changed: the website
+  # alone (site/, published by pages.yml) needs neither, and a change only to the Mac app doesn't make a
+  # new Windows build, or the other way round (tools/ci/apps-changed.sh says which files are whose). The
+  # skipped jobs still report under their usual names, so the required checks pass: they're skipped, and
+  # the Mac matrix (whose check names only exist once it runs) runs on Linux with every step skipped.
   changes:
     runs-on: ubuntu-latest
     outputs:
       app: ${{ steps.check.outputs.app }}
+      windows: ${{ steps.check.outputs.windows }}
+      mac: ${{ steps.check.outputs.mac }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Check whether the apps changed
+      - name: Check which apps changed
         id: check
         shell: bash
         env:
@@ -31,40 +34,61 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          website='^(site/|\.github/workflows/pages\.yml$)'
+          # Which apps the changes in a range of commits touch; both if the range can't be read.
+          apps_in() {
+            if [ -n "$1" ] && files=$(git diff --name-only "$1"); then
+              echo "$files" | tools/ci/apps-changed.sh
+            else
+              echo "windows mac"
+            fi
+          }
+          # The commit a build on the latest release was made from, if it's there and known here.
+          built_from() {
+            [ -n "$1" ] && git cat-file -e "$1^{commit}" 2> /dev/null && echo "$1..$GITHUB_SHA"
+          }
           case "$GITHUB_EVENT_NAME" in
-            pull_request) range="$BASE...$HEAD" ;;
-            # On main, compare with the build installed copies have now, not only the last push, so an
+            pull_request)
+              windows_apps=$(apps_in "$BASE...$HEAD"); mac_apps=$windows_apps ;;
+            # On main, compare with the builds installed copies have now, not only the last push, so an
             # app change whose build was cancelled by a newer push is still built.
-            push) built=$(gh release view latest --json targetCommitish --jq .targetCommitish 2> /dev/null || true)
-                  if [ -n "$built" ] && git cat-file -e "$built^{commit}" 2> /dev/null; then range="$built..$GITHUB_SHA"; fi ;;
+            push)
+              windows_apps=$(apps_in "$(built_from "$(gh release view latest --json targetCommitish --jq .targetCommitish 2> /dev/null)")")
+              mac_apps=$(apps_in "$(built_from "$(gh release download latest -p commit-osx-x64.txt -O - 2> /dev/null)")") ;;
+            *) windows_apps="windows mac"; mac_apps="windows mac" ;;
           esac
-          if [ -n "${range:-}" ] && files=$(git diff --name-only "$range") && [ -n "$files" ] && ! grep -qvE "$website" <<< "$files"; then
-            echo "Only the website changed ($range), so the apps aren't built:"
-            echo "$files"
-            echo "app=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "app=true" >> "$GITHUB_OUTPUT"
-          fi
+          windows=false; mac=false
+          [[ " $windows_apps " == *" windows "* ]] && windows=true
+          [[ " $mac_apps " == *" mac "* ]] && mac=true
+          app=false
+          if [ "$windows" = true ] || [ "$mac" = true ]; then app=true; fi
+          echo "Build Windows: $windows. Build the Mac: $mac."
+          { echo "windows=$windows"; echo "mac=$mac"; echo "app=$app"; } >> "$GITHUB_OUTPUT"
 
-      # The app's "what's new" list leaves out website-only changes; it reads which they were from this
-      # file on the release (merge commits on main whose changes were all to the website).
-      - name: List the website-only changes
+      # The app's "what's new" list leaves out changes that aren't to that app: those only to the website,
+      # and those only to the other platform. It reads which they were from these files on the release
+      # (merge commits on main), which every build that publishes uploads.
+      - name: List the changes that aren't to both apps
         if: steps.check.outputs.app == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
-          website='^(site/|\.github/workflows/pages\.yml$)'
+          : > website-changes.txt; : > windows-changes.txt; : > mac-changes.txt
           git log --first-parent --merges --format=%H -n 500 "$GITHUB_SHA" | while read -r merge; do
-            files=$(git diff --name-only "$merge^1" "$merge")
-            if [ -n "$files" ] && ! grep -qvE "$website" <<< "$files"; then echo "$merge"; fi
-          done > website-changes.txt
-          wc -l website-changes.txt
+            case "$(git diff --name-only "$merge^1" "$merge" | tools/ci/apps-changed.sh)" in
+              "") echo "$merge" >> website-changes.txt ;;
+              windows) echo "$merge" >> windows-changes.txt ;;
+              mac) echo "$merge" >> mac-changes.txt ;;
+            esac
+          done
+          wc -l website-changes.txt windows-changes.txt mac-changes.txt
 
       - uses: actions/upload-artifact@v4
         if: steps.check.outputs.app == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          name: website-changes
-          path: website-changes.txt
+          name: change-lists
+          path: |
+            website-changes.txt
+            windows-changes.txt
+            mac-changes.txt
 
   # The audio editor's stem splitter model: Demucs' HTDemucs exported to ONNX and checked against Demucs
   # itself (see tools/StemModel). It's cached until the export changes, tested by the Windows and Mac
@@ -124,7 +148,7 @@ jobs:
 
   build:
     needs: [changes, stem-model]
-    if: needs.changes.outputs.app == 'true'
+    if: needs.changes.outputs.windows == 'true'
     runs-on: windows-latest
     # Merging several pull requests close together starts several builds of main at once. Only the
     # newest one should publish the Windows download, so a newer build of main cancels an older Windows
@@ -424,7 +448,7 @@ jobs:
       - uses: actions/download-artifact@v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          name: website-changes
+          name: change-lists
 
       - name: Update "latest" download
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -442,6 +466,9 @@ jobs:
           # still be running; keep the newest ones until that job replaces them.
           mkdir -p mac-carry
           gh release download latest -p '*mac*' -p '*osx*' -D mac-carry 2> /dev/null || true
+          rm -f mac-carry/*-changes.txt
+          # Which commit this Windows build is from, for the app's what's new (the Mac builds add their own).
+          echo "$GITHUB_SHA" > commit-win.txt
           cat > release-notes.md << 'NOTES'
           Automatic build of the newest version on main.
 
@@ -452,7 +479,7 @@ jobs:
           gh release delete latest --cleanup-tag --yes || true
           # The .nupkg and the releases/assets files are what installed copies of Lucent update from.
           gh release create latest Lucent-Setup.exe Lucent-win-x64.zip \
-            releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES website-changes.txt \
+            releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES commit-win.txt website-changes.txt windows-changes.txt mac-changes.txt \
             --target "$GITHUB_SHA" --prerelease \
             --title "Latest build ($LUCENT_VERSION)" \
             --notes-file release-notes.md
@@ -490,7 +517,7 @@ jobs:
   # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
   metal-shaders:
     needs: changes
-    if: needs.changes.outputs.app == 'true'
+    if: needs.changes.outputs.mac == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -519,7 +546,7 @@ jobs:
   # file for both kinds of Mac, once per DXC version (the result is cached), and ships inside Lucent.app.
   dxc-mac:
     needs: changes
-    if: needs.changes.outputs.app == 'true'
+    if: needs.changes.outputs.mac == 'true'
     # On an Intel Mac: GitHub's Apple silicon Macs are often all busy, and a job waiting for one is
     # cancelled after about 15 minutes, which held up both Mac builds. This only restores (or, once,
     # builds) a universal library, so either kind of Mac will do, and the Intel ones have been free.
@@ -590,7 +617,7 @@ jobs:
   #   APPLE_APP_PASSWORD               (optional, for notarizing) an app-specific password for that Apple ID
   mac:
     needs: [changes, metal-shaders, dxc-mac, stem-model]
-    # Runs (rather than being skipped) when only the website changed, so its required checks still
+    # Runs (rather than being skipped) when the Mac app didn't change, so its required checks still
     # report under their full names; it then takes a Linux runner and skips every step.
     if: ${{ !cancelled() && !failure() }}
     strategy:
@@ -605,39 +632,39 @@ jobs:
           - arch: x64
             runner: macos-15-intel
             cpu: x86_64
-    runs-on: ${{ needs.changes.outputs.app == 'true' && matrix.runner || 'ubuntu-latest' }}
+    runs-on: ${{ needs.changes.outputs.mac == 'true' && matrix.runner || 'ubuntu-latest' }}
     # Builds of main queue up per chip rather than cancelling each other: a Mac build takes longer than the gap between merges, so cancelling would mean none ever finished
     # and published. GitHub keeps only the newest waiting build, so the queue never grows past one.
     concurrency:
-      group: ${{ needs.changes.outputs.app == 'true' && github.event_name == 'push' && format('publish-latest-mac-{0}', matrix.arch) || format('mac-{0}-{1}', github.run_id, matrix.arch) }}
+      group: ${{ needs.changes.outputs.mac == 'true' && github.event_name == 'push' && format('publish-latest-mac-{0}', matrix.arch) || format('mac-{0}-{1}', github.run_id, matrix.arch) }}
       cancel-in-progress: false
     env:
       LUCENT_VERSION: 1.0.${{ github.run_number }}
       RID: osx-${{ matrix.arch }}
-      BUILD_APP: ${{ needs.changes.outputs.app }}
+      BUILD_MAC: ${{ needs.changes.outputs.mac }}
     steps:
       - uses: actions/checkout@v4
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
 
       - uses: actions/setup-dotnet@v4
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         with:
           dotnet-version: 8.0.x
 
       - uses: actions/download-artifact@v4
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         with:
           name: metal-shaders
           path: artifacts/metal-shaders
 
       - uses: actions/download-artifact@v4
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         with:
           name: dxc-mac
           path: artifacts/dxc-mac
 
       - name: Check the Metal shaders compile
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         run: |
           # Xcode's offline Metal compiler, when this runner has it; the self-test below compiles
           # them on the graphics card as well.
@@ -659,21 +686,21 @@ jobs:
       # executable: libmp3lame (MP3 saving) and the VST3 plugin helper (src/PluginHost). Both are universal.
       # DXC 1.8 and the VST3 SDK still set CMake policies that CMake 4 (on the Mac runners) no longer allows.
       - uses: jwlawson/actions-setup-cmake@v2
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         with:
           cmake-version: '3.31.x'
 
       - name: Build LAME for MP3 saving
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         run: tools/build-lame-mac.sh
 
       - name: Build the VST3 plugin helper
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         run: tools/build-pluginhost-mac.sh
 
 
       - name: Publish the Mac app
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         run: >
           dotnet publish src/Lucent.Mac/Lucent.Mac.csproj
           -c Release -r ${{ env.RID }} --self-contained true
@@ -683,17 +710,17 @@ jobs:
           -o publish-mac
 
       - name: Make test music
-        if: env.BUILD_APP == 'true' && (matrix.arch == 'x64')
+        if: env.BUILD_MAC == 'true' && (matrix.arch == 'x64')
         run: tools/mac/make-test-music.sh
 
       - uses: actions/download-artifact@v4
-        if: env.BUILD_APP == 'true' && (matrix.arch == 'x64')
+        if: env.BUILD_MAC == 'true' && (matrix.arch == 'x64')
         with:
           name: stem-model
           path: stem-model
 
       - name: Self-test (decoding, videos, every visual, recording a video, and the stem splitter)
-        if: env.BUILD_APP == 'true' && (matrix.arch == 'x64')
+        if: env.BUILD_MAC == 'true' && (matrix.arch == 'x64')
         # A hang fails the build instead of holding the runner for GitHub's six-hour limit.
         timeout-minutes: 40
         env:
@@ -709,7 +736,7 @@ jobs:
             test.wav test.m4a test-alac.m4a test.flac test.aiff
 
       - name: Set up signing
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         id: signing
         env:
           MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
@@ -778,7 +805,7 @@ jobs:
           fi
 
       - name: Make Lucent.app
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         env:
           MAC_SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
           MAC_KEYCHAIN: ${{ steps.signing.outputs.keychain }}
@@ -801,7 +828,7 @@ jobs:
           ditto -c -k --keepParent out/Lucent.app "Lucent-mac-${{ matrix.arch }}.zip"
 
       - name: Build the installer and update package
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         # A few minutes normally, plus Apple notarizing the installer; fail rather than hang for hours.
         timeout-minutes: 60
         env:
@@ -858,31 +885,31 @@ jobs:
           cp releases-mac/*.nupkg "releases-mac/releases.$RID.json" "releases-mac/assets.$RID.json" "releases-mac/RELEASES-$RID" mac-release/
 
       - name: Check Lucent.app opens and lays out its windows
-        if: env.BUILD_APP == 'true' && (matrix.arch == 'x64')
+        if: env.BUILD_MAC == 'true' && (matrix.arch == 'x64')
         run: tools/mac/launch-check.sh check/Lucent.app
 
       - uses: actions/upload-artifact@v4
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         with:
           name: Lucent-mac-${{ matrix.arch }}
           path: Lucent-mac-${{ matrix.arch }}.zip
 
       - uses: actions/upload-artifact@v4
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         with:
           name: Lucent-Setup-mac-${{ matrix.arch }}
           path: mac-release/Lucent-Setup-mac-${{ matrix.arch }}.pkg
 
       # Everything the "latest" release gets from this Mac build.
       - uses: actions/upload-artifact@v4
-        if: env.BUILD_APP == 'true'
+        if: env.BUILD_MAC == 'true'
         with:
           name: mac-release-${{ matrix.arch }}
           path: mac-release
           retention-days: 3
 
       - uses: actions/upload-artifact@v4
-        if: env.BUILD_APP == 'true' && (always())
+        if: env.BUILD_MAC == 'true' && (always())
         with:
           name: mac-visuals-${{ matrix.arch }}
           path: mac-visuals-${{ matrix.arch }}.png
@@ -891,11 +918,20 @@ jobs:
       # Each Mac build adds its own downloads to "latest" as soon as it's done, without waiting for the
       # other chip's. The Windows build makes that release (and carries the Mac files over when it
       # replaces it), so wait for it to exist, and retry if the Windows build is replacing it right then.
+      # Without a Windows build of this commit, the lists of changes on the release come from here instead.
+      - uses: actions/download-artifact@v4
+        if: env.BUILD_MAC == 'true' && (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.windows != 'true')
+        with:
+          name: change-lists
+          path: mac-release
+
       - name: Add this Mac's downloads to "latest"
-        if: env.BUILD_APP == 'true' && (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: env.BUILD_MAC == 'true' && (github.event_name == 'push' && github.ref == 'refs/heads/main')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Which commit this Mac build is from, for the app's what's new and for finding what changed since.
+          echo "$GITHUB_SHA" > "mac-release/commit-$RID.txt"
           for attempt in $(seq 1 60); do
             if gh release view latest -R "$GITHUB_REPOSITORY" > /dev/null 2>&1 &&
                gh release upload latest mac-release/* -R "$GITHUB_REPOSITORY" --clobber; then
@@ -913,7 +949,7 @@ jobs:
           exit 1
 
       - name: Remove the signing keychain
-        if: env.BUILD_APP == 'true' && (always() && steps.signing.outputs.keychain != '')
+        if: env.BUILD_MAC == 'true' && (always() && steps.signing.outputs.keychain != '')
         run: security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
 
   # The Apple silicon build from the mac job, tested on an Apple silicon Mac: the self-test, then the
@@ -921,7 +957,7 @@ jobs:
   # GitHub's scarce Apple silicon runners never holds up a merge or the "latest" download.
   mac-arm64-check:
     needs: [changes, mac, stem-model]
-    if: needs.changes.outputs.app == 'true'
+    if: needs.changes.outputs.mac == 'true'
     runs-on: macos-latest
     # As with the mac job, builds of main queue up here, keeping only the newest waiting one.
     concurrency:
