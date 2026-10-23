@@ -14,7 +14,7 @@ public static class FreshStart
     /// 0 keeps everyone's settings between updates (Joshua's call, 2026-10-23). Raising it above 0 would give
     /// everyone a fresh start once on their next update.
     /// </summary>
-    public const int Generation = 0;
+    public static readonly int Generation = 0;
 
     /// <summary>What a fresh start leaves in the data folder: sign-ins and downloads, not preferences.</summary>
     private static readonly string[] Kept =
