@@ -2031,6 +2031,9 @@ public partial class MainWindow : Window
 
     private void StopPlayback()
     {
+        // Stop means stop: a song or video playing in the editor stops too.
+        AudioTools.StopEditors();
+
         if (RemoteTakes(remote => remote.StopAsync()))
         {
             return;
