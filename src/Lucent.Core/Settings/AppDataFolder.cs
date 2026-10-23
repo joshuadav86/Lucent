@@ -14,6 +14,9 @@ public static class AppDataFolder
         ? Environment.SpecialFolder.LocalApplicationData
         : Environment.SpecialFolder.ApplicationData);
 
+    /// <summary>Whether LUCENT_DATA_FOLDER put the folder somewhere else.</summary>
+    public static bool IsCustom { get; } = Environment.GetEnvironmentVariable("LUCENT_DATA_FOLDER") is { Length: > 0 };
+
     public static string Path { get; } = Environment.GetEnvironmentVariable("LUCENT_DATA_FOLDER") is { Length: > 0 } custom
         ? custom
         : System.IO.Path.Combine(Roaming, "Lucent");
