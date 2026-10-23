@@ -3,6 +3,8 @@ namespace WinampInspiredVisualizer.Radio;
 /// <summary>
 /// The stations the radio browser opens on: listener-supported networks audio nerds already know, built in so they
 /// play even when the directory is down. FRISKY's stations move around, so they're looked up in the directory instead.
+/// Only high quality streams are featured (see <see cref="IsHighQuality"/>): each network's best stream, with its
+/// everyday one kept as a <see cref="RadioStation.Backup"/> for when the best one can't be reached.
 /// </summary>
 public static class FeaturedStations
 {
@@ -34,6 +36,71 @@ public static class FeaturedStations
         [TheLot] = "https://www.thelotradio.com/shop",
         [Nts] = "https://www.nts.live/supporters",
     };
+
+    /// <summary>The lowest bitrate featured for MP3 and other older formats, in kbps.</summary>
+    public const int MinBitrate = 192;
+
+    /// <summary>The lowest featured for AAC, Opus and Ogg, which sound as good as MP3 at about one and a half times the bitrate.</summary>
+    public const int MinEfficientBitrate = 128;
+
+    /// <summary>
+    /// True when a station sounds good enough to feature: lossless (FLAC), AAC, Opus or Ogg at 128 kbps or more, or
+    /// MP3 at 192 kbps or more. Video stations are featured for their picture. The built-in stations below are picked by
+    /// hand at their networks' best streams; this sorts the ones looked up in the directory.
+    /// </summary>
+    public static bool IsHighQuality(RadioStation station)
+    {
+        if (station.HasVideo)
+        {
+            return true;
+        }
+
+        var codec = station.Codec.ToUpperInvariant();
+        if (codec.Contains("FLAC"))
+        {
+            return true;
+        }
+
+        var efficient = codec.Contains("AAC") || codec.Contains("OPUS") || codec.Contains("OGG") || codec.Contains("VORBIS");
+        return station.Bitrate >= (efficient ? MinEfficientBitrate : MinBitrate);
+    }
+
+    /// <summary>
+    /// A looked-up network's stations from a directory search: only the ones named for it, each at its best stream,
+    /// and only those that are <see cref="IsHighQuality">high quality</see>. (The directory already leaves out streams
+    /// that were down at its last check.)
+    /// </summary>
+    public static List<RadioStation> BestStations(IEnumerable<RadioStation> found, string name, string network) =>
+        found.Where(station => station.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(station => RadioDirectory.NameKey(station.Name))
+            .Select(copies => copies.Where(IsHighQuality).OrderByDescending(Quality).ThenByDescending(station => station.Votes).FirstOrDefault())
+            .OfType<RadioStation>()
+            .Select(station => station with { Network = network })
+            .ToList();
+
+    // MP3 kbps that sound about the same: AAC, Opus and Ogg count half again.
+    private static double Quality(RadioStation station)
+    {
+        var codec = station.Codec.ToUpperInvariant();
+        if (codec.Contains("FLAC"))
+        {
+            return double.MaxValue;
+        }
+
+        var efficient = codec.Contains("AAC") || codec.Contains("OPUS") || codec.Contains("OGG") || codec.Contains("VORBIS");
+        return station.Bitrate * (efficient ? 1.5 : 1.0);
+    }
+
+    /// <summary>
+    /// A featured station as Lucent lists it now, for a copy saved in the favorites or recently played before its
+    /// stream changed (SomaFM's were 128 kbps MP3), so it plays at today's quality. Any other station comes back as it is.
+    /// </summary>
+    public static RadioStation Latest(RadioStation station) =>
+        station.IsFromDirectory || station.Network is null
+            ? station
+            : Stations.FirstOrDefault(featured => featured.Id == station.Id) is { } latest
+                ? latest with { Video = latest.Video || station.Video }
+                : station;
 
     // The networks' own web addresses, so their stations found in the directory are known too.
     private static readonly (string Host, string Network)[] Hosts =
@@ -104,12 +171,9 @@ public static class FeaturedStations
         Soma("metal", "Metal Detector", "metal", "rock", "heavy metal"),
         Soma("digitalis", "Digitalis", "electronic", "alternative", "rock"),
         Soma("sf1033", "SF 10-33", "ambient", "scanner", "experimental"),
-        Station(RadioParadise, "radioparadise:main", "Radio Paradise Main Mix", "http://stream.radioparadise.com/mp3-192", 192,
-            "https://radioparadise.com", "eclectic", "rock", "world"),
-        Station(RadioParadise, "radioparadise:mellow", "Radio Paradise Mellow Mix", "http://stream.radioparadise.com/mellow-192", 192,
-            "https://radioparadise.com", "eclectic", "chillout", "acoustic"),
-        Station(RadioParadise, "radioparadise:rock", "Radio Paradise Rock Mix", "http://stream.radioparadise.com/rock-192", 192,
-            "https://radioparadise.com", "rock", "classic rock", "alternative"),
+        Paradise("main", "aac-320", "mp3-192", "Radio Paradise Main Mix", "eclectic", "rock", "world"),
+        Paradise("mellow", "mellow-320", "mellow-192", "Radio Paradise Mellow Mix", "eclectic", "chillout", "acoustic"),
+        Paradise("rock", "rock-320", "rock-192", "Radio Paradise Rock Mix", "rock", "classic rock", "alternative"),
         Station(Nightride, "nightride:nightride", "Nightride FM", "https://stream.nightride.fm/nightride.mp3", 320,
             "https://nightride.fm", "synthwave", "retrowave", "electronic"),
         Station(Nightride, "nightride:chillsynth", "Chillsynth", "https://stream.nightride.fm/chillsynth.mp3", 320,
@@ -126,9 +190,33 @@ public static class FeaturedStations
             "https://www.nts.live", "dj sets", "eclectic", "experimental") with { Country = "United Kingdom", CountryCode = "GB" },
     };
 
-    private static RadioStation Soma(string channel, string name, params string[] tags) =>
-        Station(SomaFm, $"somafm:{channel}", name, $"https://ice1.somafm.com/{channel}-128-mp3", 128,
+    // SomaFM's best is 320 kbps AAC over HLS; its 128 kbps MP3 Icecast stream is the backup.
+    private static RadioStation Soma(string channel, string name, params string[] tags)
+    {
+        var everyday = Station(SomaFm, $"somafm:{channel}", name, $"https://ice1.somafm.com/{channel}-128-mp3", 128,
             $"https://somafm.com/{channel}/", tags);
+        return everyday with
+        {
+            StreamUrl = $"https://hls.somafm.com/hls/{channel}/320k/program.m3u8",
+            Codec = "AAC",
+            Bitrate = 320,
+            Backup = everyday,
+        };
+    }
+
+    // Radio Paradise's best is 320 kbps AAC; its 192 kbps MP3 stream is the backup.
+    private static RadioStation Paradise(string mix, string best, string everyday, string name, params string[] tags)
+    {
+        var backup = Station(RadioParadise, $"radioparadise:{mix}", name, $"http://stream.radioparadise.com/{everyday}", 192,
+            "https://radioparadise.com", tags);
+        return backup with
+        {
+            StreamUrl = $"https://stream.radioparadise.com/{best}",
+            Codec = "AAC",
+            Bitrate = 320,
+            Backup = backup,
+        };
+    }
 
     private static RadioStation Station(string network, string id, string name, string url, int bitrate, string homepage, params string[] tags) =>
         new()

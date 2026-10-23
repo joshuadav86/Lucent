@@ -123,13 +123,13 @@ public static class RadioGuide
         var stations = section switch
         {
             Featured => featured,
-            Favorites => settings.RadioFavorites,
+            Favorites => settings.RadioFavorites.Select(FeaturedStations.Latest).ToList(),
             // The featured ones first, then any others played or starred that turned out to have video.
             LiveAndVideo => featured.Concat(settings.RadioFavorites).Concat(settings.RadioRecent)
                 .Where(station => IsLiveDj(station) || HasVideo(settings, station))
                 .DistinctBy(station => station.Id)
                 .ToList(),
-            _ => settings.RadioRecent,
+            _ => settings.RadioRecent.Select(FeaturedStations.Latest).ToList(),
         };
         var shown = stations
             .Where(station => Matches(station, search) && PassesFilters(station, settings));
