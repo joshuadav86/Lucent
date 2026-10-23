@@ -1,4 +1,5 @@
 using NAudio.Wave;
+using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Editor.Dsp;
 
 namespace WinampInspiredVisualizer.Editor;
@@ -9,10 +10,20 @@ namespace WinampInspiredVisualizer.Editor;
 /// </summary>
 public sealed class EditorPlayer : IDisposable
 {
+    /// <summary>How much audio is queued ahead of the speakers (WaveOutEvent's DesiredLatency).</summary>
+    private const int LatencyMs = 120;
+
+    private readonly AudioCapture? _capture;
     private WaveOutEvent? _output;
     private RangeSampleProvider? _provider;
+    private EditorFeed? _feed;
     private int _startFrame;
     private int _channels = 1;
+
+    /// <param name="capture">
+    /// Where the visuals, meter, and analyzer look (the main player's), so they follow the editor while it plays.
+    /// </param>
+    public EditorPlayer(AudioCapture? capture = null) => _capture = capture;
 
     /// <summary>Raised (on the audio thread's context, usually the UI thread) when playback stops by itself or fails.</summary>
     public event EventHandler<Exception?>? Stopped;
@@ -84,14 +95,30 @@ public sealed class EditorPlayer : IDisposable
         _provider = new RangeSampleProvider(audio, from, to) { Loop = loop && to - from > audio.SampleRate / 20 };
         Meter = new LiveMeter(audio.ChannelCount, audio.SampleRate);
         var processed = through is null ? _provider : through(_provider);
-        _output = new WaveOutEvent { DesiredLatency = 120 };
+        if (_capture is not null)
+        {
+            // What's heard, before the listening volume, as the player's music is captured.
+            processed = _feed = new EditorFeed(processed, _capture, LatencyMs);
+        }
+
+        _output = new WaveOutEvent { DesiredLatency = LatencyMs };
         _output.PlaybackStopped += OnPlaybackStopped;
-        _output.Init(new MeteredOutput(processed, Meter, this));
-        _output.Play();
+        try
+        {
+            _output.Init(new MeteredOutput(processed, Meter, this));
+            _output.Play();
+        }
+        catch
+        {
+            Stop();
+            throw;
+        }
     }
 
     public void Stop()
     {
+        _feed?.Dispose();
+        _feed = null;
         if (_output is null)
         {
             return;

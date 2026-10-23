@@ -94,6 +94,7 @@ public static partial class SelfTest
         failures += TestOutputDevices();
         failures += TestGapless();
         failures += TestOtherApps();
+        failures += WinampInspiredVisualizer.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
         // Before the visuals: their timing pass keeps CI's virtual GPU busy for minutes, and a
         // recording straight after it has stalled.
         failures += TestRecording();

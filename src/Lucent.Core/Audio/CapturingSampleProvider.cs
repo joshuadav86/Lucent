@@ -23,13 +23,25 @@ public sealed class CapturingSampleProvider : ISampleProvider
     public int Read(float[] buffer, int offset, int count)
     {
         var read = _source.Read(buffer, offset, count);
-        var channels = Math.Max(1, WaveFormat.Channels);
-        var frames = read / channels;
-        if (_mono.Length < frames)
+        var frames = Split(buffer, offset, read, WaveFormat.Channels, ref _mono, ref _left, ref _right);
+        _capture.Write(_mono.AsSpan(0, frames), _left.AsSpan(0, frames), _right.AsSpan(0, frames));
+        return read;
+    }
+
+    /// <summary>
+    /// Splits <paramref name="count"/> interleaved samples into a mono mix and the left and right channels, growing
+    /// the arrays if they're too small, and returns how many frames there were.
+    /// </summary>
+    internal static int Split(float[] buffer, int offset, int count, int channelCount, ref float[] mono, ref float[] left,
+        ref float[] right)
+    {
+        var channels = Math.Max(1, channelCount);
+        var frames = count / channels;
+        if (mono.Length < frames)
         {
-            _mono = new float[frames];
-            _left = new float[frames];
-            _right = new float[frames];
+            mono = new float[frames];
+            left = new float[frames];
+            right = new float[frames];
         }
 
         for (var frame = 0; frame < frames; frame++)
@@ -40,13 +52,12 @@ public sealed class CapturingSampleProvider : ISampleProvider
                 sum += buffer[offset + frame * channels + channel];
             }
 
-            _mono[frame] = sum / channels;
+            mono[frame] = sum / channels;
             // Mono music plays the same on both sides; anything with more channels uses its front pair.
-            _left[frame] = buffer[offset + frame * channels];
-            _right[frame] = buffer[offset + frame * channels + Math.Min(1, channels - 1)];
+            left[frame] = buffer[offset + frame * channels];
+            right[frame] = buffer[offset + frame * channels + Math.Min(1, channels - 1)];
         }
 
-        _capture.Write(_mono.AsSpan(0, frames), _left.AsSpan(0, frames), _right.AsSpan(0, frames));
-        return read;
+        return frames;
     }
 }
