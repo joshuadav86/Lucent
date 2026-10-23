@@ -50,6 +50,12 @@ public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Po
 /// <param name="FollowsSong">True for a list that changes with every song (what's up next), so it's read again when the song changes.</param>
 public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTrack> Tracks, string? Note = null, bool FollowsSong = false);
 
+/// <summary>A playlist in the account of an app Lucent controls, listed in the library under PLAYLISTS.</summary>
+/// <param name="Uri">What the app calls it when asked to play it (Spotify's spotify:playlist:…).</param>
+/// <param name="Songs">How many songs it has, or null when the app doesn't say.</param>
+/// <param name="Owner">Who made it, when that isn't the user (a friend, or Spotify itself), or null.</param>
+public sealed record RemotePlaylist(string Uri, string Name, int? Songs = null, string? Owner = null);
+
 /// <summary>An app whose volume Lucent can change, on the device it's playing on (<see cref="RemoteState.Volume"/>).</summary>
 public interface IRemoteVolume
 {
@@ -117,4 +123,15 @@ public interface IRemoteLists
 
     /// <summary>Plays <paramref name="track"/>, carrying on through <paramref name="list"/> after it.</summary>
     Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel);
+}
+
+/// <summary>An <see cref="IRemotePlayer"/> that can list the playlists in the user's account, and play one.</summary>
+public interface IRemotePlaylists
+{
+    /// <summary>The account's playlists, in the order the app lists them.</summary>
+    /// <exception cref="RemoteProblem">When the app won't list them, in a way the user can fix (signing in again).</exception>
+    Task<IReadOnlyList<RemotePlaylist>> PlaylistsAsync(CancellationToken cancel);
+
+    /// <summary>Plays <paramref name="playlist"/> from its start.</summary>
+    Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel);
 }

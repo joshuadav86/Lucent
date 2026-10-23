@@ -106,6 +106,11 @@ public sealed class RemoteControl : IDisposable
         ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
         : Task.CompletedTask;
 
+    /// <summary>Plays one of the account's playlists (<see cref="IRemotePlaylists"/>) in the app.</summary>
+    public Task PlayPlaylistAsync(RemotePlaylist playlist) => Player is IRemotePlaylists playlists
+        ? RunAsync(cancel => playlists.PlayPlaylistAsync(playlist, cancel), null)
+        : Task.CompletedTask;
+
     /// <summary>
     /// Why the visuals can't follow the music, worded for the user, while the app plays on another device (Spotify on
     /// a TV, say), or null when it plays here.

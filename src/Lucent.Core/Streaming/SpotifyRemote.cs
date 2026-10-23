@@ -9,15 +9,19 @@ namespace WinampInspiredVisualizer.Streaming;
 /// Spotify, through its Web API: what's playing on whichever device the account is playing on (the
 /// Spotify app on this computer, a phone, a speaker), and its play, pause, skip and seek. Spotify only
 /// takes those buttons from Premium accounts; on a free account Lucent can still show what's playing.
-/// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window.
+/// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window, and lists the
+/// account's playlists for the library.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, IRemoteDevices
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteDevices
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
 
     // Enough for any playlist someone plays through, without hundreds of requests for a huge Liked Songs.
     private const int MostSongs = 1000;
+
+    // More playlists than anyone scrolls through in the library, in at most 10 requests.
+    private const int MostPlaylists = 500;
 
     private readonly HttpClient _http;
     private readonly string _clientId;
@@ -318,6 +322,81 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
     }
 
     /// <summary>
+    /// The account's Liked Songs, then its playlists as Spotify lists them (GET /me/playlists): the ones it made, follows
+    /// and collaborates on. Spotify's own mixes (Discover Weekly, Release Radar) aren't among them, as it doesn't share
+    /// those with other apps.
+    /// </summary>
+    public async Task<IReadOnlyList<RemotePlaylist>> PlaylistsAsync(CancellationToken cancel)
+    {
+        try
+        {
+            await RequireScopeAsync("playlist-read-private", PlaylistsSignInNote, cancel);
+        }
+        catch (Refused refused)
+        {
+            throw new RemoteProblem(refused.Note);
+        }
+
+        string me;
+        using (var account = await GetJsonAsync($"{Root}/me", null, cancel))
+        {
+            me = Text(account.RootElement, "id");
+        }
+
+        var playlists = new List<RemotePlaylist>();
+        if (me.Length > 0 && _tokens?.Scope?.Split(' ').Contains("user-library-read") != false)
+        {
+            playlists.Add(new RemotePlaylist($"spotify:user:{me}:collection", "Liked Songs"));
+        }
+
+        for (string? page = $"{Root}/me/playlists?limit=50"; page is not null && playlists.Count < MostPlaylists;)
+        {
+            using var json = await GetJsonAsync(page, null, cancel);
+            if (json.RootElement.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
+            {
+                playlists.AddRange(items.EnumerateArray().Select(item => ParsePlaylist(item, me)).OfType<RemotePlaylist>());
+            }
+
+            page = Text(json.RootElement, "next") is { Length: > 0 } next ? next : null;
+        }
+
+        return playlists;
+    }
+
+    /// <summary>A playlist from GET /me/playlists, or null for an empty slot (one since deleted).</summary>
+    internal static RemotePlaylist? ParsePlaylist(JsonElement item, string me)
+    {
+        if (item.ValueKind != JsonValueKind.Object || Text(item, "uri") is not { Length: > 0 } uri)
+        {
+            return null;
+        }
+
+        // The count is under "items" since February 2026's changes ("tracks" before).
+        int? songs = null;
+        foreach (var name in new[] { "items", "tracks" })
+        {
+            if (item.TryGetProperty(name, out var count) && count.ValueKind == JsonValueKind.Object
+                && count.TryGetProperty("total", out var total) && total.ValueKind == JsonValueKind.Number)
+            {
+                songs = total.GetInt32();
+                break;
+            }
+        }
+
+        string? owner = null;
+        if (item.TryGetProperty("owner", out var by) && by.ValueKind == JsonValueKind.Object && Text(by, "id") != me)
+        {
+            owner = Text(by, "display_name") is { Length: > 0 } shown ? shown : Text(by, "id") is { Length: > 0 } id ? id : null;
+        }
+
+        var title = Text(item, "name");
+        return new RemotePlaylist(uri, title.Length > 0 ? title : "Untitled playlist", songs, owner);
+    }
+
+    public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) =>
+        PlayOnSomeDeviceAsync(JsonSerializer.Serialize(new Dictionary<string, object> { ["context_uri"] = playlist.Uri }), cancel);
+
+    /// <summary>
     /// Plays (what's loaded, or <paramref name="json"/>'s songs). With no device playing for the account, Spotify
     /// refuses that (404, NO_ACTIVE_DEVICE), so the play goes to one of the account's devices that's on: this
     /// computer's Spotify first, then the only one there is, then any computer. Spotify carries on there from
@@ -480,6 +559,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemoteVolume, 
 
     private const string PlaylistSignInNote =
         "To show your playlists here, sign out of Spotify and back in from the Add music menu. Until then, this is what's up next.";
+
+    private const string PlaylistsSignInNote =
+        "To see your Spotify playlists here, sign out of Spotify and back in from the Add music menu.";
 
     private const string SignInAgainNote =
         "To show your Liked Songs here, sign out of Spotify and back in from the Add music menu. Until then, this is what's up next.";
