@@ -1,336 +1,80 @@
-<p align="center"><img src="assets/lucent-icon.png" width="128" alt="Lucent icon"></p>
+<p align="center"><img src="assets/lucent-icon.png" width="112" alt="Lucent icon"></p>
 
 <h1 align="center">Lucent</h1>
 
-<p align="center"><b>Built for audio nerds.</b><br>
-Winamp's soul, a 2026 graphics card's muscle: a player, editor, and analyzer for Windows, with 201 live GPU visuals, ray-traced scenes, and particle storms that move to every beat.</p>
+<p align="center"><b>A spiritual successor to Winamp, built for audio nerds.</b><br>
+A free music player for Windows and Mac, with 453 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
 
 <p align="center">
-  <a href="../../releases/tag/latest"><img src="https://img.shields.io/badge/download-latest%20build-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download the latest build"></a>
-  <a href="https://buymeacoffee.com/joshuadav86"><img src="https://img.shields.io/badge/buy%20me%20a%20coffee-support%20Lucent-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
+  <a href="../../releases/download/latest/Lucent-Setup.exe"><img src="https://img.shields.io/badge/download-Windows-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
+  <a href="../../releases/download/latest/Lucent-Setup-mac-arm64.pkg"><img src="https://img.shields.io/badge/download-Mac-8B5CF6?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac"></a>
+  <a href="https://lucentaudio.net"><img src="https://img.shields.io/badge/lucentaudio.net-22D3EE?style=for-the-badge&logoColor=black" alt="lucentaudio.net"></a>
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Windows-10%20%26%2011-22D3EE?style=flat-square" alt="Windows 10 and 11">
-  <img src="https://img.shields.io/badge/visuals-201-D946EF?style=flat-square" alt="201 visuals">
-  <img src="https://img.shields.io/badge/Direct3D-11-F97316?style=flat-square" alt="Direct3D 11">
-  <img src="https://img.shields.io/badge/license-MIT-10B981?style=flat-square" alt="MIT license">
-</p>
+![Lucent in full screen: library, player, equalizer, queue, visuals, analyzer, artwork, and online radio](site/img/full-screen.jpg)
 
-<p align="center">
-  <a href="#201-visuals">Visuals</a> ·
-  <a href="#the-player">Player</a> ·
-  <a href="#equalizer">Equalizer</a> ·
-  <a href="#analyzer">Analyzer</a> ·
-  <a href="#skins-and-themes">Skins</a> ·
-  <a href="#download-and-run">Download</a> ·
-  <a href="#make-your-own-visuals">Make visuals</a>
-</p>
+## What's inside
 
-![Lucent's Black Hole visual, fullscreen](assets/screenshots/hero-black-hole.jpg)
+- **453 visuals**, drawn live on your graphics card: 201 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 218 MilkDrop presets, and 34 Winamp AVS presets. They know the song's build-ups and drops, even on radio.
+- **Windows like Winamp's.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
+- REMOVE tiles them all full screen.
+- **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
+- **Analyzer.** Spectrogram, waveform, spectrum, and stereo scope for everything you play.
+- **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
+- **Skins and themes.** Five skins, eight themes, Lucent Classic for the full Winamp 2 look, and any .wsz skin.
+- **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.
+- **Your streaming apps, too.** Spotify, Apple Music, TIDAL, SoundCloud, and YouTube play with Lucent's visuals and controls.
+- **Sounds right.** Gapless, bit-perfect exclusive mode, and 15 formats from MP3 and FLAC to WavPack and APE.
 
-## At a glance
+<table>
+<tr>
+<td width="33%"><img src="site/img/black-hole.jpg" alt="Black Hole"><br><sub><b>Black Hole</b></sub></td>
+<td width="33%"><img src="site/img/diamond-fire.jpg" alt="Diamond Fire"><br><sub><b>Diamond Fire</b></sub></td>
+<td width="33%"><img src="site/img/galaxy-collision.jpg" alt="Galaxy Collision"><br><sub><b>Galaxy Collision</b></sub></td>
+</tr>
+<tr>
+<td><img src="site/img/kaleido-cathedral.jpg" alt="Kaleido Cathedral"><br><sub><b>Kaleido Cathedral</b></sub></td>
+<td><img src="site/img/mandelbulb-bloom.jpg" alt="Mandelbulb Bloom"><br><sub><b>Mandelbulb Bloom</b></sub></td>
+<td><img src="site/img/neon-downpour.jpg" alt="Neon Downpour"><br><sub><b>Neon Downpour</b></sub></td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td width="50%"><img src="site/img/editor-video.png" alt="The video and audio editor"><br><sub><b>Video and audio editor</b></sub></td>
+<td width="50%"><img src="site/img/radio-groove-salad.jpg" alt="Online radio playing SomaFM's Groove Salad"><br><sub><b>Internet radio</b></sub></td>
+</tr>
+</table>
+
+See everything at **[lucentaudio.net](https://lucentaudio.net)**.
+
+## Download
 
 | | |
 |---|---|
-| ✨ **201 visuals** | Geometric patterns, minimal pieces, and endless fractals; ray-traced glass, chrome, and planets; and particle storms of fire, smoke, sparks, and starlings. |
-| 📊 **Analyzer** | A scrolling spectrogram heatmap like Winamp's Vision plugin, with a live spectrum, waveform, and stereo spread scope. |
-| 🎨 **Skins and themes** | Five skins change the shape, type, and finish of every window, and any skin goes with any of the eight themes. |
-| 🎚️ **Studio equalizer** | 4, 8, 16, 24, or 32 mixing-desk faders over the music's live spectrum. |
-| 🧲 **Snapping windows** | The player, equalizer, queue, library, and visuals snap together like Winamp's and move as one. |
-| ✂️ **Built-in tools** | A video and audio editor, a converter, and a tag editor, all a right-click away. |
+| **Windows 10 or 11** | [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe), or the portable [`Lucent-win-x64.zip`](../../releases/download/latest/Lucent-win-x64.zip) |
+| **Mac, Apple silicon** | [`Lucent-Setup-mac-arm64.pkg`](../../releases/download/latest/Lucent-Setup-mac-arm64.pkg) |
+| **Mac, Intel** | [`Lucent-Setup-mac-x64.pkg`](../../releases/download/latest/Lucent-Setup-mac-x64.pkg) |
 
-## 201 visuals
+Windows installs for your account, with no admin rights. If SmartScreen warns, click **More info**, then **Run anyway**. The Mac app needs macOS 12 or later and is signed and notarized by Apple. Any Direct3D 11 or Metal GPU works; a recent one gets you Ultra detail and 4K.
 
-Every visual is drawn live on your graphics card and listens to the bass, mids, treble, and beat of what's playing. Lucent studies each song ahead of time and maps its arrangement: the beats and bars, the intros, verses, and breakdowns, and the build-ups and drops. The visuals pulse on the song's real beats, glow brighter through a build-up, and Auto cuts to a new visual right as the drop hits. Online radio, streams, and other apps' sound are followed live, by ear: Lucent locks onto the beat, predicts the bars, and hears a drop the moment it lands. Otherwise it changes on a downbeat, with morphs that melt, glow, fly, or fold one visual into the next.
-
-### Ray traced
-
-Physically lit 3D scenes with real reflections, glass that bends light, and soft shadows. 30 of them, from a diamond throwing rainbows to a whole planet under moving cloud.
-
-<table>
-<tr>
-<td width="33%"><img src="assets/screenshots/visuals/diamond-fire.jpg" alt="Diamond Fire"><br><sub><b>Diamond Fire</b></sub></td>
-<td width="33%"><img src="assets/screenshots/visuals/blue-marble.jpg" alt="Blue Marble"><br><sub><b>Blue Marble</b></sub></td>
-<td width="33%"><img src="assets/screenshots/visuals/cathedral-light.jpg" alt="Cathedral Light"><br><sub><b>Cathedral Light</b></sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/visuals/disco-ball.jpg" alt="Disco Ball"><br><sub><b>Disco Ball</b></sub></td>
-<td><img src="assets/screenshots/visuals/crystal-organ.jpg" alt="Crystal Organ"><br><sub><b>Crystal Organ</b></sub></td>
-<td><img src="assets/screenshots/visuals/cloud-sea.jpg" alt="Cloud Sea"><br><sub><b>Cloud Sea</b></sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/visuals/ringed-world.jpg" alt="Ringed World"><br><sub><b>Ringed World</b></sub></td>
-<td><img src="assets/screenshots/visuals/chrome-equalizer.jpg" alt="Chrome Equalizer"><br><sub><b>Chrome Equalizer</b></sub></td>
-<td><img src="assets/screenshots/visuals/forest-light.jpg" alt="Forest Light"><br><sub><b>Forest Light</b></sub></td>
-</tr>
-</table>
-
-### Particles
-
-Hundreds of thousands of glowing particles simulated on the graphics card every frame, with lens blur and motion streaks. 57 of them, and up to four times as many particles on Ultra detail.
-
-<table>
-<tr>
-<td width="33%"><img src="assets/screenshots/visuals/phoenix-rising.jpg" alt="Phoenix Rising"><br><sub><b>Phoenix Rising</b></sub></td>
-<td width="33%"><img src="assets/screenshots/visuals/volcanic-eruption.jpg" alt="Volcanic Eruption"><br><sub><b>Volcanic Eruption</b></sub></td>
-<td width="33%"><img src="assets/screenshots/visuals/solar-flare.jpg" alt="Solar Flare"><br><sub><b>Solar Flare</b></sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/visuals/iron-filings.jpg" alt="Iron Filings"><br><sub><b>Iron Filings</b></sub></td>
-<td><img src="assets/screenshots/visuals/magnetosphere.jpg" alt="Magnetosphere"><br><sub><b>Magnetosphere</b></sub></td>
-<td><img src="assets/screenshots/visuals/ember-storm.jpg" alt="Ember Storm"><br><sub><b>Ember Storm</b></sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/visuals/strange-attractors.jpg" alt="Strange Attractors"><br><sub><b>Strange Attractors</b></sub></td>
-<td><img src="assets/screenshots/visuals/knot-stream.jpg" alt="Knot Stream"><br><sub><b>Knot Stream</b></sub></td>
-<td><img src="assets/screenshots/visuals/dyson-swarm.jpg" alt="Dyson Swarm"><br><sub><b>Dyson Swarm</b></sub></td>
-</tr>
-</table>
-
-### Geometric, minimal, and fractal
-
-Tilings, star polygons, and quasicrystals; a single ink circle or an eclipse that breathes with the bass; and fractals from glass trees to sphere foam you fly through.
-
-<table>
-<tr>
-<td width="33%"><img src="assets/screenshots/visuals/quasicrystal.jpg" alt="Quasicrystal"><br><sub><b>Quasicrystal</b></sub></td>
-<td width="33%"><img src="assets/screenshots/visuals/girih-tiles.jpg" alt="Girih Tiles"><br><sub><b>Girih Tiles</b></sub></td>
-<td width="33%"><img src="assets/screenshots/visuals/voronoi-glass.jpg" alt="Voronoi Glass"><br><sub><b>Voronoi Glass</b></sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/visuals/enso.jpg" alt="Enso"><br><sub><b>Enso</b></sub></td>
-<td><img src="assets/screenshots/visuals/eclipse.jpg" alt="Eclipse"><br><sub><b>Eclipse</b></sub></td>
-<td><img src="assets/screenshots/visuals/harmonograph.jpg" alt="Harmonograph"><br><sub><b>Harmonograph</b></sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/visuals/pythagoras-tree.jpg" alt="Pythagoras Tree"><br><sub><b>Pythagoras Tree</b></sub></td>
-<td><img src="assets/screenshots/visuals/apollonian-spheres.jpg" alt="Apollonian Spheres"><br><sub><b>Apollonian Spheres</b></sub></td>
-<td><img src="assets/screenshots/visuals/buddhabrot.jpg" alt="Buddhabrot"><br><sub><b>Buddhabrot</b></sub></td>
-</tr>
-</table>
-
-### Fractals, kaleidoscopes, and neon worlds
-
-The MilkDrop spirit, rebuilt: fly through infinite fractals, stare into kaleidoscopes and sacred geometry, or cruise rain-soaked cyberpunk cities.
-
-<table>
-<tr>
-<td width="33%"><img src="assets/screenshots/sunset-highway.jpg" alt="Sunset Highway"><br><sub><b>Sunset Highway</b></sub></td>
-<td width="33%"><img src="assets/screenshots/mandelbulb-bloom.jpg" alt="Mandelbulb Bloom"><br><sub><b>Mandelbulb Bloom</b></sub></td>
-<td width="33%"><img src="assets/screenshots/rose-window.jpg" alt="Rose Window"><br><sub><b>Rose Window</b></sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/kaleido-cathedral.jpg" alt="Kaleido Cathedral"><br><sub><b>Kaleido Cathedral</b></sub></td>
-<td><img src="assets/screenshots/neon-downpour.jpg" alt="Neon Downpour"><br><sub><b>Neon Downpour</b></sub></td>
-<td><img src="assets/screenshots/menger-voyage.jpg" alt="Menger Voyage"><br><sub><b>Menger Voyage</b></sub></td>
-</tr>
-</table>
-
-| Family | Visuals | A few favorites |
-|---|---:|---|
-| Particles | 57 | Galaxy Collision, Phoenix Rising, Murmuration, Buddhabrot, Physarum |
-| Ray traced | 30 | Diamond Fire, Glass and Chrome, Hall of Mirrors, Disco Ball, Tesseract |
-| Fractal | 26 | Mandelbulb Bloom, Pythagoras Tree, Apollonian Spheres, Burning Ship, Orbit Traps |
-| Kaleidoscope | 15 | Kaleido Cathedral, Rose Window, Metatron's Cube, Flower of Life, Droste Zoom |
-| Geometric | 15 | Quasicrystal, Girih Tiles, Voronoi Glass, Spirograph, Hilbert Curve |
-| Minimal | 14 | Enso, Eclipse, Harmonograph, Horizon Line, Rothko Fields |
-| Fly-through | 12 | Menger Voyage, Mandelbox Tunnel, Wormhole Transit, Gyroid Caverns |
-| Music-shaped | 12 | Spectrum Tunnel, Cymatic Plate, Lissajous Laser, Pulsar Ridges |
-| Cyberpunk | 7 | Neon Downpour, Sunset Highway, Folded Metropolis, Neon Alley |
-| Organic | 6 | Aurora Veil, Ink Flow, Shot Silk, Living Cells |
-| Cosmic | 5 | Black Hole, Bass Nebula, Cosmic Jellyfish, Supernova Remnant |
-
-<details>
-<summary><b>Graphics options</b></summary>
-
-- **Resolution:** Automatic (the window's size, drawing fewer pixels while a heavy visual can't keep up), the window's size, or 1080p, 1440p, or 4K supersampled down for finer detail
-- **Detail:** Low to Ultra, for more ray-marching steps, deeper fractals, and up to four times the particles
-- **Glow:** how strongly bright parts bloom, from off to strong
-- **HDR:** highlights shine brighter than white on HDR screens
-- Transition length, morphs only, Auto timing from 10 seconds to 3 minutes, and a frame rate readout
-
-</details>
-
-### Find the right one in seconds
-
-Press **V** and start typing. Visuals sit in family folders and carry tags (Calm, Intense, Neon, Space, Fire, 3D, and more). Star your favorites or make lists, and Auto mode, N, and B stick to what you picked.
-
-![The visual picker, searching for Kaleido Cathedral](assets/screenshots/visual-picker.jpg)
-
-### Fullscreen, without losing control
-
-Double-click the visuals or press **F11**. Click once to pause or play, and right-click for a seek bar, track controls, volume, and every graphics option.
-
-![The right-click menu over the Neon Downpour visual in fullscreen](assets/screenshots/fullscreen-menu.jpg)
-
-### Record a visual to video
-
-Right-click the visuals and choose **Record video…** to save the song that's playing, drawn with a visual (or with Auto, changing on the beat), as an MP4 to share: the whole song or just a part, in 1080p, 1440p, or 4K at 30 or 60 fps. Every frame is drawn in turn and none are skipped, so a recording can take more or less time than the song lasts, and the visuals and music carry on as usual meanwhile. It's encoded as H.264 with AAC sound by Windows or macOS, on the graphics card or the Mac's own video encoder when it can be.
-
-### Record a DJ set (or anything) live
-
-Click the red **Record** button in the player's title bar (or **File › Record from an Audio Interface…** on a Mac) to record from an audio interface, DJ mixer, or microphone into a WAV file while the visuals react to it. Pick the input and its channels (any stereo pair, a single channel, or a pair mixed to mono; if a stereo recording only has sound on one side, Lucent offers to record that input in mono), the sample rate (44.1 to 192 kHz), and 16-bit, 24-bit, or 32-bit float. On Windows, inputs come through WASAPI or the interface's ASIO driver; on a Mac, through Core Audio, which switches the interface to the chosen rate. Run the sound through live VST3 plugins (or a chain saved in the editor) on its way to the file, keep a copy without them if you like, and listen through the speakers. Name files from a template such as `{name} {date} {time}` or `{name} {take}`, and choose the folder they go in; the window shows how much room is left. Recordings past 4 GB become RF64 files, and the file is kept up to date as it goes, so a crash keeps what was recorded.
-
-Press **New track** (M) as each song starts, and Lucent also marks where it hears one song give way to the next. The marks go into the WAV as cue points (with a .cue sheet beside it), so Next and Previous in Lucent skip from song to song in the set, and DJ software and editors show them. **New file** (N) carries on in a new file without missing a sample. Finished recordings show up in the Library under their folder's heading (turn off **Show recordings in the Library** if you'd rather they didn't), and each is tagged with its file name, so sets from different nights are easy to tell apart.
-
-To have the marks named after their songs, paste your own [ACRCloud](https://www.acrcloud.com/) project's host, access key, and secret under **Name the songs with ACRCloud** (SET UP). About 25 seconds into each track, Lucent sends 12 seconds of it to ACRCloud, which was built for DJ mixes and broadcasts, and names the mark "Artist - Title" (in the WAV, the .cue sheet's TITLE and PERFORMER, and the window). A track it doesn't know is tried once more a minute later. Lookups count on your own ACRCloud account (it has a free trial), and the key is kept encrypted for your user account: with DPAPI on Windows and in the keychain on a Mac.
-
-## The player
-
-A small player in the spirit of Winamp's, with the equalizer, queue, library, analyzer, artwork, and visuals each in their own window. Edges snap to each other and to the screen, docked windows travel together while you drag, and resizing one edge resizes its neighbours. Press **D** to tidy everything back into one neat rectangle, **G** to fill the screen, or **K** to shrink it all.
-
-![The Lucent player with its library, equalizer, queue, and visuals docked together](assets/screenshots/player-layout.jpg)
-
-## Equalizer
-
-<img align="right" width="400" src="assets/screenshots/equalizer.png" alt="The 16-band equalizer with the music's live spectrum behind the response curve">
-
-Docked under the player like Winamp's, with sliders styled after mixing-desk faders.
-
-- **4, 8, 16, 24, or 32 bands.** Switching keeps your curve, and the new faders rise into place.
-- **The music's live spectrum** sits behind the response curve, so problem frequencies show up as peaks.
-- **15 presets** such as Bass Boost, Rock, Vocal, Late Night, and Small Speakers, or save your own.
-- **Preamp and safe boosting.** Lucent lowers the volume a touch when you boost, so the music doesn't distort.
-- The visuals react to the equalized sound.
-
-<br clear="right">
-
-## Analyzer
-
-Open it with the heatmap button in the player, or **Y**. Four panels, and you choose which to show:
-
-| Panel | What it shows |
-|---|---|
-| **Spectrogram** | The music as a heatmap scrolling right to left, low notes at the bottom, coloured by loudness. Point at it to read the frequency. |
-| **Waveform** | The signal scrolling underneath, in step with the heatmap. |
-| **Spectrum** | Bars on the same frequency scale right now, with peak marks. |
-| **Stereo spread** | How wide the mix is, with a bar for how alike the left and right sides are. |
-
-Pick Classic (blue through red), Fire, or Theme colours, and right-click to scroll slower or faster. It docks with the other windows, follows your skin and theme, and holds still while the music is paused so you can look closer.
-
-## Skins and themes
-
-Skins decide the shape, type, and finish of every window. Themes decide the colours. Each skin comes with a theme it was designed around, and any skin works with any theme.
-
-| Skin | Look | Made for |
-|---|---|---|
-| **Lucent** | Soft corners, hairlines, and calm, modern type | Midnight |
-| **Retro** | Square corners, raised buttons, and a black LCD, like the players of 1999 | Emerald |
-| **Glass** | Frosted panes, soft light, and big round buttons | Deep Ocean |
-| **Neon** | Hard edges that glow in the accent colour, over scan lines | Ultraviolet |
-| **Studio** | Brushed metal and an inset display, like rack-mounted hi-fi gear | Graphite |
-
-<p align="center"><img src="assets/themes.svg" alt="The eight themes: Midnight, Deep Ocean, Glacier, Ultraviolet, Emerald, Ember, Graphite, and Rosé"></p>
-
-### Classic Winamp skins
-
-The player can also wear a classic Winamp 2 skin (.wsz), drawn pixel for pixel at double size (or actual size), with working buttons, sliders, balance, the little spectrum and oscilloscope, the O A I D V bar, and window shade mode (double-click the title bar). Lucent comes with **Lucent Classic**, its own skin drawn in Lucent's colours. Import any other from **Options → Look**, or drop a .wsz on any Lucent window; **Find skins** opens the [Winamp Skin Museum](https://skins.webamp.org/), where tens of thousands can be downloaded. Right-click the classic player to switch skins, go back to Lucent's own player, or turn on double size or always on top. The other windows keep Lucent's skin and theme.
-
-Lucent doesn't ship anyone else's skins: each belongs to whoever drew it. Lucent Classic is drawn from scratch by [`tools/ClassicSkin/make_lucent_classic.py`](tools/ClassicSkin/make_lucent_classic.py) and uses no art from Winamp. Winamp is a trademark of its owners, and Lucent isn't connected with them.
-
-## Everything else a music player needs
-
-| | |
-|---|---|
-| 🎵 **Plays almost anything** | MP3, FLAC (also in Ogg), WAV (any bit depth, RF64, and Wave64), AAC/M4A, ALAC, WMA, OGG Vorbis, Opus, AIFF and AIFF-C, CAF, Dolby Digital (AC-3 and E-AC-3), DTS, Matroska and WebM audio, MP2, TTA, WavPack, Monkey's Audio (APE), and Speex |
-| 📚 **Library** | Link a folder and every sound shows up, searchable as you type |
-| 📻 **Online radio** | SomaFM, FRISKY, Radio Paradise, Nightride FM, and thousands more from Radio Browser, by genre, with search, sorting, and quality and country filters. The visuals play along |
-| 🛒 **Bandcamp and Beatport** | Music you download from either store files itself into the library, and Bandcamp purchases can sync by themselves |
-| 📥 **Import from another player** | Bring playlists, play counts, ratings and loved songs over from Apple Music or iTunes, MusicBee, foobar2000, Plex, or YouTube Music |
-| ❤️ **Favorites and playlists** | Heart sounds, star visuals, and save .m3u8 playlists Winamp can open too |
-| ✂️ **Audio editor** | Cut, copy, and paste with crossfades; a spectrogram view; meters and loudness analysis; EQ, compressor, and limiter; hum, click, and noise repair; tempo; mono conversion; and your own VST3 effects, chained and saved as presets (or brought in from REAPER), with undo and a history of every step |
-| 🔁 **Converter** | Make MP3, FLAC, or WAV, in mono if you like, with tags and artwork carried across and optional processing for a whole batch |
-| 🏷️ **Tag editor** | Titles, artists, lyrics, and cover art, saved safely to a checked copy first |
-| 🖼️ **Artwork window** | The playing sound's cover, as big as you like |
-
-## Download and run
-
-1. Download [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe) from the [Latest build](../../releases/tag/latest) release.
-2. Run it. Lucent installs for your Windows account (no admin needed), adds Start menu and desktop shortcuts, and opens.
-
-Installed Lucent keeps itself up to date. It checks for a newer version when it starts and every four hours while it runs, downloads it in the background, and installs it when you close Lucent; an **UPDATE** button appears in the title bar if you'd rather restart into it straight away. Your settings, playlists, and visuals are kept. It updates to stable releases; to get every new build as soon as it's made, choose **Every build** under **Options > Updates**. (Until the first stable release is out, everyone gets every build.) To decide when updates go in yourself, switch off **Install updates automatically** under **Options > Updates**: Lucent still downloads them and tells you one is ready, but installs it only when you choose **Restart and install**. Uninstall it from Windows' **Installed apps** list.
-
-If Windows SmartScreen warns about an unknown app, click **More info**, then **Run anyway**.
-
-Rather not install? Download `Lucent-win-x64.zip` from the same release, right-click it and choose **Extract All**, then double-click `Lucent.exe`. That copy doesn't update itself.
-
-### On a Mac
-
-Lucent for the Mac is the same app (every window, the visuals drawn with Metal) and needs macOS 12 or later.
-
-1. From the [Latest build](../../releases/tag/latest) release, download [`Lucent-Setup-mac-arm64.pkg`](../../releases/download/latest/Lucent-Setup-mac-arm64.pkg) for an Apple silicon Mac (M1 or later), or [`Lucent-Setup-mac-x64.pkg`](../../releases/download/latest/Lucent-Setup-mac-x64.pkg) for an Intel Mac. (**Apple menu > About This Mac** says which you have.)
-2. Open it. Lucent installs into **Applications** and opens.
-
-Installed Lucent keeps itself up to date just like on Windows, with the same **UPDATE** button in the title bar. Your settings, playlists, and visuals are in `~/Library/Application Support/Lucent` and are kept. To uninstall, drag Lucent from Applications to the Bin.
-
-The installer and the app are signed with Lucent's Apple Developer ID and notarized by Apple, so they open like any other Mac app, with no warnings to click past.
-
-Rather not install? Download `Lucent-mac-arm64.zip` or `Lucent-mac-x64.zip`, open it, and double-click `Lucent.app` (drag it to Applications first if you like). That copy doesn't update itself.
+Lucent updates itself when you close it. Choose **Every build** or switch off automatic installs under **Options → Updates**. All files are on the [Latest build](../../releases/tag/latest) release.
 
 ## Keyboard shortcuts
 
-Shortcuts work from any Lucent window. Your keyboard's media keys work even when Lucent isn't in front, and the playing song (with its cover, play, pause, next, and previous buttons, and a seek bar) shows in Windows' media controls by the volume flyout and on the lock screen, or in the Mac's Now Playing in Control Center, the menu bar, and the lock screen, where AirPods and other headphones' buttons control it too.
-
 | Playback | | Windows | | Visuals | |
 |---|---|---|---|---|---|
-| `Space` | Play or pause | `W` `Q` `L` | Visuals, queue, library | `N` / `B` | Next visual, or back to the last one shown |
-| `Z` / `X` | Previous or next track | `E` | Equalizer | `V` | Visual picker |
-| `S` | Shuffle | `Y` | Analyzer | `A` | Auto mode |
-| `R` | Repeat off, all, or one | `C` | Artwork | `F` | Star the visual |
-| `H` | Favorite the sound | `D` / `G` / `K` | Dock, fill, shrink | `F11` / `Esc` | Fullscreen, leave it |
-| `Enter` / `Delete` | Play or remove selected | `O` / `M` | Options, Sources | `Ctrl+I` | Edit sound info |
-| | | `J` | Link every window to the player | | |
+| `Space` | Play or pause | `W` `Q` `L` | Visuals, queue, library | `V` | Visual picker |
+| `Z` / `X` | Previous, next | `E` `Y` `C` | Equalizer, analyzer, artwork | `N` / `B` | Next visual, back |
+| `S` / `R` | Shuffle, repeat | `D` `G` `K` | Dock, fill, shrink | `A` | Auto mode |
+| `H` | Favorite | `J` | Link windows to the player | `F` | Star the visual |
+| `Ctrl+I` | Edit sound info | `O` / `M` | Options, Sources | `F11` / `Shift+F11` | Fullscreen visuals, full-screen layout |
 
-<details>
-<summary><b>The full feature list</b></summary>
-
-- A small player window like Winamp's, with a big time display, a spectrum meter (click it for a waveform, or to hide it), a scrolling title, and the bitrate and sample rate
-- The visuals, queue, library, equalizer, analyzer, and artwork each have their own window. Edges snap to each other and to the screen (keep dragging to pull a window free). A window dropped beside others with one corner lined up stretches a little to line up its other corner too. Dragging the player carries every window docked to it, even ones that are switched off, and docked windows stay together throughout the drag. Drag a window onto another (with the mouse well inside it) and an outline says **Swap**: drop it there and the two trade places and sizes, which also works in Lucent full screen. Windows never end up overlapping by accident
-- The equalizer opens docked under the player, with the queue below it. The visuals and library line up with the bottom of the column, so the windows form one neat rectangle whichever are open. Lucent remembers where you left every window and how big, and opens them there next time, analyzer and artwork included. A window you left docked docks to the player again; one you left on its own goes back to its spot
-- The lock in each window's title bar locks it in place: it can't be moved or resized, it stays put when the player moves, and docking or laying out the windows (D, G, K) leaves it where it is
-- The link button in the player's title bar (or J) links every window to the player, so dragging the player moves them all, docked or not. Locked windows still stay put
-- Resizing a window resizes the windows docked to it: drag the edge between two windows to move both, or an outside edge they share to stretch them together; hold Ctrl to resize just one
-- On a first start, just the player, equalizer, and visuals open, and Lucent plays a song to show them off: "Self Actualize" from Kepler North's *Pseudo Profound* EP. It sits in its own Starter Music folder in the library, so take it out like any other folder when you're done with it
-- **Sources** (the button at the top of the player, the eject button, or M) gathers every way to bring sound in on one panel: add files or folders, import from another player, Bandcamp and Beatport, online radio, and switches for Spotify, Apple Music, TIDAL, YouTube and SoundCloud, and visuals for every app's sound. On a Mac it's also under **File → Sources…**
-- **Visuals for a DAW**: with visuals for every app's sound on, the button under the switch picks what they listen to: every app's sound, or one of your audio interface's inputs. A DAW playing through ASIO on Windows (Ableton, say) skips Windows' mixer, so every app's sound can't hear it. Loop its output back to an input in the interface's mixer and pick that input. On an RME interface: open TotalMix FX, click the settings (wrench) of the output channel Ableton plays to (Analog 1/2, say) and turn on **Loopback**; that output's sound then also arrives on the input of the same name, so pick "Analog (1+2)" in Lucent. On a Mac, every app's sound already hears a DAW playing to the Mac's output; for one playing to another interface, use the same loopback, or a loopback device like BlackHole
-- Add files or folders from Sources, or drag them onto Lucent like Winamp: drop on the player (or the visuals) to play them now, on the queue to add them to the end, or on the library to add them to it
-- Queue with play, pause, stop, previous, next, seek, volume (the mouse wheel over the player works too), shuffle, and repeat all or one
-- Sound options (**Options → Sound**), on Windows and the Mac: gapless playback, so each track runs straight into the next for live albums, DJ mixes, and albums that flow; the speakers, headphones, or DAC to play through; and **Exclusive mode: bit-perfect**, which takes the output for Lucent alone and sends each track at its own sample rate past the system's mixer (WASAPI exclusive mode on Windows, hog mode on a Mac), bit-perfect at 100% volume with the equalizer off. Underneath, Lucent shows the sample rate, format, and mode reaching the output, and whether it's bit-perfect
-- A music library, newest first, with other sort orders and folder headings you can open or close. Search by title, artist, album, or file name as you type (Ctrl+F); Esc clears it
-- Adding a folder that has folders inside it asks whether each of those gets its own heading or all the music goes under the one folder, with a **Don't ask again** switch. Right-click a heading to change it for that folder later, and choose **Ask about folders inside new folders** in the library's folder menu to be asked again
-- Online radio: choose **Browse stations…** in Sources (**File → Online Radio…** on a Mac). Featured opens on SomaFM's channels, FRISKY, Radio Paradise, and Nightride FM; **All stations** and the genres on the left (ambient to talk) search [Radio Browser](https://www.radio-browser.info), a free directory of about 50,000 stations kept up by its listeners, with no account. Type to search by name, genre, or country; sort by most played, most voted, trending, name, or bitrate; and filter by quality (128 kbps and up, say) or country. Star a station for Favorites (or press the heart while it plays), and the stations you play show under Recently played. A station plays through Lucent's own sound, so the equalizer, meter, analyzer, and visuals all follow it, and the player shows the song the station says is on. Next and Previous move through the list you picked it from. **Play an address…** plays a station that isn't listed, from its stream or .pls or .m3u link. The globe beside a station opens its website. Lucent plays MP3 and AAC (including AAC+) stations, sent as one stream or as HLS (the pieces-at-a-time streaming that SomaFM's 320k and surround channels use), so the lists show only those. Surround stations play folded down to stereo, and video stations play their sound
-- Bandcamp and Beatport: switch them on under **Bandcamp and Beatport…** in the library's folder menu, and Lucent watches your Downloads folder. Releases and tracks you download from either store are unpacked into Music\Bandcamp or Music\Beatport, a folder per artist and release, and show up in the library under one heading per store, with a subheading for each release. The downloads stay where they are, and other zips and songs are left alone (each store tags the files it sells, which is how Lucent recognises them)
-- Bandcamp collection sync (experimental): sign in to Bandcamp on its own page and Lucent downloads your purchases in the format you pick (FLAC, MP3, ALAC, AAC, or Ogg), then any new ones each time it starts. Bandcamp has no official way for apps to do this, so it uses the website's own pages and may need an update if Bandcamp changes them. The sign-in is kept encrypted for your Windows account only
-- Import from another player: choose **Import from another player…** in the library's folder menu. Lucent reads iTunes' or Apple Music's library file (File > Library > Export Library), MusicBee's iTunes-style XML file, foobar2000's playlists (and .m3u, .pls, .xspf and .wpl files from other players), ratings and play counts saved in your files' tags, your Plex Media Server (sign in on Plex's own page), and YouTube Music playlists from a Google Takeout download. Each song is matched to the file in your library, by its path even if the music moved drives, or by artist and title. Playlists become Lucent playlists, loved songs become favorites, and plays and ratings show in the library, which can sort by most played, recently played, or rating. Nothing is downloaded from YouTube; songs you don't have are listed so you can find them
-- Favorite sounds: the heart in the player (or H), or right-click sounds in the queue or library. The FAVORITES pill in the library shows only them
-- Playlists: save the queue, add sounds from the queue or library, and play them from **Playlists** in the queue window. They're standard .m3u8 files
-- Edit a sound's info (right-click it, or Ctrl+I): title, artist, album, album artist, year, track and disc, genre, composer, BPM, key, comment, and lyrics. **Detect** listens to a song and fills in its BPM and key. Edit several sounds at once. Add, paste, remove, or save cover art; very large pictures are shrunk to 1600 pixels. New info is written to a checked copy before it replaces the original, and sounds keep their date so they stay put in the library
-- An artwork window (Art in the player, or C) that uses the file's cover, or a folder.jpg, cover.jpg, or front.jpg next to it. Pin it on top, or copy or save the picture
-- An audio editor (the waveform button in the player, or **Open in editor…** on a sound) showing both channels. Drag to select, the wheel zooms, and Space plays. Every effect is in one **Effects** menu (E), by category and searchable, like the plugin browser, with the ones you used last under Recent: normalize to a peak of −0.1, −1, or −3 dB or a loudness of −14, −16, or −23 LUFS, change pitch by up to 12 semitones in 0.1 steps (keeping the speed or like a record), gain, fade in and out, silence, and reverse, plus the EQ, dynamics, repair, channel, stem, and analysis tools, with undo and redo. Trim and delete have their own buttons. Right-click the waveform for these on the selection or the clip under the mouse. Press **S** to split at the cursor (or at the playhead while it plays, or around the selection), then drag a clip to slide it left or right with silence filling in behind it (the hand tool, on unless you turn it off with its button or G; Shift+drag, drag in a gap, or drag in the ruler to select, and double-click a clip to select it). Slide a clip over the next one and the two overlap with a crossfade, drawn as an X, as in REAPER; slide it away again and both come back whole. Alt or Option+drag a clip's tab to put it in among the others instead, and add silence before, after, or in the middle of a clip. Clips edit like items in a DAW such as REAPER: drag a clip's left or right edge in to trim it, or back out over the silence to bring back what was trimmed or cut, since nothing trimmed is thrown away. Where two clips touch, dragging the edge moves the split between them (Shift+drag trims just one). Drag the handles at a clip's top corners to fade it in or out, and drag them again to change the fade; right-click a fade or crossfade to give it another shape (linear, fast start, slow start, S-curve, or equal power). Edges snap to other clips, the cursor, and the playhead (Ctrl or ⌘ drags freely). Save over the original after asking, or as a new version; formats Lucent can't write are saved as FLAC
-- Editing tools in the editor: **cut, copy, and paste** (Ctrl+X, C, V, between sounds and to and from other programs; a cut leaves silence, so drag the next clip left to close the gap) with every join crossfaded (0 to 50 ms, from the **Edit** menu); **Snap** to zero crossings (hold Ctrl to place exactly); **Tab to Transient**, as in Pro Tools (Tab jumps to the next drum hit or note, Shift+Tab to the one before, Ctrl+Tab and Ctrl+Shift+Tab select up to it, or ⌥ on a Mac; right-click its button to set how sensitive it is); a **Spectrogram** view (V); **Loop** playback of the selection (L); a level meter with true peak and momentary, short-term, and integrated LUFS while it plays; and **Analyze…** for peak, true peak, RMS, DC offset, loudness, loudness range, stereo correlation, the average spectrum, and a clipping finder that marks each clipped spot (F3 goes to the next)
-- Built-in processing: a 7-band parametric **EQ** drawn over the selection's spectrum and a **compressor** or true-peak **limiter**, all heard live while you set them up; **Tempo** from 50 to 200% keeping the pitch or not; **Repair** for 50 or 60 Hz hum, clicks and crackle, background noise (learned from a quiet part), and DC offset; and **Channels** to swap, mix, invert, or widen; edit one channel alone (Alt+drag); or **convert to a mono file**
-- **Stems…** splits the music into vocals, drums, bass, and the other instruments with Demucs, an AI model that runs on the graphics card (any DirectX 12 card on Windows, Core ML on a Mac) or on the processor. Keep any mix of them in the editor (**No vocals** for karaoke, **Only vocals** for an a cappella) as one step you can undo, **Listen…** to them in their own window (mute or solo each stem as it plays, then keep what you hear), or **Save stems as files** into a folder next to the sound. The graphics card is checked against the processor on a short test first, and only used if its stems match. The model (about 90 MB) downloads the first time you use it
-- **Tempo and key**: the editor listens to each sound for its BPM and musical key (with its Camelot number, such as 8A, for DJ mixing) and shows them beside **Loop maker**. **Beats** draws the bars and beats over the waveform and snaps the cursor and selection to the beat (half and quarter beats when zoomed in; hold Ctrl, or ⌘ on a Mac, to place them freely). Any selection shows its length in bars and beats as you drag it
-- **Loop maker**: pick a length (1, 2, 4, 8, or 16 bars) and **Loop here** selects that many bars from the bar at the cursor and plays them round and round. Step the loop back or on by its own length, halve or double it, or **Find loops** to list the stretches that loop most seamlessly (where the song repeats itself and the end flows back into the start). **Save loop** and **Save all found** write WAV files into a folder beside the song, named and tagged with their length, tempo, and key
-- **Markers** (M, and [ and ] to go between them) to name spots, select between them, or split at every one. Markers and clips aren't saved into the file
-- VST3 effects in the editor (**Plugins**): reverbs, EQs, compressors, and anything else installed in the usual VST3 folder (or a folder you add). The plugin's own window opens; **Preview** plays the selection through it as you turn its knobs, and **Apply** changes the selection or the whole sound as one step you can undo. Reverb and delay tails ring on into the audio that follows, or lengthen the sound at the end. Each plugin runs in a helper program of its own, so one that crashes can't take Lucent or your edits with it, and its settings are remembered for next time. 64-bit VST3 effects only (not VST2, 32-bit plugins, or instruments)
-- Plugin chains: the **Inserts** channel strip beside the waveform (I) shows the plugins as insert slots, and the sound goes through them from the top down. Click an empty slot to add one from the plugin browser: type to search by name, maker, or type; narrow it to your starred favorites or one type (EQ, Compressor, Limiter, Reverb, Delay, Saturation, and more, worked out from each plugin and changed with a right-click); and list them under their types or their makers. Play goes through the plugins that are on, so you hear them as you set them up; **Bypass** (B) plays without them to compare. Switch any one off with its power dot (heard at once, even while playing), move them up or down, and **Apply** makes the ones that are on part of the sound, as one step. The listening volume beside the meter (Shift+Up and Shift+Down) changes only what you hear **Chains** saves the chain, with every plugin's settings, to open again any time, and imports REAPER FX chains (`.RfxChain`): their VST3 plugins come over in order with their settings, and anything that can't (JS effects, VST2 versions, plugins that aren't installed) is listed
-- **History** (or **H**) opens a list beside the waveform of every step taken, with its settings and the time. Click a step to go back to it; the steps after it stay, dimmed, until you make a new change
-- A converter (**Convert to…**): MP3 at 128 to 320 kbps or VBR V0 and V2, FLAC at 16 or 24-bit, or WAV at 16, 24, or 32-bit float, at the original sample rate or 44.1 or 48 kHz, in stereo or mono. Several sounds at once, optionally processed on the way (normalize, limit, change volume, use the editor's EQ or compressor, remove hum, clicks, or DC offset, trim silence, and fade in and out; also **Batch…** in the editor), tags and artwork copied, and nothing replaced without asking
-- A Direct3D 11 visualizer with MilkDrop-style feedback trails, and visuals that compile in the background and are kept on disk, so the app starts straight away
-- The visual picker lists visuals in family folders (switch them off with the FOLDERS pill) and filters by tag; CLEAR shows everything again. Enter shows the first match, Esc clears the search
-- Favorite visuals and lists: star a visual in the picker, under the visuals, or with F. The menu at the top of the picker switches between all visuals, favorites, and your lists
-- Auto mode moves to a new visual about every 25 seconds, on a downbeat at the start of a phrase where it can. When a drop is coming it waits for it and cuts to the new visual right on the drop, and it lingers a little longer in quiet intros and breakdowns. The beat pulse follows the song's own beats, and the glow builds through a build-up and flares on the drop. For radio, streams, and other apps, where nothing can be studied ahead, it follows the beat live: it cuts on a drop the moment it's heard and holds on through a build-up waiting for one. The AUTO pill shows how often; click the arrow beside it to choose anything from 10 seconds to 3 minutes
-- Fullscreen: double-click or F11. Leave with Esc, a double-click, the × in the top-right corner, or the right-click menu. Click once to pause or play, in a window or fullscreen
-- The right-click menu on the visuals: fullscreen, a seek bar, play or pause, stop, next and previous track, volume, the next or previous visual, the picker, favorite, Auto and its timing, recording a video, and the graphics options
-- Remembers the last visual, your options, your skin, and your theme
-
-</details>
+Media keys work in the background, and the playing song shows in Windows' media controls and the Mac's Now Playing.
 
 ## Make your own visuals
 
-Each visual is one HLSL pixel shader file in [`src/WinampInspiredVisualizer/Presets`](src/WinampInspiredVisualizer/Presets) (and in the `Presets` folder next to the installed app). A preset defines one function:
+Each visual is one HLSL shader in [`src/WinampInspiredVisualizer/Presets`](src/WinampInspiredVisualizer/Presets), or the `Presets` folder next to the app. Both platforms load the same files.
 
 ```hlsl
 // Name: My Visual
@@ -344,89 +88,48 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-`Bass`, `Mid`, `Treble`, `Beat`, `Level`, `Time`, `spectrum(x)`, `waveform(x)`, and helpers like `previous`, `rotate`, `kaleidoscope`, `palette`, `neon`, `polygon`, `glow`, `fbm`, and `cameraRay` (for fly-through visuals) are listed in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). `qualitySteps(n)` and `fractalDepth(n)` scale loops with the Detail option, and `pixelSize()` keeps thin lines one screen pixel wide at every Resolution setting. The `// Family:` and `// Tags:` lines put a visual in a picker folder and give it tags (the families and tags are listed in [`Visualizer/VisualStyles.cs`](src/Lucent.Core/Visualizer/VisualStyles.cs); without them it goes in Other), and an optional `// Added: 2026-10-18` line places it in the picker's Newest first order (without one, the file's date counts). Drop a new `.hlsl` file into `%AppData%\Lucent\Presets` on Windows or `~/Library/Application Support/Lucent/Presets` on a Mac (create the folder if it isn't there) and restart the app to see it. Visuals there survive updates, and one with the same file name as a built-in visual replaces it. Every pull request checks that all presets compile.
-
-A particle visual also defines `Spawn`, `Simulate`, and `Show`, which start, move, and draw each of its particles. The engine runs them for every particle each frame on the graphics card and adds the glowing dots into a layer that `Render` reads with `particles(uv)`. A `// Particles: 300000` line sets how many run on Normal detail. Random numbers, 3D projection with lens blur, curl-noise flow, and motion streaks are in [`Shaders/Particles.hlsli`](src/WinampInspiredVisualizer/Shaders/Particles.hlsli).
-
-### MilkDrop presets
-
-Lucent plays MilkDrop presets (`.milk` files from Winamp's MilkDrop 1 and 2 and from projectM) as visuals on Windows and the Mac, listed in the picker's MilkDrop folder. It comes with 214 classics picked from projectM's [Cream of the Crop](https://github.com/projectM-visualizer/presets-cream-of-the-crop) collection, among them 71 that first shipped with MilkDrop 2 itself, by Geiss, Rovastar, Zylot, Flexi, and many more (see [the credits](src/WinampInspiredVisualizer/Presets/MilkDrop/CREDITS.md)), and four of Lucent's own. Every preset is shown with its artist: in the picker after its name, over the visuals, and in the record dialog. By default they get a modern look: their picture is brought into Lucent's light, with its glow, tone-mapping, richer colour, and highlights that climb on HDR screens; switch **Modern look for MilkDrop presets** off in **Options → Visuals** (or **MilkDrop presets → Modern look** in the visuals' right-click menu) to see them as MilkDrop showed them. Switch **MilkDrop presets** off in **Options → Visuals** (or the visuals' right-click menu) to leave them out of the picker and Auto. To add your own, press **Import** on the picker's MilkDrop folder, right-click the visuals and choose **MilkDrop presets → Import MilkDrop presets…** (or **Import a folder of presets…** for a whole pack), or drop them into `%AppData%\Lucent\Presets\MilkDrop` (on the Mac, `~/Library/Application Support/Lucent/Presets/MilkDrop`) and restart; folders inside it load too. They're named the way preset packs name them: a file called `Geiss - Reaction Diffusion.milk` shows as **Reaction Diffusion by Geiss**, and the picker's search finds presets by author too. The self-tests on Windows and the Mac watch each visual's brightness for a moment and warn about any that flash more than three times a second, so strobing presets can be left out. They work with Auto, favourites, lists, and the transitions like any other visual. Each preset runs as MilkDrop runs it, stepping at most 60 frames a second however fast the screen refreshes (preset equations count frames, so faster would speed them up and turn some into strobes): its per-frame and per-pixel equations (MilkDrop's expression language compiled to fast .NET code) bend a warp mesh that feeds each frame into the next, then its custom shapes, custom waves, built-in wave, borders, and motion vectors are drawn on top, and MilkDrop 2 warp and composite shaders are translated to Shader Model 5 (and on to Metal on the Mac), with the blur and noise textures they expect. Bass, mid, and treble come from Lucent's own analysis, scaled the way MilkDrop scales them. A part of a preset that can't be used is left out (an equation that doesn't parse), swapped for MilkDrop 1's version (a shader that won't compile) or stood in for (a picture from MilkDrop's textures folder becomes noise), and noted in `%AppData%\Lucent\errors.log`; a file that isn't a preset at all is skipped. The code is in [`Lucent.Core/Visualizer/MilkDrop`](src/Lucent.Core/Visualizer/MilkDrop) (reading presets and running them, with no graphics card needed) [`Visualizer/MilkDrop`](src/WinampInspiredVisualizer/Visualizer/MilkDrop) (drawing them with Direct3D) and [`Lucent.Mac/Visuals`](src/Lucent.Mac/Visuals) (drawing them with Metal); `dotnet run --project tools/MilkDropCheck -- <presets>` reads and runs presets without the app, and CI compiles the bundled presets' shaders.
-
-### Winamp AVS presets
-
-Lucent plays Winamp AVS presets (`.avs` files from Winamp's Advanced Visualization Studio) as visuals on Windows and the Mac, listed in the picker's Winamp AVS folder with a small AVS tag. It comes with 34 of the 35 presets that shipped with Winamp, by Justin, Tag, and Lone (see [the credits](src/WinampInspiredVisualizer/Presets/AVS/CREDITS.md)). Switch **Winamp AVS presets** off in **Options → Visuals** (or the visuals' right-click menu) to leave them out of the picker and Auto. To add your own, press **Import** on the picker's Winamp AVS folder, right-click the visuals and choose **Winamp AVS presets → Import AVS presets…** (or **Import a folder of presets…** for a whole pack, which brings its .bmp pictures along), or drop them into `%AppData%\Lucent\Presets\AVS` (on the Mac, `~/Library/Application Support/Lucent/Presets/AVS`) and restart. They're named the same way as MilkDrop presets, and work with Auto, favourites, lists, and the transitions like any other visual.
-
-Each preset runs as AVS ran it: its effect lists, blends, and buffers, and its superscopes, dynamic movements, and other code (AVS's expression language, compiled by the same engine as MilkDrop's), draw a picture on the CPU each frame at 60 fps. With **Modern look for AVS presets** on (the default), that picture is drawn at up to 1080 lines with lines and dots thickened to match, enlarged smoothly, and brought into Lucent's light, so it goes through the same glow, tone-mapping, and transitions as Lucent's own visuals. Switched off, presets look as Winamp drew them: about 480 lines, pixel for pixel, without the glow. Most popular plug-in effects (APEs) are built in too, such as Texer II, Color Map, Convolution Filter, Channel Shift, Multiplier, and the video delays. Effects that can't run in Lucent (AVI video, Sonique SVP plug-ins, and closed-source APEs such as FyrewurX) are left out and noted in the error log. The code is in [`Lucent.Core/Visualizer/Avs`](src/Lucent.Core/Visualizer/Avs), shown by [`Shaders/AvsDisplay.hlsl`](src/WinampInspiredVisualizer/Shaders/AvsDisplay.hlsl); `dotnet run --project tools/AvsCheck -- <presets>` reads and runs presets without the app, and CI runs every bundled preset.
+Inputs like `Bass`, `Mid`, `Treble`, `Beat`, `spectrum(x)`, and `waveform(x)`, and helpers like `kaleidoscope`, `glow`, `fbm`, and `cameraRay`, are in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). Your own `.milk` and `.avs` presets import too. MilkDrop and AVS credits are in each preset folder's `CREDITS.md`.
 
 ## Build from source
 
-Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) on Windows.
+You'll need the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```
-dotnet run --project src/WinampInspiredVisualizer
+dotnet run --project src/WinampInspiredVisualizer   # Windows
+dotnet run --project src/Lucent.Mac                 # Mac
 ```
 
-The code is in three projects. `src/Lucent.Core` holds everything that doesn't depend on Windows (audio analysis, the equalizer, the editor's effects, export, tags, the library, playlists, and settings) and builds on any OS, for both apps. `src/WinampInspiredVisualizer` is the Windows app: its windows, the Direct3D renderer, playback, and the shaders. `src/Lucent.Mac` is the Mac app (see [Mac](#mac)).
+| Project | What it is |
+|---|---|
+| [`src/Lucent.Core`](src/Lucent.Core) | Everything platform-free: audio analysis, EQ, editor effects, tags, library, and settings |
+| [`src/WinampInspiredVisualizer`](src/WinampInspiredVisualizer) | The Windows app (WPF, Direct3D 11) |
+| [`src/Lucent.Mac`](src/Lucent.Mac) | The Mac app (Avalonia, Metal, Core Audio) |
+| [`src/PluginHost`](src/PluginHost) | The VST3 plugin helper (C++, built with CMake) |
 
-The two apps have the same features, so a change to one goes into the other in the same pull request. Anything that can only be on one platform is listed in [`docs/PARITY.md`](docs/PARITY.md) with what the other has instead, and every pull request runs `dotnet run --project tools/ParityCheck` to catch a file, setting, or shared piece of `Lucent.Core` that only one app has.
+The Mac app needs the visuals translated to Metal first, which takes Microsoft's [`dxc`](https://github.com/microsoft/DirectXShaderCompiler/releases) on Linux or Windows: `dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders`.
 
-VST3 plugins in the editor need the plugin helper, a small C++ program in [`src/PluginHost`](src/PluginHost). Build it first (with [CMake](https://cmake.org/) and Visual Studio's C++ tools) and the app build copies it next to `Lucent.exe`:
+Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
 
-```
-cmake -S src/PluginHost -B build/PluginHost -A x64
-cmake --build build/PluginHost --config Release
-```
+## Bugs and crash reports
 
-### Mac
-
-`src/Lucent.Mac` is the Mac app: the whole Windows app ported to [Avalonia](https://avaloniaui.net/), sharing `src/Lucent.Core` with it. The visuals are drawn with Metal, music plays through Core Audio, the Bandcamp sign-in uses Safari's WebKit and is kept in your keychain, and it updates itself with [Velopack](https://velopack.io/) like the Windows app. It needs macOS 12 or later and the .NET 8 SDK.
-
-The visuals are written in HLSL, so they're translated to Metal when the app is built. That needs Microsoft's [DirectX Shader Compiler](https://github.com/microsoft/DirectXShaderCompiler/releases) (`dxc`) on your PATH, or set `DXC` to it. DXC has no Mac build, so run the first line on Linux or Windows (CI does it on Linux) and copy `artifacts/metal-shaders` across:
-
-```
-dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders
-dotnet run --project src/Lucent.Mac
-```
-
-To make `Lucent.app`, publish it for your Mac's chip (`osx-arm64` for Apple silicon, `osx-x64` for Intel) and package it. `package-mac.sh` adds the icon and Info.plist and signs it ad hoc (set `MAC_SIGN_IDENTITY` to a Developer ID certificate's name to sign it properly):
-
-```
-dotnet publish src/Lucent.Mac -c Release -r osx-arm64 --self-contained -o publish-mac
-tools/package-mac.sh publish-mac . 0.1.0
-```
-
-CI builds both chips on every push, each on its own kind of Mac: it runs `Lucent --self-test` (decoding, every visual drawn on the graphics card, a track shown in Now Playing, and a short video recorded and checked), makes the zip of `Lucent.app`, and packs the installer and update feed with Velopack (`vpk pack`, in an `osx-arm64` or `osx-x64` channel so each Mac updates to its own build). On main, the app and installer are signed with Lucent's Developer ID, notarized by Apple, and stapled, then added to the Latest build release. Signing needs the repository secrets listed in [`build.yml`](.github/workflows/build.yml). Pull request builds are signed but not notarized, since Apple can take an hour or more to answer.
-
-### Releases
-
-Every push to main replaces the **Latest build** release, and copies of Lucent set to **Every build** update to it. To make a stable release, run the **Release** workflow from the Actions tab once the Windows and both Mac builds of a commit have reached Latest build: it copies those exact files to a new release (tagged `v1.0.412`, say, with the title you give it) that everyone on stable releases then updates to. Afterwards, raise the first two numbers of `LUCENT_VERSION` in [`build.yml`](.github/workflows/build.yml) (1.0 to 1.1, say), so later builds count up from the new release.
-
-`Lucent --screenshots <folder>` draws each window to a PNG without a screen (on any OS, Linux included), for checking the Mac windows by eye.
-
-## Report a bug
-
-Found something broken? Click **🐞 Report a bug** at the bottom of Lucent's options panel. It opens a [bug report](https://github.com/joshuadav86/Lucid/issues/new?template=bug_report.yml) on GitHub with your Lucent version, Windows version, graphics card, and the last few errors from `%AppData%\Lucent\errors.log` already filled in. Nothing is sent until you check it and click **Create**. You'll need a free GitHub account.
-
-### Crash reports
-
-When Lucent crashes, it sends a crash report to its developer the next time it starts, without asking, so crashes get fixed even when nobody files a bug. A report has where in Lucent it crashed (the exception and its stack, or for a crash inside a graphics driver, what Windows or macOS recorded about it), Lucent's version, the operating system, the graphics card, and the last few entries of `errors.log`. File paths, web addresses, email addresses, and your user and computer names are taken out before anything is kept, so a report never says whose computer it was or what was playing. Reports go to [Sentry](https://sentry.io) and nowhere else. Switch **Send crash reports** off in **Options → Updates** to stop them; any waiting to be sent are deleted. The code is in [`Lucent.Core/Diagnostics`](src/Lucent.Core/Diagnostics). Builds get Sentry's address from the `LUCENT_CRASH_DSN` repository secret; a build without it never keeps or sends a report.
+Click **🐞 Report a bug** in Lucent's options to open a [bug report](../../issues/new?template=bug_report.yml) with the details filled in. Crashes are reported automatically, without your name, files, or music. Turn that off under **Options → Updates**.
 
 ## Support Lucent
 
-Lucent is free. If it's earned a place on your desktop, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86). The coffee cup in Lucent's title bar and the **☕ Buy me a coffee** button at the bottom of its options panel go to the same page.
+Lucent is free, and always will be. If it's earned a spot in your setup, you can [buy me a coffee](https://buymeacoffee.com/joshuadav86).
 
 ## License
 
 [MIT](LICENSE). Not affiliated with or endorsed by Winamp.
 
-The audio editor's stem splitter uses [Demucs](https://github.com/facebookresearch/demucs) by Meta AI ([MIT](tools/StemModel/LICENSE-Demucs.txt)), run with [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT).
+<details>
+<summary>Third-party credits</summary>
 
-The starter song (`StarterMusic/Kepler North - Self Actualize.mp3`) is © Kepler North and isn't covered by the MIT licence; it comes with Lucent to be played in it.
+- Stem splitting uses [Demucs](https://github.com/facebookresearch/demucs) by Meta AI ([MIT](tools/StemModel/LICENSE-Demucs.txt)), run with [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT).
+- MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), shipped as separate `libmp3lame` libraries you can swap for your own build, through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
+- Videos play with [libVLC](https://www.videolan.org/vlc/libvlc.html) (LGPL 2.1 or later) through [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) (LGPL 2.1 or later). libVLC ships unchanged in the `libvlc` folder and can be swapped for your own build; its licence and source are in `Licenses/LICENSE-libVLC.txt`. VLC is a trademark of VideoLAN, which doesn't make or endorse Lucent.
+- WavPack and Monkey's Audio decoding are C# ports of the [WavPack](https://github.com/dbry/WavPack) decoder by David Bryant ([BSD](assets/licenses/LICENSE-WavPack.txt)) and the [Monkey's Audio](https://www.monkeysaudio.com) decoder by Matthew T. Ashland ([BSD 3-Clause](assets/licenses/LICENSE-MonkeysAudio.txt)).
+- The plugin helper is built with the [VST 3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT). VST is a registered trademark of Steinberg Media Technologies GmbH.
+- The starter song, "Self Actualize," is © Kepler North and isn't covered by the MIT license.
 
-MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), which ships as the separate `libmp3lame.64.dll` and `libmp3lame.32.dll` next to `Lucent.exe` and can be swapped for your own build. It's used through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
-
-Videos play with [libVLC](https://www.videolan.org/vlc/libvlc.html), VLC's engine (LGPL 2.1 or later), through [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) (LGPL 2.1 or later). libVLC ships unchanged in the `libvlc` folder next to Lucent and can be swapped for your own build; its licence and where to get its source are in `Licenses/LICENSE-libVLC.txt`. VLC is a trademark of VideoLAN, which doesn't make or endorse Lucent.
-
-WavPack and Monkey's Audio files are decoded by Lucent's own C# ports of the [WavPack](https://github.com/dbry/WavPack) decoder by David Bryant ([BSD](assets/licenses/LICENSE-WavPack.txt)) and the [Monkey's Audio](https://www.monkeysaudio.com) decoder by Matthew T. Ashland ([BSD 3-Clause](assets/licenses/LICENSE-MonkeysAudio.txt)).
-
-The plugin helper (`LucentPluginHost.exe`) is built with the [VST 3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT). VST is a registered trademark of Steinberg Media Technologies GmbH.
+</details>
