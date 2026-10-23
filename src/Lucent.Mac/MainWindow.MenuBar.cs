@@ -122,8 +122,8 @@ public partial class MainWindow
         playback.Opening += (_, _) =>
         {
             play.Header = _player.IsPlaying ? "Pause" : "Play";
-            shuffle.IsChecked = _settings.Shuffle;
-            repeat.Header = _settings.Repeat switch
+            shuffle.IsChecked = ShownShuffle;
+            repeat.Header = ShownRepeat switch
             {
                 RepeatMode.All => "Repeat: Whole Queue",
                 RepeatMode.One => "Repeat: This Track",

@@ -1,11 +1,13 @@
 using System.Diagnostics;
 using System.Globalization;
+using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 
 namespace Lucent.Mac.Streaming;
 
 /// <summary>
-/// The Spotify app on this Mac, through AppleScript: what's playing, its cover, and play, pause, skip and seek.
+/// The Spotify app on this Mac, through AppleScript: what's playing, its cover, and play, pause, skip, seek,
+/// shuffle and repeat (on or off: its AppleScript can't repeat just one song, which SpotifyRemote asks the Web API for).
 /// Lucent.Core's SpotifyRemote reads this first, so the song shows and the buttons work even while Spotify's
 /// Web API has asked Lucent to wait. macOS asks once whether Lucent may control Spotify (Privacy &amp; Security,
 /// Automation).
@@ -13,14 +15,15 @@ namespace Lucent.Mac.Streaming;
 /// <remarks>
 /// Windows reads the Spotify app through Windows' media controls instead (see Windows' Streaming/SpotifyAppRemote.cs).
 /// </remarks>
-public sealed class SpotifyAppRemote : IRemotePlayer
+public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes
 {
     private const string Osascript = "/usr/bin/osascript";
 
     private const string NotOpen = "Open Spotify and play something, then Lucent can show and control it.";
 
     // Fields between tabs: state, then the song's spotify:track: URI, name, artist, album, length in milliseconds,
-    // the position in seconds, and its cover's address.
+    // the position in seconds, its cover's address, and whether it shuffles and repeats (true or false, empty when
+    // it won't say).
     private const string ReadScript = """
         if application "Spotify" is not running then return "closed"
         tell application "Spotify"
@@ -28,7 +31,11 @@ public sealed class SpotifyAppRemote : IRemotePlayer
             if playerState is "stopped" then return "stopped"
             try
                 set t to current track
-                return playerState & tab & (id of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & (artwork url of t)
+                set modes to "" & tab & ""
+                try
+                    set modes to (shuffling as string) & tab & (repeating as string)
+                end try
+                return playerState & tab & (id of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & (artwork url of t) & tab & modes
             on error
                 return playerState
             end try
@@ -60,8 +67,18 @@ public sealed class SpotifyAppRemote : IRemotePlayer
         var id = uri[(uri.LastIndexOf(':') + 1)..];
         var art = fields.Length > 7 && fields[7].StartsWith("https://", StringComparison.Ordinal) ? fields[7] : null;
         var track = new RemoteTrack(id, fields[2], fields[3], fields[4], Seconds(fields[5]) / 1000, art, uri);
-        return new RemoteState(track, playing, Seconds(fields[6]), readAt);
+        bool? shuffle = fields.Length > 8 ? Flag(fields[8]) : null;
+        RepeatMode? repeat = fields.Length > 9 ? Flag(fields[9]) switch { true => RepeatMode.All, false => RepeatMode.Off, null => null } : null;
+        return new RemoteState(track, playing, Seconds(fields[6]), readAt, Shuffle: shuffle, Repeat: repeat);
     }
+
+    private static bool? Flag(string text) => text switch { "true" => true, "false" => false, _ => null };
+
+    public Task SetShuffleAsync(bool on, CancellationToken cancel) => TellAsync($"set shuffling to {(on ? "true" : "false")}", cancel);
+
+    public Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel) => mode == RepeatMode.One
+        ? throw new NotSupportedException("Spotify's AppleScript can't repeat one song.")
+        : TellAsync($"set repeating to {(mode == RepeatMode.All ? "true" : "false")}", cancel);
 
     public Task PlayAsync(CancellationToken cancel) => TellAsync("play", cancel);
 

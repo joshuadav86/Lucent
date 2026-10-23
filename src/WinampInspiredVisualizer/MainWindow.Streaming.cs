@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using WinampInspiredVisualizer.Audio;
+using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 
 namespace WinampInspiredVisualizer;
@@ -28,6 +29,11 @@ public partial class MainWindow
     private TimeSpan ShownPosition => _remote is not null ? _remote.State?.PositionNow ?? TimeSpan.Zero : _player.Position;
 
     private TimeSpan ShownDuration => _remote is not null ? _remote.State?.Track?.Duration ?? TimeSpan.Zero : _player.Duration;
+
+    // Shuffle and repeat as the player shows them: the other app's own while one is being controlled.
+    private bool ShownShuffle => _remote is not null ? _remote.State?.Shuffle == true : _settings.Shuffle;
+
+    private RepeatMode ShownRepeat => _remote is not null ? _remote.State?.Repeat ?? RepeatMode.Off : _settings.Repeat;
 
     /// <summary>Picks up where the last run left off: listening to other apps, and the app being controlled.</summary>
     private void StartStreaming()
@@ -125,6 +131,7 @@ public partial class MainWindow
         UpdateListening();
         ShowRemote();
         ShowWhereItPlays();
+        UpdateShuffleRepeatButtons();
     }
 
     /// <summary>Goes back to Lucent's own music, pausing the other app first when <paramref name="pause"/> says to.</summary>
@@ -157,6 +164,7 @@ public partial class MainWindow
         UpdateListening();
         ShowNowPlaying(_current?.Track);
         UpdatePlayPauseButton();
+        UpdateShuffleRepeatButtons();
         UpdatePosition();
     }
 
@@ -229,6 +237,7 @@ public partial class MainWindow
         UpdateListening();
         ShowWhereItPlays();
         UpdatePlayPauseButton();
+        UpdateShuffleRepeatButtons();
         UpdatePosition();
     }
 
