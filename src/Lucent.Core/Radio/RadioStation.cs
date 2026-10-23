@@ -52,6 +52,12 @@ public sealed record RadioStation
     /// <summary>How many more (or fewer) plays it had today than yesterday.</summary>
     public int Trend { get; init; }
 
+    /// <summary>
+    /// The same station at a stream that's more likely to be up, at a lower quality, played when <see cref="StreamUrl"/>
+    /// can't be: a featured station's everyday stream behind its best one. Null for most stations.
+    /// </summary>
+    public RadioStation? Backup { get; init; }
+
     /// <summary>The network it belongs to, for the featured stations (SomaFM, FRISKY…), otherwise null.</summary>
     public string? Network { get; init; }
 

@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using WinampInspiredVisualizer.Layout;
 
 namespace WinampInspiredVisualizer.Windows;
 
@@ -14,6 +15,8 @@ namespace WinampInspiredVisualizer.Windows;
 /// A window that's locked (<see cref="WindowLocks"/>) stays where it is: it can't be dragged or resized,
 /// and nothing carries or resizes it along with another. With <see cref="MoveEveryWindow"/> on, dragging
 /// the player carries every window, docked to it or not.
+/// Drag a window by its title bar and drop it with the mouse well inside another, and the two swap places
+/// and sizes (<see cref="WindowSwap"/>); an outline over the other window shows when a drop will swap.
 /// Works on the raw window rectangles (physical pixels) while Windows moves them.
 /// </summary>
 /// <remarks>
@@ -53,6 +56,7 @@ public sealed class WindowSnapper
     private const uint MONITOR_DEFAULTTONEAREST = 2;
     private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     private const int VK_CONTROL = 0x11;
+    private const uint GW_HWNDNEXT = 2;
 
     /// <summary>How close (in pixels at 100% scaling) an edge has to come before it snaps.</summary>
     private const double SnapDistance = 16;
@@ -85,6 +89,14 @@ public sealed class WindowSnapper
     /// <summary>The windows resizing along with the one being resized, found when the resize starts.</summary>
     private readonly List<Linked> _linked = new();
 
+    /// <summary>The window the one being dragged swaps with if it's dropped now, if any.</summary>
+    private IntPtr _swapWith;
+
+    /// <summary>Lucent's windows from front to back as the drag began, so the one in front decides where they overlap.</summary>
+    private readonly List<IntPtr> _frontToBack = new();
+
+    private SwapHighlight? _highlight;
+
     public WindowSnapper(Window main)
     {
         _main = main;
@@ -106,9 +118,13 @@ public sealed class WindowSnapper
     /// </summary>
     public Func<bool>? MoveEveryWindow { get; set; }
 
+    /// <summary>Raised when a window dragged onto another swaps places with it: the dragged one, then the other.</summary>
+    public event Action<Window, Window>? Swapped;
+
     public void Add(Window window)
     {
-        if (_windows.Contains(window))
+        // The swap outline isn't one of the windows: nothing snaps to it or swaps with it.
+        if (_windows.Contains(window) || window is SwapHighlight)
         {
             return;
         }
@@ -156,6 +172,8 @@ public sealed class WindowSnapper
                 _resized = false;
                 _carried.Clear();
                 _linked.Clear();
+                _swapWith = IntPtr.Zero;
+                FindFrontToBack();
                 GetCursorPos(out _startCursor);
                 GetWindowRect(hwnd, out _startRect);
                 _startMargins = Margins(hwnd);
@@ -191,6 +209,10 @@ public sealed class WindowSnapper
                     _carrierScale = Scale(hwnd);
                     MoveTogether(hwnd, rect);
                 }
+                else
+                {
+                    FindSwap(hwnd);
+                }
 
                 break;
             }
@@ -223,10 +245,17 @@ public sealed class WindowSnapper
                 OnDpiChanged(hwnd, wParam, lParam);
                 break;
             case WM_EXITSIZEMOVE:
-                if (hwnd == _moving && !_resized && _carried.Count == 0 && hwnd != Handle(_main))
+                _highlight?.Hide();
+                if (hwnd == _moving && !_resized && _swapWith != IntPtr.Zero)
+                {
+                    Swap(hwnd, _swapWith);
+                }
+                else if (hwnd == _moving && !_resized && _carried.Count == 0 && hwnd != Handle(_main))
                 {
                     MatchCorners(hwnd);
                 }
+
+                _swapWith = IntPtr.Zero;
 
                 if (hwnd == _moving && _carried.Count > 0)
                 {
@@ -244,6 +273,75 @@ public sealed class WindowSnapper
         }
 
         return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// Works out which window the one being dragged would swap with if it were dropped now (the one the
+    /// mouse is well inside), and shows the outline over it, or hides the outline if there's none.
+    /// </summary>
+    private void FindSwap(IntPtr hwnd)
+    {
+        GetCursorPos(out var cursor);
+        var others = OtherWindows(hwnd)
+            .OrderBy(other => _frontToBack.IndexOf(other.Handle) is var index and >= 0 ? index : int.MaxValue)
+            .ToList();
+        var target = WindowSwap.TargetAt(cursor.X, cursor.Y, Candidate(hwnd, Visible(_startRect, _startMargins)),
+            others.Select(other => Candidate(other.Handle, other.Rect)).ToList(), WindowSwap.Depth * Scale(hwnd));
+        _swapWith = target >= 0 ? others[target].Handle : IntPtr.Zero;
+        if (_swapWith == IntPtr.Zero)
+        {
+            _highlight?.Hide();
+            return;
+        }
+
+        var rect = others[target].Rect;
+        if (_highlight is null)
+        {
+            var highlight = new SwapHighlight();
+            _main.Closed += (_, _) => highlight.Close();
+            _highlight = highlight;
+        }
+
+        _highlight.ShowAt(rect.Left, rect.Top, rect.Right, rect.Bottom, WindowLocks.NameOf(HwndSource.FromHwnd(_swapWith)?.RootVisual as Window));
+    }
+
+    /// <summary>A window as one that could swap: where it is, its smallest size, and whether it can (it's resizable and not locked).</summary>
+    private SwapCandidate Candidate(IntPtr handle, Rect rect)
+    {
+        var min = MinSize(handle);
+        return new SwapCandidate(new TileRect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top), min.Width, min.Height, Resizable(handle));
+    }
+
+    /// <summary>
+    /// Swaps the dropped window with the one it was dropped on: it takes that window's place and size, and
+    /// that window takes the place and size the dropped one had before the drag.
+    /// </summary>
+    private void Swap(IntPtr hwnd, IntPtr other)
+    {
+        var start = Visible(_startRect, _startMargins);
+        var target = VisibleRect(other);
+        var here = Outer(target, Margins(hwnd));
+        var there = Outer(start, Margins(other));
+        SetWindowPos(other, IntPtr.Zero, there.Left, there.Top, there.Right - there.Left, there.Bottom - there.Top, SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(hwnd, IntPtr.Zero, here.Left, here.Top, here.Right - here.Left, here.Bottom - here.Top, SWP_NOZORDER | SWP_NOACTIVATE);
+        if (HwndSource.FromHwnd(hwnd)?.RootVisual is Window dragged && HwndSource.FromHwnd(other)?.RootVisual is Window swapped)
+        {
+            Swapped?.Invoke(dragged, swapped);
+        }
+    }
+
+    /// <summary>Notes the order Lucent's windows are in, front to back.</summary>
+    private void FindFrontToBack()
+    {
+        _frontToBack.Clear();
+        var ours = _windows.Select(Handle).Where(handle => handle != IntPtr.Zero).ToHashSet();
+        for (var handle = GetTopWindow(IntPtr.Zero); handle != IntPtr.Zero && _frontToBack.Count < ours.Count; handle = GetWindow(handle, GW_HWNDNEXT))
+        {
+            if (ours.Contains(handle))
+            {
+                _frontToBack.Add(handle);
+            }
+        }
     }
 
     /// <summary>
@@ -1177,6 +1275,12 @@ public sealed class WindowSnapper
 
     [DllImport("user32.dll")]
     private static extern short GetKeyState(int key);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetTopWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindow(IntPtr hwnd, uint command);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out Rect value, int size);

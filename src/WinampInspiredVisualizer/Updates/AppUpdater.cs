@@ -10,7 +10,7 @@ namespace WinampInspiredVisualizer.Updates;
 /// Keeps an installed Lucent up to date from its releases on GitHub: the newest stable release (a
 /// "Lucent 1.0" and so on), or, for people who choose every build, the "Latest build" release that
 /// each change to main replaces. Until there's a stable release, everyone follows the latest build.
-/// It checks shortly after startup and then every hour while Lucent runs, downloads a newer build in
+/// It checks shortly after startup and then every four hours while Lucent runs, downloads a newer build in
 /// the background, and installs it when Lucent closes, or straight away with a restart if asked. With
 /// <see cref="InstallAutomatically"/> off it only installs with that restart. Options
 /// can also check on demand with <see cref="CheckNowAsync"/>. Lucent run from the zip isn't installed and never updates.
@@ -51,7 +51,7 @@ public sealed class AppUpdater
     private (string From, IReadOnlyList<string> Changes)? _whatsNew;
     private bool _applying;
 
-    // The hourly check and one asked for in Options take turns, so they don't download the same build twice.
+    // The regular check and one asked for in Options take turns, so they don't download the same build twice.
     private readonly SemaphoreSlim _checking = new(1, 1);
 
     /// <summary>Follow every build on main rather than stable releases only.</summary>
@@ -60,8 +60,10 @@ public sealed class AppUpdater
     /// <summary>Install a downloaded build when Lucent closes. Off, only a restart asked for installs it.</summary>
     public bool InstallAutomatically { get; set; } = true;
 
-    // GitHub allows 60 unsigned requests an hour from one address, and a check uses two or three.
-    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(1);
+    // Every four hours rather than every hour: until 1.0 everyone follows every build, and on a busy night
+    // of merges an hourly check brought the UPDATE button back each time. GitHub allows 60 unsigned
+    // requests an hour from one address, and a check uses two or three.
+    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(4);
 
     /// <summary>
     /// Raised on a background thread once a newer build has downloaded and is ready to install. It's
@@ -117,7 +119,7 @@ public sealed class AppUpdater
     }
 
     /// <summary>
-    /// Checks for a newer build now, as the hourly check does, and downloads it if there is one. A
+    /// Checks for a newer build now, as the regular check does, and downloads it if there is one. A
     /// download raises <see cref="UpdateReady"/> as usual, so the title bar's UPDATE button shows too.
     /// </summary>
     public async Task<UpdateCheckResult> CheckNowAsync()
