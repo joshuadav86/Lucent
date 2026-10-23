@@ -142,6 +142,12 @@ public sealed class AppSettings
     /// <summary>Where each window was before Lucent went full screen, by name: where they go back to when it's switched off.</summary>
     public Dictionary<string, WindowBounds> WindowsBeforeFullScreen { get; set; } = new();
 
+    /// <summary>
+    /// The windows swapped while Lucent's full screen (a window dragged onto another), by name, in the
+    /// order they were swapped: laying the windows out again keeps them swapped. Cleared as it's switched on or off.
+    /// </summary>
+    public List<List<string>> FullScreenSwaps { get; set; } = new();
+
     // ---- Graphics ----
 
     public RenderResolution Resolution { get; set; } = RenderResolution.Auto;
