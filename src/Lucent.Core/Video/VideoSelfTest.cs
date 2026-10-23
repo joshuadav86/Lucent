@@ -199,7 +199,7 @@ public static class VideoSelfTest
                 var middle = new byte[4];
                 Marshal.Copy(pixels + 18 * stride + 32 * 4, middle, 0, 4);
                 seen.Add(middle[0] > 200 || middle[1] > 200 || middle[2] > 200 ? "flash" : "dark");
-            }, CancellationToken.None, kept => seen.RemoveRange(kept, seen.Count - kept));
+            }, CancellationToken.None);
             return string.Join(" ", seen);
         }
 

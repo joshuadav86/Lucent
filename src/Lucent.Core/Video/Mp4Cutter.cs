@@ -42,6 +42,12 @@ public readonly record struct VideoRange(double Start, double End)
 /// </remarks>
 public static class Mp4Cutter
 {
+    /// <summary>
+    /// Where the pictures of a video from <see cref="WritePictures"/> start: after its first picture, shown alone, and
+    /// then nothing for the time of the rest of these.
+    /// </summary>
+    internal const int LeadPictures = 30;
+
     /// <summary>The extensions that can be cut without re-encoding.</summary>
     public static readonly IReadOnlySet<string> Extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp4", ".m4v", ".mov" };
 
@@ -99,16 +105,35 @@ public static class Mp4Cutter
     /// <summary>
     /// Writes just the pictures of <paramref name="movie"/> from the keyframe at or before <paramref name="from"/> to
     /// the first place after <paramref name="to"/> a cut can end, copied as they are, into <paramref name="target"/>:
-    /// a new video that starts at that keyframe. Returns where that is in <paramref name="movie"/>.
+    /// a new video that starts at that keyframe. Returns where that is in <paramref name="movie"/>. Its pictures are
+    /// retimed to show one after another evenly, in the order they showed, so the nth shown is shown at n times one
+    /// picture's length: libVLC's transcoder rounds each picture's time to what it takes for the video's frame rate,
+    /// and drops a picture that rounds to the same time as the one before, so it needs an even rate to say exactly
+    /// which picture each one is.
     /// </summary>
+    /// <remarks>
+    /// libVLC's transcoder leaves out the last few pictures of a video it reads to the end, so when this reaches the
+    /// end of <paramref name="movie"/>, copies of its last stretch from a keyframe follow, half a second or more, to be
+    /// left out instead (see <see cref="VideoPictureReader"/>).
+    /// </remarks>
     internal static double WritePictures(Mp4Movie movie, double from, double to, string target, CancellationToken cancellation)
     {
         var video = movie.Tracks.First(track => track.IsVideo && track.Samples.Length > 0);
         var start = movie.SnapStart(from);
         var end = video.CleanPoints.FirstOrDefault(point => point.Time >= to - 0.0005, video.CleanPoints[^1]).Time;
+        var ranges = new List<VideoRange> { new(start, end) };
+        if (end >= video.CleanPoints[^1].Time - 0.0005)
+        {
+            var tail = movie.Keyframes.LastOrDefault(time => time < end - 0.0005 && time >= start - 0.0005, start);
+            for (var padded = 0.0; padded < 0.5 && ranges.Count < 64; padded += end - tail)
+            {
+                ranges.Add(new VideoRange(tail, end));
+            }
+        }
+
         using var source = File.OpenRead(movie.Path);
         using var output = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20);
-        movie.WriteCut(source, output, new[] { new VideoRange(start, end) }, video, null, cancellation);
+        movie.WriteCut(source, output, ranges, video, null, cancellation, evenly: true);
         return start;
     }
 
@@ -339,7 +364,7 @@ public sealed class Mp4Movie
 
     // With `only`, writes just that track (a sound track as an .m4a file).
     internal void WriteCut(Stream source, Stream output, IReadOnlyList<VideoRange> ranges, Mp4Track? only, IProgress<double>? progress,
-        CancellationToken cancellation)
+        CancellationToken cancellation, bool evenly = false)
     {
         // Where each stretch goes in the new file. With pictures, the stretches' lengths are counted in the
         // picture track's own ticks, so they add up exactly.
@@ -352,6 +377,17 @@ public sealed class Mp4Movie
         }
 
         var plans = Tracks.Select(track => only is null || track == only ? track.Plan(ranges, starts) : null).ToList();
+        if (evenly)
+        {
+            for (var t = 0; t < plans.Count; t++)
+            {
+                if (plans[t] is { } plan && Tracks[t].IsVideo && plan.Samples.Count > 0)
+                {
+                    plans[t] = Evenly(plan, Tracks[t].Timescale);
+                    total = plans[t]!.Length;
+                }
+            }
+        }
 
         // Interleaves the tracks in half-second chunks, as players read them.
         var chunks = new List<(int Track, int First, int Count)>();
@@ -466,6 +502,37 @@ public sealed class Mp4Movie
 
     private static Box SoundType() =>
         new("ftyp", new BoxData().U32(0x4D344120).U32(0).U32(0x4D344120).U32(0x6D703432).U32(0x69736F6D).ToArray());
+
+    // The pictures retimed to show one after another, each for the same time (the commonest a picture lasts), in the
+    // order they showed: the nth picture shown is shown at n of those, after a copy of the first (a keyframe) shown on
+    // its own, then nothing for a while. libVLC's transcoder gets the time of the first picture it decodes wrong (a
+    // few pictures late, with B-frames), and drops the next if that's the same; the copy takes that, and the gap after
+    // it keeps it clear of the rest.
+    private static TrackPlan Evenly(TrackPlan plan, uint timescale)
+    {
+        var samples = plan.Samples;
+        var each = (long)Math.Max(1, samples.GroupBy(sample => sample.Duration).MaxBy(group => group.Count())!.Key);
+        var shown = Enumerable.Range(0, samples.Count).OrderBy(i => samples[i].Dts + samples[i].CompositionOffset).ThenBy(i => i).ToArray();
+        var place = new long[samples.Count];
+        for (var r = 0; r < shown.Length; r++)
+        {
+            place[shown[r]] = r + Mp4Cutter.LeadPictures;
+        }
+
+        // Pictures shown before others decoded ahead of them wait that many places, so no time is before its decoding.
+        var wait = Math.Max(0, Enumerable.Range(0, samples.Count).Max(i => i + 1 - place[i]));
+        var retimed = new List<Mp4Sample>(samples.Count + 1)
+        {
+            samples[0] with { Dts = 0, Duration = (uint)each, CompositionOffset = (int)(wait * each) },
+        };
+        retimed.AddRange(samples.Select((sample, i) => sample with
+        {
+            Dts = (i + 1) * each,
+            Duration = (uint)each,
+            CompositionOffset = (int)((place[i] - (i + 1) + wait) * each),
+        }));
+        return new TrackPlan(retimed, wait * each, 0, (samples.Count + Mp4Cutter.LeadPictures) * each / (double)timescale);
+    }
 
     private byte[] BuildMoov(List<TrackPlan?> plans, List<(int Track, int First, int Count)> chunks, long[] offsets, double total, bool wide)
     {
