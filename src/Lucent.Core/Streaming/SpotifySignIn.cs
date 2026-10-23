@@ -24,11 +24,12 @@ public static class SpotifySignIn
     public const string RedirectUri = "http://127.0.0.1:43821/callback";
 
     /// <summary>
-    /// What Lucent asks to do: see what's playing, play, pause, skip and seek, and read the playlists and Liked Songs
-    /// it plays from. Someone who signed in before Lucent read playlists has only the first three until they sign in again.
+    /// What Lucent asks to do: see what's playing, play, pause, skip and seek, read the playlists and Liked Songs it
+    /// plays from, and add songs to them. Someone who signed in before Lucent did one of those can't until they sign in again.
     /// </summary>
     private const string Scopes = "user-read-playback-state user-modify-playback-state user-read-currently-playing "
-        + "playlist-read-private playlist-read-collaborative user-library-read";
+        + "playlist-read-private playlist-read-collaborative user-library-read "
+        + "playlist-modify-private playlist-modify-public user-library-modify";
 
     private const string AuthorizeUrl = "https://accounts.spotify.com/authorize";
     internal const string TokenUrl = "https://accounts.spotify.com/api/token";

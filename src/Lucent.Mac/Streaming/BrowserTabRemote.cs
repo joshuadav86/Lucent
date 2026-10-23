@@ -19,7 +19,7 @@ namespace Lucent.Mac.Streaming;
 /// macOS has nothing like those that other apps may press, so the Mac goes to the tab itself. Only
 /// running browsers are asked, so Lucent never opens one by itself.
 /// </remarks>
-public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume
+public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLinks
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -170,6 +170,12 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume
 
     public async Task<byte[]?> ArtworkAsync(RemoteTrack track, CancellationToken cancel) =>
         track.ArtworkUrl is { } url ? await _http.GetByteArrayAsync(url, cancel) : null;
+
+    // A song's ID is its browser, then what the site calls it (a video's ID, a song page's path).
+    public string? WebLink(RemoteTrack track) => track.Id.IndexOf('|') is var bar and >= 0 ? LinkFor(track.Id[(bar + 1)..]) : null;
+
+    /// <summary>The web link of the song the site calls <paramref name="id"/> (a video's ID, a song page's path), or null.</summary>
+    protected virtual string? LinkFor(string id) => null;
 
     /// <summary>Lists each of the site's tabs' window, tab and song, a line each, or "nojs" when the browser won't run JavaScript for Lucent.</summary>
     internal string ReadScript(string browser)

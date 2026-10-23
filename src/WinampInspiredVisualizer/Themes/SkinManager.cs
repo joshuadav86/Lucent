@@ -50,7 +50,7 @@ public static class SkinManager
         new Skin("Lucent", "Soft corners, hairlines, and calm, modern type.", "Midnight",
             "Segoe UI Variable Text, Segoe UI", "Segoe UI Variable Text, Segoe UI", FontWeights.SemiBold,
             Rounding: 1, RoundShapes: true, SkinFinish.Flat),
-        new Skin("Classic", "Square corners, raised buttons, and a black LCD, like the players of 1999.", "Emerald",
+        new Skin("Retro", "Square corners, raised buttons, and a black LCD, like the players of 1999.", "Emerald",
             "Tahoma, Segoe UI", "Lucida Console, Consolas", FontWeights.Normal,
             Rounding: 0, RoundShapes: false, SkinFinish.Bevel),
         new Skin("Glass", "Frosted panes, soft light, and big round buttons.", "Deep Ocean",
@@ -74,8 +74,15 @@ public static class SkinManager
     // Resources only some skins set; the others leave them out, so whatever uses them falls back to nothing.
     private static readonly string[] OptionalKeys = { "DisplayGlowEffect" };
 
-    public static Skin Find(string? name) =>
-        Skins.FirstOrDefault(skin => string.Equals(skin.Name, name, StringComparison.OrdinalIgnoreCase)) ?? Skins[0];
+    public static Skin Find(string? name)
+    {
+        // Retro was called Classic until it was renamed, so settings saved before then still find it.
+        if (string.Equals(name, "Classic", StringComparison.OrdinalIgnoreCase))
+        {
+            name = "Retro";
+        }
+        return Skins.FirstOrDefault(skin => string.Equals(skin.Name, name, StringComparison.OrdinalIgnoreCase)) ?? Skins[0];
+    }
 
     /// <summary>Applies a theme's colours, then lays a skin over them.</summary>
     public static void Apply(Skin skin, Theme theme)

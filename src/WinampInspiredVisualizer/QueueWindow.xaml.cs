@@ -175,8 +175,7 @@ public partial class QueueWindow : ToolWindow
                 EmptyPlaylistHint.Visibility = Visibility.Collapsed;
             }
 
-            RemoteListNote.Text = list?.Note ?? string.Empty;
-            RemoteListNote.Visibility = list?.Note is null ? Visibility.Collapsed : Visibility.Visible;
+            ShowRemoteNote(list?.Note);
             RemotePlayItem.Header = $"Play in {appName}";
             QueueTitle.Text = list is null ? "QUEUE" : appName.ToUpperInvariant();
             if (list is not null)
@@ -231,5 +230,51 @@ public partial class QueueWindow : ToolWindow
             PlayChosenRemoteSong();
             e.Handled = true;
         }
+    }
+
+    // ---- Adding the app's songs to its playlists, and sharing them ----
+
+    private void OnRemoteMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        var track = (RemoteListView.SelectedItem as RemoteListEntry)?.Track;
+        var canAdd = track is not null && Player?.CanAddToRemotePlaylists == true;
+        RemoteSongSeparator.Visibility = RemoteShareItem.Visibility = track is not null ? Visibility.Visible : Visibility.Collapsed;
+        RemoteAddItem.Visibility = canAdd ? Visibility.Visible : Visibility.Collapsed;
+        if (canAdd && track is not null)
+        {
+            Player?.FillAddToPlaylistMenu(RemoteAddItem, track, ShowRemoteNotice);
+        }
+    }
+
+    private void OnCopySongLink(object sender, RoutedEventArgs e) => CopySong(withTitle: false);
+
+    private void OnCopySongAndLink(object sender, RoutedEventArgs e) => CopySong(withTitle: true);
+
+    private void CopySong(bool withTitle)
+    {
+        if ((RemoteListView.SelectedItem as RemoteListEntry)?.Track is { } track)
+        {
+            Player?.CopySongLink(track, withTitle, ShowRemoteNotice);
+        }
+    }
+
+    private int _notice;
+
+    /// <summary>Shows <paramref name="text"/> under the list for a few seconds, then the list's own note again.</summary>
+    private async void ShowRemoteNotice(string text)
+    {
+        var notice = ++_notice;
+        ShowRemoteNote(text);
+        await Task.Delay(TimeSpan.FromSeconds(4));
+        if (notice == _notice)
+        {
+            ShowRemoteNote(_remoteList?.Note);
+        }
+    }
+
+    private void ShowRemoteNote(string? text)
+    {
+        RemoteListNote.Text = text ?? string.Empty;
+        RemoteListNote.Visibility = text is null ? Visibility.Collapsed : Visibility.Visible;
     }
 }

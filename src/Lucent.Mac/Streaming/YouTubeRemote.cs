@@ -54,6 +54,10 @@ public sealed class YouTubeRemote : BrowserTabRemote, IRemoteLists
 
     protected override string NotOpen => "Play a YouTube video";
 
+    // A video's ID is 11 letters, digits, dashes and underscores; anything else is a page without one.
+    protected override string? LinkFor(string id) =>
+        id.Length == 11 && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_') ? $"https://www.youtube.com/watch?v={id}" : null;
+
     // A playlist's videos, from the panel YouTube shows beside the video. YouTube Music's queue isn't read.
     public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel)
     {

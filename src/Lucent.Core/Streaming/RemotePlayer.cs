@@ -62,7 +62,12 @@ public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTra
 /// <param name="Uri">What the app calls it when asked to play it (Spotify's spotify:playlist:…).</param>
 /// <param name="Songs">How many songs it has, or null when the app doesn't say.</param>
 /// <param name="Owner">Who made it, when that isn't the user (a friend, or Spotify itself), or null.</param>
-public sealed record RemotePlaylist(string Uri, string Name, int? Songs = null, string? Owner = null);
+/// <param name="CanAdd">True when the user can add songs to it: Liked Songs, and playlists they made or collaborate on.</param>
+public sealed record RemotePlaylist(string Uri, string Name, int? Songs = null, string? Owner = null, bool CanAdd = false)
+{
+    /// <summary>True for the account's liked songs (Spotify's Liked Songs, Music's Favorite Songs) rather than a playlist.</summary>
+    public bool IsLiked => Uri.EndsWith(":collection", StringComparison.Ordinal) || Uri == "music:favorites";
+}
 
 /// <summary>An app whose volume Lucent can change, on the device it's playing on (<see cref="RemoteState.Volume"/>).</summary>
 public interface IRemoteVolume
@@ -142,7 +147,14 @@ public interface IRemoteLists
     Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel);
 }
 
-/// <summary>An <see cref="IRemotePlayer"/> that can list the playlists in the user's account, and play one.</summary>
+/// <summary>An <see cref="IRemotePlayer"/> that knows its songs' web addresses, to share them by (see <see cref="SongLinks"/>).</summary>
+public interface IRemoteLinks
+{
+    /// <summary>The song's own web link (open.spotify.com, a YouTube video), or null when the app doesn't say where it is.</summary>
+    string? WebLink(RemoteTrack track);
+}
+
+/// <summary>An <see cref="IRemotePlayer"/> that can list the playlists in the user's account, play one, and add songs to them.</summary>
 public interface IRemotePlaylists
 {
     /// <summary>The account's playlists, in the order the app lists them.</summary>
@@ -151,4 +163,8 @@ public interface IRemotePlaylists
 
     /// <summary>Plays <paramref name="playlist"/> from its start.</summary>
     Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel);
+
+    /// <summary>Adds <paramref name="track"/> to the end of <paramref name="playlist"/> (one with <see cref="RemotePlaylist.CanAdd"/>).</summary>
+    /// <exception cref="RemoteProblem">When the app won't add it, in a way the user can fix (signing in again).</exception>
+    Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel);
 }

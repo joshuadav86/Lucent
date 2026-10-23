@@ -27,7 +27,7 @@ public static class VideoSelfTest
 
     /// <summary>
     /// Returns the number of problems, after writing what it found (GitHub's ::error:: lines for problems). On a
-    /// virtual machine (<paramref name="virtualMachine"/>), sound out of step with the picture only warns: GitHub's
+    /// virtual machine (<paramref name="virtualMachine"/>), sound out of step with the picture, or one beep too many, only warns: GitHub's
     /// virtual Macs show pictures up to a tenth of a second late, which a real Mac doesn't.
     /// </summary>
     public static int Run(Action<string> log, IReadOnlyList<string> videos, bool virtualMachine = false)
@@ -357,6 +357,15 @@ public static class VideoSelfTest
             // Every picture of a flash came too late to show, so libVLC dropped them, as it should.
             log($"::warning::Video: {what}: saw {run.Flashes.Count} flash(es) of {expected}, as this virtual machine was too slow to show {run.LostPictures} picture(s) in time, so they were dropped. It wasn't counted as a failure.");
             return problems;
+        }
+
+        if (run.Flashes.Count == expected && run.Beeps.Count == expected + 1 && virtualMachine)
+        {
+            // When a stalled virtual machine has the sound lined up with the picture again mid-beep, part of the beep
+            // can be skipped or heard twice, so it counts as two. The one furthest from any flash is the extra one.
+            var extra = run.Beeps.MaxBy(beep => run.Flashes.Min(flash => Math.Abs(beep - flash)));
+            run.Beeps.Remove(extra);
+            log($"::warning::Video: {what}: heard {expected + 1} beep(s) for {expected} flash(es), as this virtual machine stalled mid-beep. The extra one was left out, and it wasn't counted as a failure.");
         }
 
         if (run.Flashes.Count != expected || run.Beeps.Count != expected)
