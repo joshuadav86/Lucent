@@ -60,6 +60,9 @@ public partial class MainWindow
     /// <summary>Starts showing and controlling <paramref name="app"/>, signing in first when it needs it and <paramref name="signIn"/> allows.</summary>
     private async void ControlRemote(RemoteApp app, bool signIn)
     {
+        // A Spotify playlist double-clicked in the library while Spotify wasn't being controlled plays once it is.
+        var playlist = _playWhenConnected;
+        _playWhenConnected = null;
         IRemotePlayer player;
         try
         {
@@ -87,6 +90,7 @@ public partial class MainWindow
                         }
 
                         SpotifyAccount.Save(refreshToken);
+                        _libraryWindow.SpotifyChanged();
                         Activate();
                     }
 
@@ -131,6 +135,11 @@ public partial class MainWindow
         _settings.Save();
         _remote = new RemoteControl(player);
         _remote.Changed += OnRemoteChanged;
+        if (playlist is not null && app == RemoteApp.Spotify)
+        {
+            _ = _remote.PlayPlaylistAsync(playlist);
+        }
+
         UpdateListening();
         ShowRemote();
         ShowWhereItPlays();
@@ -227,6 +236,43 @@ public partial class MainWindow
 
     /// <summary>Plays one of the songs from the other app's playlist, in that app.</summary>
     public void PlayFromRemoteList(RemoteTrack track) => RemoteTakes(remote => remote.PlayFromListAsync(track));
+
+    private RemotePlaylist? _playWhenConnected;
+
+    /// <summary>
+    /// The Spotify account's playlists for the library, or null when Lucent isn't signed in to Spotify. While Spotify is
+    /// being controlled its connection asks; otherwise one is made just for this, from the saved sign-in (which Spotify
+    /// renews with each use, so two connections at once would sign each other out).
+    /// </summary>
+    /// <exception cref="RemoteProblem">When Spotify won't list them, worded for the user.</exception>
+    public async Task<IReadOnlyList<RemotePlaylist>?> SpotifyPlaylistsAsync()
+    {
+        if (_remote?.Player is SpotifyRemote controlling)
+        {
+            return await controlling.PlaylistsAsync(CancellationToken.None);
+        }
+
+        if (SpotifyAccount.Load() is not { } refreshToken)
+        {
+            return null;
+        }
+
+        using var spotify = new SpotifyRemote(StreamingHttp, refreshToken, SpotifyAccount.Save);
+        return await spotify.PlaylistsAsync(CancellationToken.None);
+    }
+
+    /// <summary>Plays one of the account's Spotify playlists in Spotify, starting to control Spotify first when it isn't.</summary>
+    public void PlaySpotifyPlaylist(RemotePlaylist playlist)
+    {
+        if (_remote is { Player: SpotifyRemote } remote)
+        {
+            RemoteTakes(control => control.PlayPlaylistAsync(playlist));
+            return;
+        }
+
+        _playWhenConnected = playlist;
+        ControlRemote(RemoteApp.Spotify, signIn: true);
+    }
 
     private void OnRemoteChanged(object? sender, EventArgs e)
     {

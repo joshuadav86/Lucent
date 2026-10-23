@@ -13,6 +13,7 @@ using Lucent.Mac.Windows;
 using WinampInspiredVisualizer.Audio;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Streaming;
 using SavedPlaylists = WinampInspiredVisualizer.Playlist.SavedPlaylists;
 using Track = WinampInspiredVisualizer.Playlist.Track;
 
@@ -143,6 +144,11 @@ public partial class LibraryWindow : ToolWindow
     /// <summary>A new list: re-filtered, re-sorted and regrouped, with nothing selected.</summary>
     private void RebuildLibraryView()
     {
+        if (ShowingPlaylists)
+        {
+            LoadSpotifyPlaylists(force: false);
+        }
+
         BuildView(keepSelection: false);
         UpdateLibraryStatus();
     }
@@ -282,9 +288,12 @@ public partial class LibraryWindow : ToolWindow
             return null;
         }
 
-        return song => !song.IsPlaceholder
-            && (favorites is null || favorites.Contains(song.Path))
-            && SearchText.Matches(song.SearchKey, words);
+        // Spotify's playlists aren't files, so they can't be favourites, but a search finds them by name.
+        return song => song.RemotePlaylist is not null
+            ? favorites is null && SearchText.Matches(song.SearchKey, words)
+            : !song.IsPlaceholder
+                && (favorites is null || favorites.Contains(song.Path))
+                && SearchText.Matches(song.SearchKey, words);
     }
 
     private void UpdateLibraryStatus()
@@ -351,7 +360,9 @@ public partial class LibraryWindow : ToolWindow
     // PLAYLISTS swaps the library folders for the saved playlists: each playlist is a heading with its
     // sounds under it, in the playlist's own order. The favourites filter and the search still apply.
 
+    // Under PLAYLISTS: the saved playlists' rows, then Spotify's.
     private List<LibraryItem> _playlistItems = new();
+    private List<LibraryItem> _savedPlaylistItems = new();
     private int _playlistLoad;
 
     /// <summary>Called by the player whenever a playlist is saved, renamed or deleted.</summary>
@@ -413,7 +424,8 @@ public partial class LibraryWindow : ToolWindow
             }
         }
 
-        _playlistItems = items;
+        _savedPlaylistItems = items;
+        _playlistItems = items.Concat(_spotifyItems).ToList();
         if (ShowingPlaylists)
         {
             RebuildLibraryView();
@@ -441,6 +453,77 @@ public partial class LibraryWindow : ToolWindow
         }
     }
 
+    // ---- Spotify playlists ----
+    // With Lucent signed in to Spotify, PLAYLISTS also lists the account's Spotify playlists (and Liked Songs) under a
+    // Spotify heading. Each is played in Spotify, through the player's control of it. Spotify limits how often all of
+    // Lucent's users together may ask, so they're read when PLAYLISTS shows and then at most every ten minutes.
+
+    private const string SpotifySection = "Spotify";
+    private static readonly TimeSpan SpotifyReadEvery = TimeSpan.FromMinutes(10);
+    private List<LibraryItem> _spotifyItems = new();
+    private DateTime _spotifyReadAt = DateTime.MinValue;
+    private int _spotifyLoad;
+
+    /// <summary>Called by the player when Lucent signs in to or out of Spotify.</summary>
+    public void SpotifyChanged()
+    {
+        _spotifyReadAt = DateTime.MinValue;
+        ShowSpotifyRows(new List<LibraryItem>());
+        if (ShowingPlaylists)
+        {
+            LoadSpotifyPlaylists(force: true);
+        }
+    }
+
+    private async void LoadSpotifyPlaylists(bool force)
+    {
+        if (Player is not { } player || (!force && DateTime.UtcNow - _spotifyReadAt < SpotifyReadEvery))
+        {
+            return;
+        }
+
+        _spotifyReadAt = DateTime.UtcNow;
+        var load = ++_spotifyLoad;
+        List<LibraryItem> rows;
+        try
+        {
+            rows = await player.SpotifyPlaylistsAsync() is { } playlists
+                ? LibraryItem.RemotePlaylistRows(SpotifySection, playlists)
+                : new List<LibraryItem>();
+        }
+        catch (Exception ex)
+        {
+            // Under the Spotify heading, so it's clear why the playlists aren't there. It's tried again next time.
+            _spotifyReadAt = DateTime.UtcNow - SpotifyReadEvery + TimeSpan.FromMinutes(1);
+            rows = new List<LibraryItem>
+            {
+                LibraryItem.Placeholder(SpotifySection, ex is RemoteProblem ? ex.Message : "Lucent couldn't reach Spotify to list your playlists."),
+            };
+        }
+
+        if (load == _spotifyLoad)
+        {
+            ShowSpotifyRows(rows);
+        }
+    }
+
+    private void ShowSpotifyRows(List<LibraryItem> rows)
+    {
+        if (rows.Count == 0 && _spotifyItems.Count == 0)
+        {
+            return;
+        }
+
+        _spotifyItems = rows;
+        _playlistItems = _savedPlaylistItems.Concat(rows).ToList();
+        if (ShowingPlaylists)
+        {
+            RebuildLibraryView();
+        }
+    }
+
+    private bool IsSpotifyRow(LibraryItem item) => _spotifyItems.Contains(item);
+
     private static DateTime AddedTime(string path)
     {
         try
@@ -457,17 +540,22 @@ public partial class LibraryWindow : ToolWindow
     private void UpdatePlaylistsStatus()
     {
         var total = _playlistItems.Count(item => !item.IsPlaceholder);
-        var lists = _playlistItems.Select(item => item.Folder).Distinct().Count();
+        // A note under the Spotify heading (sign in again, say) isn't a playlist.
+        var lists = _playlistItems.Where(item => item.RemotePlaylist is not null || !IsSpotifyRow(item))
+            .Select(item => item.Folder).Distinct().Count();
         var filtered = IsSearching || _settings.LibraryFavoritesOnly;
-        var shown = filtered ? (_hasView ? _viewItems.Count : 0) : total;
+        var listed = filtered ? (_hasView ? _viewItems.Count : 0) : total;
+        var shown = filtered ? (_hasView ? _viewItems.Count(item => !item.IsPlaceholder) : 0) : total;
         LibraryCount.Text = lists == 0
             ? "No playlists"
             : filtered
                 ? $"{shown:N0} of {total:N0} {(total == 1 ? "sound" : "sounds")}"
-                : $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}  ·  {total:N0} {(total == 1 ? "sound" : "sounds")}";
+                : total == 0 && _spotifyItems.Count > 0
+                    ? $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}"
+                    : $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}  ·  {total:N0} {(total == 1 ? "sound" : "sounds")}";
 
         // Empty playlists show their headings, so the hint is only for no playlists at all, or no matches.
-        EmptyLibraryHint.IsVisible = lists == 0 || (filtered && shown == 0);
+        EmptyLibraryHint.IsVisible = lists == 0 || (filtered && listed == 0);
 
         // Right-clicks go through the hint to the list underneath, for New playlist….
         EmptyLibraryHint.IsHitTestVisible = false;
@@ -497,7 +585,9 @@ public partial class LibraryWindow : ToolWindow
     private void OpenPlaylistMenu()
     {
         var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.Pointer };
-        var names = HighlightedGroups().Select(group => group.Name).ToList();
+        // Spotify's headings get Spotify's items; the saved playlists' the rest.
+        var spotify = HighlightedGroups().SelectMany(group => group.Items).Where(IsSpotifyRow).Distinct().ToList();
+        var names = HighlightedGroups().Where(group => !group.Items.Any(IsSpotifyRow)).Select(group => group.Name).ToList();
         var songs = HighlightedGroups().SelectMany(group => group.Items)
             .Where(item => !item.IsPlaceholder)
             .ToList();
@@ -529,6 +619,25 @@ public partial class LibraryWindow : ToolWindow
             delete.Click += (_, _) => player.DeletePlaylist(this, name);
             menu.Items.Add(rename);
             menu.Items.Add(delete);
+        }
+
+        if (spotify.Count > 0)
+        {
+            if (menu.Items.Count > 0)
+            {
+                menu.Items.Add(new Separator());
+            }
+
+            if (spotify.Select(item => item.RemotePlaylist).OfType<RemotePlaylist>().ToList() is [var playlist])
+            {
+                var play = new MenuItem { Header = "Play in Spotify" };
+                play.Click += (_, _) => Player?.PlaySpotifyPlaylist(playlist);
+                menu.Items.Add(play);
+            }
+
+            var refresh = new MenuItem { Header = "Refresh Spotify playlists" };
+            refresh.Click += (_, _) => LoadSpotifyPlaylists(force: true);
+            menu.Items.Add(refresh);
         }
 
         if (menu.Items.Count > 0)
@@ -1426,7 +1535,16 @@ public partial class LibraryWindow : ToolWindow
     private void OnLibraryDoubleClick(object? sender, TappedEventArgs e)
     {
         // Only rows count; double-clicking a folder heading or the scroll bar does nothing.
-        if ((e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: LibraryItem { IsPlaceholder: false } item })
+        if ((e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not { DataContext: LibraryItem item })
+        {
+            return;
+        }
+
+        if (item.RemotePlaylist is { } playlist)
+        {
+            Player?.PlaySpotifyPlaylist(playlist);
+        }
+        else if (!item.IsPlaceholder)
         {
             Player?.PlayFromLibrary(item);
         }
@@ -1446,6 +1564,13 @@ public partial class LibraryWindow : ToolWindow
         if (e.Key == Key.Escape && _highlightedFolders.Count > 0)
         {
             HighlightFolders(Array.Empty<string>());
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Enter && LibraryView.SelectedItem is LibraryItem { RemotePlaylist: { } playlist })
+        {
+            Player?.PlaySpotifyPlaylist(playlist);
             e.Handled = true;
             return;
         }

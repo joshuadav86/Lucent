@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using WinampInspiredVisualizer.Playlist;
+using WinampInspiredVisualizer.Streaming;
 
 namespace WinampInspiredVisualizer.Library;
 
@@ -28,9 +29,42 @@ public sealed class LibraryItem : INotifyPropertyChanged
     public static LibraryItem Placeholder(string folder, string text) =>
         new(string.Empty, folder, string.Empty, DateTime.MinValue) { _title = text };
 
+    /// <summary>
+    /// The rows for another app's playlists (Spotify's) under PLAYLISTS: each a subheading under the app's one heading,
+    /// with a row saying what it holds, that plays it in the app. Two playlists with one name are told apart with a number.
+    /// </summary>
+    public static List<LibraryItem> RemotePlaylistRows(string app, IReadOnlyList<RemotePlaylist> playlists)
+    {
+        var rows = new List<LibraryItem>();
+        var named = new Dictionary<string, int>(StringComparer.CurrentCultureIgnoreCase);
+        foreach (var playlist in playlists)
+        {
+            var seen = named.TryGetValue(playlist.Name, out var count) ? count + 1 : 1;
+            named[playlist.Name] = seen;
+            var heading = seen == 1 ? playlist.Name : $"{playlist.Name} ({seen})";
+            var songs = playlist.Songs switch
+            {
+                null => playlist.Uri.EndsWith(":collection", StringComparison.Ordinal) ? "The songs you've liked" : "A playlist",
+                1 => "1 song",
+                var many => $"{many:N0} songs",
+            };
+            var by = playlist.Owner is { } owner ? $" · by {owner}" : string.Empty;
+            rows.Add(new LibraryItem(string.Empty, $"{app} / {heading}", string.Empty, DateTime.MinValue, app)
+            {
+                _title = $"{songs}{by}. Double-click to play it in {app}.",
+                RemotePlaylist = playlist,
+            });
+        }
+
+        return rows;
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public bool IsPlaceholder => Path.Length == 0;
+
+    /// <summary>The other app's playlist this row plays (<see cref="RemotePlaylistRows"/>), or null for any other row.</summary>
+    public RemotePlaylist? RemotePlaylist { get; private init; }
 
     /// <summary>Whether its row has a little cover beside it: every song does, a playlist's stand-in row doesn't.</summary>
     public bool ShowsCover => !IsPlaceholder;
@@ -106,7 +140,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
     public bool HasTags => Track is not null;
 
     /// <summary>The title, artist, album and file name, ready for the library's search box to look in.</summary>
-    public string SearchKey => _searchKey ??= SearchText.Key(new[] { _title, _artist, Album, FileName });
+    public string SearchKey => _searchKey ??= RemotePlaylist is { } playlist
+        ? SearchText.Key(new[] { playlist.Name, playlist.Owner ?? string.Empty })
+        : SearchText.Key(new[] { _title, _artist, Album, FileName });
 
     public Track ToTrack() => Track ?? Track.FromFile(Path);
 
