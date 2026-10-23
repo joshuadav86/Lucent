@@ -659,13 +659,7 @@ public partial class LibraryWindow : ToolWindow
             menu.Items.Add(ask);
         }
 
-        var stores = new MenuItem
-        {
-            Header = "Bandcamp and Beatport…",
-            ToolTip = "Add the music you buy on Bandcamp and Beatport to the library",
-        };
-        stores.Click += (_, _) => Player?.ShowStores();
-        menu.Items.Add(stores);
+        menu.Items.Add(StoresMenuItem());
         var import = new MenuItem
         {
             Header = "Import from another player…",
@@ -777,6 +771,18 @@ public partial class LibraryWindow : ToolWindow
         var add = new MenuItem { Header = "Add a folder to the library…" };
         add.Click += (_, _) => LinkLibraryFolder();
         return add;
+    }
+
+    /// <summary>Opens the Bandcamp and Beatport window, for adding store purchases to the library.</summary>
+    private MenuItem StoresMenuItem()
+    {
+        var stores = new MenuItem
+        {
+            Header = "Bandcamp and Beatport…",
+            ToolTip = "Add the music you buy on Bandcamp and Beatport to the library",
+        };
+        stores.Click += (_, _) => Player?.ShowStores();
+        return stores;
     }
 
     private MenuItem RemoveFoldersMenuItem(IReadOnlyList<string> folders)
@@ -981,6 +987,7 @@ public partial class LibraryWindow : ToolWindow
             menu.Items.Add(removeAll);
         }
 
+        menu.Items.Add(StoresMenuItem());
         if (groups.Count == 1 && songs.Count > 0)
         {
             var directory = DirectoryOf(groups[0]) ?? songs[0].Directory;
