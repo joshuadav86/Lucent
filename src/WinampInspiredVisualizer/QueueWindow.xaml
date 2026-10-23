@@ -153,10 +153,17 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionMode="Single"
                      MouseDoubleClick="OnRemoteListDoubleClick"
-                     KeyDown="OnRemoteListKeyDown">
+                     KeyDown="OnRemoteListKeyDown"
+                     ContextMenuOpening="OnRemoteMenuOpening">
                 <ListBox.ContextMenu>
                     <ContextMenu>
                         <MenuItem x:Name="RemotePlayItem" Header="Play" Click="OnRemoteListPlay" />
+                        <Separator x:Name="RemoteSongSeparator" />
+                        <MenuItem x:Name="RemoteAddItem" Header="Add to playlist" />
+                        <MenuItem x:Name="RemoteShareItem" Header="Share">
+                            <MenuItem Header="Copy song link" Click="OnCopySongLink" />
+                            <MenuItem Header="Copy song and link" Click="OnCopySongAndLink" />
+                        </MenuItem>
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>

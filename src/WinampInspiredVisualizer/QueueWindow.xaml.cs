@@ -143,6 +143,7 @@ public partial class QueueWindow : ToolWindow
     private RemoteList? _remoteList;
     private List<RemoteListEntry> _remoteEntries = new();
     private string? _remotePlaying;
+    private string _remoteApp = string.Empty;
 
     /// <summary>True while another app's playlist shows in place of the queue.</summary>
     public bool ShowingRemoteList => _remoteList is not null;
@@ -172,8 +173,8 @@ public partial class QueueWindow : ToolWindow
                 EmptyPlaylistHint.Visibility = Visibility.Collapsed;
             }
 
-            RemoteListNote.Text = list?.Note ?? string.Empty;
-            RemoteListNote.Visibility = list?.Note is null ? Visibility.Collapsed : Visibility.Visible;
+            ShowRemoteNote(list?.Note);
+            _remoteApp = appName;
             RemotePlayItem.Header = $"Play in {appName}";
             QueueTitle.Text = list is null ? "QUEUE" : appName.ToUpperInvariant();
             if (list is not null)
@@ -220,5 +221,125 @@ public partial class QueueWindow : ToolWindow
             PlayChosenRemoteSong();
             e.Handled = true;
         }
+    }
+
+    // ---- Adding a Spotify song to a playlist, and sharing it ----
+
+    private void OnRemoteMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        // Spotify's songs can be added to the account's playlists and shared as open.spotify.com links.
+        var track = (RemoteListView.SelectedItem as RemoteListEntry)?.Track;
+        var spotify = _remoteApp == "Spotify" && track is not null && SpotifyRemote.WebLink(track) is not null;
+        RemoteSongSeparator.Visibility = RemoteAddItem.Visibility = RemoteShareItem.Visibility =
+            spotify ? Visibility.Visible : Visibility.Collapsed;
+        if (spotify && track is not null)
+        {
+            FillAddToPlaylistMenu(track);
+        }
+    }
+
+    private async void FillAddToPlaylistMenu(RemoteTrack track)
+    {
+        RemoteAddItem.Items.Clear();
+        RemoteAddItem.Items.Add(new MenuItem { Header = "Loading your playlists…", IsEnabled = false });
+        if (Player is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<RemotePlaylist> playlists;
+        try
+        {
+            playlists = await Player.SpotifyPlaylistsToAddToAsync();
+        }
+        catch (Exception ex)
+        {
+            RemoteAddItem.Items.Clear();
+            RemoteAddItem.Items.Add(new MenuItem
+            {
+                Header = ex is RemoteProblem ? ex.Message : "Lucent couldn't reach Spotify to list your playlists.",
+                IsEnabled = false,
+            });
+            return;
+        }
+
+        RemoteAddItem.Items.Clear();
+        foreach (var playlist in playlists)
+        {
+            var item = new MenuItem { Header = playlist.Name };
+            item.Click += (_, _) => AddToPlaylist(playlist, track);
+            RemoteAddItem.Items.Add(item);
+            // Liked Songs comes first, apart from the playlists.
+            if (playlist.Uri.EndsWith(":collection", StringComparison.Ordinal) && playlists.Count > 1)
+            {
+                RemoteAddItem.Items.Add(new Separator());
+            }
+        }
+
+        if (playlists.Count == 0)
+        {
+            RemoteAddItem.Items.Add(new MenuItem { Header = "No playlists you made or collaborate on", IsEnabled = false });
+        }
+    }
+
+    private async void AddToPlaylist(RemotePlaylist playlist, RemoteTrack track)
+    {
+        if (Player is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Player.AddToSpotifyPlaylistAsync(playlist, track);
+            ShowRemoteNotice($"Added {track.Title} to {playlist.Name}.");
+        }
+        catch (Exception ex)
+        {
+            ShowRemoteNotice(ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach Spotify to add {track.Title}.");
+        }
+    }
+
+    private void OnCopySongLink(object sender, RoutedEventArgs e) => CopySong(withTitle: false);
+
+    private void OnCopySongAndLink(object sender, RoutedEventArgs e) => CopySong(withTitle: true);
+
+    private void CopySong(bool withTitle)
+    {
+        if ((RemoteListView.SelectedItem as RemoteListEntry)?.Track is not { } track || SpotifyRemote.WebLink(track) is not { } link)
+        {
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(withTitle ? $"{track.Title} by {track.Artist}{Environment.NewLine}{link}" : link);
+            ShowRemoteNotice($"Copied the link to {track.Title}.");
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            // Another app has the clipboard open.
+            ShowRemoteNotice("Lucent couldn't copy the link. Try again in a moment.");
+        }
+    }
+
+    private int _notice;
+
+    /// <summary>Shows <paramref name="text"/> under the list for a few seconds, then the list's own note again.</summary>
+    private async void ShowRemoteNotice(string text)
+    {
+        var notice = ++_notice;
+        ShowRemoteNote(text);
+        await Task.Delay(TimeSpan.FromSeconds(4));
+        if (notice == _notice)
+        {
+            ShowRemoteNote(_remoteList?.Note);
+        }
+    }
+
+    private void ShowRemoteNote(string? text)
+    {
+        RemoteListNote.Text = text ?? string.Empty;
+        RemoteListNote.Visibility = text is null ? Visibility.Collapsed : Visibility.Visible;
     }
 }

@@ -142,7 +142,7 @@ public partial class MainWindow
         }
 
         SpotifyAccount.Clear();
-        _libraryWindow.SpotifyChanged();
+        SpotifyAccountChanged();
         UpdateSourcesPanel();
     }
 

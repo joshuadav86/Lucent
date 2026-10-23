@@ -90,7 +90,7 @@ public partial class MainWindow
                         }
 
                         SpotifyAccount.Save(refreshToken);
-                        _libraryWindow.SpotifyChanged();
+                        SpotifyAccountChanged();
                         Activate();
                     }
 
@@ -244,9 +244,62 @@ public partial class MainWindow
     /// <exception cref="RemoteProblem">When Spotify won't list them, worded for the user.</exception>
     public async Task<IReadOnlyList<RemotePlaylist>?> SpotifyPlaylistsAsync()
     {
+        var playlists = await WithSpotifyAsync(spotify => spotify.PlaylistsAsync(CancellationToken.None));
+        _spotifyPlaylists = playlists;
+        _spotifyPlaylistsReadAt = DateTime.UtcNow;
+        return playlists;
+    }
+
+    // The playlists last read, for the song menus' Add to playlist, as Spotify limits how often all of Lucent's users may ask.
+    private IReadOnlyList<RemotePlaylist>? _spotifyPlaylists;
+    private DateTime _spotifyPlaylistsReadAt;
+
+    /// <summary>Called when Lucent signs in to or out of Spotify, as the playlists are then another account's, or none.</summary>
+    private void SpotifyAccountChanged()
+    {
+        _spotifyPlaylists = null;
+        _libraryWindow.SpotifyChanged();
+    }
+
+    /// <summary>
+    /// The Spotify playlists a song can be added to (Liked Songs, and the ones the account made or collaborates on), from
+    /// the last read when that was under ten minutes ago.
+    /// </summary>
+    /// <exception cref="RemoteProblem">When Spotify won't list them, worded for the user.</exception>
+    public async Task<IReadOnlyList<RemotePlaylist>> SpotifyPlaylistsToAddToAsync()
+    {
+        var playlists = _spotifyPlaylists is not null && DateTime.UtcNow - _spotifyPlaylistsReadAt < TimeSpan.FromMinutes(10)
+            ? _spotifyPlaylists
+            : await SpotifyPlaylistsAsync();
+        return playlists?.Where(playlist => playlist.CanAdd).ToList() ?? new List<RemotePlaylist>();
+    }
+
+    /// <summary>Adds a Spotify song to one of the account's playlists, or to Liked Songs.</summary>
+    /// <exception cref="RemoteProblem">When Spotify won't add it, worded for the user.</exception>
+    public async Task AddToSpotifyPlaylistAsync(RemotePlaylist playlist, RemoteTrack track)
+    {
+        var added = await WithSpotifyAsync(async spotify =>
+        {
+            await spotify.AddToPlaylistAsync(playlist, track, CancellationToken.None);
+            return playlist;
+        });
+        if (added is null)
+        {
+            throw new RemoteProblem("Sign in to Spotify from the Add music menu first.");
+        }
+    }
+
+    /// <summary>
+    /// Asks Spotify through the connection controlling it, or, when Spotify isn't being controlled, one made just for this
+    /// from the saved sign-in (which Spotify renews with each use, so two connections at once would sign each other out).
+    /// Null when Lucent isn't signed in to Spotify.
+    /// </summary>
+    private async Task<T?> WithSpotifyAsync<T>(Func<SpotifyRemote, Task<T>> ask)
+        where T : class
+    {
         if (_remote?.Player is SpotifyRemote controlling)
         {
-            return await controlling.PlaylistsAsync(CancellationToken.None);
+            return await ask(controlling);
         }
 
         if (SpotifyAccount.Load() is not { } refreshToken)
@@ -255,7 +308,7 @@ public partial class MainWindow
         }
 
         using var spotify = new SpotifyRemote(StreamingHttp, refreshToken, SpotifyAccount.Save);
-        return await spotify.PlaylistsAsync(CancellationToken.None);
+        return await ask(spotify);
     }
 
     /// <summary>Plays one of the account's Spotify playlists in Spotify, starting to control Spotify first when it isn't.</summary>

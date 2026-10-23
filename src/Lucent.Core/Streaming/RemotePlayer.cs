@@ -62,7 +62,8 @@ public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTra
 /// <param name="Uri">What the app calls it when asked to play it (Spotify's spotify:playlist:…).</param>
 /// <param name="Songs">How many songs it has, or null when the app doesn't say.</param>
 /// <param name="Owner">Who made it, when that isn't the user (a friend, or Spotify itself), or null.</param>
-public sealed record RemotePlaylist(string Uri, string Name, int? Songs = null, string? Owner = null);
+/// <param name="CanAdd">True when the user can add songs to it: Liked Songs, and playlists they made or collaborate on.</param>
+public sealed record RemotePlaylist(string Uri, string Name, int? Songs = null, string? Owner = null, bool CanAdd = false);
 
 /// <summary>An app whose volume Lucent can change, on the device it's playing on (<see cref="RemoteState.Volume"/>).</summary>
 public interface IRemoteVolume
@@ -151,4 +152,8 @@ public interface IRemotePlaylists
 
     /// <summary>Plays <paramref name="playlist"/> from its start.</summary>
     Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel);
+
+    /// <summary>Adds <paramref name="track"/> to the end of <paramref name="playlist"/> (one with <see cref="RemotePlaylist.CanAdd"/>).</summary>
+    /// <exception cref="RemoteProblem">When the app won't add it, in a way the user can fix (signing in again).</exception>
+    Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel);
 }
