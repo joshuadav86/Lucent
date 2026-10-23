@@ -415,7 +415,9 @@ public sealed class RemoteControl : IDisposable
             return;
         }
 
-        var wanted = (state.ListId, List is { FollowsSong: true } || List is null ? state.Track.Id : null);
+        // The song by its title, as its ID changes a few seconds into it (the app here names it one way, then the Web
+        // API's reading of the same song another), and reading again then would swap the list under a click.
+        var wanted = (state.ListId, List is { FollowsSong: true } || List is null ? state.Track.Title.Trim().ToLowerInvariant() : null);
         if (_listFor == wanted)
         {
             return;
