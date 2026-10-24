@@ -130,6 +130,59 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
         : TellAsync($"play (first playlist whose persistent ID is \"{Hex(playlist.Uri.Split(':')[^1])}\")", cancel);
 
     /// <summary>
+    /// Whether the song is a favorite already, or already in the playlist: the same song (its ID) or one with its name and
+    /// artist, as a song added from Apple Music can come back with an ID of its own.
+    /// </summary>
+    public async Task<bool> ContainsAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
+    {
+        var song = Hex(track.Id);
+        string result;
+        if (playlist.Uri == FavoritesUri)
+        {
+            result = await RunAsync($$"""
+                if application "Music" is not running then return "closed"
+                tell application "Music"
+                    set t to missing value
+                    try
+                        if persistent ID of current track is "{{song}}" then set t to current track
+                    end try
+                    if t is missing value then
+                        try
+                            set t to (first track of library playlist 1 whose persistent ID is "{{song}}")
+                        end try
+                    end if
+                end tell
+                if t is missing value then return "no"
+                try
+                    return (run script "on run {t}" & return & "tell application "Music" to return favorited of t" & return & "end run" with parameters {t}) as string
+                on error
+                    try
+                        return (run script "on run {t}" & return & "tell application "Music" to return loved of t" & return & "end run" with parameters {t}) as string
+                    end try
+                end try
+                return "no"
+                """, cancel);
+        }
+        else
+        {
+            result = await RunAsync($$"""
+                if application "Music" is not running then return "closed"
+                tell application "Music"
+                    set p to (first playlist whose persistent ID is "{{Hex(playlist.Uri.Split(':')[^1])}}")
+                    if exists (first track of p whose persistent ID is "{{song}}") then return "true"
+                    if exists (first track of p whose name is "{{Quoted(track.Title)}}" and artist is "{{Quoted(track.Artist)}}") then return "true"
+                    return "false"
+                end tell
+                """, cancel);
+        }
+
+        return result == "true";
+    }
+
+    // Text inside an AppleScript string's quotes.
+    private static string Quoted(string text) => text.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    /// <summary>
     /// Adds the song to the playlist (Music's duplicate, as dragging it there does), or makes it a favorite. The song is
     /// found by its ID: the one playing, or in the playlist it's playing from, or in the library.
     /// </summary>

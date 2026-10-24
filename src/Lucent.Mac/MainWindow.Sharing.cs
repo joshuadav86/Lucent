@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using WinampInspiredVisualizer.Streaming;
+using Lucent.Mac.Windows;
 
 namespace Lucent.Mac;
 
@@ -23,6 +24,7 @@ public partial class MainWindow
         _songNotice = text;
         _songNoticeUntil = DateTime.UtcNow + TimeSpan.FromSeconds(4);
         ShowRemote();
+        Toast.Show(this, text);
         await Task.Delay(TimeSpan.FromSeconds(4));
         if (notice == _songNotices)
         {
@@ -98,6 +100,23 @@ public partial class MainWindow
 
         var name = _remote.Player.Name;
 
+        // Like Spotify, a song already in the playlist isn't added twice without asking. When the app can't say, it's added.
+        var already = false;
+        try
+        {
+            already = await app.ContainsAsync(playlist, track, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            // Couldn't check; adding still works.
+        }
+
+        if (already && (playlist.IsLiked || !await AskAddAgainAsync(playlist, track)))
+        {
+            notice($"{track.Title} is already in {playlist.Name}.");
+            return;
+        }
+
         try
         {
             await app.AddToPlaylistAsync(playlist, track, CancellationToken.None);
@@ -108,6 +127,11 @@ public partial class MainWindow
             notice(ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach {name} to add {track.Title}.");
         }
     }
+
+    /// <summary>Asks whether to add a song that's already in the playlist again, as Spotify does. No unless the user says yes.</summary>
+    private async Task<bool> AskAddAgainAsync(RemotePlaylist playlist, RemoteTrack track) =>
+        await MessageWindow.ShowAsync(this, $"{track.Title} is already in {playlist.Name}. Add it again?", "Already added",
+            MessageButtons.YesNo, MessageResult.No) == MessageResult.Yes;
 
     /// <summary>
     /// Copies <paramref name="track"/>'s web link (see <see cref="SongLinks"/>), with its title and artist first when

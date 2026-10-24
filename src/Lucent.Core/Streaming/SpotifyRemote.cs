@@ -557,6 +557,25 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     string? IRemoteLinks.WebLink(RemoteTrack track) => LinkOf(track);
 
     /// <summary>
+    /// Whether the song is already saved in Liked Songs (GET /me/library/contains), or already in the playlist, among its
+    /// first thousand songs (read 50 at a time, as Spotify has no way to ask about one song).
+    /// </summary>
+    public async Task<bool> ContainsAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
+    {
+        var song = track.Uri ?? $"spotify:track:{track.Id}";
+        if (playlist.IsLiked)
+        {
+            using var saved = await GetJsonAsync($"{Root}/me/library/contains?uris={Uri.EscapeDataString(song)}", null, cancel);
+            return saved.RootElement.ValueKind == JsonValueKind.Array && saved.RootElement.EnumerateArray().FirstOrDefault().ValueKind == JsonValueKind.True;
+        }
+
+        var songs = await PagesAsync($"{Root}/playlists/{playlist.Uri.Split(':')[^1]}/items?limit=50&additional_types=track,episode", null,
+            entry => ParseTrack(entry.TryGetProperty("item", out var item) ? item : entry.TryGetProperty("track", out var each) ? each : default, null),
+            cancel);
+        return songs.Any(each => each.Uri == song || each.Id == track.Id);
+    }
+
+    /// <summary>
     /// Plays (what's loaded, or <paramref name="json"/>'s songs). With no device playing for the account, Spotify
     /// refuses that (404, NO_ACTIVE_DEVICE), so the play goes to one of the account's devices that's on: this
     /// computer's Spotify first, then the only one there is, then any computer. Spotify carries on there from
