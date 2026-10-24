@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using WinampInspiredVisualizer.Streaming;
+using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer;
 
@@ -23,6 +24,7 @@ public partial class MainWindow
         _songNotice = text;
         _songNoticeUntil = DateTime.UtcNow + TimeSpan.FromSeconds(4);
         ShowRemote();
+        Toast.Show(this, text);
         await Task.Delay(TimeSpan.FromSeconds(4));
         if (notice == _songNotices)
         {
@@ -56,6 +58,17 @@ public partial class MainWindow
         IReadOnlyList<RemotePlaylist> playlists;
         try
         {
+            // A Spotify sign-in from before Lucent added songs can't, so the menu offers to sign in again instead of
+            // listing playlists that would only refuse.
+            if (_remote?.Player is SpotifyRemote spotify && !await spotify.CanAddSongsAsync(CancellationToken.None))
+            {
+                menu.Items.Clear();
+                var signIn = new MenuItem { Header = "Sign in to Spotify again to add songs…" };
+                signIn.Click += (_, _) => SignInToSpotifyAgain();
+                menu.Items.Add(signIn);
+                return;
+            }
+
             playlists = await RemotePlaylistsToAddToAsync();
         }
         catch (Exception ex)
@@ -98,6 +111,23 @@ public partial class MainWindow
 
         var name = _remote.Player.Name;
 
+        // Like Spotify, a song already in the playlist isn't added twice without asking. When the app can't say, it's added.
+        var already = false;
+        try
+        {
+            already = await app.ContainsAsync(playlist, track, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            // Couldn't check; adding still works.
+        }
+
+        if (already && (playlist.IsLiked || !await AskAddAgainAsync(playlist, track)))
+        {
+            notice($"{track.Title} is already in {playlist.Name}.");
+            return;
+        }
+
         try
         {
             await app.AddToPlaylistAsync(playlist, track, CancellationToken.None);
@@ -108,6 +138,28 @@ public partial class MainWindow
             notice(ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach {name} to add {track.Title}.");
         }
     }
+
+    /// <summary>
+    /// Signs out of Spotify and straight back in, for the permissions a sign-in from an older Lucent doesn't have, then
+    /// carries on controlling Spotify.
+    /// </summary>
+    private void SignInToSpotifyAgain()
+    {
+        if (_settings.RemoteApp == RemoteApp.Spotify)
+        {
+            StopControllingRemote(pause: false);
+        }
+
+        SpotifyAccount.Clear();
+        SpotifyAccountChanged();
+        ControlRemote(RemoteApp.Spotify, signIn: true);
+        UpdateSourcesPanel();
+    }
+
+    /// <summary>Asks whether to add a song that's already in the playlist again, as Spotify does. No unless the user says yes.</summary>
+    private Task<bool> AskAddAgainAsync(RemotePlaylist playlist, RemoteTrack track) => Task.FromResult(
+        MessageBox.Show(this, $"{track.Title} is already in {playlist.Name}. Add it again?", "Already added",
+            MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes);
 
     /// <summary>
     /// Copies <paramref name="track"/>'s web link (see <see cref="SongLinks"/>), with its title and artist first when

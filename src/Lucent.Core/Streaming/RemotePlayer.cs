@@ -189,4 +189,8 @@ public interface IRemotePlaylists
     /// <summary>Adds <paramref name="track"/> to the end of <paramref name="playlist"/> (one with <see cref="RemotePlaylist.CanAdd"/>).</summary>
     /// <exception cref="RemoteProblem">When the app won't add it, in a way the user can fix (signing in again).</exception>
     Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel);
+
+    /// <summary>True when <paramref name="track"/> is already in <paramref name="playlist"/>, so adding it again would add it twice.</summary>
+    /// <exception cref="RemoteProblem">When the app won't say.</exception>
+    Task<bool> ContainsAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel);
 }

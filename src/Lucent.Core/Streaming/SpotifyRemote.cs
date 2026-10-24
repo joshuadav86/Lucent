@@ -519,6 +519,16 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     /// Adds the song to the end of a playlist (POST /playlists/{id}/items), or saves it to Liked Songs (PUT /me/library).
     /// A sign-in from before Lucent added songs doesn't allow either, so it says to sign in again rather than ask.
     /// </summary>
+    /// <summary>
+    /// False when the sign-in is from before Lucent added songs to playlists, so it needs signing in again first. Asks
+    /// Spotify nothing but a fresh sign-in token, when the one held has run out.
+    /// </summary>
+    public async Task<bool> CanAddSongsAsync(CancellationToken cancel)
+    {
+        await AccessTokenAsync(forceRefresh: false, cancel);
+        return _tokens?.Scope is not { } granted || granted.Split(' ').Contains("playlist-modify-private");
+    }
+
     public async Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
     {
         var song = track.Uri ?? $"spotify:track:{track.Id}";
@@ -555,6 +565,25 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
             : null;
 
     string? IRemoteLinks.WebLink(RemoteTrack track) => LinkOf(track);
+
+    /// <summary>
+    /// Whether the song is already saved in Liked Songs (GET /me/library/contains), or already in the playlist, among its
+    /// first thousand songs (read 50 at a time, as Spotify has no way to ask about one song).
+    /// </summary>
+    public async Task<bool> ContainsAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
+    {
+        var song = track.Uri ?? $"spotify:track:{track.Id}";
+        if (playlist.IsLiked)
+        {
+            using var saved = await GetJsonAsync($"{Root}/me/library/contains?uris={Uri.EscapeDataString(song)}", null, cancel);
+            return saved.RootElement.ValueKind == JsonValueKind.Array && saved.RootElement.EnumerateArray().FirstOrDefault().ValueKind == JsonValueKind.True;
+        }
+
+        var songs = await PagesAsync($"{Root}/playlists/{playlist.Uri.Split(':')[^1]}/items?limit=50&additional_types=track,episode", null,
+            entry => ParseTrack(entry.TryGetProperty("item", out var item) ? item : entry.TryGetProperty("track", out var each) ? each : default, null),
+            cancel);
+        return songs.Any(each => each.Uri == song || each.Id == track.Id);
+    }
 
     /// <summary>
     /// Plays (what's loaded, or <paramref name="json"/>'s songs). With no device playing for the account, Spotify

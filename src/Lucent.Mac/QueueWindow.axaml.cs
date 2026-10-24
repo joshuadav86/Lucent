@@ -274,6 +274,7 @@ public partial class QueueWindow : ToolWindow
     {
         var notice = ++_notice;
         ShowRemoteNote(text);
+        Toast.Show(RemoteListView, text);
         await Task.Delay(TimeSpan.FromSeconds(4));
         if (notice == _notice)
         {
