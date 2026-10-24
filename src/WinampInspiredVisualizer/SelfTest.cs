@@ -97,6 +97,7 @@ public static class SelfTest
         failures += TestVisuals(sheetPath);
         failures += TestOtherApps();
         failures += WinampInspiredVisualizer.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
+        failures += WinampInspiredVisualizer.Audio.LoudnessSelfTest.Run(Console.WriteLine);
         failures += WinampInspiredVisualizer.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
         failures += TestLiveInputs();
         failures += Editor.Stems.StemSelfTest.Run(Console.WriteLine);
