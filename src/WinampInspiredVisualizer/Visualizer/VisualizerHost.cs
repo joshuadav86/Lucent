@@ -54,9 +54,6 @@ public sealed class VisualizerHost : HwndHost
 
     public event EventHandler? DoubleClicked;
 
-    /// <summary>Raised when the left mouse button is let go over the visuals, including the second click of a double-click.</summary>
-    public event EventHandler? Clicked;
-
     /// <summary>Raised when the visuals are right-clicked, for their menu.</summary>
     public event EventHandler? RightClicked;
 
@@ -343,9 +340,6 @@ public sealed class VisualizerHost : HwndHost
                 // Direct3D covers the whole window; skipping the erase avoids flicker.
                 handled = true;
                 return new IntPtr(1);
-            case WM_LBUTTONUP:
-                Clicked?.Invoke(this, EventArgs.Empty);
-                return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
             case WM_LBUTTONDBLCLK:
                 DoubleClicked?.Invoke(this, EventArgs.Empty);
                 handled = true;

@@ -59,8 +59,6 @@ public partial class VisualizerWindow : ToolWindow
             VisualizerStatus.ToolTip = message;
         };
         host.DoubleClicked += (_, _) => OnVisualsDoubleClicked();
-        host.Clicked += (_, _) => OnVisualsClicked();
-        Activated += (_, _) => _activatedAt = DateTime.UtcNow;
         host.RightClicked += (_, _) => ShowVisualsMenu();
         host.PresetChanged += (_, _) => ShowPreset();
         host.FrameRateMeasured += (_, stats) =>

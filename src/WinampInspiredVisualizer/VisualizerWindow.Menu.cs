@@ -1,8 +1,6 @@
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Threading;
 using WinampInspiredVisualizer.Visualizer;
 
 namespace WinampInspiredVisualizer;
@@ -10,10 +8,6 @@ namespace WinampInspiredVisualizer;
 /// <summary>The menus you get by clicking the visuals. Kept in its own file.</summary>
 public partial class VisualizerWindow
 {
-    private DispatcherTimer? _clickTimer;
-    private bool _skipClick;
-    private DateTime _activatedAt;
-
     /// <summary>
     /// Fullscreen, playback controls (in fullscreen), moving between visuals, favourites and Auto, and the graphics options, at the
     /// mouse. It works in fullscreen too, where the controls under the visuals are hidden.
@@ -116,47 +110,13 @@ public partial class VisualizerWindow
     }
 
     /// <summary>
-    /// A left click on the visuals plays or pauses the music, in a window or fullscreen. It waits
-    /// out the double-click time first, so double-clicking still just switches fullscreen, and the
-    /// click that brings Lucent to the front doesn't count.
+    /// Double-clicking the visuals switches fullscreen. A single click does nothing, so clicking
+    /// the window to bring it to the front never stops the music.
     /// </summary>
-    private void OnVisualsClicked()
-    {
-        if (_skipClick)
-        {
-            // The button coming up after a double-click.
-            _skipClick = false;
-            return;
-        }
-
-        if (Player is null || DateTime.UtcNow - _activatedAt < TimeSpan.FromMilliseconds(500))
-        {
-            return;
-        }
-
-        if (_clickTimer is null)
-        {
-            _clickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime()) };
-            _clickTimer.Tick += (_, _) =>
-            {
-                _clickTimer.Stop();
-                Player?.PlayOrPause();
-            };
-        }
-
-        _clickTimer.Stop();
-        _clickTimer.Start();
-    }
-
     private void OnVisualsDoubleClicked()
     {
-        _clickTimer?.Stop();
-        _skipClick = true;
         ToggleFullscreen();
     }
-
-    [DllImport("user32.dll")]
-    private static extern uint GetDoubleClickTime();
 
     private static MenuItem Item(string header, string? keys, Action action)
     {
