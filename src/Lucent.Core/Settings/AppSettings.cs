@@ -420,6 +420,7 @@ public sealed class AppSettings
     private static readonly HashSet<string> RemovedVisuals = new(StringComparer.OrdinalIgnoreCase)
     {
         "Cornell Box",
+        "Glass and Chrome",
     };
 
     /// <summary>
