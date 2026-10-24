@@ -13,7 +13,7 @@ namespace Lucent.Mac;
 /// <summary>Playback controls, as items for the visuals' right-click menu. Kept in its own file.</summary>
 public partial class MainWindow
 {
-    /// <summary>Plays or pauses, as the Space key does. Clicking the visuals uses it.</summary>
+    /// <summary>Plays or pauses, as the Space key does. Clicking a video uses it.</summary>
     public void PlayOrPause() => TogglePlayPause();
 
     /// <summary>

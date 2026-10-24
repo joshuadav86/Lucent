@@ -227,10 +227,21 @@ public partial class MainWindow
     private void ShowRemoteList()
     {
         var showing = _queue.ShowingRemoteList;
-        _queue.ShowRemoteList(_remote?.Player.Name ?? string.Empty, _remote?.List, _remote?.State?.Track?.Id);
+        _queue.ShowRemoteList(_remote?.Player.Name ?? string.Empty, _remote?.List, _remote?.State?.Track);
         if (showing && !_queue.ShowingRemoteList)
         {
             ShowQueueSize();
+        }
+    }
+
+    /// <summary>How the queue window lists the other app's playlist, kept between runs.</summary>
+    public RemoteListOrder RemoteListOrder
+    {
+        get => _settings.RemoteListOrder;
+        set
+        {
+            _settings.RemoteListOrder = value;
+            _settings.Save();
         }
     }
 

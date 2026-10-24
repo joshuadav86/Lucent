@@ -29,6 +29,15 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     /// <summary>A preset from Winamp's world (MilkDrop or AVS), named "Author - Title" and listed in its own folder.</summary>
     public bool IsCommunityPreset => IsMilkDrop || IsAvs;
 
+    /// <summary>One of the user's own visuals, from their Presets folder rather than the app's.</summary>
+    public bool IsOwn { get; init; }
+
+    /// <summary>
+    /// One of Lucent's original shaders, the .hlsl visuals that ship with the app (not MilkDrop or AVS presets,
+    /// and not the user's own), which "Lucent originals" switches on or off.
+    /// </summary>
+    public bool IsLucentOriginal => !IsCommunityPreset && !IsOwn;
+
     /// <summary>A particle visual: it defines Simulate (and Spawn and Show) as well as Render. See Shaders/Particles.hlsli.</summary>
     public bool IsParticles { get; } = !IsMilkDropFile(FilePath) && !IsAvsFile(FilePath) && SimulatePattern.IsMatch(Code);
 
@@ -72,16 +81,19 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
     public static string LabelFor(string name, string? author) =>
         author is null || name.EndsWith($"({author})", StringComparison.OrdinalIgnoreCase) ? name : $"{name} by {author}";
 
-    /// <summary>A visual from its file, named by its first line (MilkDrop and AVS presets by their file name).</summary>
-    public static PresetSource Load(string path, string code)
+    /// <summary>
+    /// A visual from its file, named by its first line (MilkDrop and AVS presets by their file name). Own says it
+    /// came from the user's Presets folder.
+    /// </summary>
+    public static PresetSource Load(string path, string code, bool own = false)
     {
         if (!IsMilkDropFile(path) && !IsAvsFile(path))
         {
-            return new(ReadName(path, code), path, code);
+            return new(ReadName(path, code), path, code) { IsOwn = own };
         }
 
         var (title, author) = MilkDropName(path);
-        return new(title, path, code) { Author = author };
+        return new(title, path, code) { Author = author, IsOwn = own };
     }
 
     /// <summary>

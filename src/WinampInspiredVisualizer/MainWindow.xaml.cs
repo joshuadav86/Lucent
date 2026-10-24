@@ -1326,6 +1326,11 @@ public partial class MainWindow : Window
         {
             _settings.MorphTransitionsOnly = on;
         }
+        else if (sender == LucentVisualsSwitch)
+        {
+            _settings.LucentVisuals = on;
+            _visuals.ShowLucentOriginals(on);
+        }
         else if (sender == MilkDropSwitch)
         {
             _settings.MilkDropVisuals = on;
@@ -1399,6 +1404,7 @@ public partial class MainWindow : Window
         BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
+        LucentVisualsSwitch.IsChecked = _settings.LucentVisuals;
         MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;
         AvsSwitch.IsChecked = _settings.AvsVisuals;
         ModernAvsSwitch.IsChecked = _settings.ModernAvs;

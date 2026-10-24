@@ -376,6 +376,11 @@
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Visuals melt, glow, fly, or fold into each other, without the wipes and fades." />
 
+                    <CheckBox x:Name="LucentVisualsSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Lucent originals" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="List Lucent's own visuals in the picker and play them in Auto. Off leaves MilkDrop, AVS, and your own." />
+
                     <CheckBox x:Name="MilkDropSwitch" Style="{StaticResource SwitchToggle}"
                               Content="MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Style="{StaticResource OptionHint}"

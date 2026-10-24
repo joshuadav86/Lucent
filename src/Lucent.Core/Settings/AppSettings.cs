@@ -94,6 +94,9 @@ public sealed class AppSettings
     /// <summary>Take the output for Lucent alone and send each track at its own format: bit-perfect playback.</summary>
     public bool ExclusiveOutput { get; set; }
 
+    /// <summary>List Lucent's original shaders in the visual picker and play them in Auto (off leaves MilkDrop, AVS and the user's own).</summary>
+    public bool LucentVisuals { get; set; } = true;
+
     /// <summary>List MilkDrop presets in the visual picker and play them in Auto.</summary>
     public bool MilkDropVisuals { get; set; } = true;
 
@@ -356,6 +359,9 @@ public sealed class AppSettings
     /// <summary>The other app the player shows and controls instead of Lucent's own music, if any.</summary>
     public RemoteApp RemoteApp { get; set; }
 
+    /// <summary>How the queue window lists the other app's playlist: its own order, by date added, title or artist.</summary>
+    public RemoteListOrder RemoteListOrder { get; set; }
+
     // ---- Online radio ----
 
     /// <summary>Stations starred in the radio browser, kept whole so they play even when the directory is down.</summary>
@@ -414,6 +420,7 @@ public sealed class AppSettings
     private static readonly HashSet<string> RemovedVisuals = new(StringComparer.OrdinalIgnoreCase)
     {
         "Cornell Box",
+        "Glass and Chrome",
     };
 
     /// <summary>
