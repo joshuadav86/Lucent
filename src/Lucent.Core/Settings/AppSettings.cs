@@ -41,6 +41,9 @@ public sealed class AppSettings
 
     public LibrarySort LibrarySort { get; set; } = LibrarySort.Newest;
 
+    /// <summary>The order Spotify's and Music's playlists are listed in under the library's PLAYLISTS.</summary>
+    public RemotePlaylistSort RemotePlaylistSort { get; set; }
+
     public bool GroupLibraryByFolder { get; set; } = true;
 
     /// <summary>Whether the library lists only the favourite songs.</summary>

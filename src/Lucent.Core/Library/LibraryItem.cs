@@ -30,33 +30,42 @@ public sealed class LibraryItem : INotifyPropertyChanged
         new(string.Empty, folder, string.Empty, DateTime.MinValue) { _title = text };
 
     /// <summary>
-    /// The rows for another app's playlists (Spotify's) under PLAYLISTS: each a subheading under the app's one heading,
-    /// with a row saying what it holds, that plays it in the app. Two playlists with one name are told apart with a number.
+    /// The rows for another app's playlists (Spotify's, Music's) under PLAYLISTS: one row a playlist, under the app's heading,
+    /// split into the user's own ("Your playlists") and other people's ("Following"), each a subheading that can be closed.
+    /// The app's first list (Liked Songs, Favorite Songs) stays at the top whatever the order.
     /// </summary>
-    public static List<LibraryItem> RemotePlaylistRows(string app, IReadOnlyList<RemotePlaylist> playlists)
+    /// <param name="section">The app's heading: its name.</param>
+    public static List<LibraryItem> RemotePlaylistRows(RemoteApp app, string section, IReadOnlyList<RemotePlaylist> playlists,
+        RemotePlaylistSort sort)
     {
-        var rows = new List<LibraryItem>();
-        var named = new Dictionary<string, int>(StringComparer.CurrentCultureIgnoreCase);
-        foreach (var playlist in playlists)
+        var pinned = playlists.Take(1).Where(playlist => playlist.Songs is null && playlist.Owner is null);
+        IEnumerable<RemotePlaylist> rest = playlists.Skip(pinned.Count());
+        rest = sort switch
         {
-            var seen = named.TryGetValue(playlist.Name, out var count) ? count + 1 : 1;
-            named[playlist.Name] = seen;
-            var heading = seen == 1 ? playlist.Name : $"{playlist.Name} ({seen})";
-            var songs = playlist.Songs switch
-            {
-                null => playlist.Uri.EndsWith(":collection", StringComparison.Ordinal) ? "The songs you've liked" : "A playlist",
-                1 => "1 song",
-                var many => $"{many:N0} songs",
-            };
-            var by = playlist.Owner is { } owner ? $" · by {owner}" : string.Empty;
-            rows.Add(new LibraryItem(string.Empty, $"{app} / {heading}", string.Empty, DateTime.MinValue, app)
-            {
-                _title = $"{songs}{by}. Double-click to play it in {app}.",
-                RemotePlaylist = playlist,
-            });
-        }
+            RemotePlaylistSort.Name => rest.OrderBy(playlist => playlist.Name, StringComparer.CurrentCultureIgnoreCase),
+            RemotePlaylistSort.MostSongs => rest.OrderByDescending(playlist => playlist.Songs ?? -1),
+            _ => rest,
+        };
 
-        return rows;
+        return pinned.Concat(rest.Where(playlist => playlist.Owner is null)).Concat(rest.Where(playlist => playlist.Owner is not null))
+            .Select(playlist =>
+            {
+                var songs = playlist.Songs switch
+                {
+                    null => "Your liked songs",
+                    1 => "1 song",
+                    var many => $"{many:N0} songs",
+                };
+                var heading = playlist.Owner is null ? "Your playlists" : "Following";
+                return new LibraryItem(string.Empty, $"{section} / {heading}", string.Empty, DateTime.MinValue, section)
+                {
+                    _title = playlist.Name,
+                    _remoteDetails = playlist.Owner is { } owner ? $"{songs}  ·  by {owner}" : songs,
+                    RemotePlaylist = playlist,
+                    RemoteApp = app,
+                };
+            })
+            .ToList();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -65,6 +74,11 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     /// <summary>The other app's playlist this row plays (<see cref="RemotePlaylistRows"/>), or null for any other row.</summary>
     public RemotePlaylist? RemotePlaylist { get; private init; }
+
+    /// <summary>The app <see cref="RemotePlaylist"/> is played in.</summary>
+    public RemoteApp RemoteApp { get; private init; }
+
+    private string _remoteDetails = string.Empty;
 
     /// <summary>Whether its row has a little cover beside it: every song does, a playlist's stand-in row doesn't.</summary>
     public bool ShowsCover => !IsPlaceholder;
@@ -110,7 +124,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public string DurationText => _durationText;
 
-    public string Details => IsPlaceholder ? string.Empty : string.IsNullOrEmpty(_artist)
+    public string Details => RemotePlaylist is not null ? _remoteDetails : IsPlaceholder ? string.Empty : string.IsNullOrEmpty(_artist)
         ? $"{Added:d}{StatsText}"
         : $"{_artist}  ·  {Added:d}{StatsText}";
 

@@ -15,6 +15,7 @@ It also fails when an entry here is out of date, such as a file that's now on bo
 | What | Only on | Why, and what the other platform has |
 | --- | --- | --- |
 | MusicBee import button | Windows | MusicBee is Windows-only. On a Mac, the Apple Music import takes a MusicBee library file too. |
+| Apple Music's playlists in the library under PLAYLISTS | Mac | Spotify's playlists are listed on both, through its Web API. The Mac also lists the Music app's playlists (while Music is open) through AppleScript. Windows' Apple Music app has no way for other apps to read its playlists. YouTube, TIDAL, and SoundCloud play in a web page, which can't say what's in the account, so they aren't listed on either. |
 
 ## Same feature, different platform pieces
 

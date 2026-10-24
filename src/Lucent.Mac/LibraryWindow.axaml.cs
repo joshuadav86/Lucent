@@ -146,7 +146,7 @@ public partial class LibraryWindow : ToolWindow
     {
         if (ShowingPlaylists)
         {
-            LoadSpotifyPlaylists(force: false);
+            LoadRemotePlaylists(force: false);
         }
 
         BuildView(keepSelection: false);
@@ -425,7 +425,7 @@ public partial class LibraryWindow : ToolWindow
         }
 
         _savedPlaylistItems = items;
-        _playlistItems = items.Concat(_spotifyItems).ToList();
+        _playlistItems = items.Concat(_remoteItems).ToList();
         if (ShowingPlaylists)
         {
             RebuildLibraryView();
@@ -453,76 +453,123 @@ public partial class LibraryWindow : ToolWindow
         }
     }
 
-    // ---- Spotify playlists ----
-    // With Lucent signed in to Spotify, PLAYLISTS also lists the account's Spotify playlists (and Liked Songs) under a
-    // Spotify heading. Each is played in Spotify, through the player's control of it. Spotify limits how often all of
-    // Lucent's users together may ask, so they're read when PLAYLISTS shows and then at most every ten minutes.
+    // ---- Other apps' playlists ----
+    // PLAYLISTS also lists the playlists in the apps Lucent controls (Spotify, and Music on a Mac): one row a playlist,
+    // under the app's heading, split into the user's own and the ones they follow, each a subheading that can be closed.
+    // Each plays in its app, through the player's control of it. Spotify limits how often all of Lucent's users together
+    // may ask, so they're read when PLAYLISTS shows and then at most every ten minutes.
 
-    private const string SpotifySection = "Spotify";
-    private static readonly TimeSpan SpotifyReadEvery = TimeSpan.FromMinutes(10);
-    private List<LibraryItem> _spotifyItems = new();
-    private DateTime _spotifyReadAt = DateTime.MinValue;
-    private int _spotifyLoad;
+    private static readonly TimeSpan RemoteReadEvery = TimeSpan.FromMinutes(10);
+    private readonly Dictionary<RemoteApp, IReadOnlyList<RemotePlaylist>> _remotePlaylists = new();
+    private readonly Dictionary<RemoteApp, string> _remoteNotes = new();
+    private List<LibraryItem> _remoteItems = new();
+    private DateTime _remoteReadAt = DateTime.MinValue;
+    private int _remoteLoad;
 
     /// <summary>Called by the player when Lucent signs in to or out of Spotify.</summary>
     public void SpotifyChanged()
     {
-        _spotifyReadAt = DateTime.MinValue;
-        ShowSpotifyRows(new List<LibraryItem>());
+        _remotePlaylists.Remove(RemoteApp.Spotify);
+        _remoteNotes.Remove(RemoteApp.Spotify);
+        _remoteReadAt = DateTime.MinValue;
+        ShowRemoteRows();
         if (ShowingPlaylists)
         {
-            LoadSpotifyPlaylists(force: true);
+            LoadRemotePlaylists(force: true);
         }
     }
 
-    private async void LoadSpotifyPlaylists(bool force)
+    private static string AppName(RemoteApp app) => app == RemoteApp.AppleMusic ? "Apple Music" : app.ToString();
+
+    private async void LoadRemotePlaylists(bool force)
     {
-        if (Player is not { } player || (!force && DateTime.UtcNow - _spotifyReadAt < SpotifyReadEvery))
+        if (Player is not { } player || (!force && DateTime.UtcNow - _remoteReadAt < RemoteReadEvery))
         {
             return;
         }
 
-        _spotifyReadAt = DateTime.UtcNow;
-        var load = ++_spotifyLoad;
-        List<LibraryItem> rows;
-        try
+        _remoteReadAt = DateTime.UtcNow;
+        var load = ++_remoteLoad;
+        foreach (var app in player.PlaylistApps)
         {
-            rows = await player.SpotifyPlaylistsAsync() is { } playlists
-                ? LibraryItem.RemotePlaylistRows(SpotifySection, playlists)
-                : new List<LibraryItem>();
-        }
-        catch (Exception ex)
-        {
-            // Under the Spotify heading, so it's clear why the playlists aren't there. It's tried again next time.
-            _spotifyReadAt = DateTime.UtcNow - SpotifyReadEvery + TimeSpan.FromMinutes(1);
-            rows = new List<LibraryItem>
+            IReadOnlyList<RemotePlaylist>? playlists;
+            try
             {
-                LibraryItem.Placeholder(SpotifySection, ex is RemoteProblem ? ex.Message : "Lucent couldn't reach Spotify to list your playlists."),
-            };
-        }
+                playlists = await player.RemotePlaylistsAsync(app);
+                _remoteNotes.Remove(app);
+            }
+            catch (Exception ex)
+            {
+                // The last list stays; with none, a note under the app's heading says why. It's tried again in a minute.
+                _remoteReadAt = DateTime.UtcNow - RemoteReadEvery + TimeSpan.FromMinutes(1);
+                playlists = _remotePlaylists.GetValueOrDefault(app);
+                _remoteNotes[app] = ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach {AppName(app)} to list your playlists.";
+            }
 
-        if (load == _spotifyLoad)
-        {
-            ShowSpotifyRows(rows);
+            if (load != _remoteLoad)
+            {
+                return;
+            }
+
+            if (playlists is null)
+            {
+                _remotePlaylists.Remove(app);
+            }
+            else
+            {
+                _remotePlaylists[app] = playlists;
+            }
+
+            ShowRemoteRows();
         }
     }
 
-    private void ShowSpotifyRows(List<LibraryItem> rows)
+    /// <summary>Lists the apps' playlists again, in the order chosen, under PLAYLISTS.</summary>
+    private void ShowRemoteRows()
     {
-        if (rows.Count == 0 && _spotifyItems.Count == 0)
+        var rows = new List<LibraryItem>();
+        foreach (var app in Player?.PlaylistApps ?? Array.Empty<RemoteApp>())
+        {
+            if (_remotePlaylists.TryGetValue(app, out var playlists) && playlists.Count > 0)
+            {
+                rows.AddRange(LibraryItem.RemotePlaylistRows(app, AppName(app), playlists, _settings.RemotePlaylistSort));
+            }
+            else if (_remoteNotes.TryGetValue(app, out var note))
+            {
+                rows.Add(LibraryItem.Placeholder(AppName(app), note));
+            }
+        }
+
+        if (rows.Count == 0 && _remoteItems.Count == 0)
         {
             return;
         }
 
-        _spotifyItems = rows;
+        _remoteItems = rows;
         _playlistItems = _savedPlaylistItems.Concat(rows).ToList();
+        UpdateGroupFoldersButton();
         if (ShowingPlaylists)
         {
             RebuildLibraryView();
         }
     }
 
-    private bool IsSpotifyRow(LibraryItem item) => _spotifyItems.Contains(item);
+    private bool IsRemoteRow(LibraryItem item) => _remoteItems.Contains(item);
+
+    /// <summary>The items for the apps' playlists: play the one right-clicked, or read them all again.</summary>
+    private void AddRemotePlaylistItems(ItemCollection menu, LibraryItem? row)
+    {
+        if (row is { RemotePlaylist: { } playlist })
+        {
+            var play = new MenuItem { Header = $"Play in {AppName(row.RemoteApp)}" };
+            play.Click += (_, _) => Player?.PlayRemotePlaylist(row.RemoteApp, playlist);
+            menu.Add(play);
+        }
+
+        var refresh = new MenuItem { Header = "Refresh streaming playlists" };
+        refresh.Click += (_, _) => LoadRemotePlaylists(force: true);
+        menu.Add(refresh);
+    }
 
     private static DateTime AddedTime(string path)
     {
@@ -540,9 +587,9 @@ public partial class LibraryWindow : ToolWindow
     private void UpdatePlaylistsStatus()
     {
         var total = _playlistItems.Count(item => !item.IsPlaceholder);
-        // A note under the Spotify heading (sign in again, say) isn't a playlist.
-        var lists = _playlistItems.Where(item => item.RemotePlaylist is not null || !IsSpotifyRow(item))
-            .Select(item => item.Folder).Distinct().Count();
+        // Each of the apps' playlists is a row; a note under an app's heading (sign in again, say) isn't a playlist.
+        var lists = _savedPlaylistItems.Select(item => item.Folder).Distinct().Count()
+            + _remoteItems.Count(item => item.RemotePlaylist is not null);
         var filtered = IsSearching || _settings.LibraryFavoritesOnly;
         var listed = filtered ? (_hasView ? _viewItems.Count : 0) : total;
         var shown = filtered ? (_hasView ? _viewItems.Count(item => !item.IsPlaceholder) : 0) : total;
@@ -550,7 +597,7 @@ public partial class LibraryWindow : ToolWindow
             ? "No playlists"
             : filtered
                 ? $"{shown:N0} of {total:N0} {(total == 1 ? "sound" : "sounds")}"
-                : total == 0 && _spotifyItems.Count > 0
+                : total == 0 && _remoteItems.Count > 0
                     ? $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}"
                     : $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}  ·  {total:N0} {(total == 1 ? "sound" : "sounds")}";
 
@@ -585,9 +632,9 @@ public partial class LibraryWindow : ToolWindow
     private void OpenPlaylistMenu()
     {
         var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.Pointer };
-        // Spotify's headings get Spotify's items; the saved playlists' the rest.
-        var spotify = HighlightedGroups().SelectMany(group => group.Items).Where(IsSpotifyRow).Distinct().ToList();
-        var names = HighlightedGroups().Where(group => !group.Items.Any(IsSpotifyRow)).Select(group => group.Name).ToList();
+        // The apps' headings get the apps' items; the saved playlists' the rest.
+        var remote = HighlightedGroups().SelectMany(group => group.Items).Any(IsRemoteRow);
+        var names = HighlightedGroups().Where(group => !group.Items.Any(IsRemoteRow)).Select(group => group.Name).ToList();
         var songs = HighlightedGroups().SelectMany(group => group.Items)
             .Where(item => !item.IsPlaceholder)
             .ToList();
@@ -621,23 +668,14 @@ public partial class LibraryWindow : ToolWindow
             menu.Items.Add(delete);
         }
 
-        if (spotify.Count > 0)
+        if (remote)
         {
             if (menu.Items.Count > 0)
             {
                 menu.Items.Add(new Separator());
             }
 
-            if (spotify.Select(item => item.RemotePlaylist).OfType<RemotePlaylist>().ToList() is [var playlist])
-            {
-                var play = new MenuItem { Header = "Play in Spotify" };
-                play.Click += (_, _) => Player?.PlaySpotifyPlaylist(playlist);
-                menu.Items.Add(play);
-            }
-
-            var refresh = new MenuItem { Header = "Refresh Spotify playlists" };
-            refresh.Click += (_, _) => LoadSpotifyPlaylists(force: true);
-            menu.Items.Add(refresh);
+            AddRemotePlaylistItems(menu.Items, null);
         }
 
         if (menu.Items.Count > 0)
@@ -1036,6 +1074,30 @@ public partial class LibraryWindow : ToolWindow
     private void OnSortMenu(object? sender, RoutedEventArgs e)
     {
         var menu = new ContextMenu { PlacementTarget = SortButton, Placement = PlacementMode.Bottom };
+        if (ShowingPlaylists)
+        {
+            foreach (var sort in RemotePlaylistSorts.All)
+            {
+                var item = new MenuItem
+                {
+                    Header = RemotePlaylistSorts.Label(sort),
+                    ToggleType = MenuItemToggleType.CheckBox,
+                    IsChecked = sort == _settings.RemotePlaylistSort,
+                };
+                item.Click += (_, _) =>
+                {
+                    _settings.RemotePlaylistSort = sort;
+                    _settings.Save();
+                    UpdateGroupFoldersButton();
+                    ShowRemoteRows();
+                };
+                menu.Items.Add(item);
+            }
+
+            menu.Open(SortButton);
+            return;
+        }
+
         foreach (var sort in LibrarySorts.All)
         {
             var item = new MenuItem
@@ -1079,8 +1141,9 @@ public partial class LibraryWindow : ToolWindow
             _settings.GroupLibraryByFolder && !ShowingPlaylists ? "AccentBrush" : "FaintTextBrush");
         PlaylistsButton.SetResourceReference(ForegroundProperty, ShowingPlaylists ? "AccentBrush" : "FaintTextBrush");
 
-        // Playlists keep their own order, so there's nothing to sort.
-        SortButton.IsEnabled = !ShowingPlaylists;
+        // Saved playlists keep their own order; under PLAYLISTS the order is the apps' playlists' (Spotify's, Music's).
+        SortButton.IsEnabled = !ShowingPlaylists || _remoteItems.Any(item => item.RemotePlaylist is not null);
+        SortLabel.Text = ShowingPlaylists ? RemotePlaylistSorts.Label(_settings.RemotePlaylistSort) : LibrarySorts.Label(_settings.LibrarySort);
         FavoritesOnlyButton.SetResourceReference(ForegroundProperty, _settings.LibraryFavoritesOnly ? "AccentBrush" : "FaintTextBrush");
     }
 
@@ -1113,6 +1176,17 @@ public partial class LibraryWindow : ToolWindow
 
         _songMenuItems.Clear();
         var source = e.Source as Visual;
+        if (source?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: LibraryItem { RemotePlaylist: not null } row })
+        {
+            // One of Spotify's (or Music's) playlists: it isn't a file, so it gets its own small menu.
+            e.Handled = true;
+            var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.Pointer };
+            AddRemotePlaylistItems(menu.Items, row);
+            Windows.LucentFullScreen.AddTo(menu, this);
+            menu.Open(LibraryView);
+            return;
+        }
+
         if (source?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not { DataContext: LibraryItem { IsPlaceholder: false } })
         {
             // A folder heading, or the empty space below the songs, gets the folder menu instead.
@@ -1542,7 +1616,7 @@ public partial class LibraryWindow : ToolWindow
 
         if (item.RemotePlaylist is { } playlist)
         {
-            Player?.PlaySpotifyPlaylist(playlist);
+            Player?.PlayRemotePlaylist(item.RemoteApp, playlist);
         }
         else if (!item.IsPlaceholder)
         {
@@ -1568,9 +1642,9 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
-        if (e.Key == Key.Enter && LibraryView.SelectedItem is LibraryItem { RemotePlaylist: { } playlist })
+        if (e.Key == Key.Enter && LibraryView.SelectedItem is LibraryItem { RemotePlaylist: { } playlist } row)
         {
-            Player?.PlaySpotifyPlaylist(playlist);
+            Player?.PlayRemotePlaylist(row.RemoteApp, playlist);
             e.Handled = true;
             return;
         }
