@@ -59,6 +59,7 @@ public sealed class MetalShaderFiles
     {
         var files = Read(PresetsFolder);
         var own = Read(UserPresetsFolder);
+        var ownPaths = own.Select(file => file.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (own.Count > 0)
         {
             var ownNames = own.Select(file => Path.GetFileName(file.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -66,7 +67,7 @@ public sealed class MetalShaderFiles
         }
 
         return PresetSource.WithUniqueNames(files
-            .Select(file => PresetSource.Load(file.Path, file.Code))
+            .Select(file => PresetSource.Load(file.Path, file.Code, ownPaths.Contains(file.Path)))
             .OrderBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(preset => preset.Author, StringComparer.OrdinalIgnoreCase)
             .ToList());
