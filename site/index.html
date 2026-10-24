@@ -271,9 +271,20 @@ ul.ticks li::before { content: ""; position: absolute; left: 0; top: .62em; widt
 .pane .seg button { color: #8E8E9E; padding: 5px 9px; font-size: 11px; }
 .pane .seg button[aria-pressed="true"] { color: #fff; }
 .analyzer-notes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-top: 32px; }
+#analyzer .analyzer-notes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.lufs { width: 100%; margin-top: 12px; padding: 14px 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1.3fr)) repeat(2, minmax(0, 1fr)); flex-direction: row; gap: 18px; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.lufs-cell { display: grid; gap: 6px; align-content: start; min-width: 0; padding-left: 14px; border-left: 1px solid rgba(255,255,255,.07); }
+.lufs-cell:first-child { padding-left: 0; border-left: 0; }
+.lufs-k { font: 500 11px/1 var(--font-mono); letter-spacing: .14em; color: #8E8E9E; }
+.lufs-v { font: 500 12px/1 var(--font-mono); color: #8E8E9E; white-space: nowrap; }
+.lufs-v b { font: 600 22px/1 var(--font-mono); color: #fff; margin-right: 4px; font-variant-numeric: tabular-nums; }
+.lufs-v b.hot { color: #FF4A3D; }
+.lufs-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; }
+.lufs-bar i { display: block; height: 100%; width: 70%; background: linear-gradient(90deg, var(--a1), var(--a2)); transition: width .1s linear; }
+@media (max-width: 760px) { .lufs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lufs-cell { padding-left: 0; border-left: 0; } .lufs-v b { font-size: 19px; } }
 .analyzer-notes div { display: grid; gap: 6px; align-content: start; min-width: 0; }
 .analyzer-notes p { color: var(--muted); font-size: 15px; }
-@media (max-width: 820px) { .analyzer-notes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 820px) { .analyzer-notes, #analyzer .analyzer-notes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---------- skins & themes ---------- */
 .themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
@@ -726,13 +737,21 @@ footer .credits a { text-decoration: underline; }
           </div>
         </div>
       </div>
+      <button type="button" class="pane lufs" id="lufs" aria-label="Loudness readouts. Click to measure again from now">
+        <span class="lufs-cell"><span class="lufs-k">MOMENTARY</span><span class="lufs-v"><b data-l="m">−14.2</b> LUFS</span><span class="lufs-bar"><i data-b="m"></i></span></span>
+        <span class="lufs-cell"><span class="lufs-k">SHORT-TERM</span><span class="lufs-v"><b data-l="s">−13.8</b> LUFS</span><span class="lufs-bar"><i data-b="s"></i></span></span>
+        <span class="lufs-cell"><span class="lufs-k">INTEGRATED</span><span class="lufs-v"><b data-l="i">−13.9</b> LUFS</span><span class="lufs-bar"><i data-b="i"></i></span></span>
+        <span class="lufs-cell"><span class="lufs-k">RANGE</span><span class="lufs-v"><b data-l="r">4.6</b> LU</span></span>
+        <span class="lufs-cell"><span class="lufs-k">TRUE PEAK</span><span class="lufs-v"><b data-l="p">−1.2</b> dBTP</span></span>
+      </button>
       <div class="analyzer-notes">
         <div><h3>Spectrogram</h3><p>Every frequency as a heatmap.</p></div>
         <div><h3>Waveform</h3><p>The signal, in step with the heatmap.</p></div>
         <div><h3>Spectrum</h3><p>Live bars with peak marks.</p></div>
         <div><h3>Stereo spread</h3><p>How wide the mix is.</p></div>
+        <div><h3>Loudness</h3><p>LUFS, loudness range, and true peak, to broadcast standards.</p></div>
       </div>
-      <p class="try-hint an-hint">Pauses with the music so you can look closer.</p>
+      <p class="try-hint an-hint">Pauses with the music so you can look closer. Click the loudness to measure again from now.</p>
     </div>
   </section>
 
@@ -1301,6 +1320,28 @@ footer .credits a { text-decoration: underline; }
     anPaused = !anPaused; pauseBtn.setAttribute("aria-pressed", anPaused);
     pauseBtn.textContent = anPaused ? "Play the music" : "Pause the music";
   };
+  // loudness, measured from the example music as the app measures a song: 0.4 s, 3 s, and since the last click
+  const lufsEl = document.getElementById("lufs");
+  const lv = k => lufsEl.querySelector(`[data-l="${k}"]`), lb = k => lufsEl.querySelector(`[data-b="${k}"]`);
+  const L = { m: lv("m"), s: lv("s"), i: lv("i"), r: lv("r"), p: lv("p") }, B = { m: lb("m"), s: lb("s"), i: lb("i") };
+  let lMom = -14, lShort = -14, lSum = 0, lN = 0, lPeak = -60, lHist = [], lAcc = 0;
+  const fmtL = v => (v < 0 ? "−" : "+") + Math.abs(v).toFixed(1);
+  function stepLufs(t, dt) {
+    lAcc += dt; if (lAcc < .1) return; lAcc = 0;
+    let lo = 0, hi = 0; for (let i = 0; i < 24; i++) lo += anSpec[i]; for (let i = 24; i < N; i++) hi += anSpec[i];
+    lo /= 24; hi /= (N - 24);
+    const now = -20 + lo * 14 + hi * 6 + 1.2 * (hash(t * 13.7) - .5);
+    lMom += (now - lMom) * .5; lShort += (lMom - lShort) * .06;
+    lSum += Math.pow(10, lMom / 10); lN++;
+    lHist.push(lShort); if (lHist.length > 3000) lHist.shift();
+    lPeak = Math.max(lPeak, Math.min(-.4, lMom + 8.5 + 1.5 * hash(t * 5.1)));
+    const integ = 10 * Math.log10(lSum / lN), sorted = lHist.slice().sort((a, b) => a - b);
+    const range = sorted.length > 20 ? sorted[Math.floor(sorted.length * .95)] - sorted[Math.floor(sorted.length * .1)] : 0;
+    L.m.textContent = fmtL(lMom); L.s.textContent = fmtL(lShort); L.i.textContent = fmtL(integ);
+    L.r.textContent = range.toFixed(1); L.p.textContent = fmtL(lPeak); L.p.classList.toggle("hot", lPeak > -1);
+    for (const [k, v] of [["m", lMom], ["s", lShort], ["i", integ]]) B[k].style.width = Math.max(0, Math.min(100, (v + 60) / 60 * 100)) + "%";
+  }
+  lufsEl.onclick = () => { lSum = 0; lN = 0; lPeak = -60; lHist = []; lShort = lMom; };
   const corrEl = document.getElementById("corr");
   function drawScope(t) {
     fit(sc);
@@ -1455,6 +1496,7 @@ footer .credits a { text-decoration: underline; }
       anT += dt;
       if (visible.get(sp)) { const st = dt * PXS * anSpeed * (sp.width / sp.clientWidth || 1); drawSpectro(anT, st); drawWaveScroll(anT, st * (ws.width / sp.width)); }
       if (visible.get(sb)) drawBars(anT);
+      if (visible.get(sp)) stepLufs(anT, dt);
       if (visible.get(sc)) { const c = drawScope(anT); if (Math.floor(now / 250) !== frame.k) { frame.k = Math.floor(now / 250); corrEl.textContent = (c >= 0 ? "+" : "−") + Math.abs(c).toFixed(2); } }
     }
     if (!reduce) requestAnimationFrame(frame);
