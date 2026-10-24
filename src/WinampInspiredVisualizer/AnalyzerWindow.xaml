@@ -29,7 +29,7 @@
         <!-- Title bar: the frequency under the mouse, the colours, and close. -->
         <DockPanel Grid.Row="0" Background="{DynamicResource TitleBarBrush}">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Which parts show: the heatmap, spectrum, waveform and stereo scope. -->
+                <!-- Which parts show: the heatmap, spectrum, waveform, stereo scope and loudness. -->
                 <Button x:Name="PanelsButton" Style="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
                         ToolTip="Choose which parts of the analyzer to show"
                         WindowChrome.IsHitTestVisibleInChrome="True" Click="OnPanelsClicked">
@@ -76,6 +76,7 @@
                     <MenuItem x:Name="NormalMenuItem" Header="Scroll at normal speed" Click="OnSpeedChosen" Tag="Normal" />
                     <MenuItem x:Name="FastMenuItem" Header="Scroll quickly" Click="OnSpeedChosen" Tag="Fast" />
                     <Separator />
+                    <MenuItem x:Name="LoudnessMenuItem" Header="Measure loudness from here" Click="OnRestartLoudness" />
                     <MenuItem x:Name="OnTopMenuItem" Header="Keep on top" Click="OnToggleOnTop" />
                 </ContextMenu>
             </Border.ContextMenu>

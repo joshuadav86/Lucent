@@ -19,7 +19,7 @@ A free music player for Windows and Mac, with 453 live GPU visuals, a video and 
 - **Windows like Winamp's.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
 - REMOVE tiles them all full screen.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
-- **Analyzer.** Spectrogram, waveform, spectrum, and stereo scope for everything you play.
+- **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
 - **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
 - **Skins and themes.** Five skins, eight themes, Lucent Classic for the full Winamp 2 look, and any .wsz skin.
 - **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.

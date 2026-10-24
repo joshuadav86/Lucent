@@ -294,6 +294,12 @@ public sealed class AppSettings
     /// <summary>Which parts of the analyzer are shown.</summary>
     public AnalyzerModules AnalyzerModules { get; set; } = AnalyzerModules.All;
 
+    /// <summary>
+    /// True once the analyzer's loudness readouts have been switched on for settings saved before they existed,
+    /// so they show for everyone once and stay hidden after that if they're turned off.
+    /// </summary>
+    public bool AnalyzerLoudnessOffered { get; set; }
+
     // ---- Audio tools ----
 
     /// <summary>The format and quality last picked in the converter, offered again next time.</summary>
@@ -383,16 +389,17 @@ public sealed class AppSettings
                 var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
                 settings.CarryOverReplacedVisuals();
                 settings.OfferAutoResolution();
+                settings.OfferAnalyzerLoudness();
                 return settings;
             }
         }
         catch (Exception)
         {
             // A damaged settings file just means starting from the defaults.
-            return new AppSettings { AutoResolutionOffered = true };
+            return new AppSettings { AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
         }
 
-        return new AppSettings { AddStarterMusic = true, AutoResolutionOffered = true };
+        return new AppSettings { AddStarterMusic = true, AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
     }
 
     /// <summary>
@@ -439,6 +446,15 @@ public sealed class AppSettings
             {
                 Resolution = RenderResolution.Auto;
             }
+        }
+    }
+
+    private void OfferAnalyzerLoudness()
+    {
+        if (!AnalyzerLoudnessOffered)
+        {
+            AnalyzerLoudnessOffered = true;
+            AnalyzerModules |= AnalyzerModules.Loudness;
         }
     }
 
@@ -508,7 +524,9 @@ public enum AnalyzerModules
     Waveform = 4,
     /// <summary>The stereo spread scope and correlation bar.</summary>
     Stereo = 8,
-    All = Heatmap | Spectrum | Waveform | Stereo,
+    /// <summary>The loudness readouts (LUFS, range and true peak), along the bottom.</summary>
+    Loudness = 16,
+    All = Heatmap | Spectrum | Waveform | Stereo | Loudness,
 }
 
 /// <summary>How fast the analyzer scrolls.</summary>

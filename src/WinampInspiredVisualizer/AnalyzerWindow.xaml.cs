@@ -12,14 +12,15 @@ namespace WinampInspiredVisualizer;
 
 /// <summary>
 /// The analyzer: a scrolling heatmap of the music's frequencies over time with its waveform
-/// underneath, the spectrum right now beside it and a stereo spread scope, like the Vision plugin.
-/// Any of the four can be hidden. It opens docked to the player's group and snaps like the other
+/// underneath, the spectrum right now beside it and a stereo spread scope, like the Vision plugin, with
+/// loudness readouts (LUFS, as EBU R 128 measures it) along the bottom. Any of the five can be hidden. It opens docked to the player's group and snaps like the other
 /// windows; its frame and the Theme colours follow the skin and theme.
 /// </summary>
 public partial class AnalyzerWindow : Window
 {
     private static AnalyzerWindow? _instance;
 
+    private readonly AudioPlayer _player;
     private readonly AppSettings _settings;
     private readonly Spectrogram _spectrogram;
     private readonly FullScreen _fullScreen;
@@ -27,6 +28,7 @@ public partial class AnalyzerWindow : Window
     private AnalyzerWindow(AudioPlayer player, AppSettings settings)
     {
         InitializeComponent();
+        _player = player;
         _settings = settings;
         LucentFullScreen.AddTo(DisplayMenu, this);
         Width = Math.Max(MinWidth, settings.AnalyzerWindowWidth);
@@ -41,6 +43,10 @@ public partial class AnalyzerWindow : Window
             ColumnsPerSecond = ColumnsPerSecond(settings.AnalyzerSpeed),
         };
         Display.Child = _spectrogram;
+
+        // The loudness is measured only while the analyzer is open, from when it opens, and again for each song.
+        player.Capture.Loudness.Listen();
+        player.TrackAdvanced += OnTrackAdvanced;
 
         foreach (var palette in Enum.GetValues<SpectrogramPalette>())
         {
@@ -107,6 +113,7 @@ public partial class AnalyzerWindow : Window
         (AnalyzerModules.Spectrum, "Spectrum"),
         (AnalyzerModules.Waveform, "Waveform"),
         (AnalyzerModules.Stereo, "Stereo spread"),
+        (AnalyzerModules.Loudness, "Loudness (LUFS)"),
     };
 
     // The parts' on/off items, made fresh for the Panels button's menu and the right-click menu.
@@ -184,6 +191,7 @@ public partial class AnalyzerWindow : Window
         NormalMenuItem.IsChecked = _settings.AnalyzerSpeed == AnalyzerSpeed.Normal;
         FastMenuItem.IsChecked = _settings.AnalyzerSpeed == AnalyzerSpeed.Fast;
         OnTopMenuItem.IsChecked = Topmost;
+        LoudnessMenuItem.Visibility = (_settings.AnalyzerModules & AnalyzerModules.Loudness) != 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnSpeedChosen(object sender, RoutedEventArgs e)
@@ -198,11 +206,30 @@ public partial class AnalyzerWindow : Window
 
     private void OnToggleOnTop(object sender, RoutedEventArgs e) => Topmost = !Topmost;
 
+    private void OnRestartLoudness(object sender, RoutedEventArgs e) => _spectrogram.RestartLoudness();
+
+    // A song that follows on without a gap is measured on its own, as a new one loaded is.
+    private void OnTrackAdvanced(object? sender, EventArgs e)
+    {
+        var capture = _player.Capture;
+        if (!capture.IsExternal && !capture.IsLive && !capture.IsEditor)
+        {
+            capture.Loudness.Restart();
+        }
+    }
+
     // ---- The frequency under the mouse ----
 
     private void OnDisplayMouseMove(object sender, MouseEventArgs e)
     {
-        ReadoutText.Text = _spectrogram.FrequencyAt(e.GetPosition(_spectrogram).Y) is { } hertz
+        var point = e.GetPosition(_spectrogram);
+        if (_spectrogram.IsOnLoudness(point))
+        {
+            ReadoutText.Text = "Click to measure the loudness from here";
+            return;
+        }
+
+        ReadoutText.Text = _spectrogram.FrequencyAt(point.Y) is { } hertz
             ? hertz >= 1000
                 ? (hertz / 1000).ToString(hertz >= 10000 ? "0.0" : "0.00", CultureInfo.InvariantCulture) + " kHz"
                 : Math.Round(hertz).ToString(CultureInfo.InvariantCulture) + " Hz"
@@ -215,6 +242,14 @@ public partial class AnalyzerWindow : Window
 
     private void OnDisplayMouseDown(object sender, MouseButtonEventArgs e)
     {
+        // A click on the loudness readouts starts them again.
+        if (e.ButtonState == MouseButtonState.Pressed && _spectrogram.IsOnLoudness(e.GetPosition(_spectrogram)))
+        {
+            _spectrogram.RestartLoudness();
+            e.Handled = true;
+            return;
+        }
+
         // Drag the picture to move the window, as with the artwork.
         if (e.ButtonState == MouseButtonState.Pressed && WindowState == WindowState.Normal)
         {
@@ -286,6 +321,9 @@ public partial class AnalyzerWindow : Window
         {
             _instance = null;
         }
+
+        _player.TrackAdvanced -= OnTrackAdvanced;
+        _player.Capture.Loudness.StopListening();
 
         OpenChanged?.Invoke(null, EventArgs.Empty);
     }

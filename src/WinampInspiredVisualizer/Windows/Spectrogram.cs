@@ -12,8 +12,9 @@ namespace WinampInspiredVisualizer.Windows;
 /// The analyzer's picture, like the Vision plugin's: a heatmap of the music scrolling right to left,
 /// low notes at the bottom and high ones at the top, coloured by how loud each frequency was at each
 /// moment, with the waveform scrolling underneath in step. Beside them sit the spectrum right now, on
-/// the same frequency scale as the heatmap, and a stereo spread scope (see Spectrogram.Panels.cs).
-/// Each of the four can be shown or hidden; the rest fill the space. It reads the music the same way
+/// the same frequency scale as the heatmap, and a stereo spread scope (see Spectrogram.Panels.cs), with
+/// loudness readouts along the bottom (see Spectrogram.Loudness.cs). Each of the five can be shown or
+/// hidden; the rest fill the space. It reads the music the same way
 /// as the equalizer's live spectrum, but keeps the last few seconds so you can see them go by.
 /// </summary>
 public sealed partial class Spectrogram : FrameworkElement
@@ -261,7 +262,7 @@ public sealed partial class Spectrogram : FrameworkElement
     private void Arrange()
     {
         var width = ActualWidth;
-        var height = ActualHeight;
+        var height = ArrangeLoudness(ActualWidth, ActualHeight);
         var top = Shows(AnalyzerModules.Heatmap) || Shows(AnalyzerModules.Spectrum);
         var bottom = Shows(AnalyzerModules.Waveform) || Shows(AnalyzerModules.Stereo);
         var bottomHeight = !bottom ? 0
@@ -406,6 +407,7 @@ public sealed partial class Spectrogram : FrameworkElement
         var sampleRate = _capture.SampleRate;
         var delay = _capture.DelaySamples;
         UpdatePanels((float)deltaTime, delay);
+        UpdateLoudness();
 
         // The picture glides left continuously, by however far this frame's time takes it, and a new
         // column is added each time it has moved a whole pixel.
@@ -618,6 +620,11 @@ public sealed partial class Spectrogram : FrameworkElement
         if (Usable(_stereo))
         {
             DrawStereo(dc, grid, Text);
+        }
+
+        if (Usable(_loudness))
+        {
+            DrawLoudness(dc, grid, Text);
         }
     }
 
