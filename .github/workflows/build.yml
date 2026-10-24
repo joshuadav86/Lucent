@@ -458,6 +458,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
         run: |
           # A build that finishes after a newer commit reached main mustn't replace that one's download.
           newest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
@@ -479,6 +480,8 @@ jobs:
 
           Mac (macOS 12 or later): download Lucent-Setup-mac-arm64.pkg for Apple silicon Macs (M1 and later) or Lucent-Setup-mac-x64.pkg for Intel Macs, and open it to install Lucent into Applications; it keeps itself up to date from here. Or download Lucent-mac-arm64.zip or Lucent-mac-x64.zip and open Lucent.app from it (that copy doesn't update itself). Both are signed and notarized by Apple.
           NOTES
+          # Deleting the release zeroes GitHub's download counts, so send them to the private dashboard first.
+          tools/ci/send-download-counts.sh
           gh release delete latest --cleanup-tag --yes || true
           # The .nupkg and the releases/assets files are what installed copies of Lucent update from.
           gh release create latest Lucent-Setup.exe Lucent-win-x64.zip \
@@ -948,9 +951,12 @@ jobs:
         if: env.BUILD_MAC == 'true' && (github.event_name == 'push' && github.ref == 'refs/heads/main')
         env:
           GH_TOKEN: ${{ github.token }}
+          GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
         run: |
           # Which commit this Mac build is from, for the app's what's new and for finding what changed since.
           echo "$GITHUB_SHA" > "mac-release/commit-$RID.txt"
+          # Replacing this Mac's files zeroes their download counts, so send them to the private dashboard first.
+          tools/ci/send-download-counts.sh "(mac|osx)-${RID#osx-}"
           for attempt in $(seq 1 60); do
             if gh release view latest -R "$GITHUB_REPOSITORY" > /dev/null 2>&1 &&
                gh release upload latest mac-release/* -R "$GITHUB_REPOSITORY" --clobber; then
