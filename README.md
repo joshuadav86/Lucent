@@ -23,7 +23,7 @@ A free music player for Windows and Mac, with 453 live GPU visuals, a video and 
 - **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
 - **Skins and themes.** Five skins, eight themes, Lucent Classic for the full Winamp 2 look, and any .wsz skin.
 - **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.
-- **Your streaming apps, too.** Spotify, Apple Music, TIDAL, SoundCloud, and YouTube play with Lucent's visuals and controls.
+- **Your streaming apps, too.** Spotify, Apple Music, TIDAL, Pandora, SoundCloud, and YouTube play with Lucent's visuals and controls.
 - **Sounds right.** Gapless, bit-perfect exclusive mode, and 15 formats from MP3 and FLAC to WavPack and APE.
 
 <table>

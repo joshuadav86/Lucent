@@ -25,6 +25,7 @@ using WinampInspiredVisualizer.Diagnostics;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Streaming;
 using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
 using WinampInspiredVisualizer.Video;
@@ -2020,8 +2021,47 @@ public partial class MainWindow : Window
         _settings.Save();
     }
 
+    private void OnThumbUp(object? sender, RoutedEventArgs e) => ThumbUp();
+
+    private void OnThumbDown(object? sender, RoutedEventArgs e) => ThumbDown();
+
+    // Thumbs up and down, for an app that has them (Pandora). Nothing happens for one that doesn't.
+    private void ThumbUp()
+    {
+        if (_remote is { HasRating: true })
+        {
+            RemoteTakes(remote => remote.ThumbUpAsync());
+        }
+
+        UpdateShuffleRepeatButtons();
+    }
+
+    private void ThumbDown()
+    {
+        if (_remote is { HasRating: true })
+        {
+            RemoteTakes(remote => remote.ThumbDownAsync());
+        }
+
+        UpdateShuffleRepeatButtons();
+    }
+
     private void UpdateShuffleRepeatButtons()
     {
+        // An app with thumbs and no shuffle or repeat (Pandora's stations) shows its thumbs in their place.
+        var thumbs = _remote is { HasRating: true, HasShuffle: false, HasRepeat: false };
+        ShuffleButton.IsVisible = !thumbs;
+        RepeatButton.IsVisible = !thumbs;
+        ThumbUpButton.IsVisible = thumbs;
+        ThumbDownButton.IsVisible = thumbs;
+        if (thumbs)
+        {
+            ThumbUpButton.IsChecked = _remote!.State?.Rating == SongRating.Up;
+            ThumbDownButton.IsChecked = _remote.State?.Rating == SongRating.Down;
+            ToolTip.SetTip(ThumbUpButton, _remote.ThumbUpTip);
+            ToolTip.SetTip(ThumbDownButton, _remote.ThumbDownTip);
+        }
+
         ShuffleButton.IsChecked = ShownShuffle;
         RepeatButton.IsChecked = ShownRepeat != RepeatMode.Off;
         RepeatOneBadge.IsVisible = ShownRepeat == RepeatMode.One;
@@ -2210,6 +2250,12 @@ public partial class MainWindow : Window
                 break;
             case Key.S:
                 ToggleShuffle();
+                break;
+            case Key.T when e.KeyModifiers == KeyModifiers.Shift:
+                ThumbDown();
+                break;
+            case Key.T:
+                ThumbUp();
                 break;
             case Key.R:
                 CycleRepeat();

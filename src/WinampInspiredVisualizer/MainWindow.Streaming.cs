@@ -105,6 +105,9 @@ public partial class MainWindow
                 case RemoteApp.Tidal when TidalRemote.IsSupported:
                     player = new TidalRemote();
                     break;
+                case RemoteApp.Pandora when PandoraRemote.IsSupported:
+                    player = new PandoraRemote();
+                    break;
                 default:
                     return;
             }

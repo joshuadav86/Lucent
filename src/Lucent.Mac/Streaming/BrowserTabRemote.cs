@@ -59,7 +59,8 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     /// JavaScript that returns 'none' when the tab has no player, and otherwise <c>out</c> of these fields: the state
     /// ('playing' or 'paused'), an ID that tells one song from the next, its title, artist, album, length and position
     /// (in seconds), the cover's address, the ID of the playlist it's playing through (empty when there isn't one), and
-    /// the player's volume from 0 to 1 (empty when <see cref="SetVolume"/> can't change it). It runs after <see cref="Helpers"/>.
+    /// the player's volume from 0 to 1 (empty when <see cref="SetVolume"/> can't change it), and, for a site with thumbs,
+    /// the song's thumb ('up', 'down' or 'none'; left off, or empty, when the site has none). It runs after <see cref="Helpers"/>.
     /// </summary>
     protected abstract string ReadPlayer { get; }
 
@@ -151,7 +152,14 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
         double? volume = song.Length > 9 && double.TryParse(song[9], NumberStyles.Float, CultureInfo.InvariantCulture, out var level) && double.IsFinite(level)
             ? Math.Clamp(level, 0, 1)
             : null;
-        return new RemoteState(track, song[0] == "playing", Seconds(song[6]), readAt, playlist, Volume: volume);
+        SongRating? rating = song.Length > 10 ? song[10] switch
+        {
+            "up" => SongRating.Up,
+            "down" => SongRating.Down,
+            "none" => SongRating.None,
+            _ => null,
+        } : null;
+        return new RemoteState(track, song[0] == "playing", Seconds(song[6]), readAt, playlist, Volume: volume, Rating: rating);
     }
 
     public Task PlayAsync(CancellationToken cancel) => TellAsync(Play, cancel);

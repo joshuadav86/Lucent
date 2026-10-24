@@ -189,6 +189,15 @@
                                        Foreground="{Binding $parent[ToggleButton].Foreground}" />
                         </Grid>
                     </ToggleButton>
+                    <!-- Pandora's thumbs, in shuffle and repeat's place while Lucent controls an app that has them. -->
+                    <ToggleButton x:Name="ThumbUpButton" Theme="{StaticResource PanelToggle}" Padding="7,0" Margin="6,0,0,0"
+                                  IsVisible="False" ToolTip.Tip="Thumbs up (T)" Click="OnThumbUp">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ThumbUpIcon}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="ThumbDownButton" Theme="{StaticResource PanelToggle}" Padding="7,0"
+                                  IsVisible="False" ToolTip.Tip="Thumbs down (Shift+T)" Click="OnThumbDown">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ThumbDownIcon}" />
+                    </ToggleButton>
                 </StackPanel>
 
                 <!-- Each lights up while its window is open. -->
@@ -510,6 +519,8 @@
                 <CheckBox x:Name="TidalSwitch" Theme="{StaticResource SwitchToggle}" Content="TIDAL" Tag="Tidal"
                           Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
                 <CheckBox x:Name="SoundCloudSwitch" Theme="{StaticResource SwitchToggle}" Content="SoundCloud" Tag="SoundCloud"
+                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                <CheckBox x:Name="PandoraSwitch" Theme="{StaticResource SwitchToggle}" Content="Pandora" Tag="Pandora"
                           Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
                 <Button x:Name="SpotifySignOutButton" Theme="{StaticResource PillButton}" Content="Sign out of Spotify"
                         HorizontalAlignment="Left" Margin="0,12,0,0" Click="OnSignOutOfSpotify" />

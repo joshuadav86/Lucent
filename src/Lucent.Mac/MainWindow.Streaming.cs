@@ -108,6 +108,9 @@ public partial class MainWindow
                 case RemoteApp.SoundCloud:
                     player = new SoundCloudRemote(StreamingHttp);
                     break;
+                case RemoteApp.Pandora:
+                    player = new PandoraRemote(StreamingHttp);
+                    break;
                 default:
                     return;
             }

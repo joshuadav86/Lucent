@@ -39,7 +39,7 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
     /// <summary>The app's player among everything Windows' media controls know about, or null.</summary>
     protected abstract GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions);
 
-    public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
+    public virtual async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
         var session = await SessionAsync()
             ?? throw new RemoteProblem($"{NotOpen}, then Lucent can show and control it.");

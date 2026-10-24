@@ -46,6 +46,7 @@ public static partial class Screenshots
         ("Player-Options-Look", () => PreviewOptions("Theme")),
         ("Player-Options-Updates", () => PreviewOptions("Updates")),
         ("Player-Sources", () => PreviewSources()),
+        ("Player-Pandora", () => PreviewPandoraPlayer()),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
@@ -153,6 +154,16 @@ public static partial class Screenshots
             SampleTrack("Tomora", "Ring the Alarm", TimeSpan.FromSeconds(331), 1411, 44100, 2),
             SampleTrack("Boards of Canada", "Roygbiv", TimeSpan.FromSeconds(151), 320, 44100, 2),
         }, TimeSpan.FromSeconds(83));
+        return player;
+    }
+
+    /// <summary>The player while Lucent controls Pandora: a station's song, with its thumbs up lit.</summary>
+    private static Window PreviewPandoraPlayer()
+    {
+        var player = new MainWindow();
+        player.PreviewSkin("Lucent");
+        player.ShowPreview(new[] { SampleTrack("Bicep", "Glue", TimeSpan.FromSeconds(269), 1411, 44100, 2) }, TimeSpan.FromSeconds(97));
+        player.PreviewThumbs(WinampInspiredVisualizer.Streaming.SongRating.Up, "Pandora · Bicep Radio");
         return player;
     }
 
