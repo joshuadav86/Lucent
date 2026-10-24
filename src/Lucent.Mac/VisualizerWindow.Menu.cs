@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Threading;
 using WinampInspiredVisualizer.Visualizer;
 
 namespace Lucent.Mac;
@@ -8,10 +7,6 @@ namespace Lucent.Mac;
 /// <summary>The menus you get by clicking the visuals. Kept in its own file.</summary>
 public partial class VisualizerWindow
 {
-    private DispatcherTimer? _clickTimer;
-    private bool _skipClick;
-    private DateTime _activatedAt;
-
     /// <summary>
     /// Fullscreen, playback controls (in fullscreen), moving between visuals, favourites and Auto, and the graphics options, at the
     /// mouse. It works in fullscreen too, where the controls under the visuals are hidden.
@@ -118,50 +113,12 @@ public partial class VisualizerWindow
     internal static KeyGesture FullscreenGesture => new(Key.F, KeyModifiers.Control | KeyModifiers.Meta);
 
     /// <summary>
-    /// A left click on the visuals plays or pauses the music, in a window or fullscreen. It waits
-    /// out the double-click time first, so double-clicking still just switches fullscreen, and the
-    /// click that brings Lucent to the front doesn't count.
+    /// Double-clicking the visuals switches fullscreen. A single click does nothing, so clicking
+    /// the window to bring it to the front never stops the music.
     /// </summary>
-    private void OnVisualsClicked()
-    {
-        if (_skipClick)
-        {
-            // The button coming up after a double-click.
-            _skipClick = false;
-            return;
-        }
-
-        if (Player is null || DateTime.UtcNow - _activatedAt < TimeSpan.FromMilliseconds(500))
-        {
-            return;
-        }
-
-        if (_clickTimer is null)
-        {
-            _clickTimer = new DispatcherTimer { Interval = DoubleClickTime() };
-            _clickTimer.Tick += (_, _) =>
-            {
-                _clickTimer.Stop();
-                Player?.PlayOrPause();
-            };
-        }
-
-        _clickTimer.Stop();
-        _clickTimer.Start();
-    }
-
     private void OnVisualsDoubleClicked()
     {
-        _clickTimer?.Stop();
-        _skipClick = true;
         ToggleFullscreen();
-    }
-
-    /// <summary>The longest gap between the clicks of a double-click, as set in System Settings.</summary>
-    private TimeSpan DoubleClickTime()
-    {
-        var time = PlatformSettings?.GetDoubleTapTime(PointerType.Mouse) ?? TimeSpan.Zero;
-        return time > TimeSpan.Zero ? time : TimeSpan.FromMilliseconds(500);
     }
 
     private static MenuItem Item(string header, KeyGesture? keys, Action action)

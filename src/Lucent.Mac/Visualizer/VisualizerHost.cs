@@ -60,9 +60,6 @@ public sealed class VisualizerHost : Border, IDisposable
 
     public event EventHandler? DoubleClicked;
 
-    /// <summary>Raised when the left mouse button is let go over the visuals, including the second click of a double-click.</summary>
-    public event EventHandler? Clicked;
-
     /// <summary>Raised when the visuals are right-clicked (or Control-clicked), for their menu.</summary>
     public event EventHandler? RightClicked;
 
@@ -484,9 +481,6 @@ public sealed class VisualizerHost : Border, IDisposable
             case MouseButton.Right:
                 RightClicked?.Invoke(this, EventArgs.Empty);
                 e.Handled = true;
-                break;
-            case MouseButton.Left:
-                Clicked?.Invoke(this, EventArgs.Empty);
                 break;
         }
     }

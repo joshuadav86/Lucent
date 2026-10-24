@@ -160,7 +160,7 @@ Press **V** and start typing. Visuals sit in family folders and carry tags (Calm
 
 ### Fullscreen, without losing control
 
-Double-click the visuals or press **F11**. Click once to pause or play, and right-click for a seek bar, track controls, volume, and every graphics option.
+Double-click the visuals or press **F11**. Right-click for a seek bar, track controls, volume, and every graphics option.
 
 ![The right-click menu over the Neon Downpour visual in fullscreen](assets/screenshots/fullscreen-menu.jpg)
 
