@@ -521,6 +521,26 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         return new RemotePlaylist(uri, title.Length > 0 ? title : "Untitled playlist", songs, owner, owner is null || collaborative);
     }
 
+    public async Task<RemoteList> SongsAsync(RemotePlaylist playlist, CancellationToken cancel)
+    {
+        try
+        {
+            return playlist.Uri.Split(':') switch
+            {
+                ["spotify", "playlist", var id] => await PlaylistAsync(playlist.Uri, id, cancel),
+                [.., "collection"] => await LikedSongsAsync(playlist.Uri, cancel),
+                _ => new RemoteList(playlist.Uri, playlist.Name, Array.Empty<RemoteTrack>()),
+            };
+        }
+        catch (Refused refused)
+        {
+            // Other people's playlists: Spotify plays them, but won't say what's in them.
+            return new RemoteList(playlist.Uri, playlist.Name, Array.Empty<RemoteTrack>(), refused.Note == PlaylistNote
+                ? PreviewRefusedNote
+                : refused.Note.Replace(" Until then, this is what's up next.", string.Empty, StringComparison.Ordinal));
+        }
+    }
+
     public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) =>
         PlayOnSomeDeviceAsync(JsonSerializer.Serialize(new Dictionary<string, object> { ["context_uri"] = playlist.Uri }), cancel);
 
@@ -830,6 +850,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     }
 
     private const string PlaylistNote = "Spotify only shares the songs of playlists you made or collaborate on, so this is what's up next.";
+
+    private const string PreviewRefusedNote =
+        "Spotify only shares the songs of playlists you made or collaborate on. Press play to hear this one in Spotify.";
 
     private const string PlaylistSignInNote =
         "To show your playlists here, sign out of Spotify and back in from the Add music menu. Until then, this is what's up next.";

@@ -60,7 +60,7 @@ public partial class MainWindow
     /// <summary>Starts showing and controlling <paramref name="app"/>, signing in first when it needs it and <paramref name="signIn"/> allows.</summary>
     private async void ControlRemote(RemoteApp app, bool signIn)
     {
-        // A playlist double-clicked in the library while its app wasn't being controlled plays once it is.
+        // A playlist (or one of its songs) chosen in the library while its app wasn't being controlled plays once it is.
         var pending = _playWhenConnected;
         _playWhenConnected = null;
         IRemotePlayer player;
@@ -140,7 +140,7 @@ public partial class MainWindow
         _remote.Changed += OnRemoteChanged;
         if (pending is { } wanted && wanted.App == app)
         {
-            _ = _remote.PlayPlaylistAsync(wanted.Playlist);
+            _ = wanted.Play(_remote);
         }
 
         UpdateListening();
@@ -251,7 +251,7 @@ public partial class MainWindow
     /// <summary>Plays one of the songs from the other app's playlist, in that app.</summary>
     public void PlayFromRemoteList(RemoteTrack track) => RemoteTakes(remote => remote.PlayFromListAsync(track));
 
-    private (RemoteApp App, RemotePlaylist Playlist)? _playWhenConnected;
+    private (RemoteApp App, Func<RemoteControl, Task> Play)? _playWhenConnected;
 
     /// <summary>
     /// The Spotify account's playlists for the library, or null when Lucent isn't signed in to Spotify. While Spotify is
@@ -350,17 +350,52 @@ public partial class MainWindow
     }
 
     /// <summary>Plays one of an app's playlists in the app, starting to control the app first when it isn't.</summary>
-    public void PlayRemotePlaylist(RemoteApp app, RemotePlaylist playlist)
+    public void PlayRemotePlaylist(RemoteApp app, RemotePlaylist playlist) =>
+        PlayInRemote(app, control => control.PlayPlaylistAsync(playlist));
+
+    /// <summary>
+    /// Plays one song of a playlist looked through in the library (<see cref="RemotePlaylistSongsAsync"/>), carrying on
+    /// through the playlist, starting to control the app first when it isn't.
+    /// </summary>
+    public void PlayFromRemotePlaylist(RemoteApp app, RemoteList list, RemoteTrack track) =>
+        PlayInRemote(app, control => control.PlayFromListAsync(list, track));
+
+    private void PlayInRemote(RemoteApp app, Func<RemoteControl, Task> play)
     {
         if (_remote is not null && _settings.RemoteApp == app)
         {
-            RemoteTakes(control => control.PlayPlaylistAsync(playlist));
+            RemoteTakes(play);
             return;
         }
 
-        _playWhenConnected = (app, playlist);
+        _playWhenConnected = (app, play);
         ControlRemote(app, signIn: true);
     }
+
+    /// <summary>
+    /// A playlist's songs, for the library to show without playing anything, or null when the app can't be asked
+    /// (signed out of Spotify, say).
+    /// </summary>
+    /// <exception cref="RemoteProblem">When the app won't say, worded for the user.</exception>
+    public async Task<RemoteList?> RemotePlaylistSongsAsync(RemoteApp app, RemotePlaylist playlist)
+    {
+        switch (app)
+        {
+            case RemoteApp.Spotify:
+                return await WithSpotifyAsync(spotify => spotify.SongsAsync(playlist, CancellationToken.None));
+            case RemoteApp.AppleMusic:
+                using (var music = new AppleMusicRemote())
+                {
+                    return await music.SongsAsync(playlist, CancellationToken.None);
+                }
+
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>The other app's song now playing, for the library to mark in a playlist it shows, or null.</summary>
+    public RemoteTrack? RemotePlayingTrack => _remote?.State?.Track;
 
     private void OnRemoteChanged(object? sender, EventArgs e)
     {
@@ -371,6 +406,7 @@ public partial class MainWindow
 
         ShowRemote();
         ShowRemoteList();
+        _libraryWindow.MarkRemotePlaying(_remote?.State?.Track);
         UpdateListening();
         ShowWhereItPlays();
         UpdatePlayPauseButton();

@@ -63,6 +63,8 @@ public partial class LibraryWindow : ToolWindow
         LibraryView.AddHandler(PointerPressedEvent, OnFolderHeadingMouseDown, RoutingStrategies.Tunnel);
         LibraryView.AddHandler(KeyDownEvent, OnLibraryNavigationKey, RoutingStrategies.Tunnel);
         LibraryView.AddHandler(ContextRequestedEvent, OnLibraryMenuOpening, RoutingStrategies.Tunnel);
+        LibraryView.AddHandler(Gestures.TappedEvent, OnLibraryTapped, RoutingStrategies.Bubble, handledEventsToo: true);
+        RemotePlaylistView.AddHandler(ContextRequestedEvent, OnRemoteSongMenuOpening, RoutingStrategies.Tunnel);
     }
 
     private bool IsSearching => _searchWords.Length > 0;
@@ -338,7 +340,7 @@ public partial class LibraryWindow : ToolWindow
                     : countText;
 
         var noMatches = searching && shown == 0;
-        EmptyLibraryHint.IsVisible = shown == 0 && !_library.IsScanning;
+        EmptyLibraryHint.IsVisible = shown == 0 && !_library.IsScanning && !ShowingRemotePlaylist;
         EmptyLibraryTitle.Text = noMatches ? "No sounds match your search"
             : favoritesOnly ? "No favorites here yet"
             : linked ? "No music found"
@@ -469,6 +471,11 @@ public partial class LibraryWindow : ToolWindow
     /// <summary>Called by the player when Lucent signs in to or out of Spotify.</summary>
     public void SpotifyChanged()
     {
+        if (_openRemote?.RemoteApp == RemoteApp.Spotify)
+        {
+            CloseRemotePlaylist();
+        }
+
         _remotePlaylists.Remove(RemoteApp.Spotify);
         _remoteNotes.Remove(RemoteApp.Spotify);
         _remoteReadAt = DateTime.MinValue;
@@ -556,11 +563,220 @@ public partial class LibraryWindow : ToolWindow
 
     private bool IsRemoteRow(LibraryItem item) => _remoteItems.Contains(item);
 
+    // ---- A streaming playlist, opened to look through ----
+
+    // The playlist row opened, its songs once read, and the read under way (cancelled by going back).
+    private LibraryItem? _openRemote;
+    private RemoteList? _openRemoteList;
+    private List<RemoteListEntry> _openRemoteEntries = new();
+    private CancellationTokenSource? _openRemoteStop;
+    private DateTime _openedRemoteAt;
+
+    private bool ShowingRemotePlaylist => _openRemote is not null;
+
+    // A click on a streaming playlist opens it, as in Spotify; a click with ⌘ or Shift only picks it, as for any row.
+    private void OnLibraryTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.KeyModifiers == KeyModifiers.None
+            && (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: LibraryItem { RemotePlaylist: not null } row })
+        {
+            OpenRemotePlaylist(row);
+        }
+    }
+
+    /// <summary>
+    /// Shows a streaming playlist's songs in place of the list, without playing anything, so one of them can be chosen
+    /// (or the whole playlist played with the play button).
+    /// </summary>
+    private async void OpenRemotePlaylist(LibraryItem row)
+    {
+        if (row.RemotePlaylist is not { } playlist || Player is not { } player || _openRemote == row)
+        {
+            return;
+        }
+
+        _openRemoteStop?.Cancel();
+        var stop = _openRemoteStop = new CancellationTokenSource();
+        _openRemote = row;
+        _openRemoteList = null;
+        _openedRemoteAt = DateTime.UtcNow;
+        var app = AppName(row.RemoteApp);
+        RemotePlaylistName.Text = playlist.Name;
+        RemotePlaylistDetails.Text = "Reading its songs…";
+        ToolTip.SetTip(PlayRemotePlaylistButton, $"Play the whole playlist in {app}");
+        RemoteSongPlayItem.Header = $"Play in {app}";
+        _openRemoteEntries = new List<RemoteListEntry>();
+        RemotePlaylistView.ItemsSource = _openRemoteEntries;
+        ShowRemotePlaylistNote(null);
+        SearchRow.IsVisible = FilterRow.IsVisible = LibraryView.IsVisible = EmptyLibraryHint.IsVisible = false;
+        RemotePlaylistPanel.IsVisible = true;
+        RemotePlaylistView.Focus();
+
+        RemoteList? list;
+        try
+        {
+            list = await player.RemotePlaylistSongsAsync(row.RemoteApp, playlist);
+        }
+        catch (Exception ex)
+        {
+            if (!stop.IsCancellationRequested)
+            {
+                ShowRemoteSongs(null, ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach {app} to read this playlist.");
+            }
+
+            return;
+        }
+
+        if (stop.IsCancellationRequested)
+        {
+            return;
+        }
+
+        ShowRemoteSongs(list, list is null ? $"Sign in to {app} from the Add music menu to see this playlist's songs." : list.Note);
+
+        // A long playlist shows its start first, then the rest as it's read.
+        while (list?.Rest is { } rest)
+        {
+            try
+            {
+                list = await rest(stop.Token);
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            if (stop.IsCancellationRequested)
+            {
+                return;
+            }
+
+            ShowRemoteSongs(list, list.Note);
+        }
+    }
+
+    private void ShowRemoteSongs(RemoteList? list, string? note)
+    {
+        _openRemoteList = list;
+        var chosen = (RemotePlaylistView.SelectedItem as RemoteListEntry)?.Track.Id;
+        _openRemoteEntries = (list?.Tracks ?? Array.Empty<RemoteTrack>()).Select(track => new RemoteListEntry(track)).ToList();
+        RemotePlaylistView.ItemsSource = _openRemoteEntries;
+        RemotePlaylistView.SelectedItem = _openRemoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
+        var app = AppName(_openRemote!.RemoteApp);
+        var count = list?.Tracks.Count ?? 0;
+        var songs = count == 1 ? "1 song" : $"{count:N0} songs";
+        RemotePlaylistDetails.Text = list is null || (count == 0 && note is not null)
+            ? app
+            : list is { Rest: not null, Total: { } total } && total > count
+                ? $"{count:N0} of {total:N0} songs  ·  {app}"
+                : $"{songs}  ·  {app}";
+        ShowRemotePlaylistNote(note);
+        MarkRemotePlaying(Player?.RemotePlayingTrack);
+    }
+
+    private void ShowRemotePlaylistNote(string? note)
+    {
+        RemotePlaylistNote.Text = note ?? string.Empty;
+        RemotePlaylistNote.IsVisible = !string.IsNullOrEmpty(note);
+    }
+
+    /// <summary>Marks the song the other app is playing in the streaming playlist that's open, if it's in it.</summary>
+    public void MarkRemotePlaying(RemoteTrack? playing)
+    {
+        foreach (var entry in _openRemoteEntries)
+        {
+            entry.IsCurrent = playing is not null && entry.Track.IsSameSong(playing);
+        }
+    }
+
+    /// <summary>Goes back from a streaming playlist's songs to the playlists.</summary>
+    private void CloseRemotePlaylist()
+    {
+        if (_openRemote is null)
+        {
+            return;
+        }
+
+        _openRemoteStop?.Cancel();
+        _openRemoteStop = null;
+        _openRemote = null;
+        _openRemoteList = null;
+        _openRemoteEntries = new List<RemoteListEntry>();
+        RemotePlaylistView.ItemsSource = null;
+        RemotePlaylistPanel.IsVisible = false;
+        SearchRow.IsVisible = FilterRow.IsVisible = LibraryView.IsVisible = true;
+        UpdateLibraryStatus();
+        LibraryView.Focus();
+    }
+
+    private void OnCloseRemotePlaylist(object? sender, RoutedEventArgs e) => CloseRemotePlaylist();
+
+    private void OnPlayRemotePlaylist(object? sender, RoutedEventArgs e)
+    {
+        if (_openRemote is { RemotePlaylist: { } playlist } row)
+        {
+            Player?.PlayRemotePlaylist(row.RemoteApp, playlist);
+        }
+    }
+
+    /// <summary>Plays the chosen song in its app, which carries on through the playlist after it.</summary>
+    private void PlayRemoteSong(RemoteListEntry? entry)
+    {
+        if (entry is not null && _openRemote is { } row && _openRemoteList is { } list)
+        {
+            Player?.PlayFromRemotePlaylist(row.RemoteApp, list, entry.Track);
+        }
+    }
+
+    private void OnRemotePlaylistDoubleClick(object? sender, TappedEventArgs e)
+    {
+        // The second click of a double-click that opened the playlist lands on its songs, and mustn't play one.
+        if (DateTime.UtcNow - _openedRemoteAt > OpenClickGap)
+        {
+            PlayRemoteSong((e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext as RemoteListEntry);
+        }
+    }
+
+    private static readonly TimeSpan OpenClickGap = TimeSpan.FromMilliseconds(700);
+
+    private void OnRemotePlaylistPlaySong(object? sender, RoutedEventArgs e) =>
+        PlayRemoteSong(RemotePlaylistView.SelectedItem as RemoteListEntry);
+
+    private void OnRemotePlaylistKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            PlayRemoteSong(RemotePlaylistView.SelectedItem as RemoteListEntry);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            CloseRemotePlaylist();
+            e.Handled = true;
+        }
+    }
+
+    // A right-click picks the song under it first, so Play plays that one.
+    private void OnRemoteSongMenuOpening(object? sender, ContextRequestedEventArgs e)
+    {
+        if ((e.Source as Control)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: RemoteListEntry row })
+        {
+            RemotePlaylistView.SelectedItem = row;
+        }
+        else
+        {
+            e.Handled = true;
+        }
+    }
+
     /// <summary>The items for the apps' playlists: play the one right-clicked, or read them all again.</summary>
     private void AddRemotePlaylistItems(ItemCollection menu, LibraryItem? row)
     {
         if (row is { RemotePlaylist: { } playlist })
         {
+            var open = new MenuItem { Header = "Show songs" };
+            open.Click += (_, _) => OpenRemotePlaylist(row);
+            menu.Add(open);
             var play = new MenuItem { Header = $"Play in {AppName(row.RemoteApp)}" };
             play.Click += (_, _) => Player?.PlayRemotePlaylist(row.RemoteApp, playlist);
             menu.Add(play);
@@ -602,7 +818,7 @@ public partial class LibraryWindow : ToolWindow
                     : $"{lists:N0} {(lists == 1 ? "playlist" : "playlists")}  ·  {total:N0} {(total == 1 ? "sound" : "sounds")}";
 
         // Empty playlists show their headings, so the hint is only for no playlists at all, or no matches.
-        EmptyLibraryHint.IsVisible = lists == 0 || (filtered && listed == 0);
+        EmptyLibraryHint.IsVisible = (lists == 0 || (filtered && listed == 0)) && !ShowingRemotePlaylist;
 
         // Right-clicks go through the hint to the list underneath, for New playlist….
         EmptyLibraryHint.IsHitTestVisible = false;
@@ -621,6 +837,7 @@ public partial class LibraryWindow : ToolWindow
 
     private void SetShowingPlaylists(bool show)
     {
+        CloseRemotePlaylist();
         _settings.LibraryShowPlaylists = show;
         _settings.Save();
         HighlightFolders(Array.Empty<string>());
@@ -767,6 +984,7 @@ public partial class LibraryWindow : ToolWindow
     /// <summary>Puts the keyboard in the search box, with what's there selected so typing replaces it.</summary>
     public void FocusSearch()
     {
+        CloseRemotePlaylist();
         SearchBox.Focus();
         SearchBox.SelectAll();
     }
@@ -1614,9 +1832,9 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
-        if (item.RemotePlaylist is { } playlist)
+        if (item.RemotePlaylist is not null)
         {
-            Player?.PlayRemotePlaylist(item.RemoteApp, playlist);
+            OpenRemotePlaylist(item);
         }
         else if (!item.IsPlaceholder)
         {
@@ -1642,9 +1860,9 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
-        if (e.Key == Key.Enter && LibraryView.SelectedItem is LibraryItem { RemotePlaylist: { } playlist } row)
+        if (e.Key == Key.Enter && LibraryView.SelectedItem is LibraryItem { RemotePlaylist: not null } row)
         {
-            Player?.PlayRemotePlaylist(row.RemoteApp, playlist);
+            OpenRemotePlaylist(row);
             e.Handled = true;
             return;
         }

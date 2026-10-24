@@ -119,6 +119,11 @@ public sealed class RemoteControl : IDisposable
         ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
         : Task.CompletedTask;
 
+    /// <summary>Plays one of the songs of <paramref name="list"/>, a playlist looked through in the library, carrying on through it.</summary>
+    public Task PlayFromListAsync(RemoteList list, RemoteTrack track) => Player is IRemoteLists lists
+        ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
+        : Task.CompletedTask;
+
     /// <summary>Plays one of the account's playlists (<see cref="IRemotePlaylists"/>) in the app.</summary>
     public Task PlayPlaylistAsync(RemotePlaylist playlist) => Player is IRemotePlaylists playlists
         ? RunAsync(cancel => playlists.PlayPlaylistAsync(playlist, cancel), null)

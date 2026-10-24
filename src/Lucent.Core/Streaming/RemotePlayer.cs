@@ -214,6 +214,13 @@ public interface IRemotePlaylists
     /// <summary>Plays <paramref name="playlist"/> from its start.</summary>
     Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel);
 
+    /// <summary>
+    /// <paramref name="playlist"/>'s songs, to look through in the library without playing anything. One of them plays
+    /// from the playlist through <see cref="IRemoteLists.PlayFromListAsync"/>. When the app won't share the songs, the
+    /// list is empty and its <see cref="RemoteList.Note"/> says why.
+    /// </summary>
+    Task<RemoteList> SongsAsync(RemotePlaylist playlist, CancellationToken cancel);
+
     /// <summary>Adds <paramref name="track"/> to the end of <paramref name="playlist"/> (one with <see cref="RemotePlaylist.CanAdd"/>).</summary>
     /// <exception cref="RemoteProblem">When the app won't add it, in a way the user can fix (signing in again).</exception>
     Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel);
