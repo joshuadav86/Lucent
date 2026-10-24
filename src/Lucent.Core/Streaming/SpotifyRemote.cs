@@ -519,6 +519,16 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     /// Adds the song to the end of a playlist (POST /playlists/{id}/items), or saves it to Liked Songs (PUT /me/library).
     /// A sign-in from before Lucent added songs doesn't allow either, so it says to sign in again rather than ask.
     /// </summary>
+    /// <summary>
+    /// False when the sign-in is from before Lucent added songs to playlists, so it needs signing in again first. Asks
+    /// Spotify nothing but a fresh sign-in token, when the one held has run out.
+    /// </summary>
+    public async Task<bool> CanAddSongsAsync(CancellationToken cancel)
+    {
+        await AccessTokenAsync(forceRefresh: false, cancel);
+        return _tokens?.Scope is not { } granted || granted.Split(' ').Contains("playlist-modify-private");
+    }
+
     public async Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
     {
         var song = track.Uri ?? $"spotify:track:{track.Id}";
