@@ -858,7 +858,23 @@ jobs:
           else
             args+=(--signAppIdentity "$SIGN_IDENTITY" --keychain "$KEYCHAIN")
           fi
-          .vpk/vpk "${args[@]}"
+          # vpk signs a copy of Lucent.app with codesign --timestamp, and Apple's timestamp server sometimes
+          # doesn't answer from GitHub's Mac runners ("The timestamp service is not available"), so try a few
+          # times with a growing wait, starting each try from an empty output folder.
+          wait_s=15
+          for attempt in 1 2 3 4 5; do
+            rm -rf releases-mac
+            if .vpk/vpk "${args[@]}"; then
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error::vpk couldn't package Lucent.app after 5 tries (Apple's timestamp server may be down)."
+              exit 1
+            fi
+            echo "Packaging Lucent.app failed (attempt $attempt); trying again in $wait_s s."
+            sleep "$wait_s"
+            wait_s=$((wait_s * 2))
+          done
           ls -l releases-mac
 
           # vpk signs the installer with productbuild, which hung for the whole job on CI, so vpk makes it
