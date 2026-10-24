@@ -159,6 +159,10 @@ public sealed class MilkDropRenderer : IDisposable
             if (geometry.VertexCount > 0)
             {
                 encoder.SetVertexBuffer(shapeBuffer, shapeOffset, 3);
+
+                // Textured shapes read through the first sampler; clamp it when MilkDrop would have.
+                var shapesWrap = runner.ShapesWrap(visual.Warp is not null, visual.BlurLevels);
+                encoder.SetFragmentSamplerState(shapesWrap ? _samplers[0] : _samplers[1], 0);
                 foreach (var batch in geometry.Batches)
                 {
                     encoder.SetRenderPipelineState(_draw[(batch.Textured ? 2 : 0) + (batch.Additive ? 1 : 0)]);
