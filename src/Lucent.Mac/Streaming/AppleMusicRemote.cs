@@ -59,11 +59,14 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
     // The playlist's name, then its songs' IDs, names, artists, albums and lengths, up to 1,000 songs. Each property comes
     // for every song at once (one request to Music, not one a song), each a list split by character 30, and they're
     // split from one another by character 31: characters no song name has.
-    private const string ListScript = """
+    private static readonly string ListScript = SongsScript("current playlist");
+
+    // The same for any playlist, named as PlaylistReference names it (see SongsAsync).
+    private static string SongsScript(string playlist) => $$"""
         if application "Music" is not running then return ""
         tell application "Music"
             try
-                set p to current playlist
+                set p to {{playlist}}
             on error
                 return ""
             end try
@@ -125,9 +128,37 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
                 fields.Length > 2 && int.TryParse(fields[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) ? count : null,
                 CanAdd: true));
 
-    public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) => playlist.Uri == FavoritesUri
-        ? TellAsync("play (first playlist whose name is \"Favorite Songs\")", cancel)
-        : TellAsync($"play (first playlist whose persistent ID is \"{Hex(playlist.Uri.Split(':')[^1])}\")", cancel);
+    public async Task<RemoteList> SongsAsync(RemotePlaylist playlist, CancellationToken cancel)
+    {
+        var p = PlaylistReference(playlist);
+        var text = await RunAsync($"""
+            if application "Music" is not running then return ""
+            tell application "Music"
+                try
+                    set playlistId to persistent ID of {p}
+                on error
+                    return ""
+                end try
+            end tell
+            return playlistId
+            """, cancel);
+        if (Hex(text) is not { Length: > 0 } id)
+        {
+            throw new RemoteProblem("Open the Music app, then Lucent can show what's in its playlists.");
+        }
+
+        // PlayFromListAsync finds the playlist by its persistent ID, so the list carries that.
+        return ParseList(id, await RunAsync(SongsScript(p), cancel))
+            ?? new RemoteList(id, playlist.Name, Array.Empty<RemoteTrack>());
+    }
+
+    // How a script names the playlist.
+    private static string PlaylistReference(RemotePlaylist playlist) => playlist.Uri == FavoritesUri
+        ? "(first playlist whose name is \"Favorite Songs\")"
+        : $"(first playlist whose persistent ID is \"{Hex(playlist.Uri.Split(':')[^1])}\")";
+
+    public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) =>
+        TellAsync($"play {PlaylistReference(playlist)}", cancel);
 
     /// <summary>
     /// Whether the song is a favorite already, or already in the playlist: the same song (its ID) or one with its name and
