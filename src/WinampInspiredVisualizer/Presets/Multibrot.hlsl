@@ -31,20 +31,22 @@ float3 Render(float2 uv, float2 p)
     c.x -= 0.4 * saturate(3.0 - power);
     float pixel = pixelSize() * scale;
 
-    float2 z = 0.0;
-    float2 dz = 0.0;
-    float n = 0.0;
-    float trap = 1.0e3;
+    // The first step from z = 0 lands on c with dz = 1, so start there: atan2(0, 0) isn't a number on
+    // Direct3D, and it turned the whole picture black.
+    float2 z = c;
+    float2 dz = float2(1.0, 0.0);
+    float n = 1.0;
+    float trap = abs(dot(c, c) - 0.25);
     bool escaped = false;
     float bailout = 256.0;
     int maxIterations = qualitySteps(140);
     [loop]
-    for (int i = 0; i < maxIterations; i++)
+    for (int i = 1; i < maxIterations; i++)
     {
         // z^d in polar form, and its derivative d z^(d-1) dz + 1.
         float r2 = max(dot(z, z), 1.0e-30);
         float logR = 0.5 * log(r2);
-        float angle = atan2(z.y, z.x);
+        float angle = r2 > 1.0e-30 ? atan2(z.y, z.x) : 0.0;
         float rd1 = exp(logR * (power - 1.0));
         float s1, c1;
         sincos(angle * (power - 1.0), s1, c1);
