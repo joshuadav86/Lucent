@@ -239,6 +239,19 @@
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
                 </DockPanel>
+                <!-- How the songs are listed: the playlist's own order, by date added, title or artist, as in the queue. -->
+                <Button x:Name="RemoteSortButton" DockPanel.Dock="Top" Style="{StaticResource PickerButton}" Height="28" Padding="10,0"
+                        Margin="8,0,4,8" HorizontalAlignment="Left" Visibility="Collapsed"
+                        ToolTip="List the playlist in its own order, by date added, by title or by artist. It still plays in its own order."
+                        Click="OnRemoteSortMenu">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
+                              Stroke="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
+                        <TextBlock x:Name="RemoteSortLabel" Text="Playlist order" FontSize="12" VerticalAlignment="Center" />
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                              Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                    </StackPanel>
+                </Button>
                 <TextBlock x:Name="RemotePlaylistNote" DockPanel.Dock="Bottom" Visibility="Collapsed" Margin="10,6,8,0" FontSize="11"
                            TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
                 <ListBox x:Name="RemotePlaylistView" Background="Transparent" BorderThickness="0"
