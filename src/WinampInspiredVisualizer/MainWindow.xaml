@@ -40,7 +40,7 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
                     <Image Source="Assets/Lucent-64.png" Width="14" Height="14" VerticalAlignment="Center"
                            RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="LUCENT" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Text="LUCENT (Beta)" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel x:Name="TitleButtons" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
