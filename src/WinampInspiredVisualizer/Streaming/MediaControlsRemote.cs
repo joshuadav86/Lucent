@@ -83,15 +83,15 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
         return new RemoteState(track, playing, timeline.Position - timeline.StartTime, readAt, Volume: volume, Shuffle: shuffle, Repeat: repeat);
     }
 
-    public Task PlayAsync(CancellationToken cancel) => PressAsync(session => session.TryPlayAsync().AsTask(cancel));
+    public virtual Task PlayAsync(CancellationToken cancel) => PressAsync(session => session.TryPlayAsync().AsTask(cancel));
 
-    public Task PauseAsync(CancellationToken cancel) => PressAsync(session => session.TryPauseAsync().AsTask(cancel));
+    public virtual Task PauseAsync(CancellationToken cancel) => PressAsync(session => session.TryPauseAsync().AsTask(cancel));
 
-    public Task NextAsync(CancellationToken cancel) => PressAsync(session => session.TrySkipNextAsync().AsTask(cancel));
+    public virtual Task NextAsync(CancellationToken cancel) => PressAsync(session => session.TrySkipNextAsync().AsTask(cancel));
 
-    public Task PreviousAsync(CancellationToken cancel) => PressAsync(session => session.TrySkipPreviousAsync().AsTask(cancel));
+    public virtual Task PreviousAsync(CancellationToken cancel) => PressAsync(session => session.TrySkipPreviousAsync().AsTask(cancel));
 
-    public Task SeekAsync(TimeSpan position, CancellationToken cancel) =>
+    public virtual Task SeekAsync(TimeSpan position, CancellationToken cancel) =>
         PressAsync(session => session.TryChangePlaybackPositionAsync(position.Ticks).AsTask(cancel));
 
     public Task SetShuffleAsync(bool on, CancellationToken cancel) =>
@@ -112,7 +112,7 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
     /// there; set to <paramref name="set"/> first, unless that's null. A browser's sound can come from a helper
     /// process, which has the browser's name too.
     /// </summary>
-    private double? AppVolume(float? set)
+    protected double? AppVolume(float? set)
     {
         try
         {

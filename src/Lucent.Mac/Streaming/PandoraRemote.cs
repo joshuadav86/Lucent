@@ -10,9 +10,8 @@ namespace Lucent.Mac.Streaming;
 /// <remarks>
 /// Pandora has no Mac app and no public API, so the web player is the only Pandora there is to control. A station
 /// can't go back a song or be sought through (Pandora doesn't let it), and Pandora's free tier limits skips (thumbs
-/// down skips too), so those buttons do nothing once Pandora says no. Windows controls Pandora's Windows app, or a
-/// Pandora tab, through Windows' media controls, and reaches its thumbs through UI Automation (see Windows'
-/// Streaming/PandoraRemote.cs).
+/// down skips too), so those buttons do nothing once Pandora says no. Windows reads and presses Pandora's own window
+/// (its app, or a Pandora tab) through UI Automation, as screen readers do (see Windows' Streaming/PandoraRemote.cs).
 /// </remarks>
 public sealed class PandoraRemote : BrowserTabRemote, IRemoteRating
 {
