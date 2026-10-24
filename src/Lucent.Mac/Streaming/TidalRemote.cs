@@ -48,6 +48,12 @@ public sealed class TidalRemote : BrowserTabRemote
 
     protected override string NotOpen => "Play something in TIDAL's web player (tidal.com)";
 
+    // The title's link, /track/123 (or /album/45/track/123).
+    protected override string? LinkFor(string id) =>
+        System.Text.RegularExpressions.Regex.Match(id, @"/track/(\d+)") is { Success: true } track
+            ? $"https://tidal.com/browse/track/{track.Groups[1].Value}"
+            : null;
+
     protected override string ReadPlayer => ReadFooter;
 
     protected override string FindPlayer => FindFooter;

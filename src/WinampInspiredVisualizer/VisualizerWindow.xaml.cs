@@ -298,6 +298,7 @@ public partial class VisualizerWindow : ToolWindow
             {
                 IsFavorite = favorites.Contains(name),
                 Added = preset?.Added,
+                IsLucentOriginal = preset?.IsLucentOriginal ?? false,
             };
         }).ToList();
 
@@ -335,7 +336,7 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         var names = NamesInList(list);
-        // With MilkDrop or AVS presets switched off, they're left out of every list, and so out of Auto.
+        // With Lucent's originals, MilkDrop or AVS presets switched off, they're left out of every list, and so out of Auto.
         var choices = _choices.Where(IsSwitchedOn).ToList();
         var presetsHidden = choices.Count < _choices.Count;
         List<VisualChoice> inList;

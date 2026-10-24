@@ -1,3 +1,5 @@
+using WinampInspiredVisualizer.Settings;
+
 namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>Which other app's player Lucent shows and controls.</summary>
@@ -10,15 +12,45 @@ public enum RemoteApp
     YouTube,
     Tidal,
     SoundCloud,
+    Pandora,
+}
+
+/// <summary>What the user thinks of the playing song, as an app with thumbs (Pandora) keeps it.</summary>
+public enum SongRating
+{
+    /// <summary>Neither thumb.</summary>
+    None,
+    Up,
+    Down,
 }
 
 /// <summary>A song playing in another app, as that app describes it.</summary>
 /// <param name="Id">Tells one song from the next, so its artwork is only fetched once.</param>
 /// <param name="ArtworkUrl">Where its cover can be downloaded, when the app gives one as a web address.</param>
 /// <param name="Uri">What the app calls the song when asked to play it (Spotify's spotify:track:…), when that isn't its ID.</param>
+/// <param name="ThumbnailUrl">A small copy of its cover, for the little picture beside it in a list, when the app gives one.</param>
+/// <param name="AddedAt">When it was added to the playlist (or liked) it's listed in, when the app says.</param>
 public sealed record RemoteTrack(string Id, string Title, string Artist, string Album, TimeSpan Duration, string? ArtworkUrl = null,
-    string? Uri = null)
+    string? Uri = null, string? ThumbnailUrl = null, DateTime? AddedAt = null)
 {
+    /// <summary>
+    /// Whether <paramref name="other"/> is the same song: by ID, or by Spotify URI, or failing those by title and artist,
+    /// as the app here and the Web API name the same song differently for its first few seconds.
+    /// </summary>
+    public bool IsSameSong(RemoteTrack? other) =>
+        other is not null
+        && (Id == other.Id
+            || (Uri is not null && Uri == other.Uri)
+            || (string.Equals(Title.Trim(), other.Title.Trim(), StringComparison.OrdinalIgnoreCase) && SameArtist(Artist, other.Artist)));
+
+    // One may name every artist ("Ulrich Schnauss, Mark Peters") where the other names only the first.
+    private static bool SameArtist(string a, string b) =>
+        a.Length == 0 || b.Length == 0
+        || a.Contains(b.Trim(), StringComparison.OrdinalIgnoreCase) || b.Contains(a.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The cover to show beside it in a list: the small copy, or the full one when there's no small one.</summary>
+    public string? ListArtUrl => ThumbnailUrl ?? ArtworkUrl;
+
     public string DurationText => Duration > TimeSpan.Zero ? Playlist.TimeFormat.Format(Duration) : string.Empty;
 }
 
@@ -30,8 +62,12 @@ public sealed record RemoteTrack(string Id, string Title, string Artist, string 
 /// True when <paramref name="Device"/> isn't this computer (a phone, speaker or TV), so the sound never passes through
 /// it and the visuals can't hear it.
 /// </param>
+/// <param name="Shuffle">Whether the app is shuffling, or null when Lucent can't read or change it.</param>
+/// <param name="Repeat">What the app repeats, or null when Lucent can't read or change it.</param>
+/// <param name="Rating">The song's thumb (Pandora's thumbs up and down), or null when the app has no thumbs Lucent can press.</param>
 public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Position, DateTime ReadAt, string? ListId = null,
-    string? Device = null, double? Volume = null, bool IsElsewhere = false)
+    string? Device = null, double? Volume = null, bool IsElsewhere = false, bool? Shuffle = null, RepeatMode? Repeat = null,
+    SongRating? Rating = null)
 {
     /// <summary>Where the song is now: the position it was read at, moved on by the time since while it plays.</summary>
     public TimeSpan PositionNow
@@ -45,16 +81,58 @@ public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Po
 }
 
 /// <summary>The songs another app is playing through: a playlist, an album, or what's up next.</summary>
-/// <param name="Id">The <see cref="RemoteState.ListId"/> it was read for.</param>
+/// <param name="Id">The <see cref="RemoteState.ListId"/> it was read for (for what's up next, the playlist or album it plays from, or null).</param>
 /// <param name="Note">Why it isn't the whole playlist, worded for the user, or null when it is.</param>
 /// <param name="FollowsSong">True for a list that changes with every song (what's up next), so it's read again when the song changes.</param>
-public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTrack> Tracks, string? Note = null, bool FollowsSong = false);
+/// <param name="Total">How many songs the whole list has, when <paramref name="Rest"/> is still to be read.</param>
+/// <param name="Rest">
+/// Reads the whole of a long playlist, of which <paramref name="Tracks"/> is only the start, or null when it's all there.
+/// It's read slowly after the start shows, so a playlist of thousands of songs doesn't ask too much of the app at once.
+/// </param>
+public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTrack> Tracks, string? Note = null, bool FollowsSong = false,
+    int? Total = null, Func<CancellationToken, Task<RemoteList>>? Rest = null)
+{
+    /// <summary>The count in the queue window's title bar: "Deep Chill  ·  1000 of 4210 songs" while the rest is read.</summary>
+    public string CountText => Rest is not null && Total > Tracks.Count
+        ? $"{Name}  ·  {Tracks.Count} of {Total} songs"
+        : Tracks.Count == 1 ? $"{Name}  ·  1 song" : $"{Name}  ·  {Tracks.Count} songs";
+}
+
+/// <summary>A playlist in the account of an app Lucent controls, listed in the library under PLAYLISTS.</summary>
+/// <param name="Uri">What the app calls it when asked to play it (Spotify's spotify:playlist:…).</param>
+/// <param name="Songs">How many songs it has, or null when the app doesn't say.</param>
+/// <param name="Owner">Who made it, when that isn't the user (a friend, or Spotify itself), or null.</param>
+/// <param name="CanAdd">True when the user can add songs to it: Liked Songs, and playlists they made or collaborate on.</param>
+public sealed record RemotePlaylist(string Uri, string Name, int? Songs = null, string? Owner = null, bool CanAdd = false)
+{
+    /// <summary>True for the account's liked songs (Spotify's Liked Songs, Music's Favorite Songs) rather than a playlist.</summary>
+    public bool IsLiked => Uri.EndsWith(":collection", StringComparison.Ordinal) || Uri == "music:favorites";
+}
 
 /// <summary>An app whose volume Lucent can change, on the device it's playing on (<see cref="RemoteState.Volume"/>).</summary>
 public interface IRemoteVolume
 {
     /// <param name="volume">From 0 to 1.</param>
     Task SetVolumeAsync(double volume, CancellationToken cancel);
+}
+
+/// <summary>An app whose shuffle and repeat Lucent can change (<see cref="RemoteState.Shuffle"/>, <see cref="RemoteState.Repeat"/>).</summary>
+public interface IRemoteModes
+{
+    Task SetShuffleAsync(bool on, CancellationToken cancel);
+
+    /// <exception cref="NotSupportedException">When the app can't repeat that way (Spotify's Mac app can't repeat one song).</exception>
+    Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel);
+}
+
+/// <summary>An app with thumbs up and down for the playing song (Pandora), which Lucent can press (<see cref="RemoteState.Rating"/>).</summary>
+public interface IRemoteRating
+{
+    /// <summary>
+    /// Gives the playing song <paramref name="rating"/>, or takes its thumb back for <see cref="SongRating.None"/>. A thumbs
+    /// down on Pandora skips the song too.
+    /// </summary>
+    Task RateAsync(SongRating rating, CancellationToken cancel);
 }
 
 /// <summary>An app that can play on one of several devices (Spotify Connect), and can be moved to this computer.</summary>
@@ -117,4 +195,30 @@ public interface IRemoteLists
 
     /// <summary>Plays <paramref name="track"/>, carrying on through <paramref name="list"/> after it.</summary>
     Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel);
+}
+
+/// <summary>An <see cref="IRemotePlayer"/> that knows its songs' web addresses, to share them by (see <see cref="SongLinks"/>).</summary>
+public interface IRemoteLinks
+{
+    /// <summary>The song's own web link (open.spotify.com, a YouTube video), or null when the app doesn't say where it is.</summary>
+    string? WebLink(RemoteTrack track);
+}
+
+/// <summary>An <see cref="IRemotePlayer"/> that can list the playlists in the user's account, play one, and add songs to them.</summary>
+public interface IRemotePlaylists
+{
+    /// <summary>The account's playlists, in the order the app lists them.</summary>
+    /// <exception cref="RemoteProblem">When the app won't list them, in a way the user can fix (signing in again).</exception>
+    Task<IReadOnlyList<RemotePlaylist>> PlaylistsAsync(CancellationToken cancel);
+
+    /// <summary>Plays <paramref name="playlist"/> from its start.</summary>
+    Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel);
+
+    /// <summary>Adds <paramref name="track"/> to the end of <paramref name="playlist"/> (one with <see cref="RemotePlaylist.CanAdd"/>).</summary>
+    /// <exception cref="RemoteProblem">When the app won't add it, in a way the user can fix (signing in again).</exception>
+    Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel);
+
+    /// <summary>True when <paramref name="track"/> is already in <paramref name="playlist"/>, so adding it again would add it twice.</summary>
+    /// <exception cref="RemoteProblem">When the app won't say.</exception>
+    Task<bool> ContainsAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel);
 }

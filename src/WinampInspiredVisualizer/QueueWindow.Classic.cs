@@ -79,7 +79,9 @@ public partial class QueueWindow
             {
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top,
+                ContextMenu = new ContextMenu(),
             };
+            LucentFullScreen.AddTo(_classicView.ContextMenu, this);
             _classicLists = new Grid();
             _classicRoot = new Grid { Children = { _classicView, _classicLists } };
             _listsHome = (Panel)PlaylistView.Parent;

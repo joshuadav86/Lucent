@@ -126,6 +126,8 @@
         <Geometry x:Key="SourcesIcon">M6,1 V11 M1,6 H11</Geometry>
         <Geometry x:Key="ShuffleIcon">M1,4 H3.5 Q6.5,4 8,8 Q9.5,12 12.5,12 H15 M1,12 H3.5 Q6.5,12 8,8 Q9.5,4 12.5,4 H15 M13,2 L15,4 L13,6 M13,10 L15,12 L13,14</Geometry>
         <Geometry x:Key="RepeatIcon">M2,8.5 V6.5 Q2,4 4.5,4 H13.5 M11.5,2 L13.5,4 L11.5,6 M14,7.5 V9.5 Q14,12 11.5,12 H2.5 M4.5,10 L2.5,12 L4.5,14</Geometry>
+        <Geometry x:Key="ThumbUpIcon">M2,7 H4.5 V14 H2 Z M4.5,7.5 L7.5,2 Q9,2 9,3.5 V6 H13 Q14.5,6 14.2,7.5 L13.2,12.8 Q13,14 11.8,14 H4.5</Geometry>
+        <Geometry x:Key="ThumbDownIcon">M2,9 H4.5 V2 H2 Z M4.5,8.5 L7.5,14 Q9,14 9,12.5 V10 H13 Q14.5,10 14.2,8.5 L13.2,3.2 Q13,2 11.8,2 H4.5</Geometry>
         <GeometryGroup x:Key="MusicIcon">
             <EllipseGeometry Center="6,21" RadiusX="4.5" RadiusY="3.5" />
             <EllipseGeometry Center="22,18" RadiusX="4.5" RadiusY="3.5" />

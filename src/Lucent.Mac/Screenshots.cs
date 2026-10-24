@@ -5,6 +5,8 @@ using Avalonia.Headless;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using Lucent.Mac.Library;
+using Lucent.Mac.Windows;
+using SkiaSharp;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using Lucent.Mac.Audio;
@@ -32,7 +34,7 @@ public static partial class Screenshots
     {
         ("Player", () => PreviewPlayer("Lucent")),
         ("Player-Lucent", () => PreviewPlayer("Lucent")),
-        ("Player-Classic", () => PreviewPlayer("Classic")),
+        ("Player-Retro", () => PreviewPlayer("Retro")),
         ("Player-Glass", () => PreviewPlayer("Glass")),
         ("Player-Neon", () => PreviewPlayer("Neon")),
         ("Player-Studio", () => PreviewPlayer("Studio")),
@@ -44,10 +46,12 @@ public static partial class Screenshots
         ("Player-Options-Look", () => PreviewOptions("Theme")),
         ("Player-Options-Updates", () => PreviewOptions("Updates")),
         ("Player-Sources", () => PreviewSources()),
+        ("Player-Pandora", () => PreviewPandoraPlayer()),
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
         ("Queue", () => PreviewQueue()),
+        ("Queue-Spotify", () => PreviewSpotifyQueue()),
         ("Queue-ClassicSkin", () => PreviewClassicQueue()),
         ("TrackInfo", TrackInfoPreviews.TrackInfo),
         ("TrackInfoLyrics", TrackInfoPreviews.TrackInfoLyrics),
@@ -150,6 +154,16 @@ public static partial class Screenshots
             SampleTrack("Tomora", "Ring the Alarm", TimeSpan.FromSeconds(331), 1411, 44100, 2),
             SampleTrack("Boards of Canada", "Roygbiv", TimeSpan.FromSeconds(151), 320, 44100, 2),
         }, TimeSpan.FromSeconds(83));
+        return player;
+    }
+
+    /// <summary>The player while Lucent controls Pandora: a station's song, with its thumbs up lit.</summary>
+    private static Window PreviewPandoraPlayer()
+    {
+        var player = new MainWindow();
+        player.PreviewSkin("Lucent");
+        player.ShowPreview(new[] { SampleTrack("Bicep", "Glue", TimeSpan.FromSeconds(269), 1411, 44100, 2) }, TimeSpan.FromSeconds(97));
+        player.PreviewThumbs(WinampInspiredVisualizer.Streaming.SongRating.Up, "Pandora · Bicep Radio");
         return player;
     }
 
@@ -338,20 +352,72 @@ public static partial class Screenshots
         var library = new MusicLibrary();
         var window = new LibraryWindow();
         window.Attach(library, settings);
+        PreviewCovers(SampleSongs.Zip(items, (song, item) => (item.Path, song)));
         library.ShowPreview(settings.LibraryFolders, items);
         window.LibraryView.SelectedItem = items[1];
         return window;
     }
 
+    /// <summary>
+    /// Covers for the sample songs' rows, one per album (LUCENT_PREVIEW_COVERS' "Album.png" when there is one), as if
+    /// read from the files. Songs with no album have none, so the rows show both.
+    /// </summary>
+    private static void PreviewCovers(IEnumerable<(string Path, (string Folder, string Title, string Artist, string Album, int Seconds, int DaysAgo) Song)> rows)
+    {
+        var colors = new[]
+        {
+            (new SKColor(0x1E, 0x2A, 0x5E), new SKColor(0xF2, 0x5C, 0x4B)),
+            (new SKColor(0x0F, 0x3D, 0x3E), new SKColor(0xE8, 0xC5, 0x47)),
+            (new SKColor(0x3B, 0x1F, 0x4F), new SKColor(0x4F, 0xC3, 0xF7)),
+            (new SKColor(0x2B, 0x2B, 0x2B), new SKColor(0xD9, 0x4F, 0x8C)),
+            (new SKColor(0x12, 0x30, 0x22), new SKColor(0x9C, 0xE0, 0x6B)),
+        };
+        var albums = rows.Select(row => row.Song.Album).Where(album => album.Length > 0).Distinct().ToList();
+        foreach (var (path, song) in rows.Where(row => row.Song.Album.Length > 0))
+        {
+            var (from, to) = colors[albums.IndexOf(song.Album) % colors.Length];
+            var data = PreviewCover(song.Album) ?? TrackInfoPreviews.Cover(240, from, to, song.Artist.ToUpperInvariant());
+            if (CoverArt.Decode(data, 96)?.Image is { } cover)
+            {
+                Thumbnails.Preview(path, cover);
+            }
+        }
+    }
+
+    private static byte[]? PreviewCover(string name)
+    {
+        if (Environment.GetEnvironmentVariable("LUCENT_PREVIEW_COVERS") is not { Length: > 0 } folder)
+        {
+            return null;
+        }
+
+        return new[] { ".png", ".jpg", ".jpeg" }.Select(extension => Path.Combine(folder, name + extension))
+            .Where(File.Exists).Select(File.ReadAllBytes).FirstOrDefault();
+    }
+
     private static Window PreviewQueue()
     {
-        var tracks = SampleSongs.Take(6).Select(song => SampleTrack(song.Title + ".flac", song.Title, song.Artist, song.Album, song.Seconds));
+        var tracks = SampleSongs.Take(6).Select(song => SampleTrack(song.Title + ".flac", song.Title, song.Artist, song.Album, song.Seconds)).ToList();
+        PreviewCovers(SampleSongs.Zip(tracks, (song, track) => (track.Path, song)));
         var entries = new ObservableCollection<PlaylistEntry>(tracks.Select(track => new PlaylistEntry(track)));
         entries[0].IsCurrent = true;
         var queue = new QueueWindow();
         queue.PlaylistView.ItemsSource = entries;
         queue.EmptyPlaylistHint.IsVisible = false;
         queue.QueueCount.Text = $"{entries.Count} tracks";
+        return queue;
+    }
+
+    /// <summary>Spotify's playlist in place of the queue, each song with its cover, as Spotify's own list shows them.</summary>
+    private static Window PreviewSpotifyQueue()
+    {
+        var songs = SampleSongs.Where(song => song.Album.Length > 0).ToList();
+        var tracks = songs.Select((song, i) => new WinampInspiredVisualizer.Streaming.RemoteTrack($"preview{i}", song.Title, song.Artist,
+            song.Album, TimeSpan.FromSeconds(song.Seconds), ThumbnailUrl: $"https://i.scdn.co/image/preview-{song.Album}")).ToList();
+        PreviewCovers(songs.Zip(tracks, (song, track) => (track.ThumbnailUrl!, song)));
+        var queue = new QueueWindow();
+        queue.ShowRemoteList("Spotify", new WinampInspiredVisualizer.Streaming.RemoteList("spotify:playlist:preview", "Late night", tracks),
+            tracks[1]);
         return queue;
     }
 

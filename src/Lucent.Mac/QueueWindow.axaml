@@ -63,6 +63,19 @@
             <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34" Background="{DynamicResource TitleBarBrush}"
                        w:Chrome.IsCaption="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- How Spotify's playlist is listed: its own order, by date added, title or artist. -->
+                    <Button x:Name="SortButton" Theme="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
+                            IsVisible="False"
+                            ToolTip.Tip="List the playlist in its own order, by date added, by title or by artist. It still plays in its own order."
+                            Click="OnSortMenu">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
+                            <TextBlock x:Name="SortButtonText" Text="Playlist order" FontSize="12" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
                     <!-- Favourite songs and saved playlists: play them, or save the queue as one. -->
                     <Button x:Name="PlaylistsButton" Theme="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
                             ToolTip.Tip="Play your favorite sounds or a saved playlist, or save the queue as a playlist"
@@ -116,18 +129,19 @@
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="pl:PlaylistEntry">
-                        <Grid ColumnDefinitions="3,*,Auto">
+                        <Grid ColumnDefinitions="3,Auto,*,Auto">
                             <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
                                     Background="{DynamicResource AccentGradientBrush}"
                                     IsVisible="{Binding IsCurrent}" />
-                            <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                            <w:TrackThumb Grid.Column="1" Margin="8,0,0,0" Path="{Binding Track.Path}" />
+                            <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextBrush}" />
                                 <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                            <TextBlock Grid.Column="3" Text="{Binding Track.DurationText}" FontSize="11"
                                        VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
                         </Grid>
                     </DataTemplate>
@@ -144,22 +158,29 @@
                 <ListBox.ContextMenu>
                     <ContextMenu>
                         <MenuItem x:Name="RemotePlayItem" Header="Play" Click="OnRemoteListPlay" />
+                        <Separator x:Name="RemoteSongSeparator" />
+                        <MenuItem x:Name="RemoteAddItem" Header="Add to playlist" />
+                        <MenuItem x:Name="RemoteShareItem" Header="Share">
+                            <MenuItem Header="Copy song link" Click="OnCopySongLink" />
+                            <MenuItem Header="Copy song and link" Click="OnCopySongAndLink" />
+                        </MenuItem>
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="st:RemoteListEntry">
-                        <Grid ColumnDefinitions="3,*,Auto">
+                        <Grid ColumnDefinitions="3,Auto,*,Auto">
                             <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
                                     Background="{DynamicResource AccentGradientBrush}"
                                     IsVisible="{Binding IsCurrent}" />
-                            <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                            <w:TrackThumb Grid.Column="1" Margin="8,0,0,0" Url="{Binding Track.ListArtUrl}" />
+                            <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextBrush}" />
                                 <TextBlock Text="{Binding Track.Artist}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding Track.DurationText}" FontSize="11"
+                            <TextBlock Grid.Column="3" Text="{Binding Track.DurationText}" FontSize="11"
                                        VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
                         </Grid>
                     </DataTemplate>

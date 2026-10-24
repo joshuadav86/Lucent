@@ -34,6 +34,8 @@ public static class Program
         AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
         // A video's frames saved as JPEG, by SkiaSharp's encoder.
         WinampInspiredVisualizer.Editor.VideoExport.EncodeJpeg = Library.CoverArt.EncodeJpeg;
+        // Smaller copies of a video, by AVFoundation's encoders.
+        WinampInspiredVisualizer.Editor.VideoCopy.CreateWriter = VideoCopyWriter.Create;
 
         if (args.Length > 0 && args[0] == "--self-test")
         {

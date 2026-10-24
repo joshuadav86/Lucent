@@ -227,6 +227,15 @@ public sealed class MilkPresetRunner
     public bool Wrap => _values[(int)V.Wrap] != 0;
 
     /// <summary>
+    /// Whether textured shapes wrap around the edges of last frame's image, or repeat its edge pixels. MilkDrop
+    /// never sets this for the shapes: they read the image the way the step before them left the sampler.
+    /// Making blurred copies leaves it clamped, a warp shader leaves it wrapping, and MilkDrop 1's warp
+    /// leaves it as the preset's wrap. Presets count on it: Stahlregen's "Spiral Beats" grows its flowers
+    /// from a wave at the edge of the screen, smeared outwards by a clamped full-screen shape.
+    /// </summary>
+    public bool ShapesWrap(bool warpShader, int blurLevels) => blurLevels == 0 && (warpShader || Wrap);
+
+    /// <summary>
     /// Starts the preset again from the beginning (its variables cleared and its init equations run
     /// on the next frame), as MilkDrop does each time a preset is loaded.
     /// </summary>

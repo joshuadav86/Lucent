@@ -1,229 +1,269 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
 
 namespace WinampInspiredVisualizer.Video;
 
 /// <summary>
-/// Reads the first pictures of a video, in order, as fast as libVLC decodes them, for saving as images or a GIF.
-/// Pictures come as 32-bit BGRA (blue, green, red, then a byte that's always opaque), top row first.
+/// Reads every picture of a video, in the order they show, as fast as libVLC decodes them, each with when it shows,
+/// for saving as images, a GIF or a smaller copy. Pictures come as 32-bit BGRA (blue, green, red, then a byte that's
+/// always opaque), top row first, turned the right way up for a video filmed on its side.
 /// </summary>
 /// <remarks>
 /// <para>
-/// libVLC doesn't say which moment a picture it shows belongs to, so pictures are counted from the start of the
-/// video: its own libVLC (from <see cref="VideoEngine.CreateForFrames"/>) shows every picture in turn, dropping none
-/// for coming late. It's always read from the start because where libVLC starts after a jump into a video varies by
-/// a picture or two; to read pictures from the middle of a video, those are copied into a short video of their own
-/// first (<see cref="Mp4Cutter.WritePictures"/>).
+/// The pictures don't go to a screen: libVLC's transcoder decodes them, scales them, and hands each over through its
+/// "smem" output with its timestamp. Nothing there waits for a clock, so it goes as fast as the processor decodes, and
+/// every picture says when it shows, so nothing has to be counted. (Pictures drawn for a screen, as before, were
+/// sometimes shown twice or skipped as playback started, and could only be told apart by counting, which on a long
+/// stretch of a big video almost never came out the same twice.)
 /// </para>
 /// <para>
-/// When decoding stalls for a moment, libVLC shows the last picture again (it does so every 80 ms with nothing new).
-/// Such a repeat is the same picture, shown that long after it, so a picture identical to the one before that comes
-/// as late as that is taken for a repeat and skipped.
+/// The times are from the first picture, which is the video's first (a keyframe, always decoded). libVLC can still
+/// leave out a picture now and then (the first after the keyframe, as it starts, and the last few, as it ends), so
+/// callers read from a keyframe early and past the end where they can, and check for gaps by time.
 /// </para>
 /// </remarks>
 public static class VideoPictureReader
 {
-    // libVLC shows the last picture again when nothing new has come for 80 ms; a repeat comes at least about that late.
-    private const double RepeatAfterMs = 60;
+    // How long libVLC may go without a picture before it counts as stuck.
+    private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(60);
 
-    // How many pictures libVLC can have made at once (its decoder's and converter's own, plus the one shown).
-    private const int Buffers = 6;
+    // After libVLC says the video's ended, a last picture may still be on its way.
+    private static readonly TimeSpan EndQuiet = TimeSpan.FromMilliseconds(300);
 
     /// <summary>The size libVLC shows a video's pictures at (square pixels, no bigger than 3840 × 2160), or (0, 0).</summary>
     public static (int Width, int Height) SizeOf(LibVLC libVlc, string path)
+    {
+        var (width, height, orientation) = Describe(libVlc, path);
+        return Turned(orientation) ? (height, width) : (width, height);
+    }
+
+    /// <summary>
+    /// Reads the video's pictures, scaled to <paramref name="width"/> × <paramref name="height"/> (as it shows, so
+    /// already turned for a video filmed on its side), handing each to <paramref name="picture"/> with when it shows in
+    /// microseconds after the first, its pixels and the bytes from one row to the next. Called on libVLC's thread,
+    /// which waits for it; it returns false to stop reading. Returns how many pictures were handed over.
+    /// </summary>
+    public static int Read(LibVLC libVlc, string path, int width, int height, Func<long, nint, int, bool> picture,
+        CancellationToken cancellation)
+    {
+        width = Math.Max(2, width / 2 * 2);
+        height = Math.Max(2, height / 2 * 2);
+        var (_, _, orientation) = Describe(libVlc, path);
+        // libVLC scales, then turns: so a picture on its side is scaled to the size it is before it's turned.
+        var (scaleWidth, scaleHeight) = Turned(orientation) ? (height, width) : (width, height);
+        var turn = orientation switch
+        {
+            VideoOrientation.TopRight => "hflip",
+            VideoOrientation.BottomLeft => "vflip",
+            VideoOrientation.BottomRight => "180",
+            VideoOrientation.LeftTop => "transpose",
+            VideoOrientation.LeftBottom => "270",
+            VideoOrientation.RightTop => "90",
+            VideoOrientation.RightBottom => "antitranspose",
+            _ => null,
+        };
+
+        var reading = new Reading(width, height, picture);
+        var handle = GCHandle.Alloc(reading);
+        try
+        {
+            unsafe
+            {
+                delegate* unmanaged[Cdecl]<nint, nint*, nuint, void> prerender = &Prerender;
+                delegate* unmanaged[Cdecl]<nint, nint, int, int, int, nuint, long, void> postrender = &Postrender;
+                var filter = turn is null ? string.Empty : $",vfilter=transform{{type={turn}}}";
+                using var media = new Media(libVlc, Path.GetFullPath(path), FromType.FromPath);
+                media.AddOption(":no-audio");
+                media.AddOption(":no-spu");
+                // Decoded, scaled (and turned) to BGRA, and handed over without waiting for a clock.
+                media.AddOption($":sout=#transcode{{vcodec=RV32,width={scaleWidth},height={scaleHeight},acodec=none{filter}}}"
+                    + $":smem{{video-prerender-callback={(long)(nint)prerender},video-postrender-callback={(long)(nint)postrender},"
+                    + $"video-data={(long)GCHandle.ToIntPtr(handle)},no-time-sync}}");
+                Run(media, reading, cancellation);
+            }
+        }
+        finally
+        {
+            handle.Free();
+            reading.Free();
+        }
+
+        cancellation.ThrowIfCancellationRequested();
+        if (reading.Failure is { } failure)
+        {
+            throw failure is InvalidDataException or IOException ? failure : new IOException(failure.Message, failure);
+        }
+
+        return reading.Count;
+    }
+
+    private static void Run(Media media, Reading reading, CancellationToken cancellation)
+    {
+        using var player = new MediaPlayer(media);
+        using var ended = new ManualResetEventSlim();
+        player.EndReached += (_, _) => ended.Set();
+        player.EncounteredError += (_, _) =>
+        {
+            reading.Failure ??= new InvalidDataException("libVLC couldn't read this video's pictures.");
+            ended.Set();
+        };
+        if (!player.Play())
+        {
+            throw new InvalidDataException("This video couldn't be read.");
+        }
+
+        try
+        {
+            while (true)
+            {
+                if (cancellation.IsCancellationRequested || reading.Stopped)
+                {
+                    break;
+                }
+
+                if (ended.Wait(50))
+                {
+                    // libVLC has read the whole file; the last picture may still be on its way.
+                    if (reading.SinceLast >= EndQuiet)
+                    {
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (reading.SinceLast > StallTimeout)
+                {
+                    reading.Failure ??= new InvalidDataException("libVLC stopped decoding this video's pictures.");
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            reading.Stopped = true;
+            // Stopped off libVLC's own threads, which stopping waits for.
+            Task.Run(player.Stop).GetAwaiter().GetResult();
+        }
+    }
+
+    private static (int Width, int Height, VideoOrientation Orientation) Describe(LibVLC libVlc, string path)
     {
         using var media = new Media(libVlc, Path.GetFullPath(path), FromType.FromPath);
         Task.Run(() => media.Parse(MediaParseOptions.ParseLocal, 10_000)).GetAwaiter().GetResult();
         var video = media.Tracks.Where(track => track.TrackType == TrackType.Video).Select(track => track.Data.Video).FirstOrDefault();
         var (width, height) = VideoFrames.SizeFor((int)video.Width, (int)video.Height, video.SarNum, video.SarDen);
-        return (int)video.Orientation >= 4 ? (height, width) : (width, height);
+        return (width, height, video.Orientation);
     }
 
-    /// <summary>
-    /// Reads the first <paramref name="count"/> pictures of the video, scaled to <paramref name="width"/> ×
-    /// <paramref name="height"/>, handing each to <paramref name="picture"/> with its place (0 for the first), its
-    /// pixels and the bytes from one row to the next. Called on libVLC's thread, which waits for it; it returns false
-    /// to stop reading, and then -1 is returned. Otherwise returns how many came, which is fewer than asked only when
-    /// the video ended first.
-    /// </summary>
-    public static int Read(LibVLC libVlc, string path, int count, int width, int height,
-        Func<int, nint, int, bool> picture, CancellationToken cancellation) =>
-        Read(libVlc, path, count, width, height, picture, cancellation, step: false);
+    // On its side: shown with its width and height swapped.
+    private static bool Turned(VideoOrientation orientation) => (int)orientation >= 4;
 
-    /// <summary>
-    /// The first picture of a video at this size, as <see cref="Read"/> gives it, or null if libVLC shows none. Read
-    /// from a paused start, asking for one picture: playing, libVLC now and then skips the first as it starts.
-    /// </summary>
-    public static byte[]? ReadFirst(LibVLC libVlc, string path, int width, int height, CancellationToken cancellation)
+    // libVLC asks where to put the next picture.
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe void Prerender(nint data, nint* buffer, nuint size)
     {
-        byte[]? copy = null;
-        Read(libVlc, path, 1, width, height, (_, pixels, stride) =>
-        {
-            copy = new byte[stride * Math.Max(2, height / 2 * 2)];
-            Marshal.Copy(pixels, copy, 0, copy.Length);
-            return true;
-        }, cancellation, step: true);
-        return copy;
+        var reading = (Reading)GCHandle.FromIntPtr(data).Target!;
+        *buffer = reading.Room((long)size);
     }
 
-    private static int Read(LibVLC libVlc, string path, int count, int width, int height,
-        Func<int, nint, int, bool> picture, CancellationToken cancellation, bool step)
+    // libVLC has put a picture there.
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static void Postrender(nint data, nint pixels, int width, int height, int bitsPerPixel, nuint size, long pts)
     {
-        if (count <= 0)
+        var reading = (Reading)GCHandle.FromIntPtr(data).Target!;
+        reading.Arrived(pixels, (long)size, pts);
+    }
+
+    private sealed class Reading
+    {
+        private readonly int _width;
+        private readonly int _height;
+        private readonly Func<long, nint, int, bool> _picture;
+        private readonly Stopwatch _clock = Stopwatch.StartNew();
+        private long _lastAt;
+        private long _first = long.MinValue;
+        private nint _buffer;
+        private long _capacity;
+
+        public Reading(int width, int height, Func<long, nint, int, bool> picture)
         {
-            return 0;
+            _width = width;
+            _height = height;
+            _picture = picture;
         }
 
-        width = Math.Max(2, width / 2 * 2);
-        height = Math.Max(2, height / 2 * 2);
-        var stride = width * 4;
-        var bytes = stride * height;
-        // Each picture libVLC makes gets the next of a few buffers, so it never writes the next into the one being
-        // read. Padded, as libVLC's converters may write a little beyond the last pixel.
-        var buffers = Enumerable.Range(0, Buffers).Select(_ => Marshal.AllocHGlobal(bytes + 64)).ToArray();
-        var next = 0;
-        var previous = new byte[bytes];
-        var hasPrevious = false;
-        var shown = 0;
-        var clock = Stopwatch.StartNew();
-        var lastShown = 0.0;
-        Exception? failure = null;
-        using var done = new ManualResetEventSlim();
-        var stopped = false;
-        try
+        public volatile bool Stopped;
+
+        public Exception? Failure;
+
+        public int Count;
+
+        public TimeSpan SinceLast => TimeSpan.FromTicks(_clock.Elapsed.Ticks - Interlocked.Read(ref _lastAt));
+
+        public nint Room(long size)
         {
-            using var media = new Media(libVlc, Path.GetFullPath(path), FromType.FromPath);
-            media.AddOption(":no-audio");
-            // As fast as it decodes: no picture is dropped for coming late, so the clock only sets the order.
-            media.AddOption(":rate=16");
-            if (step)
+            if (size > _capacity)
             {
-                media.AddOption(":start-paused");
-            }
-
-            using var player = new MediaPlayer(media);
-            player.SetVideoFormatCallbacks(
-                (ref nint opaque, nint chroma, ref uint w, ref uint h, ref uint pitches, ref uint lines) =>
+                if (_buffer != 0)
                 {
-                    Marshal.Copy("RV32"u8.ToArray(), 0, chroma, 4);
-                    w = (uint)width;
-                    h = (uint)height;
-                    pitches = (uint)stride;
-                    lines = (uint)height;
-                    return 1;
-                },
-                (ref nint opaque) => { });
-            player.SetVideoCallbacks(
-                (opaque, planes) =>
-                {
-                    var which = next;
-                    next = (next + 1) % Buffers;
-                    Marshal.WriteIntPtr(planes, buffers[which]);
-                    return (nint)which;
-                },
-                null,
-                (opaque, which) =>
-                {
-                    if (done.IsSet)
-                    {
-                        return;
-                    }
-
-                    var buffer = buffers[(int)which];
-
-                    var now = clock.Elapsed.TotalMilliseconds;
-                    var late = now - lastShown >= RepeatAfterMs;
-                    lastShown = now;
-                    unsafe
-                    {
-                        var pixels = new ReadOnlySpan<byte>((void*)buffer, bytes);
-                        if (hasPrevious && late && pixels.SequenceEqual(previous))
-                        {
-                            // libVLC showing the last picture again while it waits for the next.
-                            return;
-                        }
-
-                        pixels.CopyTo(previous);
-                    }
-
-                    hasPrevious = true;
-                    try
-                    {
-                        if (!picture(shown, buffer, stride))
-                        {
-                            stopped = true;
-                            done.Set();
-                            return;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        failure = ex;
-                        done.Set();
-                        return;
-                    }
-
-                    if (++shown == count)
-                    {
-                        done.Set();
-                    }
-
-                    // The time spent saving the picture isn't a stall in decoding.
-                    lastShown = clock.Elapsed.TotalMilliseconds;
-                });
-            player.EndReached += (_, _) => done.Set();
-            player.EncounteredError += (_, _) => done.Set();
-            if (!player.Play())
-            {
-                throw new InvalidDataException("This video couldn't be read.");
-            }
-
-            if (step)
-            {
-                // Paused, libVLC shows nothing until asked for the next picture, and doesn't say when a video ends.
-                using var paused = new ManualResetEventSlim();
-                player.Paused += (_, _) => paused.Set();
-                if (player.State == VLCState.Paused)
-                {
-                    paused.Set();
+                    Marshal.FreeHGlobal(_buffer);
                 }
 
-                WaitHandle.WaitAny(new[] { paused.WaitHandle, done.WaitHandle }, 10_000);
-                Task.Run(player.NextFrame).GetAwaiter().GetResult();
-                for (var waited = 0; waited < 10_000 && !done.Wait(50) && !cancellation.IsCancellationRequested; waited += 50)
+                // Padded, as libVLC may write a little beyond the last pixel.
+                _buffer = Marshal.AllocHGlobal((nint)(size + 64));
+                _capacity = size;
+            }
+
+            return _buffer;
+        }
+
+        public void Arrived(nint pixels, long size, long pts)
+        {
+            Interlocked.Exchange(ref _lastAt, _clock.Elapsed.Ticks);
+            if (Stopped)
+            {
+                return;
+            }
+
+            try
+            {
+                var stride = _width * 4;
+                if (size < (long)stride * _height)
                 {
+                    throw new InvalidDataException("libVLC gave this video's pictures at a size Lucent didn't ask for.");
                 }
 
-                done.Set();
-            }
-
-            while (!done.Wait(50))
-            {
-                if (cancellation.IsCancellationRequested)
+                if (_first == long.MinValue)
                 {
-                    done.Set();
+                    _first = pts;
+                }
+
+                Count++;
+                if (!_picture(pts - _first, pixels, stride))
+                {
+                    Stopped = true;
                 }
             }
-
-            // Stopped off libVLC's own threads, which stopping waits for.
-            Task.Run(player.Stop).GetAwaiter().GetResult();
-        }
-        finally
-        {
-            foreach (var buffer in buffers)
+            catch (Exception ex)
             {
-                Marshal.FreeHGlobal(buffer);
+                Failure ??= ex;
+                Stopped = true;
+            }
+
+            Interlocked.Exchange(ref _lastAt, _clock.Elapsed.Ticks);
+        }
+
+        public void Free()
+        {
+            if (_buffer != 0)
+            {
+                Marshal.FreeHGlobal(_buffer);
+                _buffer = 0;
             }
         }
-
-        cancellation.ThrowIfCancellationRequested();
-        if (failure is not null)
-        {
-            throw new IOException(failure.Message, failure);
-        }
-
-        return stopped ? -1 : shown;
     }
 }

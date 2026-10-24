@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lucent.Mac.Interop;
+using WinampInspiredVisualizer.Layout;
 
 namespace Lucent.Mac.Windows;
 
@@ -19,6 +20,8 @@ namespace Lucent.Mac.Windows;
 /// A window that's locked (<see cref="WindowLocks"/>) stays where it is: it can't be dragged or resized,
 /// and nothing carries or resizes it along with another. With <see cref="MoveEveryWindow"/> on, dragging
 /// the player carries every window, docked to it or not.
+/// Drag a window by its title bar and drop it with the mouse well inside another, and the two swap places
+/// and sizes (<see cref="WindowSwap"/>); an outline over the other window shows when a drop will swap.
 /// </summary>
 /// <remarks>
 /// On Windows this works on the window messages sent while Windows moves a window. On the Mac the
@@ -68,6 +71,11 @@ public sealed class WindowSnapper
     /// <summary>The windows resizing along with the one being resized, found when the resize starts.</summary>
     private readonly List<Linked> _linked = new();
 
+    /// <summary>The window the one being dragged swaps with if it's dropped now, if any.</summary>
+    private Window? _swapWith;
+
+    private SwapHighlight? _highlight;
+
     public WindowSnapper(Window main)
     {
         _main = main;
@@ -85,9 +93,13 @@ public sealed class WindowSnapper
     /// </summary>
     public Func<bool>? MoveEveryWindow { get; set; }
 
+    /// <summary>Raised when a window dragged onto another swaps places with it: the dragged one, then the other.</summary>
+    public event Action<Window, Window>? Swapped;
+
     public void Add(Window window)
     {
-        if (_windows.Contains(window))
+        // The swap outline isn't one of the windows: nothing snaps to it or swaps with it.
+        if (_windows.Contains(window) || window is SwapHighlight)
         {
             return;
         }
@@ -129,6 +141,7 @@ public sealed class WindowSnapper
         _carried.Clear();
         _staying.Clear();
         _linked.Clear();
+        _swapWith = null;
         _startCursor = Cursor(window, e);
         _startRect = BoxOf(window);
         if (window == _main)
@@ -148,7 +161,8 @@ public sealed class WindowSnapper
             return;
         }
 
-        var rect = UnsnappedMove(Cursor(window, e));
+        var cursor = Cursor(window, e);
+        var rect = UnsnappedMove(cursor);
         var (dx, dy) = SnapMove(window, rect);
         rect = rect.Offset(dx, dy);
         _adjusting = true;
@@ -163,6 +177,11 @@ public sealed class WindowSnapper
         finally
         {
             _adjusting = false;
+        }
+
+        if (_carried.Count == 0)
+        {
+            FindSwap(window, cursor);
         }
 
         e.Handled = true;
@@ -186,16 +205,77 @@ public sealed class WindowSnapper
         }
 
         _dragging = false;
-        if (!_resized && _carried.Count == 0)
+        _highlight?.Hide();
+        if (!_resized && _swapWith is { } other)
+        {
+            Swap(window, other);
+        }
+        else if (!_resized && _carried.Count == 0)
         {
             MatchCorners(window);
         }
+
+        _swapWith = null;
 
         _moving = null;
         _carried.Clear();
         _staying.Clear();
         _linked.Clear();
         MoveFinished?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Works out which window the one being dragged would swap with if it were dropped now (the one the
+    /// mouse is well inside), and shows the outline over it, or hides the outline if there's none.
+    /// </summary>
+    private void FindSwap(Window window, Point cursor)
+    {
+        var others = OtherWindows(window).ToList();
+        var target = WindowSwap.TargetAt(cursor.X, cursor.Y, Candidate(window, _startRect),
+            others.Select(other => Candidate(other.Window, other.Rect)).ToList(), WindowSwap.Depth);
+        _swapWith = target >= 0 ? others[target].Window : null;
+        if (_swapWith is null)
+        {
+            _highlight?.Hide();
+            return;
+        }
+
+        var rect = others[target].Rect;
+        if (_highlight is null)
+        {
+            var highlight = new SwapHighlight();
+            _main.Closed += (_, _) => highlight.Close();
+            _highlight = highlight;
+        }
+
+        _highlight.ShowAt(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, WindowLocks.NameOf(_swapWith));
+    }
+
+    /// <summary>A window as one that could swap: where it is, its smallest size, and whether it can (it's resizable and not locked).</summary>
+    private SwapCandidate Candidate(Window window, Box rect) =>
+        new(new TileRect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top), window.MinWidth, window.MinHeight,
+            Resizable(window) && !WindowLocks.IsLocked(window));
+
+    /// <summary>
+    /// Swaps the dropped window with the one it was dropped on: it takes that window's place and size, and
+    /// that window takes the place and size the dropped one had before the drag.
+    /// </summary>
+    private void Swap(Window window, Window other)
+    {
+        var start = _startRect;
+        var target = BoxOf(other);
+        _adjusting = true;
+        try
+        {
+            Placement.Place(other, start.Left, start.Top, start.Right - start.Left, start.Bottom - start.Top);
+            Placement.Place(window, target.Left, target.Top, target.Right - target.Left, target.Bottom - target.Top);
+        }
+        finally
+        {
+            _adjusting = false;
+        }
+
+        Swapped?.Invoke(window, other);
     }
 
     /// <summary>True when the press landed on a title bar, and not on a button or other control in it.</summary>

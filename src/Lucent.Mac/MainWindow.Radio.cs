@@ -57,6 +57,8 @@ public partial class MainWindow
     /// </summary>
     public async void PlayStation(RadioStation station, IReadOnlyList<RadioStation> list)
     {
+        // A featured station saved before its stream changed plays at today's quality.
+        station = FeaturedStations.Latest(station);
         StopControllingRemote(pause: true);
         _tuning?.Cancel();
         var tuning = _tuning = new CancellationTokenSource();
@@ -87,9 +89,10 @@ public partial class MainWindow
         ShowStationChange();
 
         ILiveStream stream;
+        RadioStation heard;
         try
         {
-            stream = await TuneInAsync(station, tuning.Token);
+            (stream, heard) = await TuneInWithBackupAsync(station, tuning.Token);
         }
         catch (OperationCanceledException)
         {
@@ -115,9 +118,15 @@ public partial class MainWindow
         }
 
         _tuning = null;
+        if (heard != station)
+        {
+            // Its best stream couldn't be reached, so the backup's quality is what's shown. It's still saved as itself.
+            _station = heard;
+        }
+
         try
         {
-            _player.Load(station.StreamUrl, stream.Sound);
+            _player.Load(heard.StreamUrl, stream.Sound);
         }
         catch (Exception ex)
         {
@@ -174,6 +183,23 @@ public partial class MainWindow
     }
 
     /// <summary>
+    /// Opens the station's stream, or when it can't be reached and the station has a backup stream (a featured
+    /// station's everyday one, behind its best), that one. Returns the stream and the station it's from.
+    /// </summary>
+    private async Task<(ILiveStream Stream, RadioStation Heard)> TuneInWithBackupAsync(RadioStation station, CancellationToken cancel)
+    {
+        try
+        {
+            return (await TuneInAsync(station, cancel), station);
+        }
+        catch (Exception ex) when (station.Backup is { } backup && !cancel.IsCancellationRequested)
+        {
+            ErrorLog.Write("Radio best stream", ex);
+            return (await TuneInAsync(backup, cancel), backup);
+        }
+    }
+
+    /// <summary>
     /// Opens the station's stream: through Lucent's own radio player for MP3 and AAC, and through the video player
     /// (libVLC) for video stations and the formats Lucent's own player doesn't read.
     /// </summary>
@@ -194,14 +220,15 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Opens an MP3 or AAC stream. A featured station whose address has moved is looked up in the directory.</summary>
+    /// <summary>Opens an MP3 or AAC stream. A featured station whose address has moved (and that has no backup) is looked up in the directory.</summary>
     private async Task<RadioStream> OpenRadioStreamAsync(RadioStation station, CancellationToken cancel)
     {
         try
         {
             return await RadioStream.OpenAsync(station.StreamUrl, RadioUserAgent, cancel, station.Codec);
         }
-        catch (RadioProblem problem) when (problem.Address is null && !station.IsFromDirectory && station.Network is not null && !cancel.IsCancellationRequested)
+        catch (RadioProblem problem) when (problem.Address is null && !station.IsFromDirectory && station.Network is not null && station.Backup is null
+                                          && !cancel.IsCancellationRequested)
         {
             var found = await RadioDirectory.SearchAsync(new RadioQuery(station.Name, null, null, 0, RadioSort.Popular, 20), cancel);
             var same = found.FirstOrDefault(candidate => string.Equals(candidate.Name, station.Name, StringComparison.OrdinalIgnoreCase)

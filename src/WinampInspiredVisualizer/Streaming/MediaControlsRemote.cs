@@ -1,18 +1,20 @@
 using System.Diagnostics;
 using System.IO;
 using NAudio.CoreAudioApi;
+using Windows.Media;
 using Windows.Media.Control;
 using Windows.Storage.Streams;
+using WinampInspiredVisualizer.Settings;
 
 namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>
 /// Another app's player through Windows' media controls: every player that shows up in the media panel
-/// by the volume flyout tells Windows what's playing and takes its play, pause, skip and seek buttons,
-/// and Windows lets other apps read and press those. <see cref="AppleMusicRemote"/> and
+/// by the volume flyout tells Windows what's playing and takes its play, pause, skip and seek buttons
+/// (and shuffle and repeat, for players that offer them there), and Windows lets other apps read and press those. <see cref="AppleMusicRemote"/> and
 /// <see cref="YouTubeRemote"/> say which of those players is theirs.
 /// </summary>
-public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume
+public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemoteModes
 {
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private (string Id, IRandomAccessStreamReference Thumbnail)? _cover;
@@ -37,17 +39,28 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume
     /// <summary>The app's player among everything Windows' media controls know about, or null.</summary>
     protected abstract GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions);
 
-    public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
+    public virtual async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
         var session = await SessionAsync()
             ?? throw new RemoteProblem($"{NotOpen}, then Lucent can show and control it.");
 
         var properties = await session.TryGetMediaPropertiesAsync().AsTask(cancel);
         var timeline = session.GetTimelineProperties();
-        var playing = session.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+        var info = session.GetPlaybackInfo();
+        var playing = info?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+        // Only players that offer shuffle and repeat to Windows say whether they're on.
+        var shuffle = info?.Controls?.IsShuffleEnabled == true ? info.IsShuffleActive : null;
+        RepeatMode? repeat = info?.Controls?.IsRepeatEnabled == true && info.AutoRepeatMode is { } mode
+            ? mode switch
+            {
+                MediaPlaybackAutoRepeatMode.Track => RepeatMode.One,
+                MediaPlaybackAutoRepeatMode.List => RepeatMode.All,
+                _ => RepeatMode.Off,
+            }
+            : null;
         if (properties is null || string.IsNullOrEmpty(properties.Title))
         {
-            return new RemoteState(null, playing, TimeSpan.Zero, DateTime.UtcNow);
+            return new RemoteState(null, playing, TimeSpan.Zero, DateTime.UtcNow, Shuffle: shuffle, Repeat: repeat);
         }
 
         var duration = timeline.EndTime - timeline.StartTime;
@@ -67,7 +80,7 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume
         var track = new RemoteTrack(id, properties.Title, properties.Artist ?? string.Empty, properties.AlbumTitle ?? string.Empty,
             duration > TimeSpan.Zero ? duration : TimeSpan.Zero);
         var volume = await Task.Run(() => AppVolume(null), cancel);
-        return new RemoteState(track, playing, timeline.Position - timeline.StartTime, readAt, Volume: volume);
+        return new RemoteState(track, playing, timeline.Position - timeline.StartTime, readAt, Volume: volume, Shuffle: shuffle, Repeat: repeat);
     }
 
     public Task PlayAsync(CancellationToken cancel) => PressAsync(session => session.TryPlayAsync().AsTask(cancel));
@@ -80,6 +93,17 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume
 
     public Task SeekAsync(TimeSpan position, CancellationToken cancel) =>
         PressAsync(session => session.TryChangePlaybackPositionAsync(position.Ticks).AsTask(cancel));
+
+    public Task SetShuffleAsync(bool on, CancellationToken cancel) =>
+        PressAsync(session => session.TryChangeShuffleActiveAsync(on).AsTask(cancel));
+
+    public Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel) =>
+        PressAsync(session => session.TryChangeAutoRepeatModeAsync(mode switch
+        {
+            RepeatMode.One => MediaPlaybackAutoRepeatMode.Track,
+            RepeatMode.All => MediaPlaybackAutoRepeatMode.List,
+            _ => MediaPlaybackAutoRepeatMode.None,
+        }).AsTask(cancel));
 
     public Task SetVolumeAsync(double volume, CancellationToken cancel) => Task.Run(() => AppVolume((float)Math.Clamp(volume, 0, 1)), cancel);
 

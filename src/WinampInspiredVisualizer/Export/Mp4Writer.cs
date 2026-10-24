@@ -5,7 +5,7 @@ using Vortice.MediaFoundation;
 namespace WinampInspiredVisualizer.Export;
 
 /// <summary>
-/// Writes an MP4 file of H.264 video and AAC audio with the encoders built into Windows (Media
+/// Writes an MP4 file of H.264 (or HEVC) video and AAC audio with the encoders built into Windows (Media
 /// Foundation's sink writer). The graphics card's own video encoder (NVIDIA, AMD or Intel) is used
 /// when Windows offers one, and Windows' software encoder otherwise. Pictures go in as NV12 (see
 /// <see cref="VideoFrameConverter"/>) and sound as 16-bit stereo; everything is timed by frame and
@@ -20,6 +20,7 @@ public sealed class Mp4Writer : IDisposable
     // Values of Media Foundation enumerations the bindings don't name.
     private const uint ProgressiveVideo = 2;          // MFVideoInterlace_Progressive
     private const uint H264HighProfile = 100;         // eAVEncH264VProfile_High
+    private const uint HevcMainProfile = 1;           // eAVEncH265VProfile_Main_420_8
     private const uint TvRange = 2;                   // MFNominalRange_16_235
     private const uint Bt709Matrix = 1;               // MFVideoTransferMatrix_BT709
     private const uint Bt709Primaries = 2;            // MFVideoPrimaries_BT709
@@ -56,15 +57,17 @@ public sealed class Mp4Writer : IDisposable
     /// <paramref name="sampleRate"/> must be 44100 or 48000, the rates Windows' AAC encoder takes, and
     /// <paramref name="audioBitrate"/> 96, 128, 160 or 192 thousand. With <paramref name="allowHardware"/>
     /// off, or if the graphics card's encoder won't take these settings, Windows' software encoder is used.
+    /// With <paramref name="hevc"/>, the video is HEVC: Windows' own HEVC encoder comes with the HEVC Video
+    /// Extensions, and most graphics cards from the last ten years have one.
     /// </summary>
     public static Mp4Writer Create(string path, int width, int height, int frameRate, int videoBitrate,
-        int sampleRate, int audioBitrate, bool allowHardware)
+        int sampleRate, int audioBitrate, bool allowHardware, bool hevc = false)
     {
         if (allowHardware)
         {
             try
             {
-                return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: true);
+                return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: true, hevc);
             }
             catch (SharpGen.Runtime.SharpGenException)
             {
@@ -73,11 +76,11 @@ public sealed class Mp4Writer : IDisposable
             }
         }
 
-        return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: false);
+        return Open(path, width, height, frameRate, videoBitrate, sampleRate, audioBitrate, hardware: false, hevc);
     }
 
     private static Mp4Writer Open(string path, int width, int height, int frameRate, int videoBitrate,
-        int sampleRate, int audioBitrate, bool hardware)
+        int sampleRate, int audioBitrate, bool hardware, bool hevc)
     {
         var writer = new Mp4Writer(frameRate, sampleRate);
         // Media Foundation keeps count of starts, so this pairs with the shutdown in Dispose even
@@ -85,7 +88,7 @@ public sealed class Mp4Writer : IDisposable
         MediaFactory.MFStartup().CheckError();
         try
         {
-            writer.Begin(path, width, height, videoBitrate, audioBitrate, hardware);
+            writer.Begin(path, width, height, videoBitrate, audioBitrate, hardware, hevc);
             return writer;
         }
         catch (Exception)
@@ -95,7 +98,7 @@ public sealed class Mp4Writer : IDisposable
         }
     }
 
-    private void Begin(string path, int width, int height, int videoBitrate, int audioBitrate, bool hardware)
+    private void Begin(string path, int width, int height, int videoBitrate, int audioBitrate, bool hardware, bool hevc)
     {
         using (var attributes = MediaFactory.MFCreateAttributes(2))
         {
@@ -108,9 +111,9 @@ public sealed class Mp4Writer : IDisposable
         // Video: what goes in the file, then what we hand over.
         using (var encoded = MediaFactory.MFCreateMediaType())
         {
-            SetVideoBasics(encoded, VideoFormatGuids.H264, width, height);
+            SetVideoBasics(encoded, hevc ? VideoFormatGuids.Hevc : VideoFormatGuids.H264, width, height);
             encoded.Set(MediaTypeAttributeKeys.AvgBitrate, (uint)videoBitrate).CheckError();
-            encoded.Set(MediaTypeAttributeKeys.Mpeg2Profile, H264HighProfile).CheckError();
+            encoded.Set(MediaTypeAttributeKeys.Mpeg2Profile, hevc ? HevcMainProfile : H264HighProfile).CheckError();
             _videoStream = _writer.AddStream(encoded);
         }
 

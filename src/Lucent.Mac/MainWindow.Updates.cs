@@ -4,7 +4,7 @@ using Lucent.Mac.Updates;
 namespace Lucent.Mac;
 
 // Checking for updates on demand, from the Updates tab in Options or Check for Updates in the menus.
-// The hourly check runs either way.
+// The regular check runs either way.
 public partial class MainWindow
 {
     private bool _checkingForUpdates;

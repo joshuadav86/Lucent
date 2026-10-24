@@ -16,10 +16,11 @@ public partial class QueueWindow : ToolWindow
         InitializeComponent();
         Chrome.UseLucentFrame(this);
         PlacementName = "Queue";
-        LucentFullScreen.AddTo(QueueMenu);
+        LucentFullScreen.AddTo(QueueMenu, this);
 
         // Runs before the list's menu opens, to fill in the items that depend on what's selected.
         PlaylistView.AddHandler(ContextRequestedEvent, OnQueueMenuOpening, RoutingStrategies.Tunnel);
+        RemoteListView.AddHandler(ContextRequestedEvent, OnRemoteMenuOpening, RoutingStrategies.Tunnel);
     }
 
     /// <summary>Music dropped on the queue goes on the end of it, as on Winamp's playlist.</summary>
@@ -149,23 +150,27 @@ public partial class QueueWindow : ToolWindow
 
     private RemoteList? _remoteList;
     private List<RemoteListEntry> _remoteEntries = new();
-    private string? _remotePlaying;
+    private RemoteTrack? _remotePlaying;
+    private string? _remotePlayingTitle;
 
     /// <summary>True while another app's playlist shows in place of the queue.</summary>
     public bool ShowingRemoteList => _remoteList is not null;
 
     /// <summary>
     /// Shows <paramref name="list"/>, the songs <paramref name="appName"/> is playing through, in place of the queue,
-    /// marking the one with <paramref name="playingId"/>; or puts the queue back when <paramref name="list"/> is null.
+    /// marking <paramref name="playing"/> with the songs either side of it in view; or puts the queue back when
+    /// <paramref name="list"/> is null.
     /// </summary>
-    public void ShowRemoteList(string appName, RemoteList? list, string? playingId)
+    public void ShowRemoteList(string appName, RemoteList? list, RemoteTrack? playing)
     {
-        if (!ReferenceEquals(list, _remoteList))
+        var listChanged = !ReferenceEquals(list, _remoteList);
+        // The whole of a long playlist arriving after its start, or the same playlist read again.
+        var sameList = list is not null && _remoteList is not null && list.Id == _remoteList.Id && list.Name == _remoteList.Name;
+        var wasMarked = _remoteEntries.Any(entry => entry.IsCurrent);
+        if (listChanged)
         {
             _remoteList = list;
-            _remoteEntries = list?.Tracks.Select(track => new RemoteListEntry(track)).ToList() ?? new List<RemoteListEntry>();
-            RemoteListView.ItemsSource = _remoteEntries;
-            _remotePlaying = null;
+            FillRemoteEntries();
             var showing = list is not null;
             PlaylistView.IsVisible = !showing;
             RemoteListView.IsVisible = showing;
@@ -175,33 +180,119 @@ public partial class QueueWindow : ToolWindow
                 EmptyPlaylistHint.IsVisible = false;
             }
 
-            RemoteListNote.Text = list?.Note ?? string.Empty;
-            RemoteListNote.IsVisible = list?.Note is not null;
+            ShowRemoteNote(list?.Note);
+            ShowSortButton();
             RemotePlayItem.Header = $"Play in {appName}";
             QueueTitle.Text = list is null ? "QUEUE" : appName.ToUpperInvariant();
             if (list is not null)
             {
-                QueueCount.Text = list.Tracks.Count == 1 ? $"{list.Name}  ·  1 song" : $"{list.Name}  ·  {list.Tracks.Count} songs";
+                QueueCount.Text = list.CountText;
             }
         }
 
-        if (playingId == _remotePlaying)
+        // The song by its title, as its ID changes a few seconds into it (see RemoteControl.ReadListIfChanged).
+        var title = playing?.Title.Trim().ToLowerInvariant();
+        var songChanged = title != _remotePlayingTitle;
+        _remotePlaying = playing;
+        _remotePlayingTitle = title;
+        if (listChanged || songChanged)
+        {
+            // Not when the rest of a long playlist arrives, as the list may have been scrolled meanwhile, unless the
+            // song playing is only in the rest.
+            MarkRemotePlaying(scroll: songChanged || !sameList || !wasMarked);
+        }
+    }
+
+    // How the list is shown: as the app lists it, unless the user picked another order and the list can be sorted.
+    private RemoteListOrder ShownOrder =>
+        _remoteList is { FollowsSong: false } list && Player?.RemoteListOrder is { } order && RemoteListSorting.OrdersFor(list).Contains(order)
+            ? order
+            : RemoteListOrder.Playlist;
+
+    private void FillRemoteEntries()
+    {
+        var chosen = (RemoteListView.SelectedItem as RemoteListEntry)?.Track.Id;
+        var tracks = _remoteList is null ? Array.Empty<RemoteTrack>() : RemoteListSorting.Sort(_remoteList.Tracks, ShownOrder);
+        _remoteEntries = tracks.Select(track => new RemoteListEntry(track)).ToList();
+        RemoteListView.ItemsSource = _remoteEntries;
+        // The song chosen stays chosen when the list is read again (what's up next is, with every song).
+        RemoteListView.SelectedItem = _remoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
+    }
+
+    private void MarkRemotePlaying(bool scroll)
+    {
+        RemoteListEntry? current = null;
+        foreach (var entry in _remoteEntries)
+        {
+            entry.IsCurrent = current is null && entry.Track.IsSameSong(_remotePlaying);
+            current ??= entry.IsCurrent ? entry : null;
+        }
+
+        if (scroll && current is not null)
+        {
+            ShowAround(current);
+        }
+    }
+
+    // Puts the song in the middle of the list, with the songs before and after it either side.
+    private void ShowAround(RemoteListEntry entry)
+    {
+        RemoteListView.ScrollIntoView(entry);
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            var index = _remoteEntries.IndexOf(entry);
+            if (index < 0 || RemoteListView.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault() is not { } scroller)
+            {
+                return;
+            }
+
+            // The rows are all the same height.
+            var row = scroller.Extent.Height / _remoteEntries.Count;
+            var top = Math.Clamp(index * row - (scroller.Viewport.Height - row) / 2, 0, Math.Max(0, scroller.Extent.Height - scroller.Viewport.Height));
+            scroller.Offset = new Avalonia.Vector(scroller.Offset.X, top);
+        }, Avalonia.Threading.DispatcherPriority.Loaded);
+    }
+
+    // The Sort button shows for a playlist, album or Liked Songs, not for what's up next, which is in the order it plays.
+    private void ShowSortButton()
+    {
+        SortButton.IsVisible = _remoteList is { FollowsSong: false, Tracks.Count: > 1 };
+        SortButtonText.Text = RemoteListSorting.Name(ShownOrder);
+    }
+
+    private void OnSortMenu(object? sender, RoutedEventArgs e)
+    {
+        if (_remoteList is not { } list)
         {
             return;
         }
 
-        _remotePlaying = playingId;
-        RemoteListEntry? playing = null;
-        foreach (var entry in _remoteEntries)
+        var menu = new ContextMenu { PlacementTarget = SortButton, Placement = PlacementMode.Bottom };
+        foreach (var order in RemoteListSorting.OrdersFor(list))
         {
-            entry.IsCurrent = entry.Track.Id == playingId;
-            playing ??= entry.IsCurrent ? entry : null;
+            var item = new MenuItem
+            {
+                Header = RemoteListSorting.Name(order),
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = order == ShownOrder,
+            };
+            item.Click += (_, _) => SortRemoteList(order);
+            menu.Items.Add(item);
         }
 
-        if (playing is not null)
+        menu.Open(SortButton);
+    }
+
+    private void SortRemoteList(RemoteListOrder order)
+    {
+        if (Player is { } player)
         {
-            RemoteListView.ScrollIntoView(playing);
+            player.RemoteListOrder = order;
         }
+
+        FillRemoteEntries();
+        ShowSortButton();
+        MarkRemotePlaying(scroll: true);
     }
 
     private void PlayChosenRemoteSong()
@@ -230,5 +321,58 @@ public partial class QueueWindow : ToolWindow
             PlayChosenRemoteSong();
             e.Handled = true;
         }
+    }
+
+    // ---- Adding the app's songs to its playlists, and sharing them ----
+
+    private void OnRemoteMenuOpening(object? sender, ContextRequestedEventArgs e)
+    {
+        // The row right-clicked is the one the menu is for.
+        if ((e.Source as Control)?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: RemoteListEntry row })
+        {
+            RemoteListView.SelectedItem = row;
+        }
+
+        var track = (RemoteListView.SelectedItem as RemoteListEntry)?.Track;
+        var canAdd = track is not null && Player?.CanAddToRemotePlaylists == true;
+        RemoteSongSeparator.IsVisible = RemoteShareItem.IsVisible = track is not null;
+        RemoteAddItem.IsVisible = canAdd;
+        if (canAdd && track is not null)
+        {
+            Player?.FillAddToPlaylistMenu(RemoteAddItem, track, ShowRemoteNotice);
+        }
+    }
+
+    private void OnCopySongLink(object? sender, RoutedEventArgs e) => CopySong(withTitle: false);
+
+    private void OnCopySongAndLink(object? sender, RoutedEventArgs e) => CopySong(withTitle: true);
+
+    private void CopySong(bool withTitle)
+    {
+        if ((RemoteListView.SelectedItem as RemoteListEntry)?.Track is { } track)
+        {
+            Player?.CopySongLink(track, withTitle, ShowRemoteNotice);
+        }
+    }
+
+    private int _notice;
+
+    /// <summary>Shows <paramref name="text"/> under the list for a few seconds, then the list's own note again.</summary>
+    private async void ShowRemoteNotice(string text)
+    {
+        var notice = ++_notice;
+        ShowRemoteNote(text);
+        Toast.Show(RemoteListView, text);
+        await Task.Delay(TimeSpan.FromSeconds(4));
+        if (notice == _notice)
+        {
+            ShowRemoteNote(_remoteList?.Note);
+        }
+    }
+
+    private void ShowRemoteNote(string? text)
+    {
+        RemoteListNote.Text = text ?? string.Empty;
+        RemoteListNote.IsVisible = text is not null;
     }
 }

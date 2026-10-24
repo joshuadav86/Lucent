@@ -61,6 +61,9 @@ public static class VideoExport
     /// <summary>The most memory a GIF's pictures may take while it's made.</summary>
     public const long GifMemoryLimit = 1L << 30;
 
+    // The most of a video read in one go: a long stretch is read a piece at a time, each from its own keyframe.
+    private const double PieceSeconds = 10;
+
     /// <summary>The choices made last time, offered again (this session).</summary>
     public static FrameExportChoice LastChoice { get; set; } = new();
 
@@ -160,7 +163,7 @@ public static class VideoExport
                 }
 
                 progress?.Report(++saved / (double)pictures.Count);
-            }, cancellation, kept => saved = kept);
+            }, cancellation);
         }
         catch (Exception)
         {
@@ -239,11 +242,7 @@ public static class VideoExport
             var delay = (int)(Math.Round((k + 1) * 100 / perSecond) - Math.Round(k * 100 / perSecond));
             gif.Add(pixels, stride, delay);
             progress?.Report(0.8 * ++read / pictures.Count);
-        }, cancellation, kept =>
-        {
-            gif.KeepFirst(kept);
-            read = kept;
-        });
+        }, cancellation);
 
         var temporary = target + ".part";
         try
@@ -264,118 +263,152 @@ public static class VideoExport
         }
     }
 
-    // Reads the pictures, a stretch of the original at a time, handing over just the ones asked for, in order (the
-    // self-test checks them as they come). Each stretch's pictures are copied into a short video of their own, from
-    // the keyframe before them, and read from its start, where libVLC's pictures can be counted exactly. A stretch
-    // may be read again, and then `rewind` is told how many of the pictures handed over so far to keep.
+    // Reads the pictures, a piece of the original at a time, handing over just the ones asked for, in order (the
+    // self-test checks them as they come). Each piece's pictures are copied into a short video of their own, from a
+    // keyframe, and read with when each shows (VideoPictureReader), which says which picture of the original it is.
     internal static void Read(LibVLC libVlc, VideoEdit video, IReadOnlyList<VideoExportPicture> pictures, int width, int height,
-        Action<VideoExportPicture, nint, int> save, CancellationToken cancellation, Action<int>? rewind = null)
+        Action<VideoExportPicture, nint, int> save, CancellationToken cancellation)
     {
-        var times = video.Movie.PictureTimes;
-        var rows = Math.Max(2, height / 2 * 2);
-        var saved = 0;
+        var movie = video.Movie;
+        var times = movie.PictureTimes;
         var at = 0;
         while (at < pictures.Count)
         {
-            // A run of pictures from one stretch of the original, in order.
+            // A run of pictures from one stretch of the original, in order, and no more than a piece of it (or what's
+            // left of the keyframe's own pictures).
             var stretch = pictures[at].Stretch;
+            var key = movie.SnapStart(pictures[at].Original);
             var runEnd = at;
-            while (runEnd + 1 < pictures.Count && pictures[runEnd + 1].Stretch == stretch && pictures[runEnd + 1].Original >= pictures[runEnd].Original)
+            while (runEnd + 1 < pictures.Count && pictures[runEnd + 1].Stretch == stretch && pictures[runEnd + 1].Original >= pictures[runEnd].Original
+                && (pictures[runEnd + 1].Original - key <= PieceSeconds || movie.SnapStart(pictures[runEnd + 1].Original) <= key + 0.0005))
             {
                 runEnd++;
             }
 
-            // Up to the end of the run's last picture.
+            // From the keyframe before, when the first picture wanted is one of the first few after its own: libVLC
+            // can leave out the picture after the one it starts on. To a little past the last picture, as it can
+            // leave out the last few too.
+            var first = LowerBound(times, pictures[at].Original - 1e-6);
+            var keyIndex = LowerBound(times, key - 1e-6);
+            var from = first - keyIndex < 8 ? movie.Keyframes.LastOrDefault(time => time < key - 0.0005, key) : key;
             var last = LowerBound(times, pictures[runEnd].Original - 1e-6);
-            var through = last + 1 < times.Count ? times[last + 1] : video.Movie.Duration;
+            var through = last + 1 < times.Count ? times[last + 1] : movie.Duration;
             var part = Path.Combine(Path.GetTempPath(), $"lucent-frames-{Guid.NewGuid():N}.mp4");
-            var anchorPart = Path.ChangeExtension(part, ".anchor.mp4");
             try
             {
-                // From the keyframe before the one the pictures start after, when there is one, and a second more
-                // than needed: libVLC can end before showing a video's last picture or two. (See ReadStretch.)
-                var keyframes = video.Movie.Keyframes;
-                var key = video.Movie.SnapStart(pictures[at].Original);
-                var before = keyframes.LastOrDefault(time => time < key - 0.0005, -1);
-                var after = keyframes.FirstOrDefault(time => time > key + 0.0005, -1);
-                var anchor = before >= 0 ? key : after;
-                var end = Math.Max(through + 1, before < 0 && after >= 0 ? after + 0.002 : 0);
-                var start = Mp4Cutter.WritePictures(video.Movie, before >= 0 ? before : key, end, part, cancellation);
+                // The short video's pictures are the original's from its keyframe on (after a copy of that keyframe).
+                var start = Mp4Cutter.WritePictures(movie, from, through + 1.5, part, cancellation);
                 var partTimes = Mp4Cutter.Read(part).PictureTimes;
-
-                // Which of the short video's pictures are wanted: some may be wanted twice (a slow video at a high rate).
-                var wanted = new Dictionary<int, List<VideoExportPicture>>();
-                var needed = 0;
+                var startIndex = Nearest(times, start);
+                var wanted = new List<(int Index, VideoExportPicture Picture)>();
                 for (var p = at; p <= runEnd; p++)
                 {
-                    var index = Nearest(partTimes, pictures[p].Original - start);
-                    if (!wanted.TryGetValue(index, out var list))
-                    {
-                        wanted[index] = list = new List<VideoExportPicture>();
-                    }
-
-                    list.Add(pictures[p]);
-                    needed = Math.Max(needed, index + 1);
+                    wanted.Add((Nearest(times, pictures[p].Original) - startIndex, pictures[p]));
                 }
 
-                var anchorAt = -1;
-                byte[]? anchorPicture = null;
-                if (anchor >= 0)
-                {
-                    anchorAt = Nearest(partTimes, anchor - start);
-                    // A few pictures: libVLC shows none of a video of one.
-                    Mp4Cutter.WritePictures(video.Movie, anchor, anchor + 0.25, anchorPart, cancellation);
-                    anchorPicture = AnchorPicture(libVlc, anchorPart, width, height, rows, cancellation);
-                }
-
-                var savedBefore = saved;
-                var got = -1;
-                for (var attempt = 0; attempt < 5 && got < 0; attempt++)
-                {
-                    if (saved > savedBefore)
-                    {
-                        saved = savedBefore;
-                        rewind?.Invoke(saved);
-                    }
-
-                    got = ReadStretch(libVlc, part, needed, width, height, rows, anchorAt, anchorPicture, before >= 0, (index, pixels, stride) =>
-                    {
-                        if (wanted.TryGetValue(index, out var each))
-                        {
-                            foreach (var picture in each)
-                            {
-                                save(picture, pixels, stride);
-                                saved++;
-                            }
-                        }
-                    }, cancellation);
-                }
-
-                if (got < 0)
-                {
-                    throw new InvalidDataException("The video's pictures couldn't be read in order. Try again, perhaps with fewer programs running.");
-                }
-
-                if (got < needed)
-                {
-                    throw new InvalidDataException($"The video ended {needed - got} picture(s) early, so the last part couldn't be saved.");
-                }
+                ReadPiece(libVlc, part, partTimes, wanted, width, height, save, cancellation);
             }
             finally
             {
-                foreach (var file in new[] { part, anchorPart })
+                try
                 {
-                    try
-                    {
-                        File.Delete(file);
-                    }
-                    catch (IOException)
-                    {
-                    }
+                    File.Delete(part);
+                }
+                catch (IOException)
+                {
                 }
             }
 
             at = runEnd + 1;
+        }
+    }
+
+    // Reads a short video from Mp4Cutter.WritePictures, handing over the pictures wanted (by their place among its
+    // pictures after the lead copy, in order; some may be wanted twice, for a slow video at a high rate). Which picture
+    // each one libVLC gives is, is told by when it shows: the first after the lead copy is the first, and each after is
+    // the one that long after the one before. A picture libVLC left out is stood in for by the one shown before it.
+    private static unsafe void ReadPiece(LibVLC libVlc, string path, IReadOnlyList<double> times, List<(int Index, VideoExportPicture Picture)> wanted,
+        int width, int height, Action<VideoExportPicture, nint, int> save, CancellationToken cancellation)
+    {
+        // The pictures are evenly spaced, after the lead copy and the gap after it.
+        var each = times.Count > 2 ? times[2] - times[1] : 1;
+        var count = times.Count - 1;
+        var next = 0;
+        var standIns = 0;
+        var given = 0;
+        var leadPts = 0L;
+        var place = -1;
+        var placePts = 0L;
+        byte[]? previous = null;
+        var previousStride = 0;
+        void SavePrevious(VideoExportPicture picture)
+        {
+            fixed (byte* pixels = previous)
+            {
+                save(picture, (nint)pixels, previousStride);
+            }
+
+            standIns++;
+        }
+
+        VideoPictureReader.Read(libVlc, path, width, height, (pts, pixels, stride) =>
+        {
+            if (given++ == 0)
+            {
+                // The lead copy.
+                leadPts = pts;
+                return true;
+            }
+
+            if (place < 0)
+            {
+                // The first picture: libVLC gives the lead copy a time anywhere up to it (often a few pictures late).
+                var gap = (pts - leadPts) / 1e6 / each;
+                if (gap < 0.5 || gap > Mp4Cutter.LeadPictures + 0.5)
+                {
+                    throw new InvalidDataException("The video's pictures couldn't be read in order.");
+                }
+            }
+
+            var index = place < 0 ? 0 : place + Math.Max(1, (int)Math.Round((pts - placePts) / 1e6 / each));
+            place = index;
+            placePts = pts;
+            while (next < wanted.Count && wanted[next].Index < index)
+            {
+                SavePrevious(wanted[next++].Picture);
+            }
+
+            while (next < wanted.Count && wanted[next].Index == index)
+            {
+                save(wanted[next++].Picture, pixels, stride);
+            }
+
+            if (next >= wanted.Count || index >= count)
+            {
+                return false;
+            }
+
+            var bytes = stride * Math.Max(2, height / 2 * 2);
+            previous ??= new byte[bytes];
+            previousStride = stride;
+            new ReadOnlySpan<byte>((void*)pixels, bytes).CopyTo(previous);
+            return true;
+        }, cancellation);
+
+        if (previous is null && next < wanted.Count)
+        {
+            throw new InvalidDataException("This video's pictures couldn't be read.");
+        }
+
+        // The video ended before the last pictures wanted: the last one shown stands for them.
+        while (next < wanted.Count)
+        {
+            SavePrevious(wanted[next++].Picture);
+        }
+
+        if (standIns > Math.Max(2, wanted.Count / 4))
+        {
+            throw new InvalidDataException("libVLC left out too many of the video's pictures. Try again, perhaps with fewer programs running.");
         }
     }
 
@@ -389,148 +422,6 @@ public static class VideoExport
         }
 
         return i > 0 && value - sorted[i - 1] < sorted[i] - value ? i - 1 : i;
-    }
-
-    // Reads a short video's first `needed` pictures, handing each over with its place, or returns -1 to be tried
-    // again, or how many came if the video ended first.
-    //
-    // libVLC doesn't always show each picture once. As a video starts, on a busy machine, it now and then skips the
-    // first picture or two, or shows the first twice; and when the next picture is slow to come it shows the last one
-    // again, which can't be told from a picture that's really the same as the one before. So the video is first read
-    // quickly for what each picture is, and where the anchor (a keyframe whose place is known, and whose picture was
-    // read on its own) turns up says how far out the start was. With `spare` (the video starts a keyframe early, and
-    // no picture before the anchor is wanted) the start can be out; otherwise it has to be right. Two such reads have
-    // to agree. Then the video is read again to save the pictures, going by when the picture changes, not by
-    // counting: each new picture has to be the next different one, and stands for every place in its row.
-    private static int ReadStretch(LibVLC libVlc, string path, int needed, int width, int height, int rows, int anchorAt,
-        byte[]? anchorPicture, bool spare, Action<int, nint, int> save, CancellationToken cancellation)
-    {
-        var anchor = anchorPicture is null ? (int?)null : Fingerprint(anchorPicture);
-        List<int>? reference = null;
-        List<int>? previous = null;
-        for (var read = 0; read < 4 && reference is null; read++)
-        {
-            // A little more than needed, and past the anchor, as the start may be out by a picture or two.
-            var seen = Fingerprints(libVlc, path, Math.Max(needed, anchorAt + 1) + 3, width, height, rows, cancellation);
-            var shift = 0;
-            if (anchor is { } fingerprint && anchorAt >= 0)
-            {
-                var found = Enumerable.Range(-3, 7).Select(by => anchorAt + by)
-                    .Where(i => i >= 0 && i < seen.Count && seen[i] == fingerprint)
-                    .OrderBy(i => (i > 0 && seen[i - 1] == fingerprint ? 1 : 0, Math.Abs(i - anchorAt)))
-                    .Select(i => (int?)i).FirstOrDefault();
-                if (found is not { } at || (!spare && at != anchorAt))
-                {
-                    previous = null;
-                    continue;
-                }
-
-                shift = at - anchorAt;
-            }
-
-            // Each place's picture, by where it really is; places the read missed (before the anchor) are unknown.
-            var placed = Enumerable.Repeat(0, Math.Max(0, -shift)).Concat(seen.Skip(Math.Max(0, shift))).Take(needed).ToList();
-            if (previous is not null && placed.SequenceEqual(previous))
-            {
-                reference = placed;
-            }
-
-            previous = placed;
-        }
-
-        if (reference is null)
-        {
-            return -1;
-        }
-
-        // Each row of the same picture, from the anchor on: its fingerprint, and the places it's in.
-        var first = spare ? anchorAt : 0;
-        var rowsOf = new List<(int Fingerprint, int First, int Last)>();
-        for (var index = first; index < reference.Count; index++)
-        {
-            if (rowsOf.Count > 0 && rowsOf[^1].Fingerprint == reference[index])
-            {
-                rowsOf[^1] = rowsOf[^1] with { Last = index };
-            }
-            else
-            {
-                rowsOf.Add((reference[index], index, index));
-            }
-        }
-
-        if (rowsOf.Count == 0)
-        {
-            return reference.Count;
-        }
-
-        var row = -1;
-        var finished = false;
-        VideoPictureReader.Read(libVlc, path, int.MaxValue, width, height, (_, pixels, stride) =>
-        {
-            var fingerprint = Fingerprint(pixels, stride * rows);
-            if (row >= 0 && rowsOf[row].Fingerprint == fingerprint)
-            {
-                return true;
-            }
-
-            if (row < 0 && fingerprint != rowsOf[0].Fingerprint)
-            {
-                // Before the anchor's row: the spare keyframe's pictures.
-                return true;
-            }
-
-            if (++row >= rowsOf.Count || rowsOf[row].Fingerprint != fingerprint)
-            {
-                return false;
-            }
-
-            for (var index = rowsOf[row].First; index <= rowsOf[row].Last; index++)
-            {
-                save(index, pixels, stride);
-            }
-
-            finished = row == rowsOf.Count - 1;
-            return !finished;
-        }, cancellation);
-        return finished ? reference.Count : -1;
-    }
-
-    // The first picture of a video, read a picture at a time from a paused start, twice to be sure, or null.
-    private static byte[]? AnchorPicture(LibVLC libVlc, string path, int width, int height, int rows, CancellationToken cancellation)
-    {
-        for (var attempt = 0; attempt < 3; attempt++)
-        {
-            var one = VideoPictureReader.ReadFirst(libVlc, path, width, height, cancellation);
-            var two = VideoPictureReader.ReadFirst(libVlc, path, width, height, cancellation);
-            if (one is not null && two is not null && one.AsSpan().SequenceEqual(two))
-            {
-                return one;
-            }
-        }
-
-        return null;
-    }
-
-    // What each of a video's first `count` pictures is, read as fast as libVLC goes.
-    private static List<int> Fingerprints(LibVLC libVlc, string path, int count, int width, int height, int rows, CancellationToken cancellation)
-    {
-        var fingerprints = new List<int>();
-        VideoPictureReader.Read(libVlc, path, count, width, height, (_, pixels, stride) =>
-        {
-            fingerprints.Add(Fingerprint(pixels, stride * rows));
-            return true;
-        }, cancellation);
-        return fingerprints;
-    }
-
-    // A picture's pixels, boiled down: two reads of the same picture give the same.
-    private static unsafe int Fingerprint(nint pixels, int bytes) => Fingerprint(new ReadOnlySpan<byte>((void*)pixels, bytes));
-
-    private static int Fingerprint(ReadOnlySpan<byte> pixels)
-    {
-        var hash = new HashCode();
-        hash.AddBytes(pixels);
-        return hash.ToHashCode();
     }
 
     private static int LowerBound(IReadOnlyList<double> sorted, double value)

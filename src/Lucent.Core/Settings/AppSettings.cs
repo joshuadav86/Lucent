@@ -41,6 +41,9 @@ public sealed class AppSettings
 
     public LibrarySort LibrarySort { get; set; } = LibrarySort.Newest;
 
+    /// <summary>The order Spotify's and Music's playlists are listed in under the library's PLAYLISTS.</summary>
+    public RemotePlaylistSort RemotePlaylistSort { get; set; }
+
     public bool GroupLibraryByFolder { get; set; } = true;
 
     /// <summary>Whether the library lists only the favourite songs.</summary>
@@ -90,6 +93,9 @@ public sealed class AppSettings
 
     /// <summary>Take the output for Lucent alone and send each track at its own format: bit-perfect playback.</summary>
     public bool ExclusiveOutput { get; set; }
+
+    /// <summary>List Lucent's original shaders in the visual picker and play them in Auto (off leaves MilkDrop, AVS and the user's own).</summary>
+    public bool LucentVisuals { get; set; } = true;
 
     /// <summary>List MilkDrop presets in the visual picker and play them in Auto.</summary>
     public bool MilkDropVisuals { get; set; } = true;
@@ -141,6 +147,12 @@ public sealed class AppSettings
 
     /// <summary>Where each window was before Lucent went full screen, by name: where they go back to when it's switched off.</summary>
     public Dictionary<string, WindowBounds> WindowsBeforeFullScreen { get; set; } = new();
+
+    /// <summary>
+    /// The windows swapped while Lucent's full screen (a window dragged onto another), by name, in the
+    /// order they were swapped: laying the windows out again keeps them swapped. Cleared as it's switched on or off.
+    /// </summary>
+    public List<List<string>> FullScreenSwaps { get; set; } = new();
 
     // ---- Graphics ----
 
@@ -285,6 +297,12 @@ public sealed class AppSettings
     /// <summary>Which parts of the analyzer are shown.</summary>
     public AnalyzerModules AnalyzerModules { get; set; } = AnalyzerModules.All;
 
+    /// <summary>
+    /// True once the analyzer's loudness readouts have been switched on for settings saved before they existed,
+    /// so they show for everyone once and stay hidden after that if they're turned off.
+    /// </summary>
+    public bool AnalyzerLoudnessOffered { get; set; }
+
     // ---- Audio tools ----
 
     /// <summary>The format and quality last picked in the converter, offered again next time.</summary>
@@ -341,6 +359,9 @@ public sealed class AppSettings
     /// <summary>The other app the player shows and controls instead of Lucent's own music, if any.</summary>
     public RemoteApp RemoteApp { get; set; }
 
+    /// <summary>How the queue window lists the other app's playlist: its own order, by date added, title or artist.</summary>
+    public RemoteListOrder RemoteListOrder { get; set; }
+
     // ---- Online radio ----
 
     /// <summary>Stations starred in the radio browser, kept whole so they play even when the directory is down.</summary>
@@ -374,16 +395,17 @@ public sealed class AppSettings
                 var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), JsonOptions) ?? new AppSettings();
                 settings.CarryOverReplacedVisuals();
                 settings.OfferAutoResolution();
+                settings.OfferAnalyzerLoudness();
                 return settings;
             }
         }
         catch (Exception)
         {
             // A damaged settings file just means starting from the defaults.
-            return new AppSettings { AutoResolutionOffered = true };
+            return new AppSettings { AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
         }
 
-        return new AppSettings { AddStarterMusic = true, AutoResolutionOffered = true };
+        return new AppSettings { AddStarterMusic = true, AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
     }
 
     /// <summary>
@@ -430,6 +452,15 @@ public sealed class AppSettings
             {
                 Resolution = RenderResolution.Auto;
             }
+        }
+    }
+
+    private void OfferAnalyzerLoudness()
+    {
+        if (!AnalyzerLoudnessOffered)
+        {
+            AnalyzerLoudnessOffered = true;
+            AnalyzerModules |= AnalyzerModules.Loudness;
         }
     }
 
@@ -499,7 +530,9 @@ public enum AnalyzerModules
     Waveform = 4,
     /// <summary>The stereo spread scope and correlation bar.</summary>
     Stereo = 8,
-    All = Heatmap | Spectrum | Waveform | Stereo,
+    /// <summary>The loudness readouts (LUFS, range and true peak), along the bottom.</summary>
+    Loudness = 16,
+    All = Heatmap | Spectrum | Waveform | Stereo | Loudness,
 }
 
 /// <summary>How fast the analyzer scrolls.</summary>

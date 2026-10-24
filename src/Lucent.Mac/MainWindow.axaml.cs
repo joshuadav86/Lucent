@@ -25,6 +25,7 @@ using WinampInspiredVisualizer.Diagnostics;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Streaming;
 using WinampInspiredVisualizer.Visualizer.Avs;
 using WinampInspiredVisualizer.Visualizer.MilkDrop;
 using WinampInspiredVisualizer.Video;
@@ -1481,6 +1482,11 @@ public partial class MainWindow : Window
         {
             _settings.MorphTransitionsOnly = on;
         }
+        else if (sender == LucentVisualsSwitch)
+        {
+            _settings.LucentVisuals = on;
+            _visuals.ShowLucentOriginals(on);
+        }
         else if (sender == MilkDropSwitch)
         {
             _settings.MilkDropVisuals = on;
@@ -1554,6 +1560,7 @@ public partial class MainWindow : Window
         BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
+        LucentVisualsSwitch.IsChecked = _settings.LucentVisuals;
         MilkDropSwitch.IsChecked = _settings.MilkDropVisuals;
         AvsSwitch.IsChecked = _settings.AvsVisuals;
         ModernAvsSwitch.IsChecked = _settings.ModernAvs;
@@ -1982,6 +1989,12 @@ public partial class MainWindow : Window
 
     private void ToggleShuffle()
     {
+        // While another app is controlled, it's that app's shuffle.
+        if (RemoteTakes(remote => remote.ToggleShuffleAsync()))
+        {
+            return;
+        }
+
         _settings.Shuffle = !_settings.Shuffle;
         _shuffleHistory.Clear();
         if (_current is not null)
@@ -1998,6 +2011,11 @@ public partial class MainWindow : Window
 
     private void CycleRepeat()
     {
+        if (RemoteTakes(remote => remote.CycleRepeatAsync()))
+        {
+            return;
+        }
+
         _settings.Repeat = _settings.Repeat switch
         {
             RepeatMode.Off => RepeatMode.All,
@@ -2009,12 +2027,58 @@ public partial class MainWindow : Window
         _settings.Save();
     }
 
+    private void OnThumbUp(object? sender, RoutedEventArgs e) => ThumbUp();
+
+    private void OnThumbDown(object? sender, RoutedEventArgs e) => ThumbDown();
+
+    // Thumbs up and down, for an app that has them (Pandora). Nothing happens for one that doesn't.
+    private void ThumbUp()
+    {
+        if (_remote is { HasRating: true })
+        {
+            RemoteTakes(remote => remote.ThumbUpAsync());
+        }
+
+        UpdateShuffleRepeatButtons();
+    }
+
+    private void ThumbDown()
+    {
+        if (_remote is { HasRating: true })
+        {
+            RemoteTakes(remote => remote.ThumbDownAsync());
+        }
+
+        UpdateShuffleRepeatButtons();
+    }
+
     private void UpdateShuffleRepeatButtons()
     {
-        ShuffleButton.IsChecked = _settings.Shuffle;
+        // An app with thumbs and no shuffle or repeat (Pandora's stations) shows its thumbs in their place.
+        var thumbs = _remote is { HasRating: true, HasShuffle: false, HasRepeat: false };
+        ShuffleButton.IsVisible = !thumbs;
+        RepeatButton.IsVisible = !thumbs;
+        ThumbUpButton.IsVisible = thumbs;
+        ThumbDownButton.IsVisible = thumbs;
+        if (thumbs)
+        {
+            ThumbUpButton.IsChecked = _remote!.State?.Rating == SongRating.Up;
+            ThumbDownButton.IsChecked = _remote.State?.Rating == SongRating.Down;
+            ToolTip.SetTip(ThumbUpButton, _remote.ThumbUpTip);
+            ToolTip.SetTip(ThumbDownButton, _remote.ThumbDownTip);
+        }
+
+        ShuffleButton.IsChecked = ShownShuffle;
+        RepeatButton.IsChecked = ShownRepeat != RepeatMode.Off;
+        RepeatOneBadge.IsVisible = ShownRepeat == RepeatMode.One;
+        if (_remote is { } remote)
+        {
+            ToolTip.SetTip(ShuffleButton, remote.ShuffleTip);
+            ToolTip.SetTip(RepeatButton, remote.RepeatTip);
+            return;
+        }
+
         ToolTip.SetTip(ShuffleButton, _settings.Shuffle ? "Shuffle is on (S)" : "Shuffle (S)");
-        RepeatButton.IsChecked = _settings.Repeat != RepeatMode.Off;
-        RepeatOneBadge.IsVisible = _settings.Repeat == RepeatMode.One;
         ToolTip.SetTip(RepeatButton, _settings.Repeat switch
         {
             RepeatMode.All => "Repeating the whole queue. Click to repeat just this track (R)",
@@ -2031,6 +2095,9 @@ public partial class MainWindow : Window
 
     private void StopPlayback()
     {
+        // Stop means stop: a song or video playing in the editor stops too.
+        AudioTools.StopEditors();
+
         if (RemoteTakes(remote => remote.StopAsync()))
         {
             return;
@@ -2189,6 +2256,12 @@ public partial class MainWindow : Window
                 break;
             case Key.S:
                 ToggleShuffle();
+                break;
+            case Key.T when e.KeyModifiers == KeyModifiers.Shift:
+                ThumbDown();
+                break;
+            case Key.T:
+                ThumbUp();
                 break;
             case Key.R:
                 CycleRepeat();

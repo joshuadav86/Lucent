@@ -1,3 +1,5 @@
+using WinampInspiredVisualizer.Settings;
+
 namespace WinampInspiredVisualizer.Streaming;
 
 /// <summary>
@@ -27,6 +29,17 @@ public sealed class RemoteControl : IDisposable
 
     // Until when a button's problem stays shown, though the app reads fine again.
     private DateTime _problemHeldUntil;
+
+    // Shuffle and repeat just asked for, and until when reads keep showing them, as the app (Spotify's Web API
+    // especially) can take a moment to report them.
+    private bool? _shuffleWanted;
+    private RepeatMode? _repeatWanted;
+    private DateTime _modesHeldUntil;
+
+    // The thumb just given, the song it was given to, and until when reads keep showing it, as the app can take a
+    // moment to light its thumb (or, on Windows, may not say at all).
+    private (string Song, SongRating Rating)? _ratingWanted;
+    private DateTime _ratingHeldUntil;
 
     // Until when reads keep the position just sought to, rather than where the app was before it caught up.
     private DateTime _positionHeldUntil;
@@ -106,6 +119,11 @@ public sealed class RemoteControl : IDisposable
         ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
         : Task.CompletedTask;
 
+    /// <summary>Plays one of the account's playlists (<see cref="IRemotePlaylists"/>) in the app.</summary>
+    public Task PlayPlaylistAsync(RemotePlaylist playlist) => Player is IRemotePlaylists playlists
+        ? RunAsync(cancel => playlists.PlayPlaylistAsync(playlist, cancel), null)
+        : Task.CompletedTask;
+
     /// <summary>
     /// Why the visuals can't follow the music, worded for the user, while the app plays on another device (Spotify on
     /// a TV, say), or null when it plays here.
@@ -167,6 +185,138 @@ public sealed class RemoteControl : IDisposable
             _sendingVolume = false;
             _volumeHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(1);
         }
+    }
+
+    /// <summary>True when the app says whether it's shuffling and Lucent can change it (<see cref="RemoteState.Shuffle"/>).</summary>
+    public bool HasShuffle => Player is IRemoteModes && State?.Shuffle is not null;
+
+    /// <summary>True when the app says what it repeats and Lucent can change it (<see cref="RemoteState.Repeat"/>).</summary>
+    public bool HasRepeat => Player is IRemoteModes && State?.Repeat is not null;
+
+    /// <summary>Turns the app's shuffle on or off.</summary>
+    public Task ToggleShuffleAsync()
+    {
+        if (Player is not IRemoteModes modes || State?.Shuffle is not { } shuffle)
+        {
+            return CantChange("shuffle");
+        }
+
+        var on = !shuffle;
+        _shuffleWanted = on;
+        _modesHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await modes.SetShuffleAsync(on, cancel);
+                }
+                catch (Exception)
+                {
+                    _shuffleWanted = null;
+                    throw;
+                }
+            },
+            state => state with { Shuffle = on });
+    }
+
+    /// <summary>Moves the app's repeat on, as the player's own does: off, the whole list, this song, off again.</summary>
+    public Task CycleRepeatAsync()
+    {
+        if (Player is not IRemoteModes modes || State?.Repeat is not { } repeat)
+        {
+            return CantChange("repeat");
+        }
+
+        var next = repeat switch
+        {
+            RepeatMode.Off => RepeatMode.All,
+            RepeatMode.All => RepeatMode.One,
+            _ => RepeatMode.Off,
+        };
+        _repeatWanted = next;
+        _modesHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await modes.SetRepeatAsync(next, cancel);
+                }
+                catch (Exception)
+                {
+                    _repeatWanted = null;
+                    throw;
+                }
+            },
+            state => state with { Repeat = next });
+    }
+
+    /// <summary>The shuffle button's tip, while it's the app's shuffle.</summary>
+    public string ShuffleTip => !HasShuffle ? $"{Player.Name} doesn't let Lucent change its shuffle"
+        : State!.Shuffle == true ? $"{Player.Name} is shuffling. Click to turn it off (S)"
+        : $"Shuffle {Player.Name} (S)";
+
+    /// <summary>The repeat button's tip, while it's the app's repeat.</summary>
+    public string RepeatTip => !HasRepeat ? $"{Player.Name} doesn't let Lucent change its repeat" : State!.Repeat switch
+    {
+        RepeatMode.All => $"{Player.Name} repeats the whole playlist. Click to repeat just this song (R)",
+        RepeatMode.One => $"{Player.Name} repeats this song. Click to stop repeating (R)",
+        _ => $"Repeat is off in {Player.Name}. Click to repeat the whole playlist (R)",
+    };
+
+    /// <summary>True when the app has thumbs up and down Lucent can press (<see cref="RemoteState.Rating"/>).</summary>
+    public bool HasRating => Player is IRemoteRating && State is { Rating: not null, Track: not null };
+
+    /// <summary>Gives the song a thumbs up, or takes it back when it has one.</summary>
+    public Task ThumbUpAsync() => RateAsync(SongRating.Up);
+
+    /// <summary>Gives the song a thumbs down (which skips it, on Pandora), or takes it back when it has one.</summary>
+    public Task ThumbDownAsync() => RateAsync(SongRating.Down);
+
+    private Task RateAsync(SongRating thumb)
+    {
+        if (Player is not IRemoteRating rating || State is not { Rating: { } shown, Track: { } song })
+        {
+            return CantChange("thumbs");
+        }
+
+        // Pressing a lit thumb takes it back, as in the app.
+        var wanted = shown == thumb ? SongRating.None : thumb;
+        _ratingWanted = (song.Id, wanted);
+        _ratingHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await rating.RateAsync(wanted, cancel);
+                }
+                catch (Exception)
+                {
+                    _ratingWanted = null;
+                    throw;
+                }
+            },
+            state => state with { Rating = wanted });
+    }
+
+    /// <summary>The thumbs up button's tip, while the app has thumbs.</summary>
+    public string ThumbUpTip => State?.Rating == SongRating.Up
+        ? $"You gave this a thumbs up in {Player.Name}. Click to take it back (T)"
+        : $"Thumbs up: {Player.Name} plays more like this (T)";
+
+    /// <summary>The thumbs down button's tip, while the app has thumbs.</summary>
+    public string ThumbDownTip => State?.Rating == SongRating.Down
+        ? $"You gave this a thumbs down in {Player.Name}. Click to take it back (Shift+T)"
+        : $"Thumbs down: {Player.Name} skips it and plays less like it (Shift+T)";
+
+    private Task CantChange(string what)
+    {
+        Report(new RemoteProblem(State is null
+            ? $"Wait a moment for {Player.Name} to connect, then try {what} again."
+            : $"{Player.Name} doesn't let Lucent change its {what}. Change it in {Player.Name} itself."), fromButton: true);
+        return Task.CompletedTask;
     }
 
     public Task SeekAsync(TimeSpan position)
@@ -252,6 +402,30 @@ public sealed class RemoteControl : IDisposable
             state = state with { Volume = asked };
         }
 
+        if (DateTime.UtcNow < _modesHeldUntil)
+        {
+            if (state is { Shuffle: not null } && _shuffleWanted is { } shuffle)
+            {
+                state = state with { Shuffle = shuffle };
+            }
+
+            if (state is { Repeat: not null } && _repeatWanted is { } repeat)
+            {
+                state = state with { Repeat = repeat };
+            }
+        }
+        else
+        {
+            _shuffleWanted = null;
+            _repeatWanted = null;
+        }
+
+        // Only for the song it was given to: a thumbs down skips to the next one, which starts with neither.
+        if (state is { Rating: not null, Track: { } rated } && _ratingWanted is { } given && given.Song == rated.Id && DateTime.UtcNow < _ratingHeldUntil)
+        {
+            state = state with { Rating = given.Rating };
+        }
+
         if (state is { Track: { } song } && State is { Track: { } shown } && song.Id == shown.Id && DateTime.UtcNow < _positionHeldUntil)
         {
             state = state with { Position = State.PositionNow, ReadAt = DateTime.UtcNow };
@@ -303,7 +477,9 @@ public sealed class RemoteControl : IDisposable
             return;
         }
 
-        var wanted = (state.ListId, List is { FollowsSong: true } || List is null ? state.Track.Id : null);
+        // The song by its title, as its ID changes a few seconds into it (the app here names it one way, then the Web
+        // API's reading of the same song another), and reading again then would swap the list under a click.
+        var wanted = (state.ListId, List is { FollowsSong: true } || List is null ? state.Track.Title.Trim().ToLowerInvariant() : null);
         if (_listFor == wanted)
         {
             return;
@@ -335,6 +511,29 @@ public sealed class RemoteControl : IDisposable
 
         List = list;
         Changed?.Invoke(this, EventArgs.Empty);
+
+        // A long playlist shows its start straight away, and the whole of it once that's read.
+        if (list?.Rest is { } rest)
+        {
+            RemoteList whole;
+            try
+            {
+                whole = await rest(_stop.Token);
+            }
+            catch (Exception)
+            {
+                // The start stays, then; the whole playlist is read again when it next plays.
+                return;
+            }
+
+            if (_disposed || read != _listReads)
+            {
+                return;
+            }
+
+            List = whole;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void Report(Exception ex, bool fromButton = false)

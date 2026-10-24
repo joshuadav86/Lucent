@@ -1253,6 +1253,15 @@ public partial class EditorWindow : Window
         ShowStopped();
     }
 
+    /// <summary>Stops the editor's playback (and its video), as the player's Stop does for every editor.</summary>
+    public void StopPlaying()
+    {
+        if (_player.IsPlaying)
+        {
+            StopPlayback();
+        }
+    }
+
     private void ShowStopped()
     {
         AudioTools.NotifyEditorPlayingChanged();

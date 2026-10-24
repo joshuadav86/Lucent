@@ -127,10 +127,16 @@
                                 MouseLeftButtonUp="OnMeterClick" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent"
+                                ContextMenuOpening="OnNowPlayingMenuOpening">
                         <StackPanel.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                            <ContextMenu x:Name="NowPlayingMenu">
+                                <MenuItem x:Name="NowPlayingEditItem" Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                                <MenuItem x:Name="NowPlayingAddItem" Header="Add to playlist" />
+                                <MenuItem x:Name="NowPlayingShareItem" Header="Share">
+                                    <MenuItem Header="Copy song link" Click="OnNowPlayingCopyLink" />
+                                    <MenuItem Header="Copy song and link" Click="OnNowPlayingCopySongAndLink" />
+                                </MenuItem>
                             </ContextMenu>
                         </StackPanel.ContextMenu>
                         <DockPanel>
@@ -211,6 +217,15 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" />
                         </Grid>
+                    </ToggleButton>
+                    <!-- Pandora's thumbs, in shuffle and repeat's place while Lucent controls an app that has them. -->
+                    <ToggleButton x:Name="ThumbUpButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="6,0,0,0"
+                                  Visibility="Collapsed" ToolTip="Thumbs up (T)" Click="OnThumbUp">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ThumbUpIcon}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="ThumbDownButton" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  Visibility="Collapsed" ToolTip="Thumbs down (Shift+T)" Click="OnThumbDown">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ThumbDownIcon}" />
                     </ToggleButton>
                 </StackPanel>
 
@@ -361,6 +376,11 @@
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Visuals melt, glow, fly, or fold into each other, without the wipes and fades." />
 
+                    <CheckBox x:Name="LucentVisualsSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Lucent originals" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="List Lucent's own visuals in the picker and play them in Auto. Off leaves MilkDrop, AVS, and your own." />
+
                     <CheckBox x:Name="MilkDropSwitch" Style="{StaticResource SwitchToggle}"
                               Content="MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Style="{StaticResource OptionHint}"
@@ -439,7 +459,7 @@
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="On, Lucent downloads updates in the background and installs them when you close it. Off, it still downloads them and tells you one is ready, but installs it only when you choose Restart and install." />
                     <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" />
-                    <!-- Lucent checks on its own every hour; this checks now and says what it found. -->
+                    <!-- Lucent checks on its own every four hours; this checks now and says what it found. -->
                     <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed" />
                     <StackPanel x:Name="WhatsNewPanel" Visibility="Collapsed">
                         <TextBlock Style="{StaticResource OptionLabel}" Text="What's new" />
@@ -451,7 +471,7 @@
                         <Button x:Name="RestartToUpdateButton" Style="{StaticResource PillButton}" Content="Restart and install" Margin="0,0,8,0"
                                 Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Click="OnInstallUpdate" />
                         <Button x:Name="CheckUpdatesButton" Style="{StaticResource PillButton}" Content="Check for updates"
-                                ToolTip="Looks for a newer Lucent now instead of waiting for the hourly check" Click="OnCheckForUpdates" />
+                                ToolTip="Looks for a newer Lucent now instead of waiting for the next regular check" Click="OnCheckForUpdates" />
                     </StackPanel>
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Default player" />
@@ -526,6 +546,8 @@
                 <CheckBox x:Name="AppleMusicSwitch" Style="{StaticResource SwitchToggle}" Content="Apple Music" Tag="AppleMusic"
                           Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
                 <CheckBox x:Name="TidalSwitch" Style="{StaticResource SwitchToggle}" Content="TIDAL" Tag="Tidal"
+                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                <CheckBox x:Name="PandoraSwitch" Style="{StaticResource SwitchToggle}" Content="Pandora" Tag="Pandora"
                           Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
                 <!-- YouTube, SoundCloud and every other site: Windows says which browser is playing, not which site. -->
                 <CheckBox x:Name="YouTubeSwitch" Style="{StaticResource SwitchToggle}" Content="Web browser (YouTube, SoundCloud)" Tag="YouTube"

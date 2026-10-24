@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using WinampInspiredVisualizer.Playlist;
+using WinampInspiredVisualizer.Streaming;
 
 namespace WinampInspiredVisualizer.Library;
 
@@ -28,9 +29,59 @@ public sealed class LibraryItem : INotifyPropertyChanged
     public static LibraryItem Placeholder(string folder, string text) =>
         new(string.Empty, folder, string.Empty, DateTime.MinValue) { _title = text };
 
+    /// <summary>
+    /// The rows for another app's playlists (Spotify's, Music's) under PLAYLISTS: one row a playlist, under the app's heading,
+    /// split into the user's own ("Your playlists") and other people's ("Following"), each a subheading that can be closed.
+    /// The app's first list (Liked Songs, Favorite Songs) stays at the top whatever the order.
+    /// </summary>
+    /// <param name="section">The app's heading: its name.</param>
+    public static List<LibraryItem> RemotePlaylistRows(RemoteApp app, string section, IReadOnlyList<RemotePlaylist> playlists,
+        RemotePlaylistSort sort)
+    {
+        var pinned = playlists.Take(1).Where(playlist => playlist.Songs is null && playlist.Owner is null);
+        IEnumerable<RemotePlaylist> rest = playlists.Skip(pinned.Count());
+        rest = sort switch
+        {
+            RemotePlaylistSort.Name => rest.OrderBy(playlist => playlist.Name, StringComparer.CurrentCultureIgnoreCase),
+            RemotePlaylistSort.MostSongs => rest.OrderByDescending(playlist => playlist.Songs ?? -1),
+            _ => rest,
+        };
+
+        return pinned.Concat(rest.Where(playlist => playlist.Owner is null)).Concat(rest.Where(playlist => playlist.Owner is not null))
+            .Select(playlist =>
+            {
+                var songs = playlist.Songs switch
+                {
+                    null => "Your liked songs",
+                    1 => "1 song",
+                    var many => $"{many:N0} songs",
+                };
+                var heading = playlist.Owner is null ? "Your playlists" : "Following";
+                return new LibraryItem(string.Empty, $"{section} / {heading}", string.Empty, DateTime.MinValue, section)
+                {
+                    _title = playlist.Name,
+                    _remoteDetails = playlist.Owner is { } owner ? $"{songs}  ·  by {owner}" : songs,
+                    RemotePlaylist = playlist,
+                    RemoteApp = app,
+                };
+            })
+            .ToList();
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public bool IsPlaceholder => Path.Length == 0;
+
+    /// <summary>The other app's playlist this row plays (<see cref="RemotePlaylistRows"/>), or null for any other row.</summary>
+    public RemotePlaylist? RemotePlaylist { get; private init; }
+
+    /// <summary>The app <see cref="RemotePlaylist"/> is played in.</summary>
+    public RemoteApp RemoteApp { get; private init; }
+
+    private string _remoteDetails = string.Empty;
+
+    /// <summary>Whether its row has a little cover beside it: every song does, a playlist's stand-in row doesn't.</summary>
+    public bool ShowsCover => !IsPlaceholder;
 
     public string Path { get; }
 
@@ -73,7 +124,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public string DurationText => _durationText;
 
-    public string Details => IsPlaceholder ? string.Empty : string.IsNullOrEmpty(_artist)
+    public string Details => RemotePlaylist is not null ? _remoteDetails : IsPlaceholder ? string.Empty : string.IsNullOrEmpty(_artist)
         ? $"{Added:d}{StatsText}"
         : $"{_artist}  ·  {Added:d}{StatsText}";
 
@@ -103,7 +154,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
     public bool HasTags => Track is not null;
 
     /// <summary>The title, artist, album and file name, ready for the library's search box to look in.</summary>
-    public string SearchKey => _searchKey ??= SearchText.Key(new[] { _title, _artist, Album, FileName });
+    public string SearchKey => _searchKey ??= RemotePlaylist is { } playlist
+        ? SearchText.Key(new[] { playlist.Name, playlist.Owner ?? string.Empty })
+        : SearchText.Key(new[] { _title, _artist, Album, FileName });
 
     public Track ToTrack() => Track ?? Track.FromFile(Path);
 

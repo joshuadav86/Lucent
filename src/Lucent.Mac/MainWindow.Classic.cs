@@ -159,8 +159,8 @@ public partial class MainWindow
         classic.Channels = track?.Channels ?? (hasTrack ? 2 : 0);
         classic.Volume = VolumeSlider.Value;
         classic.Balance = _settings.Balance;
-        classic.Shuffle = _settings.Shuffle;
-        classic.Repeat = _settings.Repeat != RepeatMode.Off;
+        classic.Shuffle = ShownShuffle;
+        classic.Repeat = ShownRepeat != RepeatMode.Off;
         classic.EqualizerOpen = OpenEqualizerWindow is not null;
         classic.PlaylistOpen = _queue.IsVisible;
         classic.AlwaysOnTop = Topmost;
@@ -322,7 +322,7 @@ public partial class MainWindow
         menu.Items.Add(MenuItemFor("Sources…", () => ToggleSources(SourcesButton)));
         menu.Items.Add(MenuItemFor("Options…", ShowOptions));
 
-        LucentFullScreen.AddTo(menu);
+        LucentFullScreen.AddTo(menu, this);
     }
 
     private static MenuItem MenuItemFor(string header, Action action)

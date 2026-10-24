@@ -16,8 +16,9 @@ namespace Lucent.Mac.Windows;
 /// The analyzer's picture, like the Vision plugin's: a heatmap of the music scrolling right to left,
 /// low notes at the bottom and high ones at the top, coloured by how loud each frequency was at each
 /// moment, with the waveform scrolling underneath in step. Beside them sit the spectrum right now, on
-/// the same frequency scale as the heatmap, and a stereo spread scope (see Spectrogram.Panels.cs).
-/// Each of the four can be shown or hidden; the rest fill the space. It reads the music the same way
+/// the same frequency scale as the heatmap, and a stereo spread scope (see Spectrogram.Panels.cs), with
+/// loudness readouts along the bottom (see Spectrogram.Loudness.cs). Each of the five can be shown or
+/// hidden; the rest fill the space. It reads the music the same way
 /// as the equalizer's live spectrum, but keeps the last few seconds so you can see them go by.
 /// </summary>
 /// <remarks>
@@ -274,7 +275,7 @@ public sealed partial class Spectrogram : Control
     private void Arrange()
     {
         var width = Bounds.Width;
-        var height = Bounds.Height;
+        var height = ArrangeLoudness(Bounds.Width, Bounds.Height);
         var top = Shows(AnalyzerModules.Heatmap) || Shows(AnalyzerModules.Spectrum);
         var bottom = Shows(AnalyzerModules.Waveform) || Shows(AnalyzerModules.Stereo);
         var bottomHeight = !bottom ? 0
@@ -459,6 +460,7 @@ public sealed partial class Spectrogram : Control
         var sampleRate = _capture.SampleRate;
         var delay = _capture.DelaySamples;
         UpdatePanels((float)deltaTime, delay);
+        UpdateLoudness();
 
         // The picture glides left continuously, by however far this frame's time takes it, and a new
         // column is added each time it has moved a whole pixel.
@@ -666,6 +668,11 @@ public sealed partial class Spectrogram : Control
         {
             DrawStereo(dc, grid);
         }
+
+        if (Usable(_loudness))
+        {
+            DrawLoudness(dc, grid);
+        }
     }
 
     // The ring as two pieces: the newer columns (0 to the newest) end at the right edge, nudged left
@@ -785,13 +792,18 @@ public sealed partial class Spectrogram : Control
             return made;
         }
 
-        _typeface ??= new Typeface(
-            this.TryFindResource("UiFont", out var font) && font is FontFamily family ? family : FontFamily.Default,
-            FontStyle.Normal, FontWeight.SemiBold);
-        made = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _typeface.Value, size, LabelBrush);
+        made = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, UiTypeface(), size, LabelBrush);
         _labels[(text, size)] = made;
         return made;
     }
+
+    // Text that changes from frame to frame (the loudness numbers), in any colour, made fresh each time.
+    private FormattedText Text(string text, double size, IBrush brush) =>
+        new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, UiTypeface(), size, brush);
+
+    private Typeface UiTypeface() => _typeface ??= new Typeface(
+        this.TryFindResource("UiFont", out var font) && font is FontFamily family ? family : FontFamily.Default,
+        FontStyle.Normal, FontWeight.SemiBold);
 
     private void ForgetLabels()
     {

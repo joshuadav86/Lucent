@@ -43,6 +43,12 @@ public sealed class AudioCapture
 
     public int SampleRate { get; private set; } = 44100;
 
+    /// <summary>
+    /// The analyzer's loudness meter, fed every sample of whatever's shown while it's listened to, and started again
+    /// whenever what's shown changes: a new song, another source, or a new sample rate.
+    /// </summary>
+    public LoudnessMeter Loudness { get; } = new();
+
     /// <summary>True when no audio has arrived recently (paused, stopped, or nothing loaded).</summary>
     public bool IsSilent => _sinceLastWrite.Elapsed > TimeSpan.FromMilliseconds(250);
 
@@ -221,6 +227,7 @@ public sealed class AudioCapture
         Array.Clear(_rightRing);
         _written = 0;
         _lastBlock = 0;
+        Loudness.Restart(sampleRate);
     }
 
     // Call while holding the lock.
@@ -235,6 +242,11 @@ public sealed class AudioCapture
             _leftRing[at] = left[i];
             _rightRing[at] = right[i];
             _written++;
+        }
+
+        if (Loudness.IsListening)
+        {
+            Loudness.Write(left, right);
         }
 
         _lastBlock = Math.Min(samples.Length, Capacity / 4);

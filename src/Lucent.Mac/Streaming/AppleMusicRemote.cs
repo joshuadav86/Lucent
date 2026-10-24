@@ -1,11 +1,12 @@
 using System.Diagnostics;
 using System.Globalization;
+using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 
 namespace Lucent.Mac.Streaming;
 
 /// <summary>
-/// The Mac's Music app, through AppleScript: what's playing, its cover, and play, pause, skip and seek.
+/// The Mac's Music app, through AppleScript: what's playing, its cover, and play, pause, skip, seek, shuffle and repeat.
 /// No Apple sign-in is needed; whoever is signed in to the Music app is who's playing, Apple Music
 /// subscription and library alike. macOS asks once whether Lucent may control Music (Privacy &amp; Security,
 /// Automation), with the reason in Info.plist's NSAppleEventsUsageDescription.
@@ -15,12 +16,13 @@ namespace Lucent.Mac.Streaming;
 /// than controlling the Music app, so Lucent talks to the Music app the way Mac apps always have. Windows
 /// uses Windows' media controls to reach the Apple Music app (see Windows' Streaming/AppleMusicRemote.cs).
 /// </remarks>
-public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolume
+public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteModes
 {
     private const string Osascript = "/usr/bin/osascript";
 
     // Fields between tabs: state, then the song's ID, name, artist, album, length and the position, in seconds, and
-    // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station), and Music's volume (0 to 100).
+    // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station), Music's volume (0 to 100),
+    // then whether it shuffles (true or false) and what it repeats (off, one or all), empty when it won't say.
     // "is running" doesn't open Music, so Lucent never starts it by itself.
     private const string ReadScript = """
         if application "Music" is not running then return "closed"
@@ -33,7 +35,11 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolum
                 try
                     set playlistId to persistent ID of current playlist
                 end try
-                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId & tab & sound volume
+                set modes to "" & tab & ""
+                try
+                    set modes to (shuffle enabled as string) & tab & (song repeat as string)
+                end try
+                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId & tab & sound volume & tab & modes
             on error
                 return playerState
             end try
@@ -76,7 +82,160 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolum
         end tell
         """;
 
+    // The playlists the user made (not smart ones, folders or Apple Music's own), a line each: ID, name and song count, between tabs.
+    private const string PlaylistsScript = """
+        if application "Music" is not running then return "closed"
+        set sep to tab
+        tell application "Music"
+            set found to ""
+            repeat with p in (every user playlist whose smart is false and special kind is none)
+                try
+                    set found to found & (persistent ID of p) & sep & (name of p) & sep & (count of tracks of p) & linefeed
+                end try
+            end repeat
+            return found
+        end tell
+        """;
+
+    // What Lucent calls the Favorite Songs list (Music's loved songs) among the playlists.
+    private const string FavoritesUri = "music:favorites";
+
     public string Name => "Apple Music";
+
+    /// <summary>Favorite Songs, then the playlists the user made in the Music app, which songs can be added to.</summary>
+    public async Task<IReadOnlyList<RemotePlaylist>> PlaylistsAsync(CancellationToken cancel)
+    {
+        var text = await RunAsync(PlaylistsScript, cancel);
+        if (text == "closed")
+        {
+            throw new RemoteProblem("Open the Music app, then Lucent can see its playlists.");
+        }
+
+        var playlists = new List<RemotePlaylist> { new(FavoritesUri, "Favorite Songs", CanAdd: true) };
+        playlists.AddRange(ParsePlaylists(text));
+        return playlists;
+    }
+
+    /// <summary>The playlists <see cref="PlaylistsScript"/> prints.</summary>
+    internal static IEnumerable<RemotePlaylist> ParsePlaylists(string text) =>
+        text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Split('\t'))
+            .Where(fields => fields.Length >= 2 && Hex(fields[0]).Length > 0)
+            .Select(fields => new RemotePlaylist($"music:playlist:{Hex(fields[0])}", fields[1].Length > 0 ? fields[1] : "Untitled playlist",
+                fields.Length > 2 && int.TryParse(fields[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) ? count : null,
+                CanAdd: true));
+
+    public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) => playlist.Uri == FavoritesUri
+        ? TellAsync("play (first playlist whose name is \"Favorite Songs\")", cancel)
+        : TellAsync($"play (first playlist whose persistent ID is \"{Hex(playlist.Uri.Split(':')[^1])}\")", cancel);
+
+    /// <summary>
+    /// Whether the song is a favorite already, or already in the playlist: the same song (its ID) or one with its name and
+    /// artist, as a song added from Apple Music can come back with an ID of its own.
+    /// </summary>
+    public async Task<bool> ContainsAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
+    {
+        var song = Hex(track.Id);
+        string result;
+        if (playlist.Uri == FavoritesUri)
+        {
+            result = await RunAsync($$"""
+                if application "Music" is not running then return "closed"
+                tell application "Music"
+                    set t to missing value
+                    try
+                        if persistent ID of current track is "{{song}}" then set t to current track
+                    end try
+                    if t is missing value then
+                        try
+                            set t to (first track of library playlist 1 whose persistent ID is "{{song}}")
+                        end try
+                    end if
+                end tell
+                if t is missing value then return "no"
+                try
+                    return (run script "on run {t}" & return & "tell application "Music" to return favorited of t" & return & "end run" with parameters {t}) as string
+                on error
+                    try
+                        return (run script "on run {t}" & return & "tell application "Music" to return loved of t" & return & "end run" with parameters {t}) as string
+                    end try
+                end try
+                return "no"
+                """, cancel);
+        }
+        else
+        {
+            result = await RunAsync($$"""
+                if application "Music" is not running then return "closed"
+                tell application "Music"
+                    set p to (first playlist whose persistent ID is "{{Hex(playlist.Uri.Split(':')[^1])}}")
+                    if exists (first track of p whose persistent ID is "{{song}}") then return "true"
+                    if exists (first track of p whose name is "{{Quoted(track.Title)}}" and artist is "{{Quoted(track.Artist)}}") then return "true"
+                    return "false"
+                end tell
+                """, cancel);
+        }
+
+        return result == "true";
+    }
+
+    // Text inside an AppleScript string's quotes.
+    private static string Quoted(string text) => text.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    /// <summary>
+    /// Adds the song to the playlist (Music's duplicate, as dragging it there does), or makes it a favorite. The song is
+    /// found by its ID: the one playing, or in the playlist it's playing from, or in the library.
+    /// </summary>
+    public async Task AddToPlaylistAsync(RemotePlaylist playlist, RemoteTrack track, CancellationToken cancel)
+    {
+        var song = Hex(track.Id);
+        // Music calls it "favorited" since macOS 14 and "loved" before, and a script naming the other wouldn't compile,
+        // so each is tried in a script of its own (outside Music's tell, as running a script is AppleScript's, not Music's).
+        var add = playlist.Uri == FavoritesUri
+            ? """
+                try
+                    run script "on run {t}" & return & "tell application \"Music\" to set favorited of t to true" & return & "end run" with parameters {t}
+                on error
+                    run script "on run {t}" & return & "tell application \"Music\" to set loved of t to true" & return & "end run" with parameters {t}
+                end try
+                """
+            : $"tell application \"Music\" to duplicate t to (first playlist whose persistent ID is \"{Hex(playlist.Uri.Split(':')[^1])}\")";
+        var result = await RunAsync($$"""
+            if application "Music" is not running then return "closed"
+            tell application "Music"
+                set t to missing value
+                try
+                    if persistent ID of current track is "{{song}}" then set t to current track
+                end try
+                if t is missing value then
+                    try
+                        set t to (first track of current playlist whose persistent ID is "{{song}}")
+                    end try
+                end if
+                if t is missing value then
+                    try
+                        set t to (first track of library playlist 1 whose persistent ID is "{{song}}")
+                    end try
+                end if
+                if t is missing value then return "missing"
+            end tell
+            try
+                {{add}}
+            on error
+                return "refused"
+            end try
+            return "ok"
+            """, cancel);
+        if (result != "ok")
+        {
+            throw new RemoteProblem(result switch
+            {
+                "closed" => "Open the Music app, then Lucent can add songs to its playlists.",
+                "missing" => "Music couldn't find that song any more. Play it again, then try once more.",
+                _ => $"Music wouldn't add that song to {playlist.Name}. A song from Apple Music may need adding to your library first.",
+            });
+        }
+    }
 
     public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
@@ -101,8 +260,21 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemoteVolum
         double? volume = fields.Length > 8 && int.TryParse(fields[8], NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent)
             ? Math.Clamp(percent / 100.0, 0, 1)
             : null;
-        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist, Volume: volume);
+        bool? shuffle = fields.Length > 9 ? fields[9] switch { "true" => true, "false" => false, _ => null } : null;
+        RepeatMode? repeat = fields.Length > 10
+            ? fields[10] switch { "off" => RepeatMode.Off, "all" => RepeatMode.All, "one" => RepeatMode.One, _ => null }
+            : null;
+        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist, Volume: volume, Shuffle: shuffle, Repeat: repeat);
     }
+
+    public Task SetShuffleAsync(bool on, CancellationToken cancel) => TellAsync($"set shuffle enabled to {(on ? "true" : "false")}", cancel);
+
+    public Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel) => TellAsync(mode switch
+    {
+        RepeatMode.One => "set song repeat to one",
+        RepeatMode.All => "set song repeat to all",
+        _ => "set song repeat to off",
+    }, cancel);
 
     public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel) =>
         state.ListId is null ? null : ParseList(state.ListId, await RunAsync(ListScript, cancel));

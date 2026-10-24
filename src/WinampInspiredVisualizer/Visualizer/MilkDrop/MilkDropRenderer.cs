@@ -172,6 +172,10 @@ internal sealed class MilkDropRenderer : IDisposable
             {
                 context.VSSetShader(_drawVertices);
                 context.VSSetShaderResource(13, _shapes!.View);
+
+                // Textured shapes read through the first sampler; clamp it when MilkDrop would have.
+                var shapesWrap = runner.ShapesWrap(visual.Warp is not null, visual.BlurLevels);
+                context.PSSetSampler(0, shapesWrap ? _samplers[0] : _samplers[1]);
                 foreach (var batch in geometry.Batches)
                 {
                     context.OMSetBlendState(batch.Additive ? _additiveBlend : _alphaBlend);
@@ -180,6 +184,7 @@ internal sealed class MilkDropRenderer : IDisposable
                 }
 
                 context.OMSetBlendState(null);
+                context.PSSetSampler(0, _samplers[0]);
             }
 
             // 3. Blurred copies for the shaders, each from the one before.

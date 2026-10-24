@@ -3,7 +3,7 @@ using WinampInspiredVisualizer.Updates;
 
 namespace WinampInspiredVisualizer;
 
-// Checking for updates on demand, from the Updates tab in Options. The hourly check runs either way.
+// Checking for updates on demand, from the Updates tab in Options. The regular check runs either way.
 public partial class MainWindow
 {
     private bool _checkingForUpdates;

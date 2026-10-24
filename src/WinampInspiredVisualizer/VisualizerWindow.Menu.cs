@@ -48,6 +48,13 @@ public partial class VisualizerWindow
             menu.Items.Add(favourite);
         }
 
+        var originals = Item("Lucent originals", null, () =>
+        {
+            ShowLucentOriginals(!_settings.LucentVisuals);
+            Player?.ShowOptionsState();
+        });
+        originals.IsChecked = _settings.LucentVisuals;
+        menu.Items.Add(originals);
         menu.Items.Add(MilkDropMenu());
         menu.Items.Add(AvsMenu());
 
@@ -98,7 +105,7 @@ public partial class VisualizerWindow
             player.AddGraphicsItems(menu);
         }
 
-        Windows.LucentFullScreen.AddTo(menu);
+        Windows.LucentFullScreen.AddTo(menu, this);
         menu.IsOpen = true;
     }
 

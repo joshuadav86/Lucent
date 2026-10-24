@@ -64,6 +64,16 @@ public partial class MainWindow
         UpdateTrackFavoriteButton();
     }
 
+    /// <summary>Shows Pandora's thumbs in shuffle and repeat's place, as while Lucent controls Pandora, with <paramref name="rating"/> lit.</summary>
+    internal void PreviewThumbs(WinampInspiredVisualizer.Streaming.SongRating rating, string details)
+    {
+        TrackDetails.Text = details;
+        ShuffleButton.IsVisible = RepeatButton.IsVisible = false;
+        ThumbUpButton.IsVisible = ThumbDownButton.IsVisible = true;
+        ThumbUpButton.IsChecked = rating == WinampInspiredVisualizer.Streaming.SongRating.Up;
+        ThumbDownButton.IsChecked = rating == WinampInspiredVisualizer.Streaming.SongRating.Down;
+    }
+
     /// <summary>Puts on a skin (with its own theme), as picking it in the options does.</summary>
     internal void PreviewSkin(string skin)
     {
