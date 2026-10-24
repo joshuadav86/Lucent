@@ -588,9 +588,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
             return saved.RootElement.ValueKind == JsonValueKind.Array && saved.RootElement.EnumerateArray().FirstOrDefault().ValueKind == JsonValueKind.True;
         }
 
-        var songs = await PagesAsync($"{Root}/playlists/{playlist.Uri.Split(':')[^1]}/items?limit=50&additional_types=track,episode", null,
+        var (songs, _, _) = await PagesAsync($"{Root}/playlists/{playlist.Uri.Split(':')[^1]}/items?limit=50&additional_types=track,episode", null,
             entry => ParseTrack(entry.TryGetProperty("item", out var item) ? item : entry.TryGetProperty("track", out var each) ? each : default, null),
-            cancel);
+            MostSongs, TimeSpan.Zero, cancel);
         return songs.Any(each => each.Uri == song || each.Id == track.Id);
     }
 
