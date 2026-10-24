@@ -63,6 +63,19 @@
             <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34" Background="{DynamicResource TitleBarBrush}"
                        w:Chrome.IsCaption="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- How Spotify's playlist is listed: its own order, by date added, title or artist. -->
+                    <Button x:Name="SortButton" Theme="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
+                            IsVisible="False"
+                            ToolTip.Tip="List the playlist in its own order, by date added, by title or by artist. It still plays in its own order."
+                            Click="OnSortMenu">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="0,0,8,0" />
+                            <TextBlock x:Name="SortButtonText" Text="Playlist order" FontSize="12" VerticalAlignment="Center" />
+                            <Path Theme="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
+                                  Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
                     <!-- Favourite songs and saved playlists: play them, or save the queue as one. -->
                     <Button x:Name="PlaylistsButton" Theme="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
                             ToolTip.Tip="Play your favorite sounds or a saved playlist, or save the queue as a playlist"
