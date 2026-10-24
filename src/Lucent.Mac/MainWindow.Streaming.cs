@@ -60,8 +60,8 @@ public partial class MainWindow
     /// <summary>Starts showing and controlling <paramref name="app"/>, signing in first when it needs it and <paramref name="signIn"/> allows.</summary>
     private async void ControlRemote(RemoteApp app, bool signIn)
     {
-        // A Spotify playlist double-clicked in the library while Spotify wasn't being controlled plays once it is.
-        var playlist = _playWhenConnected;
+        // A playlist double-clicked in the library while its app wasn't being controlled plays once it is.
+        var pending = _playWhenConnected;
         _playWhenConnected = null;
         IRemotePlayer player;
         try
@@ -135,9 +135,9 @@ public partial class MainWindow
         _settings.Save();
         _remote = new RemoteControl(player);
         _remote.Changed += OnRemoteChanged;
-        if (playlist is not null && app == RemoteApp.Spotify)
+        if (pending is { } wanted && wanted.App == app)
         {
-            _ = _remote.PlayPlaylistAsync(playlist);
+            _ = _remote.PlayPlaylistAsync(wanted.Playlist);
         }
 
         UpdateListening();
@@ -237,7 +237,7 @@ public partial class MainWindow
     /// <summary>Plays one of the songs from the other app's playlist, in that app.</summary>
     public void PlayFromRemoteList(RemoteTrack track) => RemoteTakes(remote => remote.PlayFromListAsync(track));
 
-    private RemotePlaylist? _playWhenConnected;
+    private (RemoteApp App, RemotePlaylist Playlist)? _playWhenConnected;
 
     /// <summary>
     /// The Spotify account's playlists for the library, or null when Lucent isn't signed in to Spotify. While Spotify is
@@ -299,17 +299,53 @@ public partial class MainWindow
         return await ask(spotify);
     }
 
-    /// <summary>Plays one of the account's Spotify playlists in Spotify, starting to control Spotify first when it isn't.</summary>
-    public void PlaySpotifyPlaylist(RemotePlaylist playlist)
+    /// <summary>
+    /// The apps whose playlists the library lists under PLAYLISTS: Spotify, and the Music app (while it's open, as asking it
+    /// would otherwise open it). YouTube, TIDAL and SoundCloud play in a web page, which can't say what's in the account.
+    /// </summary>
+    public IReadOnlyList<RemoteApp> PlaylistApps { get; } = [RemoteApp.Spotify, RemoteApp.AppleMusic];
+
+    /// <summary>
+    /// An app's playlists for the library, or null when there are none to show (not signed in to Spotify, Music not open).
+    /// </summary>
+    /// <exception cref="RemoteProblem">When the app won't list them, worded for the user.</exception>
+    public async Task<IReadOnlyList<RemotePlaylist>?> RemotePlaylistsAsync(RemoteApp app)
     {
-        if (_remote is { Player: SpotifyRemote } remote)
+        switch (app)
+        {
+            case RemoteApp.Spotify:
+                return await SpotifyPlaylistsAsync();
+            case RemoteApp.AppleMusic:
+                // Each request to Music is its own osascript run, so another connection beside the controlling one is fine.
+                using (var music = new AppleMusicRemote())
+                {
+                    try
+                    {
+                        return await music.PlaylistsAsync(CancellationToken.None);
+                    }
+                    catch (RemoteProblem problem) when (problem.Message.StartsWith("Open the Music app", StringComparison.Ordinal))
+                    {
+                        // Music isn't open, and the library doesn't open it.
+                        return null;
+                    }
+                }
+
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>Plays one of an app's playlists in the app, starting to control the app first when it isn't.</summary>
+    public void PlayRemotePlaylist(RemoteApp app, RemotePlaylist playlist)
+    {
+        if (_remote is not null && _settings.RemoteApp == app)
         {
             RemoteTakes(control => control.PlayPlaylistAsync(playlist));
             return;
         }
 
-        _playWhenConnected = playlist;
-        ControlRemote(RemoteApp.Spotify, signIn: true);
+        _playWhenConnected = (app, playlist);
+        ControlRemote(app, signIn: true);
     }
 
     private void OnRemoteChanged(object? sender, EventArgs e)
