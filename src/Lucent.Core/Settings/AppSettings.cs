@@ -94,6 +94,9 @@ public sealed class AppSettings
     /// <summary>Take the output for Lucent alone and send each track at its own format: bit-perfect playback.</summary>
     public bool ExclusiveOutput { get; set; }
 
+    /// <summary>List Lucent's original shaders in the visual picker and play them in Auto (off leaves MilkDrop, AVS and the user's own).</summary>
+    public bool LucentVisuals { get; set; } = true;
+
     /// <summary>List MilkDrop presets in the visual picker and play them in Auto.</summary>
     public bool MilkDropVisuals { get; set; } = true;
 

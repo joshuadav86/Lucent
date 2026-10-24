@@ -37,6 +37,9 @@ public sealed class VisualChoice : INotifyPropertyChanged
     /// <summary>A Winamp AVS preset, listed in the Winamp AVS folder.</summary>
     public bool IsAvs => Family == VisualStyles.AvsFamily;
 
+    /// <summary>One of Lucent's original shaders (see <see cref="PresetSource.IsLucentOriginal"/>).</summary>
+    public bool IsLucentOriginal { get; init; }
+
     /// <summary>Who made it (MilkDrop and AVS presets), or null.</summary>
     public string? Author { get; }
 

@@ -51,9 +51,30 @@ public partial class VisualizerWindow
         ShowActiveList();
     }
 
-    /// <summary>Whether a visual is in the picker and Auto: MilkDrop and AVS presets only while they're switched on.</summary>
+    /// <summary>
+    /// Whether a visual is in the picker and Auto: Lucent's originals, MilkDrop and AVS presets only while they're
+    /// switched on.
+    /// </summary>
     private bool IsSwitchedOn(VisualChoice choice) =>
-        (_settings.MilkDropVisuals || !choice.IsMilkDrop) && (_settings.AvsVisuals || !choice.IsAvs);
+        (_settings.LucentVisuals || !choice.IsLucentOriginal)
+        && (_settings.MilkDropVisuals || !choice.IsMilkDrop) && (_settings.AvsVisuals || !choice.IsAvs);
+
+    /// <summary>
+    /// Lists Lucent's original shaders in the picker and lets Auto play them, or leaves them out of both, so only
+    /// MilkDrop, AVS and the user's own visuals are left. Switched off while one is showing, it moves on to the
+    /// first visual still listed.
+    /// </summary>
+    public void ShowLucentOriginals(bool shown)
+    {
+        _settings.LucentVisuals = shown;
+        _settings.Save();
+        ShowActiveList();
+        if (_host is not null && CurrentChoice() is { } current && !IsSwitchedOn(current) && _shown.Count > 0)
+        {
+            _host.PresetIndex = _shown[0].Index;
+            ShowPreset();
+        }
+    }
 
     /// <summary>
     /// Shows AVS presets modernised (sharper, smoothly enlarged, and lit by Lucent's glow and tone-mapping) or as
