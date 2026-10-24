@@ -454,6 +454,29 @@ public sealed class RemoteControl : IDisposable
 
         List = list;
         Changed?.Invoke(this, EventArgs.Empty);
+
+        // A long playlist shows its start straight away, and the whole of it once that's read.
+        if (list?.Rest is { } rest)
+        {
+            RemoteList whole;
+            try
+            {
+                whole = await rest(_stop.Token);
+            }
+            catch (Exception)
+            {
+                // The start stays, then; the whole playlist is read again when it next plays.
+                return;
+            }
+
+            if (_disposed || read != _listReads)
+            {
+                return;
+            }
+
+            List = whole;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void Report(Exception ex, bool fromButton = false)

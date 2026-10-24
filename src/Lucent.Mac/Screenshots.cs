@@ -406,7 +406,7 @@ public static partial class Screenshots
         PreviewCovers(songs.Zip(tracks, (song, track) => (track.ThumbnailUrl!, song)));
         var queue = new QueueWindow();
         queue.ShowRemoteList("Spotify", new WinampInspiredVisualizer.Streaming.RemoteList("spotify:playlist:preview", "Late night", tracks),
-            tracks[1].Id);
+            tracks[1]);
         return queue;
     }
 

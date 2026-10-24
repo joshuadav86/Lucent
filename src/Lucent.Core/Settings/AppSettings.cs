@@ -347,6 +347,9 @@ public sealed class AppSettings
     /// <summary>The other app the player shows and controls instead of Lucent's own music, if any.</summary>
     public RemoteApp RemoteApp { get; set; }
 
+    /// <summary>How the queue window lists the other app's playlist: its own order, by date added, title or artist.</summary>
+    public RemoteListOrder RemoteListOrder { get; set; }
+
     // ---- Online radio ----
 
     /// <summary>Stations starred in the radio browser, kept whole so they play even when the directory is down.</summary>

@@ -19,9 +19,25 @@ public enum RemoteApp
 /// <param name="ArtworkUrl">Where its cover can be downloaded, when the app gives one as a web address.</param>
 /// <param name="Uri">What the app calls the song when asked to play it (Spotify's spotify:track:…), when that isn't its ID.</param>
 /// <param name="ThumbnailUrl">A small copy of its cover, for the little picture beside it in a list, when the app gives one.</param>
+/// <param name="AddedAt">When it was added to the playlist (or liked) it's listed in, when the app says.</param>
 public sealed record RemoteTrack(string Id, string Title, string Artist, string Album, TimeSpan Duration, string? ArtworkUrl = null,
-    string? Uri = null, string? ThumbnailUrl = null)
+    string? Uri = null, string? ThumbnailUrl = null, DateTime? AddedAt = null)
 {
+    /// <summary>
+    /// Whether <paramref name="other"/> is the same song: by ID, or by Spotify URI, or failing those by title and artist,
+    /// as the app here and the Web API name the same song differently for its first few seconds.
+    /// </summary>
+    public bool IsSameSong(RemoteTrack? other) =>
+        other is not null
+        && (Id == other.Id
+            || (Uri is not null && Uri == other.Uri)
+            || (string.Equals(Title.Trim(), other.Title.Trim(), StringComparison.OrdinalIgnoreCase) && SameArtist(Artist, other.Artist)));
+
+    // One may name every artist ("Ulrich Schnauss, Mark Peters") where the other names only the first.
+    private static bool SameArtist(string a, string b) =>
+        a.Length == 0 || b.Length == 0
+        || a.Contains(b.Trim(), StringComparison.OrdinalIgnoreCase) || b.Contains(a.Trim(), StringComparison.OrdinalIgnoreCase);
+
     /// <summary>The cover to show beside it in a list: the small copy, or the full one when there's no small one.</summary>
     public string? ListArtUrl => ThumbnailUrl ?? ArtworkUrl;
 
@@ -56,7 +72,19 @@ public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Po
 /// <param name="Id">The <see cref="RemoteState.ListId"/> it was read for (for what's up next, the playlist or album it plays from, or null).</param>
 /// <param name="Note">Why it isn't the whole playlist, worded for the user, or null when it is.</param>
 /// <param name="FollowsSong">True for a list that changes with every song (what's up next), so it's read again when the song changes.</param>
-public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTrack> Tracks, string? Note = null, bool FollowsSong = false);
+/// <param name="Total">How many songs the whole list has, when <paramref name="Rest"/> is still to be read.</param>
+/// <param name="Rest">
+/// Reads the whole of a long playlist, of which <paramref name="Tracks"/> is only the start, or null when it's all there.
+/// It's read slowly after the start shows, so a playlist of thousands of songs doesn't ask too much of the app at once.
+/// </param>
+public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTrack> Tracks, string? Note = null, bool FollowsSong = false,
+    int? Total = null, Func<CancellationToken, Task<RemoteList>>? Rest = null)
+{
+    /// <summary>The count in the queue window's title bar: "Deep Chill  ·  1000 of 4210 songs" while the rest is read.</summary>
+    public string CountText => Rest is not null && Total > Tracks.Count
+        ? $"{Name}  ·  {Tracks.Count} of {Total} songs"
+        : Tracks.Count == 1 ? $"{Name}  ·  1 song" : $"{Name}  ·  {Tracks.Count} songs";
+}
 
 /// <summary>A playlist in the account of an app Lucent controls, listed in the library under PLAYLISTS.</summary>
 /// <param name="Uri">What the app calls it when asked to play it (Spotify's spotify:playlist:…).</param>
