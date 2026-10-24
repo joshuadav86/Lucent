@@ -12,6 +12,16 @@ public enum RemoteApp
     YouTube,
     Tidal,
     SoundCloud,
+    Pandora,
+}
+
+/// <summary>What the user thinks of the playing song, as an app with thumbs (Pandora) keeps it.</summary>
+public enum SongRating
+{
+    /// <summary>Neither thumb.</summary>
+    None,
+    Up,
+    Down,
 }
 
 /// <summary>A song playing in another app, as that app describes it.</summary>
@@ -38,8 +48,10 @@ public sealed record RemoteTrack(string Id, string Title, string Artist, string 
 /// </param>
 /// <param name="Shuffle">Whether the app is shuffling, or null when Lucent can't read or change it.</param>
 /// <param name="Repeat">What the app repeats, or null when Lucent can't read or change it.</param>
+/// <param name="Rating">The song's thumb (Pandora's thumbs up and down), or null when the app has no thumbs Lucent can press.</param>
 public sealed record RemoteState(RemoteTrack? Track, bool IsPlaying, TimeSpan Position, DateTime ReadAt, string? ListId = null,
-    string? Device = null, double? Volume = null, bool IsElsewhere = false, bool? Shuffle = null, RepeatMode? Repeat = null)
+    string? Device = null, double? Volume = null, bool IsElsewhere = false, bool? Shuffle = null, RepeatMode? Repeat = null,
+    SongRating? Rating = null)
 {
     /// <summary>Where the song is now: the position it was read at, moved on by the time since while it plays.</summary>
     public TimeSpan PositionNow
@@ -83,6 +95,16 @@ public interface IRemoteModes
 
     /// <exception cref="NotSupportedException">When the app can't repeat that way (Spotify's Mac app can't repeat one song).</exception>
     Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel);
+}
+
+/// <summary>An app with thumbs up and down for the playing song (Pandora), which Lucent can press (<see cref="RemoteState.Rating"/>).</summary>
+public interface IRemoteRating
+{
+    /// <summary>
+    /// Gives the playing song <paramref name="rating"/>, or takes its thumb back for <see cref="SongRating.None"/>. A thumbs
+    /// down on Pandora skips the song too.
+    /// </summary>
+    Task RateAsync(SongRating rating, CancellationToken cancel);
 }
 
 /// <summary>An app that can play on one of several devices (Spotify Connect), and can be moved to this computer.</summary>

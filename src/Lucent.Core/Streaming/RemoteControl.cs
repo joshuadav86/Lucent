@@ -36,6 +36,11 @@ public sealed class RemoteControl : IDisposable
     private RepeatMode? _repeatWanted;
     private DateTime _modesHeldUntil;
 
+    // The thumb just given, the song it was given to, and until when reads keep showing it, as the app can take a
+    // moment to light its thumb (or, on Windows, may not say at all).
+    private (string Song, SongRating Rating)? _ratingWanted;
+    private DateTime _ratingHeldUntil;
+
     // Until when reads keep the position just sought to, rather than where the app was before it caught up.
     private DateTime _positionHeldUntil;
 
@@ -260,6 +265,52 @@ public sealed class RemoteControl : IDisposable
         _ => $"Repeat is off in {Player.Name}. Click to repeat the whole playlist (R)",
     };
 
+    /// <summary>True when the app has thumbs up and down Lucent can press (<see cref="RemoteState.Rating"/>).</summary>
+    public bool HasRating => Player is IRemoteRating && State is { Rating: not null, Track: not null };
+
+    /// <summary>Gives the song a thumbs up, or takes it back when it has one.</summary>
+    public Task ThumbUpAsync() => RateAsync(SongRating.Up);
+
+    /// <summary>Gives the song a thumbs down (which skips it, on Pandora), or takes it back when it has one.</summary>
+    public Task ThumbDownAsync() => RateAsync(SongRating.Down);
+
+    private Task RateAsync(SongRating thumb)
+    {
+        if (Player is not IRemoteRating rating || State is not { Rating: { } shown, Track: { } song })
+        {
+            return CantChange("thumbs");
+        }
+
+        // Pressing a lit thumb takes it back, as in the app.
+        var wanted = shown == thumb ? SongRating.None : thumb;
+        _ratingWanted = (song.Id, wanted);
+        _ratingHeldUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        return RunAsync(
+            async cancel =>
+            {
+                try
+                {
+                    await rating.RateAsync(wanted, cancel);
+                }
+                catch (Exception)
+                {
+                    _ratingWanted = null;
+                    throw;
+                }
+            },
+            state => state with { Rating = wanted });
+    }
+
+    /// <summary>The thumbs up button's tip, while the app has thumbs.</summary>
+    public string ThumbUpTip => State?.Rating == SongRating.Up
+        ? $"You gave this a thumbs up in {Player.Name}. Click to take it back (T)"
+        : $"Thumbs up: {Player.Name} plays more like this (T)";
+
+    /// <summary>The thumbs down button's tip, while the app has thumbs.</summary>
+    public string ThumbDownTip => State?.Rating == SongRating.Down
+        ? $"You gave this a thumbs down in {Player.Name}. Click to take it back (Shift+T)"
+        : $"Thumbs down: {Player.Name} skips it and plays less like it (Shift+T)";
+
     private Task CantChange(string what)
     {
         Report(new RemoteProblem(State is null
@@ -367,6 +418,12 @@ public sealed class RemoteControl : IDisposable
         {
             _shuffleWanted = null;
             _repeatWanted = null;
+        }
+
+        // Only for the song it was given to: a thumbs down skips to the next one, which starts with neither.
+        if (state is { Rating: not null, Track: { } rated } && _ratingWanted is { } given && given.Song == rated.Id && DateTime.UtcNow < _ratingHeldUntil)
+        {
+            state = state with { Rating = given.Rating };
         }
 
         if (state is { Track: { } song } && State is { Track: { } shown } && song.Id == shown.Id && DateTime.UtcNow < _positionHeldUntil)

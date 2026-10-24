@@ -36,7 +36,10 @@ public sealed class YouTubeRemote : MediaControlsRemote
     protected override string NotOpen => "Play YouTube, SoundCloud or another site in your web browser";
 
     // The browser playing, as its process is named; every browser Lucent knows until one has been read.
-    public override IReadOnlyList<string> ProcessNames => SourceAppId switch
+    public override IReadOnlyList<string> ProcessNames => BrowserProcessNames(SourceAppId);
+
+    /// <summary>The process of the browser Windows names <paramref name="appId"/>, or every browser Lucent knows for null.</summary>
+    internal static IReadOnlyList<string> BrowserProcessNames(string? appId) => appId switch
     {
         { } id when id.Contains("MSEdge", StringComparison.OrdinalIgnoreCase) || id.Contains("Edge", StringComparison.OrdinalIgnoreCase) => ["msedge"],
         { } id when id.Contains("Brave", StringComparison.OrdinalIgnoreCase) => ["brave"],
@@ -45,8 +48,11 @@ public sealed class YouTubeRemote : MediaControlsRemote
         { } id when id.Contains("Firefox", StringComparison.OrdinalIgnoreCase) || id.Contains("308046B0AF4A39CB", StringComparison.OrdinalIgnoreCase) => ["firefox"],
         { } id when id.Contains("Chromium", StringComparison.OrdinalIgnoreCase) => ["chromium"],
         { } id when id.Contains("Chrome", StringComparison.OrdinalIgnoreCase) => ["chrome"],
-        _ => ["chrome", "msedge", "brave", "opera", "vivaldi", "firefox", "chromium"],
+        _ => AllBrowsers,
     };
+
+    /// <summary>Every browser Lucent knows, as their processes are named.</summary>
+    internal static IReadOnlyList<string> AllBrowsers { get; } = ["chrome", "msedge", "brave", "opera", "vivaldi", "firefox", "chromium"];
 
     protected override GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions)
     {
@@ -57,6 +63,6 @@ public sealed class YouTubeRemote : MediaControlsRemote
             ?? browsers.FirstOrDefault();
     }
 
-    private static bool IsBrowser(string? appId) =>
+    internal static bool IsBrowser(string? appId) =>
         appId is not null && Browsers.Any(browser => appId.Contains(browser, StringComparison.OrdinalIgnoreCase));
 }

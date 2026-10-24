@@ -73,6 +73,10 @@ public partial class MainWindow
         TidalSwitch.IsEnabled = TidalRemote.IsSupported;
         TidalSwitch.ToolTip = "Show what the TIDAL app is playing and use the player's buttons for it. The sound stays in TIDAL. For TIDAL's web player, use the web browser switch below.";
 
+        PandoraSwitch.IsChecked = _settings.RemoteApp == RemoteApp.Pandora;
+        PandoraSwitch.IsEnabled = PandoraRemote.IsSupported;
+        PandoraSwitch.ToolTip = "Show what Pandora is playing (its app, or pandora.com in your browser) and use the player's buttons for it, thumbs up and down included. The sound stays in Pandora.";
+
         YouTubeSwitch.IsChecked = _settings.RemoteApp == RemoteApp.YouTube;
         YouTubeSwitch.IsEnabled = YouTubeRemote.IsSupported;
         YouTubeSwitch.ToolTip = "Show what's playing in your web browser (YouTube, SoundCloud, TIDAL's web player, or any site) and use the player's buttons for it. The sound stays in the browser.";

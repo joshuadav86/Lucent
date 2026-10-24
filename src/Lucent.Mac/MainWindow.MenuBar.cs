@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Windows;
 using WinampInspiredVisualizer.Settings;
+using WinampInspiredVisualizer.Streaming;
 
 namespace Lucent.Mac;
 
@@ -116,9 +117,13 @@ public partial class MainWindow
         var shuffle = Check("Shuffle", ToggleShuffle);
         var repeat = Item("Repeat", CycleRepeat);
         var favorite = Check("Favorite Sound", ToggleTrackFavorite);
+        var thumbUp = Check("Thumbs Up", ThumbUp);
+        var thumbDown = Check("Thumbs Down", ThumbDown);
         playback.Add(shuffle);
         playback.Add(repeat);
         playback.Add(favorite);
+        playback.Add(thumbUp);
+        playback.Add(thumbDown);
         playback.Opening += (_, _) =>
         {
             play.Header = _player.IsPlaying ? "Pause" : "Play";
@@ -131,6 +136,11 @@ public partial class MainWindow
             };
             favorite.IsEnabled = _current is not null;
             favorite.IsChecked = _current is not null && IsFavoriteTrack(_current.Track.Path);
+            // Pandora's thumbs, while Lucent controls it.
+            var rating = _remote is { HasRating: true } remote ? remote.State?.Rating : null;
+            thumbUp.IsEnabled = thumbDown.IsEnabled = rating is not null;
+            thumbUp.IsChecked = rating == SongRating.Up;
+            thumbDown.IsChecked = rating == SongRating.Down;
         };
         bar.Add(new NativeMenuItem("Playback") { Menu = playback });
 

@@ -19,6 +19,7 @@ using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Playlist;
 using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Stores;
+using WinampInspiredVisualizer.Streaming;
 using WinampInspiredVisualizer.Themes;
 using WinampInspiredVisualizer.Updates;
 using WinampInspiredVisualizer.Visualizer;
@@ -1869,8 +1870,47 @@ public partial class MainWindow : Window
         _settings.Save();
     }
 
+    private void OnThumbUp(object sender, RoutedEventArgs e) => ThumbUp();
+
+    private void OnThumbDown(object sender, RoutedEventArgs e) => ThumbDown();
+
+    // Thumbs up and down, for an app that has them (Pandora). Nothing happens for one that doesn't.
+    private void ThumbUp()
+    {
+        if (_remote is { HasRating: true })
+        {
+            RemoteTakes(remote => remote.ThumbUpAsync());
+        }
+
+        UpdateShuffleRepeatButtons();
+    }
+
+    private void ThumbDown()
+    {
+        if (_remote is { HasRating: true })
+        {
+            RemoteTakes(remote => remote.ThumbDownAsync());
+        }
+
+        UpdateShuffleRepeatButtons();
+    }
+
     private void UpdateShuffleRepeatButtons()
     {
+        // An app with thumbs and no shuffle or repeat (Pandora's stations) shows its thumbs in their place.
+        var thumbs = _remote is { HasRating: true, HasShuffle: false, HasRepeat: false };
+        ShuffleButton.Visibility = !thumbs ? Visibility.Visible : Visibility.Collapsed;
+        RepeatButton.Visibility = !thumbs ? Visibility.Visible : Visibility.Collapsed;
+        ThumbUpButton.Visibility = thumbs ? Visibility.Visible : Visibility.Collapsed;
+        ThumbDownButton.Visibility = thumbs ? Visibility.Visible : Visibility.Collapsed;
+        if (thumbs)
+        {
+            ThumbUpButton.IsChecked = _remote!.State?.Rating == SongRating.Up;
+            ThumbDownButton.IsChecked = _remote.State?.Rating == SongRating.Down;
+            ThumbUpButton.ToolTip = _remote.ThumbUpTip;
+            ThumbDownButton.ToolTip = _remote.ThumbDownTip;
+        }
+
         ShuffleButton.IsChecked = ShownShuffle;
         RepeatButton.IsChecked = ShownRepeat != RepeatMode.Off;
         RepeatOneBadge.Visibility = ShownRepeat == RepeatMode.One ? Visibility.Visible : Visibility.Collapsed;
@@ -2054,6 +2094,12 @@ public partial class MainWindow : Window
                 break;
             case Key.S:
                 ToggleShuffle();
+                break;
+            case Key.T when Keyboard.Modifiers == ModifierKeys.Shift:
+                ThumbDown();
+                break;
+            case Key.T:
+                ThumbUp();
                 break;
             case Key.R:
                 CycleRepeat();

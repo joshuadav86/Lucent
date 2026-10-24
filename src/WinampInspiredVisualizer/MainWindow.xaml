@@ -218,6 +218,15 @@
                                        Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" />
                         </Grid>
                     </ToggleButton>
+                    <!-- Pandora's thumbs, in shuffle and repeat's place while Lucent controls an app that has them. -->
+                    <ToggleButton x:Name="ThumbUpButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="6,0,0,0"
+                                  Visibility="Collapsed" ToolTip="Thumbs up (T)" Click="OnThumbUp">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ThumbUpIcon}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="ThumbDownButton" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  Visibility="Collapsed" ToolTip="Thumbs down (Shift+T)" Click="OnThumbDown">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ThumbDownIcon}" />
+                    </ToggleButton>
                 </StackPanel>
 
                 <!-- Each lights up while its window is open. -->
@@ -532,6 +541,8 @@
                 <CheckBox x:Name="AppleMusicSwitch" Style="{StaticResource SwitchToggle}" Content="Apple Music" Tag="AppleMusic"
                           Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
                 <CheckBox x:Name="TidalSwitch" Style="{StaticResource SwitchToggle}" Content="TIDAL" Tag="Tidal"
+                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                <CheckBox x:Name="PandoraSwitch" Style="{StaticResource SwitchToggle}" Content="Pandora" Tag="Pandora"
                           Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
                 <!-- YouTube, SoundCloud and every other site: Windows says which browser is playing, not which site. -->
                 <CheckBox x:Name="YouTubeSwitch" Style="{StaticResource SwitchToggle}" Content="Web browser (YouTube, SoundCloud)" Tag="YouTube"
