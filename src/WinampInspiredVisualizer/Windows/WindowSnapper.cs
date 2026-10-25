@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using WinampInspiredVisualizer.Layout;
 
 namespace WinampInspiredVisualizer.Windows;
@@ -54,7 +55,6 @@ public sealed class WindowSnapper
     private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint MONITOR_DEFAULTTONEAREST = 2;
-    private const int MDT_EFFECTIVE_DPI = 0;
     private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     private const int VK_CONTROL = 0x11;
     private const uint GW_HWNDNEXT = 2;
@@ -83,6 +83,9 @@ public sealed class WindowSnapper
     private Rect _startRect;
     private Rect _startMargins;
     private bool _resized;
+
+    /// <summary>True while a dropped group is lined up again around the player (<see cref="Settle"/>).</summary>
+    private bool _settling;
 
     /// <summary>True while Windows is moving or resizing a locked window, which is held where it started.</summary>
     private bool _held;
@@ -248,7 +251,7 @@ public sealed class WindowSnapper
                 Marshal.StructureToPtr(Outer(rect, _startMargins), lParam, false);
                 break;
             }
-            case WM_DPICHANGED when _moving != IntPtr.Zero && _carried.Count > 0:
+            case WM_DPICHANGED when (_moving != IntPtr.Zero || _settling) && _carried.Count > 0:
                 OnDpiChanged(hwnd, wParam, lParam);
                 break;
             case WM_EXITSIZEMOVE:
@@ -270,6 +273,7 @@ public sealed class WindowSnapper
                     GetWindowRect(hwnd, out _carrierRect);
                     _carrierScale = Scale(hwnd);
                     MoveTogether(hwnd, _carrierRect);
+                    Settle(hwnd, _carried.ToList());
                 }
 
                 _moving = IntPtr.Zero;
@@ -367,10 +371,7 @@ public sealed class WindowSnapper
         var places = _carried.Select(carried =>
         {
             GetWindowRect(carried.Handle, out var own);
-            var width = own.Right - own.Left;
-            var height = own.Bottom - own.Top;
-            var place = carried.PlaceBeside(rect, _carrierScale, width, height);
-            return (carried.Handle, Place: Steady(carried, rect, place, width, height));
+            return (carried.Handle, Place: carried.PlaceBeside(rect, _carrierScale, own.Right - own.Left, own.Bottom - own.Top, Scale(carried.Handle)));
         }).ToList();
         var batch = BeginDeferWindowPos(places.Count + 1);
         if (batch != IntPtr.Zero && includePlayer)
@@ -396,6 +397,37 @@ public sealed class WindowSnapper
         {
             SetWindowPos(handle, IntPtr.Zero, place.X, place.Y, 0, 0, flags);
         }
+    }
+
+    /// <summary>
+    /// Once a dropped group has had time to change scale (each window does when it's moved mostly onto
+    /// another screen, and WPF redraws it at its new size after that), lines it up around the player
+    /// once more, so no window is left where it was put while it was still at its old size.
+    /// </summary>
+    private void Settle(IntPtr hwnd, List<Carried> carried)
+    {
+        _main.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            if (_moving != IntPtr.Zero || !GetWindowRect(hwnd, out var player))
+            {
+                return;
+            }
+
+            // A window that changes scale as it's moved is put beside the player as during a drag.
+            _settling = true;
+            _carried.AddRange(carried);
+            _carrierRect = player;
+            _carrierScale = Scale(hwnd);
+            try
+            {
+                MoveTogether(hwnd, player, includePlayer: false);
+            }
+            finally
+            {
+                _carried.Clear();
+                _settling = false;
+            }
+        }));
     }
 
     /// <summary>
@@ -429,60 +461,8 @@ public sealed class WindowSnapper
 
         var width = suggested.Right - suggested.Left;
         var height = suggested.Bottom - suggested.Top;
-        var place = _carried[index].PlaceBeside(_carrierRect, _carrierScale, width, height);
+        var place = _carried[index].PlaceBeside(_carrierRect, _carrierScale, width, height, scale);
         Marshal.StructureToPtr(new Rect { Left = place.X, Top = place.Y, Right = place.X + width, Bottom = place.Y + height }, lParam, false);
-    }
-
-    /// <summary>
-    /// Where a carried window goes so that it doesn't flip between two scales. A window changes scale
-    /// when most of it crosses onto a screen with a different scale, and grows or shrinks when it
-    /// does. Beside the player near the line between two screens, the new size can put most of it
-    /// back on the screen it came from, so it changes back, then again, every frame. When the move
-    /// would start that, the window keeps its scale and stays just far enough onto its own screen,
-    /// overlapping or leaving a gap by the player for a moment, until the player has moved far
-    /// enough for it to change scale for good.
-    /// </summary>
-    private (int X, int Y) Steady(Carried carried, Rect player, (int X, int Y) place, int width, int height)
-    {
-        var own = GetDpiForWindow(carried.Handle);
-        var here = new Rect { Left = place.X, Top = place.Y, Right = place.X + width, Bottom = place.Y + height };
-        var dpi = DpiAt(here);
-        if (own == 0 || dpi == 0 || dpi == own)
-        {
-            return place;
-        }
-
-        // At the new scale it'd be this size, and go here beside the player.
-        var ratio = dpi / (double)own;
-        var newWidth = (int)Math.Round(width * ratio);
-        var newHeight = (int)Math.Round(height * ratio);
-        var next = carried.PlaceBeside(player, _carrierScale, newWidth, newHeight);
-        var there = new Rect { Left = next.X, Top = next.Y, Right = next.X + newWidth, Bottom = next.Y + newHeight };
-        if (DpiAt(there) == dpi)
-        {
-            return place;
-        }
-
-        // Changing scale would send it straight back: it stays on the screen it's on (at its own scale)
-        // with its middle just inside that screen, so most of it is still there.
-        var current = MonitorFromWindow(carried.Handle, MONITOR_DEFAULTTONEAREST);
-        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
-        if (current == IntPtr.Zero || !GetMonitorInfo(current, ref info))
-        {
-            return place;
-        }
-
-        var screen = info.Monitor;
-        var middleX = Math.Clamp(place.X + width / 2, screen.Left + 1, screen.Right - 2);
-        var middleY = Math.Clamp(place.Y + height / 2, screen.Top + 1, screen.Bottom - 2);
-        return (middleX - width / 2, middleY - height / 2);
-    }
-
-    /// <summary>The scale (DPI) of the screen most of this rectangle is on, or 0 if it can't be told.</summary>
-    private static uint DpiAt(Rect rect)
-    {
-        var monitor = MonitorFromRect(ref rect, MONITOR_DEFAULTTONEAREST);
-        return monitor != IntPtr.Zero && GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, out var dpi, out _) == 0 ? dpi : 0;
     }
 
     /// <summary>
@@ -792,13 +772,25 @@ public sealed class WindowSnapper
         public IntPtr Handle { get; }
 
         /// <summary>
-        /// Where the window goes, at this size, beside the player at that rectangle and scale. A window
-        /// left of (or above) the player keeps its right (or bottom) edge where it was against the
-        /// player, so while it's still at a different scale from the player it doesn't overlap it or
-        /// leave a gap; every other window keeps its left (or top) edge in place.
+        /// Where the window goes, at this size and its own scale, beside the player at that rectangle and
+        /// scale. A window left of (or above) the player keeps its right (or bottom) edge where it was
+        /// against the player; every other window keeps its left (or top) edge in place.
         /// </summary>
-        public (int X, int Y) PlaceBeside(Rect player, double scale, int width, int height)
+        /// <remarks>
+        /// A window still at another scale from the player (it's mostly on another screen) is a different
+        /// size from the one it'll be beside the player, so it's centred on its place instead. Lined up by
+        /// an edge, it would grow or shrink away from that edge as it changed scale, and near the line
+        /// between the screens that can carry most of it back to the screen it came from, so it changes
+        /// back, again and again. Centred, which screen most of it is on doesn't depend on its size.
+        /// </remarks>
+        public (int X, int Y) PlaceBeside(Rect player, double scale, int width, int height, double ownScale)
         {
+            if (Math.Abs(ownScale - scale) > 0.01)
+            {
+                return (player.Left + (int)Math.Round((_left + _right) / 2 * scale) - width / 2,
+                    player.Top + (int)Math.Round((_top + _bottom) / 2 * scale) - height / 2);
+            }
+
             const double tolerance = 2;
             var x = _right * scale <= tolerance
                 ? player.Left + (int)Math.Round(_right * scale) - width
@@ -1337,11 +1329,6 @@ public sealed class WindowSnapper
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
-
-    [DllImport("shcore.dll")]
-    private static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
