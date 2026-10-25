@@ -17,20 +17,35 @@ counts=$(awk -v p="$pattern" '$1 ~ p && ($1 ~ /\.(exe|zip|pkg)$/ || $1 ~ /^relea
 [ -n "$counts" ] || { echo "No new downloads to send."; exit 0; }
 
 while read -r name count; do
+  # Names Joshua reads on the dashboard. Update checks are automatic: each running copy of Lucent asks
+  # for a newer build 20 seconds after it starts and every 4 hours, so they're not clicks.
   case "$name" in
-    releases.*.json) path="update-check/${name#releases.}"; path="${path%.json}" ;;
-    *) path="download/$name" ;;
+    Lucent-Setup.exe) what="Windows installer" ;;
+    Lucent-win-x64.zip) what="Windows portable zip" ;;
+    Lucent-Setup-mac-arm64.pkg) what="Mac installer (Apple silicon)" ;;
+    Lucent-Setup-mac-x64.pkg) what="Mac installer (Intel)" ;;
+    Lucent-mac-arm64.zip) what="Mac zip (Apple silicon)" ;;
+    Lucent-mac-x64.zip) what="Mac zip (Intel)" ;;
+    releases.win.json) what="Windows" ;;
+    releases.osx-arm64.json) what="Mac (Apple silicon)" ;;
+    releases.osx-x64.json) what="Mac (Intel)" ;;
+    *) what="$name" ;;
+  esac
+  case "$name" in
+    releases.*.json) path="update-check-${name#releases.}"; path="${path%.json}"; title="Update check (automatic): $what" ;;
+    *) path="github-download-${name%.*}"; title="GitHub download: $what" ;;
   esac
   echo "$name: $count"
-  # GoatCounter takes at most 500 pageviews a request and 4 requests a second.
+  # GoatCounter shows visits, so each download gets its own made-up session to count once apiece
+  # (without one, a whole batch showed as a single visit). It takes at most 500 a request.
   while [ "$count" -gt 0 ]; do
     batch=$(( count > 500 ? 500 : count ))
-    hits=$(jq -nc --arg path "$path" --argjson n "$batch" \
-      '[range($n) | {path: $path, title: $path, event: true, bot: 0,
+    hits=$(jq -nc --arg path "$path" --arg title "$title" --arg run "$GITHUB_RUN_ID-$GITHUB_JOB-$name" --argjson n "$batch" --argjson left "$count" \
+      '[range($n) | {path: $path, title: $title, event: true, bot: 0, session: "\($run)-\($left - .)",
         user_agent: "Mozilla/5.0 (X11; Linux x86_64) Lucent-download-totals"}]')
     curl -sS --fail-with-body -X POST "$site/api/v0/count" \
       -H "Authorization: Bearer $GOATCOUNTER_TOKEN" -H "Content-Type: application/json" \
-      -d "{\"no_sessions\": true, \"filter\": [], \"hits\": $hits}" > /dev/null \
+      -d "{\"filter\": [], \"hits\": $hits}" > /dev/null \
       || echo "::warning::Couldn't send the $name download count to GoatCounter."
     count=$(( count - batch ))
     sleep 0.3
