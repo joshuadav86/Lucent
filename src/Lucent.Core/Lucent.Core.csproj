@@ -6,7 +6,7 @@
     by a Mac app later, so nothing in here may use WPF, Direct3D or Windows-only APIs.
   -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Lucent.Core</AssemblyName>
