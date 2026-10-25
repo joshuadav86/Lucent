@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Reads changed file paths, one per line, and prints which apps they change: "windows mac", "windows",
 # "mac", or nothing when only the website or the specs in docs/specs changed. Anything it doesn't know is counted as both apps. The
-# Mac app is built from the Windows app's visuals, shaders, assets and starter music too (see
-# Lucent.Mac.csproj and tools/MetalShaders), so those count as both.
+# visuals, shaders and starter song in content/ go into both apps, and so does the Windows app's Assets
+# folder (the Mac app takes its icon from there, see Lucent.Mac.csproj), so those count as both.
 #
 # With --shipped, it also leaves out files that don't change what people install: the docs, CI's own
 # checks and test media, and the Mac app's website screenshot code. Pull requests still build and test
@@ -18,14 +18,14 @@ while IFS= read -r file; do
     case "$file" in
       README.md | docs/* | tools/ci/* | tools/test-media/* | tools/LayoutCheck/* | tools/AvsCheck/* | tools/MilkDropCheck/* \
         | tools/ParityCheck/* | tools/mac/launch-check.sh | tools/mac/make-test-music.sh \
-        | .github/workflows/drag-diagnose.yml | tools/drag-diagnose.ps1 | src/Lucent.Mac/Screenshots*.cs) continue ;;
+        | .github/workflows/drag-diagnose.yml | tools/windows/drag-diagnose.ps1 | src/Lucent.Mac/Screenshots*.cs) continue ;;
     esac
   fi
   case "$file" in
     site/* | .github/workflows/pages.yml | docs/specs/*) ;;
-    src/Lucent.Mac/* | tools/mac/* | tools/build-lame-mac.sh | tools/build-pluginhost-mac.sh | tools/package-mac.sh) mac=1 ;;
-    src/WinampInspiredVisualizer/Presets/* | src/WinampInspiredVisualizer/Shaders/* | src/WinampInspiredVisualizer/Assets/* | src/WinampInspiredVisualizer/StarterMusic/*) windows=1 mac=1 ;;
-    src/WinampInspiredVisualizer/* | tools/drag-diagnose.ps1) windows=1 ;;
+    src/Lucent.Mac/* | tools/mac/*) mac=1 ;;
+    src/Lucent.Windows/Assets/*) windows=1 mac=1 ;;
+    src/Lucent.Windows/* | tools/windows/*) windows=1 ;;
     *) windows=1 mac=1 ;;
   esac
 done

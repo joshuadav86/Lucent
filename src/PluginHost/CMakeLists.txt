@@ -6,7 +6,7 @@
 # Build (Windows, from a Visual Studio developer prompt or with CMake on the PATH):
 #   cmake -S src/PluginHost -B build/PluginHost -A x64
 #   cmake --build build/PluginHost --config Release
-# Build (Mac, with the Xcode command line tools and CMake): tools/build-pluginhost-mac.sh, which makes a
+# Build (Mac, with the Xcode command line tools and CMake): tools/mac/build-pluginhost-mac.sh, which makes a
 # universal (Apple silicon and Intel) LucentPluginHost for the Mac app.
 # The Steinberg VST3 SDK (MIT licence) is downloaded at configure time. To use a copy you already
 # have, pass -DLUCENT_VST3SDK_DIR=path/to/vst3sdk.

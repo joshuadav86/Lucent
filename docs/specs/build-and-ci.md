@@ -5,7 +5,8 @@
 | Project | What it is |
 | --- | --- |
 | `src/Lucent.Core` | Everything platform-free: audio, analysis, EQ, editor, library, radio, streaming, settings |
-| `src/WinampInspiredVisualizer` | The Windows app (WPF, Direct3D 11). Also holds the shared `Presets`, `Shaders`, `Assets`, and `StarterMusic` |
+| `src/Lucent.Windows` | The Windows app (WPF, Direct3D 11). Its `Assets` (icons) are used by the Mac app too |
+| `content` | Shared by both apps: `Presets` (the visuals), `Shaders`, and `StarterMusic` |
 | `src/Lucent.Mac` | The Mac app (Avalonia, Metal, Core Audio) |
 | `src/PluginHost` | VST3 helper process (C++, CMake) |
 | `tools/*` | CI checks and build scripts (see below) |
@@ -42,6 +43,6 @@ Auto-merge: when the work is done, mark the PR ready and enable auto-merge. Keep
 
 ## Local builds
 
-- .NET 8 SDK (moving to .NET 10). The WPF app builds on Linux with `EnableWindowsTargeting` but only runs on Windows.
+- .NET 10 SDK. The WPF app builds on Linux with `EnableWindowsTargeting` but only runs on Windows.
 - The Mac app builds and runs headless on Linux (screenshots, layout check).
-- Mac visuals need Metal shaders first: `dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders`.
+- Mac visuals need Metal shaders first: `dotnet run --project tools/MetalShaders -- content artifacts/metal-shaders`.

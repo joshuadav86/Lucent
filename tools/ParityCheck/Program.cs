@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using WinampInspiredVisualizer.Settings;
 
 // Usage: dotnet run --project tools/ParityCheck
-// Checks the Windows app (src/WinampInspiredVisualizer) and the Mac app (src/Lucent.Mac) keep the same
+// Checks the Windows app (src/Lucent.Windows) and the Mac app (src/Lucent.Mac) keep the same
 // features, three ways:
 //   1. every source file in one app has its counterpart at the same place in the other (a WPF window's
 //      .xaml and .xaml.cs pair with an Avalonia window's .axaml and .axaml.cs);
@@ -15,7 +15,7 @@ using WinampInspiredVisualizer.Settings;
 var repository = FindRepository();
 var apps = new[]
 {
-    new App("Windows", Path.Combine(repository, "src", "WinampInspiredVisualizer")),
+    new App("Windows", Path.Combine(repository, "src", "Lucent.Windows")),
     new App("Mac", Path.Combine(repository, "src", "Lucent.Mac")),
 };
 var parityPath = Path.Combine(repository, "docs", "PARITY.md");

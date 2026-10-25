@@ -1,13 +1,13 @@
 #!/bin/bash
 # Builds libmp3lame.dylib, the MP3 encoder the Mac app's Mp3Writer loads, as one universal (Apple silicon
 # and Intel) library, and puts it in artifacts/mac-native, where src/Lucent.Mac picks it up.
-# Runs on a Mac with the Xcode command line tools. Usage: tools/build-lame-mac.sh [output folder]
+# Runs on a Mac with the Xcode command line tools. Usage: tools/mac/build-lame-mac.sh [output folder]
 set -euo pipefail
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 output="${1:-$root/artifacts/mac-native}"
 version=3.100
 sha256=ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e
-# The same as LSMinimumSystemVersion in tools/package-mac.sh.
+# The same as LSMinimumSystemVersion in tools/mac/package-mac.sh.
 export MACOSX_DEPLOYMENT_TARGET=12.0
 
 work="$(mktemp -d)"

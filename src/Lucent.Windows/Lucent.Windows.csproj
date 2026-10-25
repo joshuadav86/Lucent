@@ -70,16 +70,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Shaders are compiled when the app starts, so they ship as plain files people can edit. -->
-    <None Include="Presets\*.hlsl" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="Presets\MilkDrop\*.milk;Presets\MilkDrop\CREDITS.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="Presets\AVS\*.avs;Presets\AVS\CREDITS.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="Shaders\*.hlsl*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The visuals and shaders, shared with the Mac app (content/). They're compiled when the app starts, so they ship as plain files people can edit. -->
+    <None Include="..\..\content\Presets\*.hlsl" Link="Presets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\Presets\MilkDrop\*.milk;..\..\content\Presets\MilkDrop\CREDITS.md" Link="Presets\MilkDrop\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\Presets\AVS\*.avs;..\..\content\Presets\AVS\CREDITS.md" Link="Presets\AVS\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\Shaders\*.hlsl*" Link="Shaders\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Copies inside Lucent.exe too, for when it's run without its folder (say, straight from the zip). -->
-    <EmbeddedResource Include="Presets\*.hlsl" LogicalName="Presets/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="Presets\MilkDrop\*.milk" LogicalName="Presets/MilkDrop/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="Presets\AVS\*.avs" LogicalName="Presets/AVS/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="Shaders\*.hlsl*" LogicalName="Shaders/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\content\Presets\*.hlsl" LogicalName="Presets/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\content\Presets\MilkDrop\*.milk" LogicalName="Presets/MilkDrop/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\content\Presets\AVS\*.avs" LogicalName="Presets/AVS/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\content\Shaders\*.hlsl*" LogicalName="Shaders/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- libVLC's and LibVLCSharp's licence (LGPL 2.1), and where their source is, beside Lucent.exe. -->
@@ -95,7 +95,7 @@
 
   <!-- The song a first start puts in the library (see StarterMusic), beside Lucent.exe so it can be copied out. -->
   <ItemGroup>
-    <None Include="StarterMusic\*.mp3" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\content\StarterMusic\*.mp3" Link="StarterMusic\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <!--

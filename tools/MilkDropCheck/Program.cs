@@ -6,7 +6,7 @@ using WinampInspiredVisualizer.Visualizer.MilkDrop;
 // With --shaders it also writes each preset's warp and composite shaders as HLSL (and the engine's
 // own MilkDrop passes), ready for fxc or dxc, e.g. dxc -T ps_6_0 -E PSWarpPreset <file>.
 var repository = FindRepository();
-var prelude = File.ReadAllText(Path.Combine(repository, "src/WinampInspiredVisualizer/Shaders/MilkDrop.hlsli"));
+var prelude = File.ReadAllText(Path.Combine(repository, "content/Shaders/MilkDrop.hlsli"));
 var inputs = new List<string>();
 string? shaderFolder = null;
 for (var i = 0; i < args.Length; i++)
@@ -23,7 +23,7 @@ for (var i = 0; i < args.Length; i++)
 
 if (inputs.Count == 0)
 {
-    inputs.Add(Path.Combine(repository, "src/WinampInspiredVisualizer/Presets/MilkDrop"));
+    inputs.Add(Path.Combine(repository, "content/Presets/MilkDrop"));
 }
 
 var failures = CheckExpressions() + CheckWarp();
@@ -34,7 +34,7 @@ var files = inputs.SelectMany<string, string>(input => Directory.Exists(input)
 if (shaderFolder is not null)
 {
     Directory.CreateDirectory(shaderFolder);
-    var engine = File.ReadAllText(Path.Combine(repository, "src/WinampInspiredVisualizer/Shaders/MilkDrop.hlsl"));
+    var engine = File.ReadAllText(Path.Combine(repository, "content/Shaders/MilkDrop.hlsl"));
     File.WriteAllText(Path.Combine(shaderFolder, "MilkDrop.engine.hlsl"), prelude + "\n" + engine);
 }
 
@@ -235,7 +235,7 @@ static int CheckWarp()
 static string FindRepository()
 {
     var folder = AppContext.BaseDirectory;
-    while (folder is not null && !Directory.Exists(Path.Combine(folder, "src", "WinampInspiredVisualizer")))
+    while (folder is not null && !Directory.Exists(Path.Combine(folder, "src", "Lucent.Windows")))
     {
         folder = Path.GetDirectoryName(folder);
     }

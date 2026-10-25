@@ -34,7 +34,7 @@ None in behavior. The renderers are separate by design (see [PARITY.md](../PARIT
 
 ## Code
 
-- Shared shaders: `Shaders/` (`Common.hlsli` has the inputs and helpers; `Engine.hlsl` does bloom, tone map, and the build-up/drop look). Shared presets: `Presets/`, `Presets/MilkDrop/`, `Presets/AVS/`. Both live in the Windows app's folder today and the Mac project links them.
+- Shared shaders: `content/Shaders/` (`Common.hlsli` has the inputs and helpers; `Engine.hlsl` does bloom, tone map, and the build-up/drop look). Shared presets: `content/Presets/`, `content/Presets/MilkDrop/`, `content/Presets/AVS/`. Both live in `content/`, which both apps link.
 - `Lucent.Core/Visualizer/` (`AudioAnalyzer`, `SongFollower`, `LiveBeatTracker`, `PresetSource`, `VisualChoice`, `FlashCheck`, `MilkDrop/`, `Avs/`)
 - `Lucent.Core/Audio/BeatMap*.cs` (song map)
 - `VisualizerWindow.*`, `MainWindow.VisualsMenu.cs`, `MainWindow.VideoExport.cs` in each app

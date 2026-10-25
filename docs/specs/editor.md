@@ -19,7 +19,7 @@ ONNX Runtime with DirectML for stems. MP3 via LAME (`NAudio.Lame`).
 
 ## Mac
 
-ONNX Runtime with Core ML for stems. MP3 via a bundled `libmp3lame` (`tools/build-lame-mac.sh`).
+ONNX Runtime with Core ML for stems. MP3 via a bundled `libmp3lame` (`tools/mac/build-lame-mac.sh`).
 
 ## Parity gaps
 

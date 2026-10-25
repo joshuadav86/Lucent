@@ -43,7 +43,7 @@ for (var i = 0; i < args.Length; i++)
 
 if (inputs.Count == 0)
 {
-    inputs.Add(Path.Combine(repository, "src/WinampInspiredVisualizer/Presets/AVS"));
+    inputs.Add(Path.Combine(repository, "content/Presets/AVS"));
 }
 
 var files = inputs.SelectMany<string, string>(input => Directory.Exists(input)

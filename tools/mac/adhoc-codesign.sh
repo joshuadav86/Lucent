@@ -1,7 +1,7 @@
 #!/bin/bash
 # Stands in for codesign while vpk packs a Lucent that has no Developer ID certificate (CI copies it onto
 # the PATH as "codesign"). vpk always signs as if for notarization, with a secure timestamp, the hardened
-# runtime and its entitlements; ad-hoc signatures have none of those (the same as tools/package-mac.sh
+# runtime and its entitlements; ad-hoc signatures have none of those (the same as tools/mac/package-mac.sh
 # signs). This passes everything else on to the real codesign, and turns vpk's
 # "--signAppIdentity adhoc" into codesign's ad-hoc identity, "-".
 args=()
