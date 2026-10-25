@@ -44,6 +44,10 @@ public sealed class RemoteControl : IDisposable
     // Until when reads keep the position just sought to, rather than where the app was before it caught up.
     private DateTime _positionHeldUntil;
 
+    // What the queue window shows for an app that can't share its list: no songs, and a note saying why.
+    private readonly RemoteList? _limitList;
+    private RemoteList? _list;
+
     // Whether the app was running here when last asked (see IRemoteOpener), the button that failed while it wasn't,
     // pressed again once the Open button has opened it, and whether it's being opened now.
     private bool _appOpen = true;
@@ -57,6 +61,7 @@ public sealed class RemoteControl : IDisposable
     public RemoteControl(IRemotePlayer player)
     {
         Player = player;
+        _limitList = player is not IRemoteLists && player.ListLimit is { } why ? new RemoteList(null, "Up next", Array.Empty<RemoteTrack>(), why) : null;
         _ = ReadLoopAsync();
     }
 
@@ -76,9 +81,14 @@ public sealed class RemoteControl : IDisposable
 
     /// <summary>
     /// The songs the app is playing through (its playlist, album or what's up next), or null when the app can't
-    /// say or it hasn't been read yet.
+    /// say or it hasn't been read yet. For an app that can never say (<see cref="IRemotePlayer.ListLimit"/>), an
+    /// empty list whose note says why.
     /// </summary>
-    public RemoteList? List { get; private set; }
+    public RemoteList? List
+    {
+        get => _list ?? _limitList;
+        private set => _list = value;
+    }
 
     public bool IsPlaying => State is { IsPlaying: true };
 
@@ -220,7 +230,7 @@ public sealed class RemoteControl : IDisposable
     public Task PreviousAsync() => RunAsync(Player.PreviousAsync, null);
 
     /// <summary>Plays one of <see cref="List"/>'s songs.</summary>
-    public Task PlayFromListAsync(RemoteTrack track) => Player is IRemoteLists lists && List is { } list
+    public Task PlayFromListAsync(RemoteTrack track) => Player is IRemoteLists lists && _list is { } list
         ? RunAsync(cancel => lists.PlayFromListAsync(list, track, cancel), null)
         : Task.CompletedTask;
 
@@ -340,6 +350,7 @@ public sealed class RemoteControl : IDisposable
 
         var next = repeat switch
         {
+            RepeatMode.Off when !modes.RepeatsAll(State!) => RepeatMode.One,
             RepeatMode.Off => RepeatMode.All,
             RepeatMode.All => RepeatMode.One,
             _ => RepeatMode.Off,
@@ -372,6 +383,7 @@ public sealed class RemoteControl : IDisposable
     {
         RepeatMode.All => $"{Player.Name} repeats the whole playlist. Click to repeat just this song (R)",
         RepeatMode.One => $"{Player.Name} repeats this song. Click to stop repeating (R)",
+        _ when Player is IRemoteModes modes && !modes.RepeatsAll(State!) => $"Repeat is off in {Player.Name}. Click to repeat this song (R)",
         _ => $"Repeat is off in {Player.Name}. Click to repeat the whole playlist (R)",
     };
 

@@ -16,13 +16,14 @@ namespace Lucent.Mac.Streaming;
 /// than controlling the Music app, so Lucent talks to the Music app the way Mac apps always have. Windows
 /// uses Windows' media controls to reach the Apple Music app (see Windows' Streaming/AppleMusicRemote.cs).
 /// </remarks>
-public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteModes, IRemoteOpener
+public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteModes, IRemoteDevices, IRemoteOpener
 {
     private const string Osascript = "/usr/bin/osascript";
 
     // Fields between tabs: state, then the song's ID, name, artist, album, length and the position, in seconds, and
     // the ID of the playlist it's playing from (empty when there isn't one, as for a radio station), Music's volume (0 to 100),
-    // then whether it shuffles (true or false) and what it repeats (off, one or all), empty when it won't say.
+    // then whether it shuffles (true or false) and what it repeats (off, one or all), empty when it won't say, then the
+    // AirPlay speakers or TVs it plays on when none of them is this Mac (empty when it plays here).
     // "is running" doesn't open Music, so Lucent never starts it by itself.
     private const string ReadScript = """
         if application "Music" is not running then return "closed"
@@ -39,7 +40,20 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
                 try
                     set modes to (shuffle enabled as string) & tab & (song repeat as string)
                 end try
-                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId & tab & sound volume & tab & modes
+                set speakers to ""
+                try
+                    set here to false
+                    repeat with d in (current AirPlay devices)
+                        if kind of d is computer then set here to true
+                        if speakers is "" then
+                            set speakers to name of d
+                        else
+                            set speakers to speakers & ", " & name of d
+                        end if
+                    end repeat
+                    if here then set speakers to ""
+                end try
+                return playerState & tab & (persistent ID of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & playlistId & tab & sound volume & tab & modes & tab & speakers
             on error
                 return playerState
             end try
@@ -300,8 +314,14 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
         RepeatMode? repeat = fields.Length > 10
             ? fields[10] switch { "off" => RepeatMode.Off, "all" => RepeatMode.All, "one" => RepeatMode.One, _ => null }
             : null;
-        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist, Volume: volume, Shuffle: shuffle, Repeat: repeat);
+        // Music playing only to AirPlay speakers sends them the sound itself, so it never plays through this Mac.
+        var speakers = fields.Length > 11 && fields[11].Length > 0 ? fields[11] : null;
+        return new RemoteState(track, playing, Seconds(fields[6]), readAt, playlist, speakers, volume, speakers is not null, shuffle, repeat);
     }
+
+    /// <summary>Has Music play through this Mac instead of the AirPlay speakers it's playing on, carrying on where it was.</summary>
+    public Task PlayHereAsync(CancellationToken cancel) =>
+        TellAsync("set current AirPlay devices to (every AirPlay device whose kind is computer)", cancel);
 
     public Task SetShuffleAsync(bool on, CancellationToken cancel) => TellAsync($"set shuffle enabled to {(on ? "true" : "false")}", cancel);
 

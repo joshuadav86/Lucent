@@ -139,6 +139,7 @@ public partial class MainWindow
         _settings.Save();
         _remote = new RemoteControl(player);
         _remote.Changed += OnRemoteChanged;
+        _libraryWindow.RemoteAppChanged();
         if (pending is { } wanted && wanted.App == app)
         {
             _ = wanted.Play(_remote);
@@ -173,6 +174,7 @@ public partial class MainWindow
 
         _settings.RemoteApp = RemoteApp.None;
         _settings.Save();
+        _libraryWindow.RemoteAppChanged();
         _shownRemoteTrack = null;
         _shownRemoteArtwork = null;
         ShowVolume();
@@ -320,6 +322,13 @@ public partial class MainWindow
     /// would otherwise open it). YouTube, TIDAL and SoundCloud play in a web page, which can't say what's in the account.
     /// </summary>
     public IReadOnlyList<RemoteApp> PlaylistApps { get; } = [RemoteApp.Spotify, RemoteApp.AppleMusic];
+
+    /// <summary>
+    /// The app being controlled, by name, and why the library can't list its playlists, when it's one whose playlists
+    /// can't show (TIDAL, Pandora and so on); null otherwise.
+    /// </summary>
+    public (string Name, string Why)? RemotePlaylistsLimit =>
+        _remote is { } remote && !PlaylistApps.Contains(_settings.RemoteApp) && remote.Player.PlaylistsLimit is { } why ? (remote.Player.Name, why) : null;
 
     /// <summary>
     /// An app's playlists for the library, or null when there are none to show (not signed in to Spotify, Music not open).

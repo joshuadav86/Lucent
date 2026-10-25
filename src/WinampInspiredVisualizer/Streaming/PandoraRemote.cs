@@ -60,6 +60,10 @@ public sealed class PandoraRemote : MediaControlsRemote, IRemotePlayer, IRemoteR
 
     public override string Name => "Pandora";
 
+    public override string ListLimit => "Pandora's stations pick each song as they go, and Pandora doesn't say what's next.";
+
+    public override string PlaylistsLimit => "Pandora doesn't let other apps see your stations or playlists.";
+
     protected override string NotOpen => "Open Pandora (its app, or pandora.com in your browser) and play a station";
 
     // The process Pandora's window belongs to (the app's, or the browser's), and the app's or browser's that tells

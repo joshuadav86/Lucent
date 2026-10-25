@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
+using WinampInspiredVisualizer.Settings;
 using WinampInspiredVisualizer.Streaming;
 
 namespace Lucent.Mac.Streaming;
@@ -19,7 +20,7 @@ namespace Lucent.Mac.Streaming;
 /// macOS has nothing like those that other apps may press, so the Mac goes to the tab itself. Only
 /// running browsers are asked, so Lucent never opens one by itself.
 /// </remarks>
-public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLinks, IRemoteOpener
+public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLinks, IRemoteModes, IRemoteOpener
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -29,13 +30,18 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     /// <summary>
     /// JavaScript the read scripts can use: <c>out(fields)</c> joins fields with tabs (taking tabs and line breaks
     /// out of each), <c>clock(text)</c> reads "3:45" or "1:02:03" as seconds, and <c>text(element)</c> is an
-    /// element's trimmed text, or empty when there's no element.
+    /// element's trimmed text, or empty when there's no element. <c>lit(button)</c> is whether a toggle button is on (by
+    /// its aria-pressed or aria-checked, or a class saying it's active), and <c>repeatOf(button)</c> reads a repeat
+    /// button's label and look as 'off', 'all' or 'one'.
     /// </summary>
     protected const string Helpers = """
         var t=String.fromCharCode(9),n=String.fromCharCode(10);
         var out=function(f){return f.map(function(x){return String(x==null?'':x).split(t).join(' ').split(n).join(' ').trim();}).join(t);};
         var clock=function(s){var r=0,p=String(s||'').trim().replace(/^-/,'').split(':');for(var i=0;i<p.length;i++){var x=parseInt(p[i],10);if(isNaN(x))return 0;r=r*60+x;}return r;};
         var text=function(e){return e?e.textContent.trim():'';};
+        var lit=function(b){if(!b)return false;var a=b.getAttribute('aria-checked')||b.getAttribute('aria-pressed');if(a)return a==='true';return /(--active|--checked|--selected|isActive|isSelected|is-active|m-active|m-shuffling)/.test(String(b.getAttribute('class')||''));};
+        var repeatOf=function(b){if(!b)return '';var s=[b.getAttribute('aria-label'),b.getAttribute('title'),b.getAttribute('data-type'),b.getAttribute('class')].join(' ').toLowerCase();
+        if(/(m-one|single|repeat ?one|repeat ?track|repeatone|repeat_one)/.test(s))return 'one';if(/(m-all|repeat ?all|repeatall|repeat_all)/.test(s))return 'all';if(/(m-none|repeat ?off)/.test(s))return 'off';return lit(b)?'all':'off';};
         var meta=navigator.mediaSession&&navigator.mediaSession.metadata;
         var metaArt=meta&&meta.artwork&&meta.artwork.length?meta.artwork[meta.artwork.length-1].src:'';
         """;
@@ -71,7 +77,9 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     /// ('playing' or 'paused'), an ID that tells one song from the next, its title, artist, album, length and position
     /// (in seconds), the cover's address, the ID of the playlist it's playing through (empty when there isn't one), and
     /// the player's volume from 0 to 1 (empty when <see cref="SetVolume"/> can't change it), and, for a site with thumbs,
-    /// the song's thumb ('up', 'down' or 'none'; left off, or empty, when the site has none). It runs after <see cref="Helpers"/>.
+    /// the song's thumb ('up', 'down' or 'none'; left off, or empty, when the site has none), then whether it shuffles
+    /// ('true' or 'false') and what it repeats ('off', 'all' or 'one'), each left off or empty when Lucent can't change
+    /// it there (see <see cref="SetShuffle"/>, <see cref="SetRepeat"/>). It runs after <see cref="Helpers"/>.
     /// </summary>
     protected abstract string ReadPlayer { get; }
 
@@ -91,6 +99,24 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
 
     /// <summary>JavaScript that sets the player's volume to <paramref name="volume"/> (0 to 1, written with a point), or null when it can't.</summary>
     protected virtual string? SetVolume(string volume) => null;
+
+    /// <summary>JavaScript that turns the player's shuffle on (<paramref name="on"/> is 'true') or off, or null when it can't.</summary>
+    protected virtual string? SetShuffle(string on) => null;
+
+    /// <summary>
+    /// JavaScript that sets what the player repeats to <paramref name="mode"/>, a JavaScript string ('off', 'all' or
+    /// 'one', quotes and all), or null when it can't.
+    /// </summary>
+    protected virtual string? SetRepeat(string mode) => null;
+
+    /// <summary>False when the site can only repeat the song or video playing, as <paramref name="state"/> plays.</summary>
+    public virtual bool RepeatsAll(RemoteState state) => true;
+
+    /// <summary>Why the queue window can't list what the site plays next, or null when it can (see <see cref="IRemotePlayer.ListLimit"/>).</summary>
+    public virtual string? ListLimit => null;
+
+    /// <summary>Why the site's playlists can't be listed or added to (see <see cref="IRemotePlayer.PlaylistsLimit"/>).</summary>
+    public virtual string? PlaylistsLimit => null;
 
     /// <summary>
     /// The bundle IDs the playing browser's sound comes from (its helpers' IDs start the same way; Safari's sound
@@ -171,7 +197,12 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
             "none" => SongRating.None,
             _ => null,
         } : null;
-        return new RemoteState(track, song[0] == "playing", Seconds(song[6]), readAt, playlist, Volume: volume, Rating: rating);
+        bool? shuffle = song.Length > 11 && SetShuffle("true") is not null ? song[11] switch { "true" => true, "false" => false, _ => null } : null;
+        RepeatMode? repeat = song.Length > 12 && SetRepeat("'off'") is not null
+            ? song[12] switch { "off" => RepeatMode.Off, "all" => RepeatMode.All, "one" => RepeatMode.One, _ => null }
+            : null;
+        return new RemoteState(track, song[0] == "playing", Seconds(song[6]), readAt, playlist, Volume: volume, Shuffle: shuffle, Repeat: repeat,
+            Rating: rating);
     }
 
     public Task PlayAsync(CancellationToken cancel) => TellAsync(Play, cancel);
@@ -187,6 +218,14 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
 
     public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
         SetVolume(Math.Clamp(volume, 0, 1).ToString("0.###", CultureInfo.InvariantCulture)) is { } script ? TellAsync(script, cancel) : Task.CompletedTask;
+
+    public Task SetShuffleAsync(bool on, CancellationToken cancel) =>
+        SetShuffle(on ? "true" : "false") is { } script ? TellAsync(script, cancel) : throw new NotSupportedException();
+
+    public Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel) =>
+        SetRepeat(mode switch { RepeatMode.One => "'one'", RepeatMode.All => "'all'", _ => "'off'" }) is { } script
+            ? TellAsync(script, cancel)
+            : throw new NotSupportedException();
 
     public async Task<byte[]?> ArtworkAsync(RemoteTrack track, CancellationToken cancel) =>
         track.ArtworkUrl is { } url ? await _http.GetByteArrayAsync(url, cancel) : null;

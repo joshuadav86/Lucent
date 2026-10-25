@@ -95,6 +95,7 @@ public sealed record RemoteList(string? Id, string Name, IReadOnlyList<RemoteTra
     /// <summary>The count in the queue window's title bar: "Deep Chill  ·  1000 of 4210 songs" while the rest is read.</summary>
     public string CountText => Rest is not null && Total > Tracks.Count
         ? $"{Name}  ·  {Tracks.Count} of {Total} songs"
+        : Tracks.Count == 0 && Note is not null ? Name
         : Tracks.Count == 1 ? $"{Name}  ·  1 song" : $"{Name}  ·  {Tracks.Count} songs";
 }
 
@@ -123,6 +124,12 @@ public interface IRemoteModes
 
     /// <exception cref="NotSupportedException">When the app can't repeat that way (Spotify's Mac app can't repeat one song).</exception>
     Task SetRepeatAsync(RepeatMode mode, CancellationToken cancel);
+
+    /// <summary>
+    /// False when the app can only repeat the one song as <paramref name="state"/> plays (a YouTube video that isn't
+    /// playing through a playlist), so the repeat button goes from off to this song and back.
+    /// </summary>
+    bool RepeatsAll(RemoteState state) => true;
 }
 
 /// <summary>An app with thumbs up and down for the playing song (Pandora), which Lucent can press (<see cref="RemoteState.Rating"/>).</summary>
@@ -202,6 +209,18 @@ public interface IRemotePlayer : IDisposable
     /// by itself between reads. A button pressed is always read straight after.
     /// </summary>
     TimeSpan ReadAgainAfter(RemoteState? state) => TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Why the queue window can't show the songs the app plays through, worded for the user, or null when it can (or
+    /// the app just isn't playing through one). Shown in the queue window in place of the list.
+    /// </summary>
+    string? ListLimit => null;
+
+    /// <summary>
+    /// Why the library can't list the app's playlists and its songs can't be added to them, worded for the user, or
+    /// null when they can (<see cref="IRemotePlaylists"/>).
+    /// </summary>
+    string? PlaylistsLimit => null;
 }
 
 /// <summary>An <see cref="IRemotePlayer"/> that can say which songs it's playing through, and play one of them.</summary>

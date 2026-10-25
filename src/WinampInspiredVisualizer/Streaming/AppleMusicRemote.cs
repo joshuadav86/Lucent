@@ -18,6 +18,10 @@ public sealed class AppleMusicRemote : MediaControlsRemote, IRemoteOpener
 
     protected override string NotOpen => "Open the Apple Music app and play something";
 
+    public override string ListLimit => "The Apple Music app for Windows only tells Windows the song playing, not what's up next, so Lucent can't show it here.";
+
+    public override string PlaylistsLimit => "The Apple Music app for Windows doesn't let other apps see or change your playlists. On a Mac, Lucent can.";
+
     public override IReadOnlyList<string> ProcessNames { get; } = ["AppleMusic", "iTunes"];
 
     public bool IsOpen => AppOpener.IsRunning(ProcessNames);

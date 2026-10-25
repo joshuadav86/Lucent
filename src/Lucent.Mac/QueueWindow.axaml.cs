@@ -334,7 +334,7 @@ public partial class QueueWindow : ToolWindow
         }
 
         var track = (RemoteListView.SelectedItem as RemoteListEntry)?.Track;
-        var canAdd = track is not null && Player?.CanAddToRemotePlaylists == true;
+        var canAdd = track is not null && Player?.ShowsAddToPlaylist == true;
         RemoteSongSeparator.IsVisible = RemoteShareItem.IsVisible = track is not null;
         RemoteAddItem.IsVisible = canAdd;
         if (canAdd && track is not null)

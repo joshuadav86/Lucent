@@ -33,6 +33,10 @@ public sealed class YouTubeRemote : MediaControlsRemote
         _ => "your browser",
     };
 
+    public override string ListLimit => "Windows only says what your browser is playing, not what the site plays next, so Lucent can't show it here.";
+
+    public override string PlaylistsLimit => "Windows can't show Lucent your playlists on websites like YouTube and SoundCloud.";
+
     protected override string NotOpen => "Play YouTube, SoundCloud or another site in your web browser";
 
     // The browser playing, as its process is named; every browser Lucent knows until one has been read.
