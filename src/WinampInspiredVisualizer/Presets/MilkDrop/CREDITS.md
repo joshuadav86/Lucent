@@ -1,6 +1,6 @@
 # MilkDrop preset credits
 
-These 211 presets come from projectM's "Cream of the Crop" collection:
+These 210 presets come from projectM's "Cream of the Crop" collection:
 https://github.com/projectM-visualizer/presets-cream-of-the-crop (commit 0180df2, 2025-10-08).
 
 License note from that pack (LICENSE.md): MilkDrop presets were, in almost all cases, not released under any specific
@@ -23,9 +23,9 @@ Lungs", which builds up into a flat light grey field, and "Tripgnosis - Photontr
 first shipped with MilkDrop 2 itself (projectM's "Milkdrop Original" pack,
 https://github.com/projectM-visualizer/presets-milkdrop-original) and are in Cream of the Crop too, where these
 copies come from, picked the same way: they run without notes in Lucent, need no image textures, their shaders
-compile, and the self-tests found them neither black nor flashing more than three times a second. One more, "Goody - LSD
-Zoomtunnel", was dropped later: it never fades its picture (decay 1), so with some music it washes out to a flat
-white field and stays that way.
+compile, and the self-tests found them neither black nor flashing more than three times a second. Two of them were dropped later: "Goody - LSD
+Zoomtunnel", which never fades its picture (decay 1), so with some music it washes out to a flat
+white field and stays that way, and "shifter - lazerspecs_phat_edit", which washes out to flat white too.
 
 **If you made one of these and want it removed, open an issue.**
 
@@ -243,7 +243,6 @@ white field and stays that way.
 | shifter + geiss - neon pulse (glow mix).milk | Fractal/Nested Spiral Multiple |
 | shifter - brain coral.milk | Fractal/Nested Circle |
 | shifter - fractal grinder.milk | Fractal/Nested Circle |
-| shifter - lazerspecs_phat_edit.milk | Geometric/Wire Morph |
 | shifter - spincycle c.milk | Reaction/Liquid Blobby |
 | shifter - swarm.milk | Reaction/Feedback |
 | yin - 191 - Temporal singularities.milk | Waveform/Wire Mirror |
