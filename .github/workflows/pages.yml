@@ -24,6 +24,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # site/ links the downloads to the "Latest build". Once there's a stable release (see release.yml,
+      # which republishes the site after making one), the buttons get the newest stable release instead,
+      # so only testers who choose Every build in Options get every build.
+      - name: Point the downloads at the newest stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if stable=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2> /dev/null); then
+            echo "Downloads point at $stable."
+            sed -i -e 's#/releases/download/latest/#/releases/latest/download/#g' \
+                   -e 's#/releases/tag/latest"#/releases/latest"#g' \
+                   -e 's#>latest build</a>#>latest release</a>#g' site/index.html
+          else
+            echo "No stable release yet: downloads stay on the latest build."
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
