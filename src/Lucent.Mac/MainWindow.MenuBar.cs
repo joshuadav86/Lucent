@@ -179,6 +179,8 @@ public partial class MainWindow
         var fullScreen = Check("Full Screen Lucent", ToggleLucentFullScreen);
         fullScreen.Gesture = LucentFullScreen.Gesture;
         window.Add(fullScreen);
+        // No key here: a menu key of ⇧D would take capital Ds typed in the search boxes. Shift+D works in Lucent's windows.
+        window.Add(Item("Tidy Layout", TidyLayout));
         window.Add(Item("Shrink Everything", ShrinkWindows));
         var link = Check("Move Every Window with the Player", ToggleLink);
         window.Add(link);

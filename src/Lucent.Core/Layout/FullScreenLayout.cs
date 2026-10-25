@@ -15,6 +15,28 @@ public enum TileKind
     Editor,
 }
 
+/// <summary>
+/// How <see cref="FullScreenLayout"/> arranges the windows. Tidy layout (Shift+D, or "Tidy layout" on a
+/// right-click) goes through the tidy ones in turn; the layout chosen stays for laying them out again.
+/// </summary>
+public enum TileStyle
+{
+    /// <summary>The player's column on the left, the library down the far left, and the windows in a row sharing it as they're sized now.</summary>
+    AsTheyAre,
+
+    /// <summary>The visuals in the middle, the player's column on the left and the library column as wide on the right.</summary>
+    Centred,
+
+    /// <summary><see cref="Centred"/> the other way round: the player's column on the right.</summary>
+    CentredMirrored,
+
+    /// <summary>Like <see cref="AsTheyAre"/>, with the windows in a row sharing it evenly.</summary>
+    Classic,
+
+    /// <summary><see cref="Classic"/> the other way round: the player's column on the right, the library on the far right.</summary>
+    Mirrored,
+}
+
 /// <summary>A rectangle on the screen, in the window units the apps place windows in (WPF's and Avalonia's own, not pixels).</summary>
 public readonly record struct TileRect(double Left, double Top, double Width, double Height)
 {
@@ -73,8 +95,65 @@ public static class FullScreenLayout
     /// <summary>The visuals (or whatever's biggest on the right) keep at least this much of their column's height when there's room.</summary>
     private const double MainShare = 0.5;
 
+    /// <summary>The tidy layouts, in the order Tidy layout goes through them.</summary>
+    public static readonly IReadOnlyList<TileStyle> TidyStyles = new[] { TileStyle.Centred, TileStyle.CentredMirrored, TileStyle.Classic, TileStyle.Mirrored };
+
+    /// <summary>What the user sees a layout called.</summary>
+    public static string NameOf(TileStyle style) => style switch
+    {
+        TileStyle.Centred => "Visuals in the middle",
+        TileStyle.CentredMirrored => "Visuals in the middle, player on the right",
+        TileStyle.Classic => "Player on the left",
+        TileStyle.Mirrored => "Player on the right",
+        _ => "As they are",
+    };
+
+    /// <summary>
+    /// Tidy layout: the next tidy layout after <paramref name="current"/> that would move something from
+    /// where the windows are <paramref name="now"/>, so each press changes the layout, and where it puts them.
+    /// One that leaves a window out that another fits is passed over.
+    /// </summary>
+    public static (TileStyle Style, TileResult Result) Tidy(TileRect area, IReadOnlyList<TileWindow> windows,
+        IReadOnlyDictionary<string, TileRect> now, TileStyle current)
+    {
+        var start = TidyStyles.ToList().IndexOf(current) + 1;
+        var tried = Enumerable.Range(0, TidyStyles.Count)
+            .Select(step => TidyStyles[(start + step) % TidyStyles.Count])
+            .Select(style => (Style: style, Result: Arrange(area, windows, style)))
+            .ToList();
+        var fewestOut = tried.Min(entry => entry.Result.LeftOut.Count);
+        var fitting = tried.Where(entry => entry.Result.LeftOut.Count == fewestOut).ToList();
+        var moving = fitting.FindIndex(entry => Moves(entry.Result, now));
+        return fitting[Math.Max(0, moving)];
+    }
+
+    /// <summary>
+    /// Where Tidy layout lays the windows out when Lucent isn't full screen: the space they take up now,
+    /// on the screen, or the whole screen if that's too small to be worth it.
+    /// </summary>
+    public static TileRect GroupArea(IEnumerable<TileRect> places, TileRect screen)
+    {
+        var all = places.ToList();
+        if (all.Count == 0)
+        {
+            return screen;
+        }
+
+        var left = Math.Max(screen.Left, all.Min(place => place.Left));
+        var top = Math.Max(screen.Top, all.Min(place => place.Top));
+        var right = Math.Min(screen.Right, all.Max(place => place.Right));
+        var bottom = Math.Min(screen.Bottom, all.Max(place => place.Bottom));
+        return right - left < 200 || bottom - top < 200 ? screen : new TileRect(left, top, right - left, bottom - top);
+    }
+
+    /// <summary>True when the layout puts some window somewhere other than where it is now.</summary>
+    private static bool Moves(TileResult result, IReadOnlyDictionary<string, TileRect> now) =>
+        result.Places.Any(entry => !now.TryGetValue(entry.Key, out var at)
+            || Math.Abs(at.Left - entry.Value.Left) > 1 || Math.Abs(at.Top - entry.Value.Top) > 1
+            || Math.Abs(at.Width - entry.Value.Width) > 1 || Math.Abs(at.Height - entry.Value.Height) > 1);
+
     /// <param name="area">The screen's usable part (without the taskbar, or the menu bar and Dock).</param>
-    public static TileResult Arrange(TileRect area, IReadOnlyList<TileWindow> windows)
+    public static TileResult Arrange(TileRect area, IReadOnlyList<TileWindow> windows, TileStyle style = TileStyle.AsTheyAre)
     {
         // With the library column, or with it moved out of the way to make room; and with the space under the
         // player filled when the queue's closed, or not (on a tiny screen that can crowd a window out):
@@ -82,7 +161,7 @@ public static class FullScreenLayout
         TileResult? best = null;
         foreach (var (keepSide, fillUnder) in new[] { (true, true), (false, true), (true, false), (false, false) })
         {
-            var tried = Arrange(area, windows, keepSide, fillUnder);
+            var tried = Arrange(area, windows, keepSide, fillUnder, style);
             if (best is null || tried.LeftOut.Count < best.LeftOut.Count)
             {
                 best = tried;
@@ -97,9 +176,10 @@ public static class FullScreenLayout
         return best!;
     }
 
-    private static TileResult Arrange(TileRect area, IReadOnlyList<TileWindow> windows, bool keepSide, bool fillUnder)
+    private static TileResult Arrange(TileRect area, IReadOnlyList<TileWindow> windows, bool keepSide, bool fillUnder, TileStyle style)
     {
         var result = new TileResult();
+        var even = style != TileStyle.AsTheyAre;
 
         // Locked windows keep their spots, and the rest fill the biggest part of the screen beside them. A
         // locked player is different: the column under it is laid out from where it is.
@@ -120,6 +200,10 @@ public static class FullScreenLayout
             lockedLeft = Math.Clamp(playerAt.Left, area.Left, Math.Max(area.Left, area.Right - columnWidth));
             columnTop = Math.Clamp(playerAt.Top, area.Top, Math.Max(area.Top, area.Bottom - playerHeight));
         }
+
+        // A locked player stays where it is, so the layout can't be centred or turned round about it.
+        var centred = lockedLeft is null && style is TileStyle.Centred or TileStyle.CentredMirrored;
+        var mirrored = lockedLeft is null && style is TileStyle.Mirrored or TileStyle.CentredMirrored;
 
         // On a short screen the equalizer doesn't fit under the player: it goes under the visuals instead.
         var equalizerBeside = equalizer is not null && columnTop + playerHeight + equalizer.Height > area.Bottom + 0.5;
@@ -152,7 +236,13 @@ public static class FullScreenLayout
             // frees its column down the side for the big windows; a small library mostly leaves that column
             // empty anyway. Otherwise one window: the artwork, then one from under the visuals. Not with
             // nothing in the big space, where the library and artwork fill the screen beside the player anyway.
-            var fillers = Borrow(side, main, columnWidth, underHeight, keepOneSide: lockedLeft is not null);
+            // Centred, the library stays on the far side to balance the player's column.
+            var fillers = Borrow(side, main, columnWidth, underHeight, keepOneSide: lockedLeft is not null || centred);
+            if (fillers.Count == 0 && centred && lockedLeft is null)
+            {
+                // Nothing else to fill it with: the library after all, and the layout's not centred.
+                fillers = Borrow(side, main, columnWidth, underHeight, keepOneSide: false);
+            }
             foreach (var filler in fillers)
             {
                 side.Remove(filler);
@@ -200,11 +290,26 @@ public static class FullScreenLayout
                     sideWidth = 0;
                     MoveSide(side, under, main, underHeight, columnWidth);
                 }
+                else if (centred && main.Count > 0 && NeededWidth(side) <= columnWidth + 0.5 && room >= columnWidth)
+                {
+                    // As wide as the player's column, so the visuals sit in the middle.
+                    sideWidth = columnWidth;
+                }
             }
 
-            columnLeft = area.Left + sideWidth;
-            sideRegion = new TileRect(area.Left, area.Top, sideWidth, area.Height);
-            mainRegion = new TileRect(columnLeft + columnWidth, area.Top, area.Right - columnLeft - columnWidth, area.Height);
+            if (centred && sideWidth > 0 && main.Count > 0)
+            {
+                // The player's column on the left, the big windows in the middle, and the library on the right.
+                columnLeft = area.Left;
+                mainRegion = new TileRect(area.Left + columnWidth, area.Top, area.Width - columnWidth - sideWidth, area.Height);
+                sideRegion = new TileRect(area.Right - sideWidth, area.Top, sideWidth, area.Height);
+            }
+            else
+            {
+                columnLeft = area.Left + sideWidth;
+                sideRegion = new TileRect(area.Left, area.Top, sideWidth, area.Height);
+                mainRegion = new TileRect(columnLeft + columnWidth, area.Top, area.Right - columnLeft - columnWidth, area.Height);
+            }
         }
 
         if (player is { LockedAt: null })
@@ -219,9 +324,18 @@ public static class FullScreenLayout
 
         // With nothing beside it, the queue (or the library) runs the whole width under the player.
         var underWidth = main.Count == 0 && side.Count == 0 && lockedLeft is null ? area.Right - columnLeft : columnWidth;
-        Pack(new TileRect(columnLeft, below, underWidth, underHeight), under, result);
-        Pack(sideRegion, side, result);
-        Pack(mainRegion, main, result);
+        Pack(new TileRect(columnLeft, below, underWidth, underHeight), under, result, even);
+        Pack(sideRegion, side, result, even);
+        Pack(mainRegion, main, result, even);
+        if (mirrored)
+        {
+            // Turned round left to right, within the part of the screen it used.
+            foreach (var (key, place) in result.Places.ToList())
+            {
+                result.Places[key] = place with { Left = area.Left + area.Right - place.Right };
+            }
+        }
+
         return result;
     }
 
@@ -275,12 +389,13 @@ public static class FullScreenLayout
     /// that fits more in, or as many on a wide region, the first fills the left and the rest go in columns
     /// beside it.
     /// </summary>
-    private static void Pack(TileRect region, List<TileWindow> windows, TileResult result)
+    /// <param name="even">Windows side by side share the space evenly, rather than as they're sized now.</param>
+    private static void Pack(TileRect region, List<TileWindow> windows, TileResult result, bool even)
     {
         var rows = new TileResult();
-        PackRows(region, windows, rows);
+        PackRows(region, windows, rows, even);
         var columns = new TileResult();
-        PackRows(Turned(region), windows.Select(Turned).ToList(), columns);
+        PackRows(Turned(region), windows.Select(Turned).ToList(), columns, even);
         var useColumns = columns.LeftOut.Count < rows.LeftOut.Count
             || columns.LeftOut.Count == rows.LeftOut.Count && region.Width > region.Height * 1.5;
         if (useColumns)
@@ -319,7 +434,7 @@ public static class FullScreenLayout
     /// The first window fills the top of the region, and the rest go in rows under it, side by side as
     /// far as the width allows. Rows that can't fit at their smallest are left out.
     /// </summary>
-    private static void PackRows(TileRect region, List<TileWindow> windows, TileResult result)
+    private static void PackRows(TileRect region, List<TileWindow> windows, TileResult result, bool even)
     {
         var fitting = new List<TileWindow>();
         foreach (var window in windows)
@@ -365,7 +480,7 @@ public static class FullScreenLayout
             rows.RemoveAt(rows.Count - 1);
         }
 
-        var widths = rows.Select(row => Widths(row, region.Width)).ToList();
+        var widths = rows.Select(row => Widths(row, region.Width, even)).ToList();
         var smallest = rows.Select(row => row.Max(window => window.MinHeight)).ToList();
         var wanted = rows.Select((row, index) => Math.Max(smallest[index], row.Select((window, column) => Wanted(window, widths[index][column])).Max())).ToList();
 
@@ -400,10 +515,38 @@ public static class FullScreenLayout
 
     /// <summary>
     /// Shares a row's width out: each window gets its smallest width, and the rest in proportion to how
-    /// wide it is now. A window that sizes itself keeps its width.
+    /// wide it is now. A window that sizes itself keeps its width. Evenly, each gets the same width where
+    /// their smallest sizes allow.
     /// </summary>
-    private static List<double> Widths(List<TileWindow> row, double width)
+    private static List<double> Widths(List<TileWindow> row, double width, bool even)
     {
+        if (even)
+        {
+            // An equal share each, but no less than a window's smallest: the others share what's left.
+            var sharing = row.Where(window => !window.FixedSize).ToList();
+            var space = width - row.Where(window => window.FixedSize).Sum(window => window.Width);
+            var shares = new Dictionary<TileWindow, double>();
+            while (sharing.Count > 0)
+            {
+                var share = space / sharing.Count;
+                var tooSmall = sharing.Where(window => window.MinWidth > share).ToList();
+                if (tooSmall.Count == 0)
+                {
+                    sharing.ForEach(window => shares[window] = share);
+                    break;
+                }
+
+                foreach (var window in tooSmall)
+                {
+                    shares[window] = window.MinWidth;
+                    space -= window.MinWidth;
+                    sharing.Remove(window);
+                }
+            }
+
+            return row.Select(window => window.FixedSize ? window.Width : shares[window]).ToList();
+        }
+
         var spare = Math.Max(0, width - row.Sum(window => window.FixedSize ? window.Width : window.MinWidth));
         var total = row.Where(window => !window.FixedSize).Sum(window => Math.Max(window.Width, 1));
         return row.Select(window => window.FixedSize ? window.Width : window.MinWidth + spare * Math.Max(window.Width, 1) / total).ToList();
