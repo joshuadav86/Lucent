@@ -396,6 +396,15 @@
                               Margin="0,18,0,0" Click="OnSoundSwitched" />
                     <TextBlock Theme="{StaticResource OptionHint}"
                                Text="Each track runs straight into the next with no silence between, for live albums, DJ mixes, and albums that flow." />
+
+                    <CheckBox x:Name="CrossfadeSwitch" Theme="{StaticResource SwitchToggle}" Content="Crossfade songs"
+                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Each song fades out as the next one fades in." />
+                    <Button x:Name="CrossfadeLengthButton" Theme="{StaticResource PillButton}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                            ToolTip.Tip="How long the songs overlap" Click="OnChooseCrossfadeLength">
+                        <TextBlock x:Name="CrossfadeLengthName" />
+                    </Button>
                 </StackPanel>
 
                 <StackPanel x:Name="ThemeTab" IsVisible="False">
