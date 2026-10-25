@@ -117,12 +117,20 @@ public partial class MainWindow
     /// <summary>
     /// The player is never maximized; it grows by its edges instead. A double-click on its title bar (or
     /// Maximize from its window menu) is turned away before Windows maximizes it, so it doesn't fill the
-    /// screen for a moment and then jump back.
+    /// screen for a moment and then jump back. The double-click turns Lucent full screen on or off instead
+    /// (Lucent's own player only: a classic skin draws its own title bar).
     /// </summary>
-    private static IntPtr RefuseMaximize(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    private IntPtr RefuseMaximize(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if ((msg == WM_NCLBUTTONDBLCLK && wParam.ToInt64() == HTCAPTION)
-            || (msg == WM_SYSCOMMAND && (wParam.ToInt64() & 0xFFF0) == SC_MAXIMIZE))
+        if (msg == WM_NCLBUTTONDBLCLK && wParam.ToInt64() == HTCAPTION)
+        {
+            handled = true;
+            if (!IsClassic)
+            {
+                Dispatcher.InvokeAsync(ToggleLucentFullScreen);
+            }
+        }
+        else if (msg == WM_SYSCOMMAND && (wParam.ToInt64() & 0xFFF0) == SC_MAXIMIZE)
         {
             handled = true;
         }

@@ -8,8 +8,9 @@ using WinampInspiredVisualizer.Windows;
 
 namespace WinampInspiredVisualizer;
 
-// Lucent full screen (Shift+F11, or "Full screen Lucent" on a right-click in any of Lucent's windows):
-// every open window tiled across the whole of the player's screen, edge to edge, none over another. It's
+// Lucent full screen (Shift+F11, a double-click on the player's title bar, or "Full screen Lucent" on a
+// right-click in any of Lucent's windows): every open window tiled across the whole of the player's screen,
+// edge to edge, none over another. It's
 // apart from the visuals' own fullscreen (F11). The layout is FullScreenLayout in Lucent.Core, shared with
 // the Mac app and checked on many screens and scalings by tools/LayoutCheck. While it's on, opening or
 // closing a window lays the others out again around it. Switching it off puts every window back where it
