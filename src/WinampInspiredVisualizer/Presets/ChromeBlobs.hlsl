@@ -1,22 +1,29 @@
 // Name: Chrome Blobs
-// Drops of liquid chrome with an oil-slick rainbow sheen merge and split in the dark, each swelling with its own part of the spectrum.
+// A drop of liquid chrome with an oil-slick rainbow sheen holds eight smaller drops at the corners of a turning cube; with the music they swell, fly out and melt back into the heart in perfect symmetry, and their mirror surfaces reflect the shimmering seven-fold pattern of a quasicrystal.
 // Family: Ray traced
-// Tags: Colourful, Dark, 3D
+// Tags: Colourful, Dark, 3D, Geometric
 // Added: 2026-10-16 23:54
 
 static const int BlobCount = 9;
 
-// Where blob i is now (xyz), and how big (w).
+// Where blob i is now (xyz), and how big (w). Blob 0 is the heart; the others sit at the corners of
+// a cube round it that turns slowly, breathing out with the music and in again so they melt back
+// into the heart. Opposite corners listen to the same band, so the shape stays symmetric.
 float4 blobAt(int i)
 {
-    float k = i;
-    float t = Time * (0.3 + 0.04 * k);
-    float3 centre = float3(sin(t * 1.1 + k * 2.4) * 1.5,
-                           cos(t * 0.9 + k * 1.7) * 0.75,
-                           sin(t * 0.7 + k * 3.1) * 0.9);
-    float level = spectrum(0.03 + k * 0.1);
-    float radius = 0.32 + 0.08 * sin(k * 5.3) + level * 0.18 + Beat * 0.03;
-    return float4(centre, radius);
+    if (i == 0)
+    {
+        return float4(0.0, 0.0, 0.0, 0.5 + Bass * 0.12 + Beat * 0.04);
+    }
+    int corner = i - 1;
+    float3 c = float3((corner & 1) ? 1.0 : -1.0, (corner & 2) ? 1.0 : -1.0, (corner & 4) ? 1.0 : -1.0);
+    float pair = (float)min(corner, 7 - corner);
+    float level = spectrum(0.05 + pair * 0.18);
+    float breathe = 0.5 + 0.5 * sin(Time * 0.35);
+    float reach = 0.45 + 0.55 * breathe + level * 0.35 + Beat * 0.08;
+    c.xz = rotate(c.xz, Time * 0.21);
+    c.xy = rotate(c.xy, Time * 0.13);
+    return float4(normalize(c) * reach, 0.26 + level * 0.14);
 }
 
 float blobSmoothMin(float a, float b, float k)
@@ -44,11 +51,19 @@ float3 blobNormal(float3 p, float4 blobs[BlobCount], float merge)
                    + e.yxy * blobField(p + e.yxy, blobs, merge) + e.xxx * blobField(p + e.xxx, blobs, merge));
 }
 
-// The stripes of light the chrome reflects: they wave and flow slowly round the room.
+// The light the chrome reflects: a quasicrystal, seven sets of waves crossing at even angles, so it
+// never quite repeats; it drifts and shimmers with the bass.
 float blobWave(float3 direction)
 {
-    float around = atan2(direction.z, direction.x);
-    return direction.y * 3.5 + sin(around * 2.0 + Time * 0.4) * 0.7 + sin(around * 5.0 - Time * 0.3) * 0.18 - Time * 0.25;
+    float2 u = direction.xz / (1.2 + abs(direction.y)) * 9.0;
+    float total = 0.0;
+    [unroll]
+    for (int k = 0; k < 7; k++)
+    {
+        float angle = k * PI / 7.0 + Time * 0.01;
+        total += cos(dot(u, float2(cos(angle), sin(angle))) + Time * (0.4 + Bass * 0.6));
+    }
+    return total / 7.0 * 2.2 + direction.y * 1.5 - Time * 0.1;
 }
 
 // What the chrome reflects: pale strip lights of uneven widths, a glowing horizon and a crisp
