@@ -143,6 +143,23 @@ public interface IRemoteDevices
     Task PlayHereAsync(CancellationToken cancel);
 }
 
+/// <summary>
+/// An app on this computer (or a web player in a browser tab) that Lucent can open when it isn't, so the player can offer
+/// an Open button instead of telling the user to go and open it.
+/// </summary>
+public interface IRemoteOpener
+{
+    /// <summary>
+    /// True when the app is running here (for a web player, when its tab was found on the last read). Asked after every
+    /// read, so it's quick.
+    /// </summary>
+    bool IsOpen { get; }
+
+    /// <summary>Starts the app, or opens its web player in a browser, without waiting for it to be ready.</summary>
+    /// <exception cref="RemoteProblem">When it can't be opened (it isn't installed, say).</exception>
+    Task OpenAsync(CancellationToken cancel);
+}
+
 /// <summary>A problem the user can do something about, worded for them (sign in again, open the app, and so on).</summary>
 public sealed class RemoteProblem : Exception
 {

@@ -15,7 +15,7 @@ namespace WinampInspiredVisualizer.Streaming;
 /// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window, its shuffle and
 /// repeat, which the player's own buttons change, and lists the account's playlists for the library.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes, IRemoteOpener
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -77,6 +77,15 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     }
 
     public string Name => "Spotify";
+
+    /// <summary>
+    /// True when the Spotify app is running on this computer, or when there's no app here to read (a connection made
+    /// just to list playlists), which then has nothing to open.
+    /// </summary>
+    public bool IsOpen => _app is not IRemoteOpener app || app.IsOpen;
+
+    /// <summary>Starts the Spotify app on this computer.</summary>
+    public Task OpenAsync(CancellationToken cancel) => _app is IRemoteOpener app ? app.OpenAsync(cancel) : Task.CompletedTask;
 
     /// <summary>
     /// What's playing: from the Spotify app on this computer while it plays (with the Web API's playlist, device and

@@ -46,6 +46,8 @@ public sealed class TidalRemote : BrowserTabRemote
 
     public override string Name => "TIDAL";
 
+    protected override string Website => "https://listen.tidal.com";
+
     protected override string NotOpen => "Play something in TIDAL's web player (tidal.com)";
 
     // The title's link, /track/123 (or /album/45/track/123).
