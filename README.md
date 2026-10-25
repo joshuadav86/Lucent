@@ -17,7 +17,6 @@ A free music player for Windows and Mac, with 448 live GPU visuals, a video and 
 
 - **448 visuals**, drawn live on your graphics card: 200 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 Winamp AVS presets. They know the song's build-ups and drops, even on radio.
 - **Windows like Winamp's.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
-- REMOVE tiles them all full screen.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
 - **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
 - **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
@@ -108,7 +107,7 @@ dotnet run --project src/Lucent.Mac                 # Mac
 
 The Mac app needs the visuals translated to Metal first, which takes Microsoft's [`dxc`](https://github.com/microsoft/DirectXShaderCompiler/releases) on Linux or Windows: `dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders`.
 
-Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
+What each feature does on Windows and Mac is written up in [`docs/specs`](docs/specs). Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
 
 ## Bugs and crash reports
 
