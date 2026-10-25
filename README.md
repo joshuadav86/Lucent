@@ -3,7 +3,7 @@
 <h1 align="center">Lucent</h1>
 
 <p align="center"><b>A spiritual successor to Winamp, built for audio nerds.</b><br>
-A free music player for Windows and Mac, with 450 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
+A free music player for Windows and Mac, with 448 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
 
 <p align="center">
   <a href="../../releases/download/latest/Lucent-Setup.exe"><img src="https://img.shields.io/badge/download-Windows-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
@@ -15,7 +15,7 @@ A free music player for Windows and Mac, with 450 live GPU visuals, a video and 
 
 ## What's inside
 
-- **450 visuals**, drawn live on your graphics card: 200 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 216 MilkDrop presets, and 34 Winamp AVS presets. They know the song's build-ups and drops, even on radio.
+- **448 visuals**, drawn live on your graphics card: 200 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 Winamp AVS presets. They know the song's build-ups and drops, even on radio.
 - **Windows like Winamp's.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
 - REMOVE tiles them all full screen.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
