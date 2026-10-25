@@ -74,7 +74,9 @@ public partial class MainWindow
     /// <summary>Scales the player to fill its new width, and remembers how big it is.</summary>
     private void OnPlayerWidthChanged(object sender, SizeChangedEventArgs e)
     {
-        if (!e.WidthChanged || ActualWidth <= 0 || IsClassic || WindowState != WindowState.Normal || ResizeMode != ResizeMode.CanResize)
+        // A drag only moves the player; any width change then is rounding as it changes scale on another screen.
+        if (!e.WidthChanged || ActualWidth <= 0 || IsClassic || WindowState != WindowState.Normal || ResizeMode != ResizeMode.CanResize
+            || _snapper.IsDragging)
         {
             return;
         }

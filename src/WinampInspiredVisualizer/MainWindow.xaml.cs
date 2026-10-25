@@ -332,7 +332,10 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnPlayerSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (!e.HeightChanged || e.PreviousSize.Height <= 0 || WindowState != WindowState.Normal)
+        // While the player is dragged the snapper places every window. Its height can wobble then, as it
+        // changes scale crossing onto another screen, and moving the windows under it here as well would
+        // fight the snapper (and mix up the two screens' units), so they'd jump about.
+        if (!e.HeightChanged || e.PreviousSize.Height <= 0 || WindowState != WindowState.Normal || _snapper.IsDragging)
         {
             return;
         }
