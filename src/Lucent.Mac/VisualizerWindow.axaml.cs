@@ -431,6 +431,7 @@ public partial class VisualizerWindow : ToolWindow
         _shown = InPickerOrder(searched.Where(MatchesTags));
         FillRows();
         ListPickerLabel.Text = list is null ? "All visuals" : $"{list} ({inList.Count})";
+        UpdateFavoritesOnlyButton();
         VisualCount.Text = VisualChoice.CountText(_shown.Count, inList.Count);
 
         // Narrowed by a list, tags or a search, Auto plays from what's shown. If nothing is shown it plays from everything.
@@ -593,6 +594,27 @@ public partial class VisualizerWindow : ToolWindow
         _settings.ActiveVisualList = list;
         _settings.Save();
         ShowActiveList();
+    }
+
+    // The FAVORITES pill beside FOLDERS: a quicker way to the Favorites list than the list menu.
+    private void OnToggleFavoritesOnly(object? sender, RoutedEventArgs e) =>
+        UseList(_settings.ActiveVisualList == AppSettings.FavoritesListName ? null : AppSettings.FavoritesListName);
+
+    private void UpdateFavoritesOnlyButton()
+    {
+        var on = _settings.ActiveVisualList == AppSettings.FavoritesListName;
+        var brush = on ? "AccentBrush" : "FaintTextBrush";
+        FavoritesOnlyButton.SetResourceReference(ForegroundProperty, brush);
+        FavoritesOnlyIcon.SetResourceReference(Shape.StrokeProperty, brush);
+        ToolTip.SetTip(FavoritesOnlyButton, on ? "Show all visuals again" : "Show only your favorite visuals");
+        if (on)
+        {
+            FavoritesOnlyIcon.SetResourceReference(Shape.FillProperty, "AccentBrush");
+        }
+        else
+        {
+            FavoritesOnlyIcon.Fill = Brushes.Transparent;
+        }
     }
 
     private void UpdateFavoriteButton()

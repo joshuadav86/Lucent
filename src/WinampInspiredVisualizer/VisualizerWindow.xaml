@@ -183,6 +183,16 @@
                                                   Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                                         </StackPanel>
                                     </Button>
+                                    <!-- Favorites on or off: one click shows only the starred visuals, another shows them all again. -->
+                                    <Button x:Name="FavoritesOnlyButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="0,0,6,0"
+                                            ToolTip="Show only your favorite visuals" Click="OnToggleFavoritesOnly">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path x:Name="FavoritesOnlyIcon" Data="{StaticResource StarIcon}" Stroke="{Binding Foreground, ElementName=FavoritesOnlyButton}"
+                                                  StrokeThickness="1.2" StrokeLineJoin="Round" Fill="Transparent"
+                                                  Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBlock Text="FAVORITES" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
                                     <!-- Family folders on or off. -->
                                     <Button x:Name="GroupFamiliesButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Margin="0,0,6,0"
                                             Content="FOLDERS" ToolTip="Show or hide the family folders" Click="OnToggleGroupFamilies" />
