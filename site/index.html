@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lucent for Windows and Mac</title>
+<title>Lucent (Beta) for Windows and Mac</title>
 <meta name="description" content="Lucent is a spiritual successor to Winamp, a music player built for audio nerds: a real video and audio editor, a studio analyzer, a 32-band equalizer, and 450 live GPU visuals, MilkDrop and Winamp AVS presets included. Free for Windows and Mac.">
 <meta property="og:title" content="Lucent">
 <meta property="og:description" content="A music player built for audio nerds, with a video and audio editor, a studio analyzer, and 450 live GPU visuals, MilkDrop and Winamp AVS presets included.">
@@ -86,6 +86,7 @@ kbd {
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand img { width: 30px; height: 30px; }
 .brand span { font: 600 15px/1 var(--font-display); letter-spacing: .18em; }
+.brand .beta { font: 500 10px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--a2); border: 1px solid currentColor; border-radius: 999px; padding: 4px 8px; }
 .nav-links { display: flex; gap: 22px; margin-left: auto; }
 .nav-links a { text-decoration: none; color: var(--muted); font-size: 15px; transition: color .2s; }
 .nav-links a:hover { color: var(--fg); }
@@ -549,7 +550,7 @@ footer .credits a { text-decoration: underline; }
 <body>
 <header class="nav">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Lucent home"><img src="img/icon.png" alt=""><span>LUCENT</span></a>
+    <a class="brand" href="#top" aria-label="Lucent home"><img src="img/icon.png" alt=""><span>LUCENT</span><span class="beta">Beta</span></a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#player">Player</a>
       <a href="#visuals">Visuals</a>
@@ -572,7 +573,7 @@ footer .credits a { text-decoration: underline; }
     <canvas id="heroBars" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="hero-copy">
-        <p class="eyebrow">Built for audio nerds · Windows and Mac</p>
+        <p class="eyebrow">Now in beta · Built for audio nerds · Windows and Mac</p>
         <h1 id="hero-title">The Media Player <span class="grad">You Didn't Know You Needed</span></h1>
         <div class="hero-side">
           <p class="lede">Lucent is a free music player for Windows and Mac, a spiritual successor to Winamp built for audio nerds. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 450 visuals drawn live on your graphics card.</p>
@@ -870,7 +871,7 @@ footer .credits a { text-decoration: underline; }
       <div class="stack">
         <img class="dl-icon" src="img/icon.png" width="96" height="96" alt="Lucent icon">
         <h2 id="dl-title">Get Lucent.</h2>
-        <p class="lede">Free and open source under the MIT license, for Windows and Mac.</p>
+        <p class="lede">Free and open source under the MIT license, for Windows and Mac. Lucent is in beta, so expect a few rough edges.</p>
         <div class="hero-cta">
           <a class="btn" href="https://github.com/joshuadav86/Lucid/releases/download/latest/Lucent-Setup.exe">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
