@@ -18,6 +18,19 @@ public static class RadioGuide
     /// <summary>How many recently played stations are remembered.</summary>
     public const int RecentLimit = 30;
 
+    /// <summary>How wide the details beside a station's name start out, in pixels.</summary>
+    public const double DetailsWidth = 240;
+
+    /// <summary>The room a station's name keeps in its row (with the row's buttons and padding) before its details get any.</summary>
+    private const double NameRoom = 280;
+
+    /// <summary>
+    /// The details' width in a station list this wide: what the listener dragged the divider to, but never so wide that
+    /// the names are squeezed, so a narrow window shrinks the details first.
+    /// </summary>
+    public static double DetailsWidthFor(double wanted, double listWidth) =>
+        listWidth <= 0 ? Math.Max(0, wanted) : Math.Clamp(wanted, 0, Math.Max(0, listWidth - NameRoom));
+
     /// <summary>The bitrates the quality filter offers, in kbps (0 for any).</summary>
     public static readonly IReadOnlyList<int> Qualities = new[] { 0, 128, 192, 256, 320 };
 

@@ -93,10 +93,33 @@
                 </ScrollViewer>
             </Border>
 
-            <ScrollViewer x:Name="StationScroller" Grid.Row="2" Grid.Column="1" Margin="0,0,10,0"
-                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel x:Name="StationRows" Margin="0,0,4,0" />
-            </ScrollViewer>
+            <Grid x:Name="StationArea" Grid.Row="2" Grid.Column="1" Margin="0,0,10,0">
+                <ScrollViewer x:Name="StationScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              ScrollChanged="OnStationScrollChanged">
+                    <StackPanel x:Name="StationRows" Margin="0,0,4,0" />
+                </ScrollViewer>
+
+                <!-- The line between the station names and their details: drag it to give the names more room. -->
+                <Thumb x:Name="DetailsDivider" Width="9" HorizontalAlignment="Left" Cursor="SizeWE" Visibility="Collapsed"
+                       ToolTip="Drag to give the station names more room, or the details. Double-click to put it back."
+                       DragDelta="OnDetailsDividerDrag" DragCompleted="OnDetailsDividerDropped" MouseDoubleClick="OnDetailsDividerReset">
+                    <Thumb.Template>
+                        <ControlTemplate TargetType="Thumb">
+                            <Grid Background="Transparent">
+                                <Rectangle x:Name="Line" Width="1" Fill="{DynamicResource HairlineBrush}" />
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Line" Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsDragging" Value="True">
+                                    <Setter TargetName="Line" Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Thumb.Template>
+                </Thumb>
+            </Grid>
 
             <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="14,8,14,12">
                 <TextBlock x:Name="StationCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"

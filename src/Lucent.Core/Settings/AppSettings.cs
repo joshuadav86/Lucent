@@ -384,6 +384,9 @@ public sealed class AppSettings
     /// <summary>The video filter: only stations with a picture (the ones with the camera beside them).</summary>
     public bool RadioVideoOnly { get; set; }
 
+    /// <summary>How wide the details beside each station's name are; the divider between them drags it (0 hides them).</summary>
+    public double RadioDetailsWidth { get; set; } = RadioGuide.DetailsWidth;
+
     private static string FilePath => Path.Combine(AppDataFolder.Path, "settings.json");
 
     public static AppSettings Load()
