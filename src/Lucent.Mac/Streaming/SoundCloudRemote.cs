@@ -9,7 +9,8 @@ namespace Lucent.Mac.Streaming;
 /// <remarks>
 /// SoundCloud keeps its audio out of the page, so the song and where it's up to are read from the player
 /// bar (and the browser's media controls, which SoundCloud tells the song and cover), and seeking clicks the
-/// bar's timeline where the position is. Its "Next up" list isn't read. Windows has no SoundCloud of its own:
+/// bar's timeline where the position is. Shuffle and repeat are the bar's own buttons. Its "Next up" list
+/// only exists inside SoundCloud's page while it's open there, so it isn't read. Windows has no SoundCloud of its own:
 /// its browser item controls SoundCloud like any site, through Windows' media controls.
 /// </remarks>
 public sealed class SoundCloudRemote : BrowserTabRemote
@@ -23,6 +24,7 @@ public sealed class SoundCloudRemote : BrowserTabRemote
         var at=clock(text(c.querySelector('.playbackTimeline__timePassed > span:nth-child(2)')));
         var left=text(c.querySelector('.playbackTimeline__duration > span:nth-child(2)'));
         var length=left.charAt(0)==='-'?at+clock(left):clock(left);
+        var sh=c.querySelector('.shuffleControl'),rp=c.querySelector('.repeatControl');
         """;
 
     // The song's title and artist come from the browser's media controls, or the player bar's badge. Its
@@ -35,7 +37,7 @@ public sealed class SoundCloudRemote : BrowserTabRemote
         var art=metaArt;
         if(!art){var s=c.querySelector('span.sc-artwork');var m=s&&/url\(["']?([^"')]+)/.exec(s.style.backgroundImage);art=m?m[1]:'';}
         art=art.replace(/-t\d+x\d+\./,'-t500x500.');
-        return out([playing?'playing':'paused',(link&&link.getAttribute('href'))||title,title,(meta&&meta.artist)||text(by),(meta&&meta.album)||'',length,at,art,'']);
+        return out([playing?'playing':'paused',(link&&link.getAttribute('href'))||title,title,(meta&&meta.artist)||text(by),(meta&&meta.album)||'',length,at,art,'','','',sh?(sh.classList.contains('m-shuffling')?'true':'false'):'',rp?repeatOf(rp):'']);
         """;
 
     public SoundCloudRemote(HttpClient http)
@@ -65,6 +67,15 @@ public sealed class SoundCloudRemote : BrowserTabRemote
     protected override string Previous => "var x=c.querySelector('.skipControl__previous');if(x)x.click();";
 
     // A click on the timeline where the position is, as the timeline listens for the mouse.
+    protected override string SetShuffle(string on) => $"if(!sh)return 'none';if(sh.classList.contains('m-shuffling')!=={on})sh.click();";
+
+    // The button goes round SoundCloud's repeat modes, so it's pressed until it shows the one wanted.
+    protected override string SetRepeat(string mode) => $"if(!rp)return 'none';for(var i=0;i<3&&repeatOf(rp)!=={mode};i++)rp.click();";
+
+    public override string ListLimit => "SoundCloud keeps its Next up list inside its own page, so Lucent can't show it here.";
+
+    public override string PlaylistsLimit => "SoundCloud isn't letting new apps in, so Lucent can't see or add to your playlists.";
+
     protected override string Seek(string seconds) => $$"""
         var w=c.querySelector('.playbackTimeline__progressWrapper');
         if(w&&length>0){var r=w.getBoundingClientRect();var x=r.left+r.width*Math.min(1,{{seconds}}/length),y=r.top+r.height/2;

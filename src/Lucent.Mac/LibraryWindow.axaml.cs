@@ -468,6 +468,9 @@ public partial class LibraryWindow : ToolWindow
     private DateTime _remoteReadAt = DateTime.MinValue;
     private int _remoteLoad;
 
+    /// <summary>Called by the player when it starts or stops controlling an app, as a note may say why its playlists can't show.</summary>
+    public void RemoteAppChanged() => ShowRemoteRows();
+
     /// <summary>Called by the player when Lucent signs in to or out of Spotify.</summary>
     public void SpotifyChanged()
     {
@@ -545,6 +548,12 @@ public partial class LibraryWindow : ToolWindow
             {
                 rows.Add(LibraryItem.Placeholder(AppName(app), note));
             }
+        }
+
+        // The app being controlled, when its playlists can't show, says why under its own heading.
+        if (Player?.RemotePlaylistsLimit is { } limit)
+        {
+            rows.Add(LibraryItem.Placeholder(limit.Name, limit.Why));
         }
 
         if (rows.Count == 0 && _remoteItems.Count == 0)

@@ -22,6 +22,7 @@ public sealed class TidalRemote : BrowserTabRemote
         var playing=v?!v.paused:!!f.querySelector('button[data-test="pause"]');
         var at=v?v.currentTime:clock(text(f.querySelector('time[data-test="current-time"]')));
         var length=v?v.duration:clock(text(f.querySelector('time[data-test="duration"]')));
+        var sh=f.querySelector('button[data-test="shuffle"]'),rp=f.querySelector('button[data-test="repeat"]');
         """;
 
     // The song's title, artist, album and cover come from the browser's media controls, which TIDAL tells,
@@ -36,7 +37,7 @@ public sealed class TidalRemote : BrowserTabRemote
         var album=[].slice.call(f.querySelectorAll('a[href^="/album/"]')).filter(function(a){return !ti||!ti.contains(a);})[0];
         var img=f.querySelector('figure[data-test="current-media-imagery"] img')||f.querySelector('img');
         var art=(metaArt||(img&&(img.currentSrc||img.src))||'').replace(/\/\d+x\d+\.jpg$/,'/640x640.jpg');
-        return out([playing?'playing':'paused',(link&&link.getAttribute('href'))||title,title,(meta&&meta.artist)||by,(meta&&meta.album)||text(album),length,at,art,'',v?(v.muted?0:v.volume):'']);
+        return out([playing?'playing':'paused',(link&&link.getAttribute('href'))||title,title,(meta&&meta.artist)||by,(meta&&meta.album)||text(album),length,at,art,'',v?(v.muted?0:v.volume):'','',sh?String(lit(sh)):'',rp?repeatOf(rp):'']);
         """;
 
     public TidalRemote(HttpClient http)
@@ -68,6 +69,15 @@ public sealed class TidalRemote : BrowserTabRemote
 
     // Only the page's audio or video element can seek; without one, the song carries on where it is.
     protected override string Seek(string seconds) => $"if(v)v.currentTime={seconds};";
+
+    protected override string SetShuffle(string on) => $"if(!sh)return 'none';if(lit(sh)!=={on})sh.click();";
+
+    // The button goes round TIDAL's repeat modes, so it's pressed until it shows the one wanted.
+    protected override string SetRepeat(string mode) => $"if(!rp)return 'none';for(var i=0;i<3&&repeatOf(rp)!=={mode};i++)rp.click();";
+
+    public override string ListLimit => "TIDAL's web player keeps its play queue inside its own page, so Lucent can't show it here.";
+
+    public override string PlaylistsLimit => "TIDAL only shares playlists with apps it has approved, which Lucent isn't yet.";
 
     protected override string SetVolume(string volume) => $"if(v){{v.muted=false;v.volume={volume};}}";
 

@@ -320,7 +320,7 @@ public partial class QueueWindow : ToolWindow
     private void OnRemoteMenuOpening(object sender, ContextMenuEventArgs e)
     {
         var track = (RemoteListView.SelectedItem as RemoteListEntry)?.Track;
-        var canAdd = track is not null && Player?.CanAddToRemotePlaylists == true;
+        var canAdd = track is not null && Player?.ShowsAddToPlaylist == true;
         RemoteSongSeparator.Visibility = RemoteShareItem.Visibility = track is not null ? Visibility.Visible : Visibility.Collapsed;
         RemoteAddItem.Visibility = canAdd ? Visibility.Visible : Visibility.Collapsed;
         if (canAdd && track is not null)

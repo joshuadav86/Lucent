@@ -18,6 +18,8 @@ public sealed class TidalRemote : MediaControlsRemote
 
     protected override string NotOpen => "Open the TIDAL app and play something";
 
+    public override string PlaylistsLimit => "TIDAL only shares playlists with apps it has approved, which Lucent isn't yet.";
+
     public override IReadOnlyList<string> ProcessNames { get; } = ["TIDAL"];
 
     protected override GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions) =>

@@ -36,6 +36,12 @@ public partial class MainWindow
     public bool CanAddToRemotePlaylists => _remote?.Player is IRemotePlaylists;
 
     /// <summary>
+    /// True when song menus have Add to playlist: for an app that can add songs, and for one that can't, whose menu then
+    /// says why (<see cref="IRemotePlayer.PlaylistsLimit"/>).
+    /// </summary>
+    public bool ShowsAddToPlaylist => CanAddToRemotePlaylists || _remote?.Player.PlaylistsLimit is not null;
+
+    /// <summary>
     /// The playlists the controlled app's songs can be added to: Spotify's Liked Songs and the playlists the account made
     /// or collaborates on (read at most every ten minutes), or Music's own on a Mac. Empty when the app can't add songs.
     /// </summary>
@@ -54,6 +60,12 @@ public partial class MainWindow
     public async void FillAddToPlaylistMenu(MenuItem menu, RemoteTrack track, Action<string> notice)
     {
         menu.Items.Clear();
+        if (!CanAddToRemotePlaylists)
+        {
+            menu.Items.Add(new MenuItem { Header = _remote?.Player.PlaylistsLimit ?? "This app can't add songs to playlists.", IsEnabled = false });
+            return;
+        }
+
         menu.Items.Add(new MenuItem { Header = "Loading your playlists…", IsEnabled = false });
         IReadOnlyList<RemotePlaylist> playlists;
         try
@@ -212,14 +224,14 @@ public partial class MainWindow
         _menuTrack = track;
         NowPlayingEditItem.Visibility = _remote is null ? Visibility.Visible : Visibility.Collapsed;
         NowPlayingShareItem.Visibility = track is not null ? Visibility.Visible : Visibility.Collapsed;
-        NowPlayingAddItem.Visibility = track is not null && CanAddToRemotePlaylists ? Visibility.Visible : Visibility.Collapsed;
+        NowPlayingAddItem.Visibility = track is not null && ShowsAddToPlaylist ? Visibility.Visible : Visibility.Collapsed;
         if (_remote is not null && track is null)
         {
             e.Handled = true;
             return;
         }
 
-        if (track is not null && CanAddToRemotePlaylists)
+        if (track is not null && ShowsAddToPlaylist)
         {
             FillAddToPlaylistMenu(NowPlayingAddItem, track, ShowSongNotice);
         }

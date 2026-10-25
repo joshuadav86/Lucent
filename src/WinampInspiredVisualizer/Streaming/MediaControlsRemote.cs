@@ -33,6 +33,15 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
     /// </summary>
     public abstract IReadOnlyList<string> ProcessNames { get; }
 
+    /// <summary>
+    /// Why the queue window can't list what's up next (see <see cref="IRemotePlayer.ListLimit"/>): Windows' media
+    /// controls only say what's playing now.
+    /// </summary>
+    public virtual string? ListLimit => $"{Name} only tells Windows the song playing, not what's up next, so Lucent can't show it here.";
+
+    /// <summary>Why the app's playlists can't be listed or added to (see <see cref="IRemotePlayer.PlaylistsLimit"/>).</summary>
+    public virtual string? PlaylistsLimit => $"{Name} doesn't let other apps on Windows see or change your playlists.";
+
     /// <summary>How Windows names the app last read (its AppUserModelID), or null before then.</summary>
     protected string? SourceAppId { get; private set; }
 

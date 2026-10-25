@@ -58,6 +58,10 @@ public sealed class PandoraRemote : BrowserTabRemote, IRemoteRating
 
     public override string Name => "Pandora";
 
+    public override string ListLimit => "Pandora's stations pick each song as they go, and Pandora doesn't say what's next.";
+
+    public override string PlaylistsLimit => "Pandora doesn't let other apps see your stations or playlists.";
+
     protected override string NotOpen => "Play a station in Pandora's web player (pandora.com)";
 
     // The title's link, the song's page on Pandora (/artist/…/TR…).
