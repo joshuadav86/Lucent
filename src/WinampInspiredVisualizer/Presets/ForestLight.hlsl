@@ -1,7 +1,7 @@
 // Name: Forest Light
-// Wander slowly along a trail through a misty forest at sunrise as shafts of golden light fall through gaps in the canopy onto ferns and moss, glinting on drifting dust and spores; the light breathes with the music and the leaves stir with the mids.
+// Wander slowly down a mirrored avenue of trees through a misty forest at sunrise. The canopy overhead opens in a lattice of six-sided gaps, each one widening with its own band of the music, so the shafts of golden light that fall onto the ferns pulse with the song; dust and spores glint in the beams with the treble.
 // Family: Ray traced
-// Tags: Calm, 3D
+// Tags: Calm, 3D, Geometric
 // Added: 2026-10-17 17:15
 
 // The trunks and the ground are found by ray marching. The light shafts come from marching
@@ -20,7 +20,7 @@ float3 sunDirection()
 
 float3 sunColour()
 {
-    float breathe = 1.0 + Bass * 0.45 + Level * 0.3 + Beat * 0.12;
+    float breathe = 1.0 + Bass * 0.35 + Level * 0.3 + Beat * 0.25;
     return float3(1.0, 0.72, 0.4) * 2.0 * breathe;
 }
 
@@ -42,21 +42,25 @@ float mistNoise(float3 p)
 
 // ---- Trees ----
 
-// The trunk in a cell: where it stands (xz), its radius (z) and a lean (w). The middle column
-// of cells is left clear for the trail.
+// The trunk in a cell: where it stands (xz), its radius (z) and a lean (w). The two middle columns
+// of cells are left clear for the trail, and the trees on the left mirror those on the right, so
+// the trail runs down an avenue like the nave of a cathedral.
 float4 trunkIn(float2 cell)
 {
-    if (abs(cell.x) < 0.5)
+    if (abs(cell.x + 0.5) < 1.0)
     {
         return float4(0.0, 0.0, 0.0, 0.0);
     }
+    bool mirrored = cell.x < 0.0;
+    cell.x = mirrored ? -cell.x - 1.0 : cell.x;
     // Two hashes give the place; the size and lean are stirred out of them rather than hashed
     // afresh, since this runs for four cells at every step of the march.
     float a = hash(cell * 1.37 + 0.5);
     float b = hash(cell * 2.11 + 3.1);
     float2 centre = (cell + 0.5) * CellSize + (float2(a, b) - 0.5) * CellSize * 0.5;
     float radius = 0.16 + frac(a * 7.31 + b * 3.17) * 0.26;
-    return float4(centre, radius, (frac(a * 5.13 + b * 11.7) - 0.5) * 0.06);
+    float lean = (frac(a * 5.13 + b * 11.7) - 0.5) * 0.06;
+    return mirrored ? float4(-centre.x, centre.y, radius, -lean) : float4(centre, radius, lean);
 }
 
 float trunkDistance(float3 q, float4 trunk)
@@ -145,23 +149,28 @@ float3 sceneNormal(float3 q)
 // Render rather than at every step through the mist.
 static float2 Sway = 0.0;
 
-// How open the canopy is at a point overhead: 0 under leaves, 1 in a gap. Most of the canopy is
-// leaves, so once the coarser layers of leaves show the finer ones can't open a gap there, the
-// rest is skipped.
+// Which hexagonal cell q is in: the offset from its centre (xy) and an id for it (zw).
+float4 hexCell(float2 q)
+{
+    const float2 s = float2(1.0, 1.7320508);
+    float2 a = q - s * floor(q / s) - s * 0.5;
+    float2 b = q - s * 0.5 - s * floor((q - s * 0.5) / s) - s * 0.5;
+    float2 offset = dot(a, a) < dot(b, b) ? a : b;
+    return float4(offset, floor((q - offset) * 2.0 + 0.5));
+}
+
+// How open the canopy is at a point overhead: 0 under leaves, 1 in a gap. The gaps sit in a
+// lattice of six-sided openings, each turning slowly and widening with its own band of the music,
+// their edges ragged with leaves.
 float canopyGap(float2 xz)
 {
-    float n = noise(xz * 0.22 + Sway * 0.3) * 0.6;
-    if (n + 0.4 < 0.56)
-    {
-        return 0.0;
-    }
-    n += noise(xz * 0.6 - Sway * 0.5) * 0.28;
-    if (n + 0.12 < 0.56)
-    {
-        return 0.0;
-    }
-    n += noise(xz * 1.7 + Sway) * 0.12;
-    return smoothstep(0.56, 0.68, n);
+    float4 cell = hexCell(xz / 3.4 + Sway * 0.04);
+    float band = hash(cell.zw * 0.37 + 1.3);
+    float loud = spectrum(band * 0.75 + 0.02);
+    float2 offset = rotate(cell.xy, Time * 0.04 + band * 6.0);
+    float opening = polygon(offset, 6.0, 0.07 + 0.2 * loud * loud + Beat * 0.02);
+    float leafEdge = (noise(xz * 1.7 + Sway) - 0.5) * 0.05;
+    return smoothstep(0.015, -0.015, opening + leafEdge);
 }
 
 // How much sunlight reaches a point: through the canopy, then past the trunks.
@@ -228,7 +237,7 @@ float3 Render(float2 uv, float2 p)
     // March to the first surface.
     float t = 0.05;
     int material = -1;
-    int steps = qualitySteps(96);
+    int steps = qualitySteps(80);
     [loop]
     for (int i = 0; i < steps; i++)
     {
@@ -296,7 +305,7 @@ float3 Render(float2 uv, float2 p)
     // March back through the mist, adding the light it scatters our way.
     // The steps are jittered every frame and blended with the last frames, so fewer of them still
     // settle into smooth shafts.
-    int mistSteps = qualitySteps(32);
+    int mistSteps = qualitySteps(22);
     float jitter = frac(hash(uv * Resolution + frac(FrameCount * 0.618) * 97.0) + FrameCount * 0.618);
     float stepLength = t / mistSteps;
     float3 scattered = 0.0;
@@ -341,5 +350,5 @@ float3 Render(float2 uv, float2 p)
     }
 
     // Settle the mist's noise over a few frames.
-    return lerp(colour, previous(uv), 0.55);
+    return lerp(colour, previous(uv), 0.6);
 }
