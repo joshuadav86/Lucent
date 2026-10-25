@@ -21,6 +21,7 @@ jobs:
       app: ${{ steps.check.outputs.app }}
       windows: ${{ steps.check.outputs.windows }}
       mac: ${{ steps.check.outputs.mac }}
+      series: ${{ steps.series.outputs.series }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,6 +67,22 @@ jobs:
           if [ "$windows" = true ] || [ "$mac" = true ]; then app=true; fi
           echo "Build Windows: $windows. Build the Mac: $mac."
           { echo "windows=$windows"; echo "mac=$mac"; echo "app=$app"; } >> "$GITHUB_OUTPUT"
+
+      # The first two numbers of every build's version: the release being worked towards. Before the first
+      # stable release that's 1.0; after one (made by release.yml, tagged v1.0.790 say), builds count on
+      # from the next one up (1.1), so nobody has to raise it by hand.
+      - name: Work out the version series
+        id: series
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          series=1.0
+          if stable=$(gh release view --json tagName --jq .tagName 2> /dev/null) && [[ "$stable" =~ ^v([0-9]+)\.([0-9]+)\. ]]; then
+            series="${BASH_REMATCH[1]}.$((BASH_REMATCH[2] + 1))"
+          fi
+          echo "Newest stable release: ${stable:-none}. Builds are $series.x."
+          echo "series=$series" >> "$GITHUB_OUTPUT"
 
       # The app's "what's new" list leaves out changes that aren't to that app: those only to the website,
       # and those only to the other platform. It reads which they were from these files on the release
@@ -163,8 +180,9 @@ jobs:
     env:
       # Every build gets a higher version than the last, so the installer and in-app updates can
       # tell which is newer. The first two numbers are the release being worked towards: a build
-      # chosen to be that release is published as it is (see release.yml), so they go up after it.
-      LUCENT_VERSION: 1.0.${{ github.run_number }}
+      # chosen to be that release is published as it is (see release.yml), so they go up after it
+      # (the changes job works them out from the newest stable release).
+      LUCENT_VERSION: ${{ needs.changes.outputs.series }}.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -645,7 +663,7 @@ jobs:
       group: ${{ needs.changes.outputs.mac == 'true' && github.event_name == 'push' && format('publish-latest-mac-{0}', matrix.arch) || format('mac-{0}-{1}', github.run_id, matrix.arch) }}
       cancel-in-progress: false
     env:
-      LUCENT_VERSION: 1.0.${{ github.run_number }}
+      LUCENT_VERSION: ${{ needs.changes.outputs.series }}.${{ github.run_number }}
       RID: osx-${{ matrix.arch }}
       BUILD_MAC: ${{ needs.changes.outputs.mac }}
     steps:
