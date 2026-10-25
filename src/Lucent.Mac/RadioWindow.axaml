@@ -74,10 +74,27 @@
                 </ScrollViewer>
             </Border>
 
-            <ScrollViewer x:Name="StationScroller" Grid.Row="2" Grid.Column="1" Margin="0,0,10,0"
-                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel x:Name="StationRows" Margin="0,0,4,0" />
-            </ScrollViewer>
+            <Grid x:Name="StationArea" Grid.Row="2" Grid.Column="1" Margin="0,0,10,0">
+                <ScrollViewer x:Name="StationScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              ScrollChanged="OnStationScrollChanged">
+                    <StackPanel x:Name="StationRows" Margin="0,0,4,0" />
+                </ScrollViewer>
+
+                <!-- The line between the station names and their details: drag it to give the names more room. -->
+                <Border x:Name="DetailsDivider" Width="9" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWestEast"
+                        IsVisible="False"
+                        ToolTip.Tip="Drag to give the station names more room, or the details. Double-click to put it back."
+                        PointerPressed="OnDetailsDividerPressed" PointerMoved="OnDetailsDividerDrag"
+                        PointerReleased="OnDetailsDividerDropped" PointerCaptureLost="OnDetailsDividerLost"
+                        DoubleTapped="OnDetailsDividerReset">
+                    <Border.Styles>
+                        <Style Selector="Border#DetailsDivider:pointerover > Rectangle">
+                            <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                        </Style>
+                    </Border.Styles>
+                    <Rectangle Width="1" Fill="{DynamicResource HairlineBrush}" />
+                </Border>
+            </Grid>
 
             <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="14,8,14,12">
                 <TextBlock x:Name="StationCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"

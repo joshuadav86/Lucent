@@ -28,6 +28,9 @@ public partial class RadioWindow : Window
     private IReadOnlyDictionary<string, int> _genreCounts = new Dictionary<string, int>();
     private IReadOnlyList<RadioCountry> _countries = Array.Empty<RadioCountry>();
     private IReadOnlyList<RadioStation> _shown = Array.Empty<RadioStation>();
+
+    // The details beside each listed station, which the divider sizes together.
+    private readonly List<TextBlock> _details = new();
     private CancellationTokenSource? _searching;
     private string? _problem;
 
@@ -255,6 +258,8 @@ public partial class RadioWindow : Window
         };
 
         StationRows.Children.Clear();
+        _details.Clear();
+        DetailsDivider.Visibility = stations.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         if (stations.Count == 0)
         {
             StationRows.Children.Add(new TextBlock
@@ -278,6 +283,69 @@ public partial class RadioWindow : Window
 
         StationScroller.UpdateLayout();
         StationScroller.ScrollToVerticalOffset(offset);
+        PlaceDetailsDivider();
+    }
+
+    /// <summary>The details width for the list as wide as it is now (names keep their room in a narrow window).</summary>
+    private double DetailsWidth => RadioGuide.DetailsWidthFor(_settings.RadioDetailsWidth, StationScroller.ViewportWidth);
+
+    private void SizeDetails()
+    {
+        var width = DetailsWidth;
+        foreach (var detail in _details)
+        {
+            detail.Width = width;
+        }
+    }
+
+    // Lines the divider up with the left edge of the details, which is the same in every row.
+    private void PlaceDetailsDivider()
+    {
+        if (_details.Count == 0)
+        {
+            return;
+        }
+
+        var left = _details[0].TranslatePoint(new Point(0, 0), StationArea).X;
+        DetailsDivider.Margin = new Thickness(Math.Max(0, left - DetailsDivider.Width / 2 - 5), 0, 0, 0);
+    }
+
+    private void OnStationScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.ViewportWidthChange != 0)
+        {
+            // The window was resized (or the scroll bar came or went): size the details again, then follow them.
+            SizeDetails();
+            Dispatcher.InvokeAsync(PlaceDetailsDivider, DispatcherPriority.Loaded);
+        }
+    }
+
+    private void OnDetailsDividerDrag(object sender, DragDeltaEventArgs e)
+    {
+        // The details end where they always do, so they reach from the pointer to there; dragging right gives the
+        // names the room. Kept within what the list allows.
+        if (_details.Count == 0)
+        {
+            return;
+        }
+
+        var end = _details[0].TranslatePoint(new Point(_details[0].ActualWidth, 0), StationArea).X;
+        _settings.RadioDetailsWidth = RadioGuide.DetailsWidthFor(end - Mouse.GetPosition(StationArea).X - 5, StationScroller.ViewportWidth);
+        SizeDetails();
+        StationScroller.UpdateLayout();
+        PlaceDetailsDivider();
+    }
+
+    private void OnDetailsDividerDropped(object sender, DragCompletedEventArgs e) => _settings.Save();
+
+    private void OnDetailsDividerReset(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        _settings.RadioDetailsWidth = RadioGuide.DetailsWidth;
+        _settings.Save();
+        SizeDetails();
+        StationScroller.UpdateLayout();
+        PlaceDetailsDivider();
     }
 
     private string EmptyText()
@@ -352,7 +420,7 @@ public partial class RadioWindow : Window
         {
             Text = station.Details(),
             FontSize = 11,
-            MaxWidth = 300,
+            Width = DetailsWidth,
             Margin = new Thickness(10, 0, 0, 0),
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
@@ -416,6 +484,7 @@ public partial class RadioWindow : Window
         DockPanel.SetDock(website, Dock.Right);
         DockPanel.SetDock(support, Dock.Right);
         DockPanel.SetDock(detail, Dock.Right);
+        _details.Add(detail);
         var content = new DockPanel();
         content.Children.Add(star);
         content.Children.Add(website);
