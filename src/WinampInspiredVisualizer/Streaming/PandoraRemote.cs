@@ -22,7 +22,7 @@ namespace WinampInspiredVisualizer.Streaming;
 /// given from Lucent. A station can't go back a song or be sought through, and Pandora's free tier limits skips.
 /// The Mac has no Pandora app, so it controls the web player in its tab (see the Mac's Streaming/PandoraRemote.cs).
 /// </remarks>
-public sealed class PandoraRemote : MediaControlsRemote, IRemotePlayer, IRemoteRating
+public sealed class PandoraRemote : MediaControlsRemote, IRemotePlayer, IRemoteRating, IRemoteOpener
 {
     // Reading Pandora's window is slow (it's a web page inside), so while it's all there is, it's read this often,
     // with the position moving on by itself between reads. With Windows' media controls too, only the thumbs come
@@ -50,6 +50,9 @@ public sealed class PandoraRemote : MediaControlsRemote, IRemotePlayer, IRemoteR
     // True while the song comes from Pandora's window rather than Windows' media controls.
     private bool _fromScreen;
     private bool _reported;
+
+    // False when the last read found Pandora nowhere: not its app, nor a browser tab.
+    private bool _found = true;
 
     // The thumb last given from Lucent and the song it was given to, shown when Pandora doesn't say which is lit.
     private (string Song, SongRating Rating)? _given;
@@ -147,8 +150,11 @@ public sealed class PandoraRemote : MediaControlsRemote, IRemotePlayer, IRemoteR
         }
         else
         {
+            _found = false;
             throw problem ?? new RemoteProblem($"{NotOpen}, then Lucent can show and control it.");
         }
+
+        _found = true;
 
         if (state?.Track is not { } song)
         {
@@ -165,6 +171,17 @@ public sealed class PandoraRemote : MediaControlsRemote, IRemotePlayer, IRemoteR
 
         var rating = thumbs.Lit ?? (_given is { } given && given.Song == song.Id ? given.Rating : SongRating.None);
         return state with { Rating = rating };
+    }
+
+    public bool IsOpen => _found;
+
+    /// <summary>Starts Pandora's app when it's installed, and otherwise opens pandora.com in the web browser.</summary>
+    public async Task OpenAsync(CancellationToken cancel)
+    {
+        if (!await AppOpener.TryStoreAppAsync("PandoraMediaInc."))
+        {
+            AppOpener.OpenWebsite("https://www.pandora.com");
+        }
     }
 
     public override Task PlayAsync(CancellationToken cancel) =>

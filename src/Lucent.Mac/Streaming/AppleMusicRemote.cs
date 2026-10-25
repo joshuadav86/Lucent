@@ -16,7 +16,7 @@ namespace Lucent.Mac.Streaming;
 /// than controlling the Music app, so Lucent talks to the Music app the way Mac apps always have. Windows
 /// uses Windows' media controls to reach the Apple Music app (see Windows' Streaming/AppleMusicRemote.cs).
 /// </remarks>
-public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteModes, IRemoteDevices
+public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteModes, IRemoteDevices, IRemoteOpener
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -118,6 +118,11 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
     private const string FavoritesUri = "music:favorites";
 
     public string Name => "Apple Music";
+
+    public bool IsOpen => AppOpener.IsRunning("Music");
+
+    public Task OpenAsync(CancellationToken cancel) =>
+        AppOpener.OpenAppAsync("com.apple.Music", "Lucent couldn't open the Music app.", cancel);
 
     /// <summary>Favorite Songs, then the playlists the user made in the Music app, which songs can be added to.</summary>
     public async Task<IReadOnlyList<RemotePlaylist>> PlaylistsAsync(CancellationToken cancel)

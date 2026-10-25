@@ -62,6 +62,8 @@ public sealed class PandoraRemote : BrowserTabRemote, IRemoteRating
 
     public override string PlaylistsLimit => "Pandora doesn't let other apps see your stations or playlists.";
 
+    protected override string Website => "https://www.pandora.com";
+
     protected override string NotOpen => "Play a station in Pandora's web player (pandora.com)";
 
     // The title's link, the song's page on Pandora (/artist/…/TR…).

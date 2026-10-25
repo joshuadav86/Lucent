@@ -682,7 +682,7 @@ footer .credits a { text-decoration: underline; }
         <h2 id="ed-title">Edit, repair, and measure without leaving your player.</h2>
         <p class="lede">Right-click any song or video and open it in the editor. Cut, clean up, split stems, master, and undo anything. Your original stays safe.</p>
       </div>
-      <div class="screen"><img src="img/editor-video.png" width="1240" height="700" alt="The Lucent video and audio editor with a music video open, its picture above the waveform, markers, and a selection ready to trim or delete" loading="lazy"></div>
+      <div class="screen"><img src="img/editor-video.png" width="1240" height="700" alt="The Lucent video and audio editor with a video of a DJ set open, its picture above the waveform, markers, and a selection ready to trim or delete" loading="lazy"></div>
       <div class="analyzer-notes ed-features">
         <div><h3>Video too</h3><p>Trim MP4 and MOV without re-encoding. Save frames, a GIF, or a smaller copy in H.264, HEVC, or just the sound.</p></div>
         <div><h3>Dock it anywhere</h3><p>Snap the editor beside the player, or drag it free.</p></div>
@@ -1098,15 +1098,15 @@ footer .credits a { text-decoration: underline; }
   /* ---------- visuals gallery ---------- */
   const V = {
     rt: ["Ray traced", 27, [["diamond-fire","Diamond Fire"],["blue-marble","Blue Marble"],["cathedral-light","Cathedral Light"],["crystal-organ","Crystal Organ"],["cloud-sea","Cloud Sea"],["ringed-world","Ringed World"],["chrome-equalizer","Chrome Equalizer"],["forest-light","Forest Light"],["disco-ball","Disco Ball"]]],
-    pa: ["Particles", 58, [["phoenix-rising","Phoenix Rising"],["galaxy-collision","Galaxy Collision"],["volcanic-eruption","Volcanic Eruption"],["strange-attractors","Strange Attractors"],["solar-flare","Solar Flare"],["iron-filings","Iron Filings"],["magnetosphere","Magnetosphere"],["silk-currents","Silk Currents"],["ember-storm","Ember Storm"],["knot-stream","Knot Stream"],["dyson-swarm","Dyson Swarm"],["murmuration","Murmuration"],["buddhabrot","Buddhabrot"],["physarum","Physarum"],["barnsley-fern","Barnsley Fern"]]],
+    pa: ["Particles", 59, [["phoenix-rising","Phoenix Rising"],["galaxy-collision","Galaxy Collision"],["volcanic-eruption","Volcanic Eruption"],["strange-attractors","Strange Attractors"],["solar-flare","Solar Flare"],["iron-filings","Iron Filings"],["magnetosphere","Magnetosphere"],["silk-currents","Silk Currents"],["ember-storm","Ember Storm"],["knot-stream","Knot Stream"],["dyson-swarm","Dyson Swarm"],["murmuration","Murmuration"],["buddhabrot","Buddhabrot"],["physarum","Physarum"],["barnsley-fern","Barnsley Fern"],["cardioid-loom","Cardioid Loom"]]],
     ge: ["Geometric", 15, [["quasicrystal","Quasicrystal"],["girih-tiles","Girih Tiles"],["voronoi-glass","Voronoi Glass"],["hex-pulse","Hex Pulse"],["spirograph","Spirograph"]]],
     mi: ["Minimal", 14, [["enso","Enso"],["eclipse","Eclipse"],["harmonograph","Harmonograph"]]],
     ka: ["Kaleidoscope", 16, [["kaleido-cathedral","Kaleido Cathedral"],["rose-window","Rose Window"],["flower-of-life","Flower of Life"]]],
     fr: ["Fractal and fly-through", 38, [["mandelbulb-bloom","Mandelbulb Bloom"],["menger-voyage","Menger Voyage"],["pythagoras-tree","Pythagoras Tree"],["apollonian-spheres","Apollonian Spheres"],["orbit-traps","Orbit Traps"]]],
-    cy: ["Cyberpunk", 7, [["neon-downpour","Neon Downpour"],["sunset-highway","Sunset Highway"]]],
+    cy: ["Cyberpunk", 6, [["neon-downpour","Neon Downpour"]]],
     co: ["Cosmic", 5, [["cosmic-jellyfish","Cosmic Jellyfish"],["black-hole","Black Hole"]]]
   };
-  const ALL = [["co",1],["ge",0],["rt",0],["mi",0],["ka",0],["pa",1],["fr",2],["rt",1],["co",0],["pa",12],["fr",0],["ge",1],["pa",2],["mi",1],["rt",2],["cy",0],["fr",3],["pa",3],["fr",1],["ge",2],["rt",3],["ka",1],["pa",4],["cy",1],["pa",0]];
+  const ALL = [["co",1],["ge",0],["rt",0],["mi",0],["ka",0],["pa",1],["fr",2],["rt",1],["co",0],["pa",12],["fr",0],["ge",1],["pa",2],["mi",1],["rt",2],["cy",0],["fr",3],["pa",3],["fr",1],["ge",2],["rt",3],["ka",1],["pa",4],["pa",15],["pa",0]];
   const SHORT = { rt: "Ray traced", pa: "Particles", ge: "Geometric", mi: "Minimal", ka: "Kaleido", fr: "Fractal", cy: "Cyberpunk", co: "Cosmic" };
   const chips = document.getElementById("chips"), gallery = document.getElementById("gallery");
   const famBtn = (key, label, count) => {

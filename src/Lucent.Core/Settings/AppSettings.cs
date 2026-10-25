@@ -432,6 +432,7 @@ public sealed class AppSettings
         ["Midnight Snowfall"] = "Julia Dust",
         ["Hourglass"] = "Calabi-Yau",
         ["Newton's Cradle"] = "Hyperbolic Tiling",
+        ["Sunset Highway"] = "Cardioid Loom",
     };
 
     /// <summary>Visuals that were taken out with nothing in their place.</summary>

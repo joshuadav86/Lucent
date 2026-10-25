@@ -1,324 +1,221 @@
 // Name: Black Hole
-// A black hole bends a glowing nebula into rings around itself; its disk burns violet where it rushes towards you and amber where it flees, and spacetime ripples on every beat.
+// Spacetime drawn as a glowing neon net sinking into the bottomless throat of a black hole: rings of the net slide slowly down the well and light up with the spectrum, spiral streams of glowing gas whirl down it faster and faster, a ring of trapped light circles the edge, jets fire out of the throat with the bass and every beat sends a gravitational wave rolling out across the net.
 // Family: Cosmic
-// Tags: Space, Dark, 3D
+// Tags: Space, Neon, Geometric, 3D
 // Added: 2026-10-16 23:54
+// Particles: 262144
 
-// Units: the event horizon has radius 1. The photon sphere is at 1.5, the shadow's edge at an impact
-// parameter of 2.6, and the disk's innermost stable orbit at 3.
-static const float DiskInner = 3.0;
-static const float DiskOuter = 13.0;
+// Units: the event horizon has radius 1. The well is Flamm's paraboloid, the shape that the space
+// around a black hole bends into when one dimension is drawn as height: 2 sqrt(r - 1) above the
+// throat, flat far out and plunging straight down at the horizon.
+static const float Outer = 12.0;
+static const float Depth = 0.85;      // how deep the well is drawn
+static const float Meridians = 48.0;
+static const float Rings = 28.0;
+static const float Streams = 96.0;
 
-float holeHash(float3 p)
+// The share of particles in each part: the net, the gas, the ring of trapped light, the jets.
+static const float NetShare = 0.34;
+static const float GasShare = 0.52;
+static const float RingShare = 0.05;
+
+// A gravitational wave rolling out from the throat after each beat. With a beat to follow it rides
+// through the whole beat; without one it shows just as it lands.
+float holeWave(float r)
 {
-    p = frac(p * float3(0.1031, 0.1030, 0.0973));
-    p += dot(p, p.yxz + 33.33);
-    return frac((p.x + p.y) * p.z);
+    float front = 1.4 + BeatPhase * (Outer - 1.4);
+    float strength = (SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat) * (1.0 - BeatPhase * 0.7);
+    float d = r - front;
+    return sin(d * 3.0) * exp(-d * d * 0.6) * strength * 0.35;
 }
 
-float holeNoise(float3 p)
+// The height of the well at radius r, carrying the beat's wave.
+float holeWell(float r)
 {
-    float3 i = floor(p);
-    float3 f = frac(p);
-    float3 u = f * f * (3.0 - 2.0 * f);
-    float n000 = holeHash(i);
-    float n100 = holeHash(i + float3(1.0, 0.0, 0.0));
-    float n010 = holeHash(i + float3(0.0, 1.0, 0.0));
-    float n110 = holeHash(i + float3(1.0, 1.0, 0.0));
-    float n001 = holeHash(i + float3(0.0, 0.0, 1.0));
-    float n101 = holeHash(i + float3(1.0, 0.0, 1.0));
-    float n011 = holeHash(i + float3(0.0, 1.0, 1.0));
-    float n111 = holeHash(i + float3(1.0, 1.0, 1.0));
-    return lerp(lerp(lerp(n000, n100, u.x), lerp(n010, n110, u.x), u.y),
-                lerp(lerp(n001, n101, u.x), lerp(n011, n111, u.x), u.y), u.z);
+    return Depth * (2.0 * sqrt(max(r - 1.0, 0.0)) - 2.0 * sqrt(Outer - 1.0)) + holeWave(r);
 }
 
-// Turbulent gas sheared into long streaks along its orbits.
-float diskStreaks(float radius, float angle, float seed)
+float3 onWell(float r, float angle, float lift)
 {
-    float3 q = float3(cos(angle) * 1.3, sin(angle) * 1.3, radius * 1.1 + seed);
-    float total = 0.0;
-    float amplitude = 0.55;
-    [unroll]
-    for (int octave = 0; octave < 4; octave++)
+    return float3(cos(angle) * r, holeWell(r) + lift, sin(angle) * r);
+}
+
+// Where a ring of the net sits: rings are spaced evenly in log r and slide down into the well.
+float ringRadius(float ring)
+{
+    float s = frac((ring + 0.5) / Rings - Time * 0.012);
+    return exp(lerp(log(1.08), log(Outer), s));
+}
+
+// A particle's data: its part (0 net, 1 gas, 2 ring, 3 jet), then two numbers that place it and a speed.
+// The net: x part, y which strand (meridians first, then rings), z how far along it, w speed.
+// The gas: y which stream, z how far in (0 at the edge, 1 at the throat), w speed.
+// The ring: y its angle. The jets: y up or down, z how far out, w its angle round the beam.
+float3 holePoint(Particle particle)
+{
+    float part = particle.data.x;
+    float strand = particle.data.y;
+    float along = particle.data.z;
+    float swirl = Time * 0.05;
+    if (part < 0.5)
     {
-        total += holeNoise(q) * amplitude;
-        q = q * float3(1.9, 1.9, 2.9) + 7.1;
-        amplitude *= 0.52;
+        if (strand < Meridians)
+        {
+            // Meridians: closer together near the throat, where the well is steepest.
+            float r = 1.03 + (Outer - 1.03) * along * along;
+            return onWell(r, strand / Meridians * 2.0 * PI + swirl, 0.0);
+        }
+        float r = ringRadius(strand - Meridians);
+        // The ring turns faster the deeper it is, dragged round by the hole.
+        return onWell(r, along * 2.0 * PI + swirl + Time * 0.6 * pow(r, -1.5), 0.0);
     }
-    return total;
+    if (part < 1.5)
+    {
+        // The gas spirals in: four arms of six fine threads each, winding tighter towards the
+        // throat, and the whole whirlpool turns faster as it narrows.
+        float r = Outer * pow(1.15 / Outer, along);
+        float arm = floor(strand / (Streams * 0.25));
+        float thread = floor(frac(strand * 0.618034) * 6.0);
+        float spread = (thread / 5.0 - 0.5) * 0.45;
+        float angle = arm * 0.5 * PI + spread + log(Outer / r) * 2.4 - Time * 0.35 + swirl;
+        return onWell(r, angle, 0.08 + (1.0 - along) * 0.1);
+    }
+    if (part < 2.5)
+    {
+        // Light trapped in orbit, circling the lip of the throat.
+        return onWell(1.5, strand - Time * 2.2, 0.06);
+    }
+    // The jets fire straight out of the throat along the spin axis, widening as they go.
+    float height = along * 9.0;
+    float width = 0.05 + height * 0.035;
+    float base = holeWell(1.0);
+    return float3(cos(particle.data.w) * width, base + strand * height, sin(particle.data.w) * width);
 }
 
-// The current colours: four for the disk's Doppler shift (receding, crossing, approaching,
-// fastest approaching) and two for the nebula.
-struct HoleScheme
+void Spawn(inout Particle particle, uint id)
 {
-    float3 receding;
-    float3 crossing;
-    float3 approaching;
-    float3 fastest;
-    float3 nebulaA;
-    float3 nebulaB;
-};
-
-// Three colour schemes the hole cycles through, cross-fading about once a minute:
-// orchid (amber, magenta, violet), fire (crimson, orange, gold) and ice (indigo, teal, aqua).
-HoleScheme holeSchemeAt(float scheme)
-{
-    HoleScheme orchid;
-    orchid.receding = float3(1.0, 0.32, 0.05);
-    orchid.crossing = float3(1.0, 0.2, 0.55);
-    orchid.approaching = float3(0.45, 0.3, 1.0);
-    orchid.fastest = float3(0.55, 0.85, 1.0);
-    orchid.nebulaA = float3(0.75, 0.08, 0.6);
-    orchid.nebulaB = float3(0.12, 0.3, 1.0);
-
-    HoleScheme fire;
-    fire.receding = float3(0.9, 0.06, 0.03);
-    fire.crossing = float3(1.0, 0.42, 0.06);
-    fire.approaching = float3(1.0, 0.78, 0.3);
-    fire.fastest = float3(0.85, 0.92, 1.0);
-    fire.nebulaA = float3(0.8, 0.12, 0.1);
-    fire.nebulaB = float3(0.04, 0.45, 0.6);
-
-    HoleScheme ice;
-    ice.receding = float3(0.25, 0.15, 0.9);
-    ice.crossing = float3(0.0, 0.62, 0.85);
-    ice.approaching = float3(0.45, 1.0, 0.9);
-    ice.fastest = float3(0.95, 1.0, 1.0);
-    ice.nebulaA = float3(0.45, 0.15, 1.0);
-    ice.nebulaB = float3(0.85, 0.15, 0.55);
-
-    HoleScheme chosen = ice;
-    if (scheme < 0.5)
+    float pick = fixedRandom(id, 1.0);
+    float part = pick < NetShare ? 0.0 : pick < NetShare + GasShare ? 1.0 : pick < NetShare + GasShare + RingShare ? 2.0 : 3.0;
+    float a = fixedRandom(id, 2.0);
+    float b = random(id, 3.0);
+    float speed = 0.8 + fixedRandom(id, 4.0) * 0.4;
+    if (part < 0.5)
     {
-        chosen = orchid;
+        particle.data = float4(0.0, min(floor(a * (Meridians + Rings)), Meridians + Rings - 1.0), b, speed);
     }
-    else if (scheme < 1.5)
+    else if (part < 1.5)
     {
-        chosen = fire;
+        particle.data = float4(1.0, min(floor(a * Streams), Streams - 1.0), b, speed);
     }
-    return chosen;
+    else if (part < 2.5)
+    {
+        particle.data = float4(2.0, a * 2.0 * PI, 0.0, speed);
+    }
+    else
+    {
+        particle.data = float4(3.0, a < 0.5 ? -1.0 : 1.0, b, fixedRandom(id, 5.0) * 2.0 * PI);
+    }
+    particle.velocity = 0.0;
+    particle.position = holePoint(particle);
+    particle.life = 1e6;
 }
 
-HoleScheme holeScheme()
+void Simulate(inout Particle particle, uint id)
 {
-    float phase = Time / 55.0;
-    float scheme = wrap(floor(phase), 3.0);
-    float fade = smoothstep(0.7, 1.0, frac(phase));
-    HoleScheme a = holeSchemeAt(scheme);
-    HoleScheme b = holeSchemeAt(wrap(scheme + 1.0, 3.0));
-    HoleScheme blend;
-    blend.receding = lerp(a.receding, b.receding, fade);
-    blend.crossing = lerp(a.crossing, b.crossing, fade);
-    blend.approaching = lerp(a.approaching, b.approaching, fade);
-    blend.fastest = lerp(a.fastest, b.fastest, fade);
-    blend.nebulaA = lerp(a.nebulaA, b.nebulaA, fade);
-    blend.nebulaB = lerp(a.nebulaB, b.nebulaB, fade);
-    return blend;
+    float dt = min(DeltaTime, 0.05);
+    float part = particle.data.x;
+    if (part < 0.5)
+    {
+        // Light creeps down the meridians into the throat.
+        if (particle.data.y < Meridians)
+        {
+            particle.data.z = frac(particle.data.z - dt * 0.02 * (1.0 + Bass) * particle.data.w);
+        }
+    }
+    else if (part < 1.5)
+    {
+        particle.data.z = frac(particle.data.z + dt * (0.03 + Bass * 0.08 + DropPulse * 0.08) * particle.data.w);
+    }
+    else if (part > 2.5)
+    {
+        float speed = 1.0 / (particle.data.w + 1.0) + 0.25;
+        particle.data.z = frac(particle.data.z + dt * (0.12 + Bass * 0.5 + Beat * 0.25) * speed);
+    }
+    float3 before = particle.position;
+    particle.position = holePoint(particle);
+    // Remember the movement for the streak, but not across a jump back to the start.
+    float3 moved = particle.position - before;
+    particle.velocity = length(moved) > 0.3 ? 0.0 : moved / max(DeltaTime, 1e-4);
 }
 
-// The disk's colour, an exaggerated Doppler shift: one hue where the gas flees from us, others
-// where it crosses our view and where it rushes towards us. The hottest gas burns white.
-float3 dopplerColour(HoleScheme scheme, float shift, float heat)
+float3 cameraEye()
 {
-    float3 colour = lerp(scheme.receding, scheme.crossing, smoothstep(0.7, 1.0, shift));
-    colour = lerp(colour, scheme.approaching, smoothstep(1.0, 1.3, shift));
-    colour = lerp(colour, scheme.fastest, smoothstep(1.3, 1.7, shift));
-    return lerp(colour, float3(1.0, 0.96, 0.93), smoothstep(0.8, 1.6, heat)) * smoothstep(0.0, 0.25, heat);
+    float angle = Time * 0.045;
+    float elevation = 0.32 + 0.12 * sin(Time * 0.037);
+    float range = 14.0 + sin(Time * 0.029) * 1.5;
+    return range * float3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation));
 }
 
-// Light and opacity of the disk where a ray crosses it.
-float4 diskSample(float3 hit, float3 rayVelocity, HoleScheme scheme)
+Sprite Show(Particle particle, uint id)
 {
-    float radius = length(hit.xz);
-    float angle = atan2(hit.z, hit.x);
+    Sprite sprite = (Sprite)0;
+    float3 eye = cameraEye();
+    float3 target = float3(0.0, -3.0, 0.0);
+    float zoom = 1.9 * (1.0 + DropPulse * 0.04);
+    float3 seen = project(particle.position, eye, target, zoom, sin(Time * 0.06) * 0.06);
+    float3 seenBefore = project(particle.position - particle.velocity * 0.03, eye, target, zoom, sin(Time * 0.06) * 0.06);
 
-    // Inner gas orbits faster than outer gas. Two copies of the texture take turns fading in
-    // and out, so the shearing never winds the streaks up too tightly.
-    float spin = 2.4 * pow(radius, -1.5);
-    const float cycle = 8.0;
-    float phaseA = frac(Time / cycle);
-    float phaseB = frac(Time / cycle + 0.5);
-    float weightA = 1.0 - abs(phaseA * 2.0 - 1.0);
-    float streaks = diskStreaks(radius, angle + spin * phaseA * cycle, 0.0) * weightA
-                  + diskStreaks(radius, angle + spin * phaseB * cycle, 19.3) * (1.0 - weightA);
-    // Blending two textures flattens the contrast mid-way; restore it.
-    streaks = 0.53 + (streaks - 0.53) * rsqrt(weightA * weightA + (1.0 - weightA) * (1.0 - weightA));
-    streaks = saturate((streaks - 0.25) * 1.8);
-
-    // A few narrow gaps, like the divisions in a planet's rings.
-    float gaps = smoothstep(0.0, 0.12, abs(frac(radius * 0.37 + 0.2) - 0.5))
-               * smoothstep(0.0, 0.05, abs(frac(radius * 1.13) - 0.5) + 0.03);
-
-    // A shock wave that rolls out through the disk after each beat.
-    float shock = exp(-abs(radius - DiskInner - (1.0 - Beat) * 8.0) * 2.5) * Beat;
-
-    float inner = smoothstep(DiskInner, DiskInner + 0.35, radius);
-    float outer = smoothstep(DiskOuter, DiskOuter - 6.0, radius);
-    float profile = inner * outer * pow(DiskInner / radius, 1.3);
-    float density = profile * (0.3 + 1.1 * streaks) * (0.4 + 0.6 * gaps) + shock * inner * 0.6;
-
-    // Relativistic beaming: gas moving towards us is brighter, receding gas dimmer.
-    float speed = min(sqrt(0.5 / radius), 0.6);
-    float3 orbit = normalize(float3(-hit.z, 0.0, hit.x));
-    float towardsUs = dot(orbit, -normalize(rayVelocity));
-    float shift = sqrt(1.0 - speed * speed) / (1.0 - speed * towardsUs) * sqrt(saturate(1.0 - 1.0 / radius));
-
-    float heat = (pow(DiskInner / radius, 1.1) * (0.7 + streaks * 0.4) + Bass * 0.15 + shock * 0.6) * shift;
-    float3 colour = dopplerColour(scheme, shift, heat) * density * pow(shift, 2.5) * (1.7 + Bass * 1.2);
-    return float4(colour, saturate(density * 1.3));
-}
-
-// The sky behind the hole, looked up by the direction a ray escapes in. The screen-space
-// derivatives of that direction turn each star into a crisp dot wherever the lensing moves it,
-// brightened where the lens magnifies it.
-float3 holeSky(float3 direction, float pixelAngle, HoleScheme scheme)
-{
-    float3 a = abs(direction);
-    float2 face = direction.xy / a.z;
-    float faceId = direction.z > 0.0 ? 0.0 : 1.0;
-    if (a.x > a.y && a.x > a.z)
+    float part = particle.data.x;
+    float r = length(particle.position.xz);
+    float3 colour;
+    if (part < 0.5)
     {
-        face = direction.yz / a.x;
-        faceId = direction.x > 0.0 ? 2.0 : 3.0;
+        // The net: teal far out, deepening to blue and violet down the well. Each ring glows with
+        // its own band of the spectrum, bass at the throat and treble at the rim.
+        float depth = saturate(log(r) / log(Outer));
+        colour = hsv2rgb(0.5 + (1.0 - depth) * 0.22, 0.85, 1.0);
+        bool ring = particle.data.y >= Meridians;
+        float level = spectrum(0.03 + depth * 0.6);
+        float fadeOut = 1.0 - smoothstep(0.75, 1.0, depth);
+        float wave = abs(holeWave(r)) * 2.0;
+        colour *= (ring ? 0.07 + level * 0.14 : 0.045) * fadeOut + wave * 0.06;
     }
-    else if (a.y > a.z)
+    else if (part < 1.5)
     {
-        face = direction.xz / a.y;
-        faceId = direction.y > 0.0 ? 4.0 : 5.0;
+        // The gas heats as it falls: magenta at the edge, violet, then blue-white near the throat.
+        // Gas swinging towards us glows brighter, gas swinging away dimmer.
+        float fall = particle.data.z;
+        float3 hot = lerp(hsv2rgb(0.88, 0.85, 1.0), hsv2rgb(0.74, 0.8, 1.0), smoothstep(0.0, 0.6, fall));
+        hot = lerp(hot, float3(0.75, 0.9, 1.0), smoothstep(0.65, 1.0, fall));
+        float3 view = normalize(particle.position - eye);
+        float3 orbit = normalize(float3(-particle.position.z, 0.0, particle.position.x));
+        float beaming = 1.0 + 0.6 * dot(orbit, view);
+        float fade = smoothstep(0.0, 0.1, fall) * (1.0 - smoothstep(0.93, 1.0, fall));
+        colour = hot * (0.045 + fall * 0.06) * beaming * fade * (0.7 + Bass * 0.6 + Level * 0.3);
     }
-
-    // Map a small step on the sky back to a step in pixels.
-    float2 alongX = ddx(face);
-    float2 alongY = ddy(face);
-    float area = alongX.x * alongY.y - alongX.y * alongY.x;
-    float safeArea = abs(area) < 1e-12 ? 1e-12 : area;
-    float2x2 toPixels = float2x2(alongY.y, -alongY.x, -alongX.y, alongX.x) / safeArea;
-    float magnify = clamp(pixelAngle * pixelAngle / (abs(area) + 1e-12), 0.3, 3.0);
-
-    // A nebula of fine glowing filaments, which the lensing wraps into rings around the hole.
-    float3 q = direction * 2.0 + float3(0.0, Time * 0.01, 0.0);
-    float warp = holeNoise(q * 1.3 + 4.0);
-    float cloud = holeNoise(q * 1.8 + warp * 1.5) * 0.65 + holeNoise(q * 3.9 + warp) * 0.35;
-    float filaments = pow(1.0 - abs(cloud * 2.0 - 1.0), 12.0);
-    float fine = pow(1.0 - abs(holeNoise(q * 8.0 + warp * 2.0) * 2.0 - 1.0), 10.0);
-    float glowField = smoothstep(0.35, 0.8, holeNoise(q * 0.7 + 2.0));
-    float3 tint = lerp(scheme.nebulaA, scheme.nebulaB, holeNoise(q * 0.9 + 9.0));
-    float3 colour = tint * glowField * (filaments * 0.3 + fine * 0.18 + 0.012);
-
-    [unroll]
-    for (int layer = 0; layer < 2; layer++)
+    else if (part < 2.5)
     {
-        float density = layer == 0 ? 42.0 : 11.0;
-        float2 grid = face * density + faceId * 13.7 + layer * 5.3;
-        float2 cell = floor(grid);
-        float chance = hash(cell + faceId);
-        float2 spot = float2(hash(cell + 3.1), hash(cell + 7.7)) * 0.8 + 0.1;
-        float2 pixels = mul(toPixels, (spot - frac(grid)) / density);
-        float brightness = layer == 0 ? pow(chance, 40.0) * 2.0 : pow(chance, 12.0) * 4.0;
-        float twinkle = 1.0 + 0.5 * sin(Time * (3.0 + chance * 7.0) + chance * 40.0) * Treble;
-        float3 starTint = lerp(float3(1.0, 0.78, 0.6), float3(0.65, 0.78, 1.0), hash(cell + 11.0));
-        colour += starTint * brightness * twinkle * exp(-dot(pixels, pixels) * 1.4) * magnify;
+        colour = float3(0.8, 0.95, 1.0) * (0.14 + Treble * 0.25) * (0.6 + 0.4 * sin(particle.data.y * 9.0 + Time * 3.0));
     }
-    return colour;
+    else
+    {
+        float along = particle.data.z;
+        colour = float3(0.35, 0.7, 1.0) * (0.05 + Bass * 0.08 + Beat * 0.04) * (1.0 - along) * smoothstep(0.0, 0.05, along);
+    }
+    colour *= 0.8 + Intensity * 0.4;
+    colour *= 1.0 + step(0.997, fixedRandom(id, 6.0)) * Treble * 4.0;
+    colour *= saturate(particle.age * 2.0);
+
+    sprite.position = seen.xy;
+    float2 streak = seen.xy - seenBefore.xy;
+    sprite.streak = streak * min(1.0, 0.03 / max(length(streak), 1e-5));
+    sprite.size = seen.z > 0.1 ? 0.9 : 0.0;
+    sprite.colour = colour;
+    focus(sprite, seen.z, length(eye - target), 0.08);
+    return sprite;
 }
 
 float3 Render(float2 uv, float2 p)
 {
-    // A slow orbit that drifts between a nearly edge-on view and a view from above.
-    float azimuth = Time * 0.05;
-    float elevation = 0.05 + 0.28 * (0.5 + 0.5 * sin(Time * 0.043 - 1.0));
-    float range = 15.0 + 2.5 * sin(Time * 0.031);
-    float3 eye = range * float3(cos(azimuth) * cos(elevation), sin(elevation), sin(azimuth) * cos(elevation));
-    // Each beat sends a ripple through spacetime, rolling outward from the hole.
-    float rippleRadius = (1.0 - Beat) * 2.2;
-    float fromCentre = length(p);
-    float ripple = exp(-(fromCentre - rippleRadius) * (fromCentre - rippleRadius) * 25.0) * Beat;
-    float2 view = p * (1.0 + 0.03 * ripple * sin((fromCentre - rippleRadius) * 40.0));
-
-    const float zoom = 1.6;
-    float3 direction = cameraRay(eye, float3(0.0, 0.0, 0.0), view, zoom, sin(Time * 0.07) * 0.15);
-    float pixelAngle = 2.0 / (Resolution.y * zoom);
-
-    HoleScheme scheme = holeScheme();
-
-    // Trace the light ray backwards through the curved space around the hole.
-    float3 position = eye;
-    float3 velocity = direction;
-    float3 angular = cross(position, velocity);
-    float bend = 1.5 * dot(angular, angular);
-
-    float3 colour = 0.0;
-    float opacity = 0.0;
-    float captured = 0.0;
-    int steps = qualitySteps(100);
-    [loop]
-    for (int i = 0; i < steps; i++)
-    {
-        float r2 = dot(position, position);
-        float radius = sqrt(r2);
-        float stepSize = clamp(radius - 1.0, 0.05, 3.0) * 0.2;
-        velocity -= bend * position / (r2 * r2 * radius) * stepSize;
-        float3 next = position + velocity * stepSize;
-
-        // Crossing the disk plane: add the disk's light in front of whatever lies behind it.
-        if (position.y * next.y < 0.0)
-        {
-            float3 hit = lerp(position, next, position.y / (position.y - next.y));
-            float hitRadius = length(hit.xz);
-            if (hitRadius > DiskInner && hitRadius < DiskOuter)
-            {
-                float4 disk = diskSample(hit, velocity, scheme);
-                colour += disk.rgb * (1.0 - opacity);
-                opacity += disk.a * (1.0 - opacity);
-            }
-        }
-
-        // Jets along the spin axis. Where this step passes closest to the axis, add the
-        // beam's light integrated across its width, so the beam stays crisp at any step size.
-        float2 across = next.xz - position.xz;
-        float acrossLength = max(dot(across, across), 1e-8);
-        float t = -dot(position.xz, across) / acrossLength;
-        float axis = length(position.xz + across * t);
-        float height = abs(lerp(position.y, next.y, t));
-        float width = 0.04 + height * 0.025;
-        if (t > 0.0 && t <= 1.0 && axis < width * 4.0 && height > 1.2)
-        {
-            float slant = stepSize * length(velocity) / sqrt(acrossLength);
-            float knots = 0.25 + pow(0.5 + 0.5 * sin(height * 1.4 - Time * 5.0), 6.0);
-            float beatKnot = exp(-abs(height - 1.5 - (1.0 - Beat) * 14.0) * 1.0) * Beat * 5.0;
-            float beam = exp(-axis * axis / (width * width)) * width * 1.77 * min(slant, 30.0);
-            float fade = smoothstep(1.2, 3.0, height) * exp(-height * 0.09);
-            colour += float3(0.45, 0.65, 1.0) * beam * fade * (knots * (0.6 + Bass * 1.2) + beatKnot) * (1.0 - opacity);
-        }
-
-        position = next;
-        if (radius < 1.0)
-        {
-            captured = 1.0;
-            break;
-        }
-        // Stop once the ray is escaping: nothing but sky and jets lies further out.
-        if (radius > 40.0 || opacity > 0.98 || (radius > 24.0 && dot(position, velocity) > 0.0))
-        {
-            break;
-        }
-    }
-
-    // The sky behind everything (the derivatives must be taken outside any branch).
-    colour += holeSky(normalize(velocity), pixelAngle, scheme) * (1.0 - opacity) * (1.0 - captured);
-
-    // The photon ring: light that has circled the hole, hugging the edge of the shadow.
-    // It is brightest on the side where the disk comes towards us, and ripples with the spectrum.
-    float impact = length(angular);
-    float edge = abs(impact - 2.62) / (pixelAngle * range);
-    float2 screen = normalize(p + 0.0001);
-    float side = 0.5 - 0.5 * screen.x;
-    float band = spectrum(0.1 + 0.6 * abs(atan2(screen.y, screen.x)) / PI);
-    float ring = exp(-edge * edge * 0.6) * (0.6 + band * 1.2) + exp(-edge * 0.25) * 0.12;
-    float3 ringColour = dopplerColour(scheme, lerp(0.75, 1.45, side), 0.6 + side * 0.5);
-    colour += ringColour * ring * (0.5 + side * 1.2) * (1.0 - opacity * 0.6);
-
-    return colour;
+    return particles(uv) + previous(uv) * 0.5;
 }

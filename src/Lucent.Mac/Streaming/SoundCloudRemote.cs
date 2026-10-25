@@ -47,6 +47,8 @@ public sealed class SoundCloudRemote : BrowserTabRemote
 
     public override string Name => "SoundCloud";
 
+    protected override string Website => "https://soundcloud.com";
+
     protected override string NotOpen => "Play something on SoundCloud";
 
     // The badge's link, /artist/song, without what follows it (?in=a playlist).
