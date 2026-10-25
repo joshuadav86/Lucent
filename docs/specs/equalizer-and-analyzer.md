@@ -1,0 +1,43 @@
+# Equalizer and analyzer
+
+## What it does
+
+**Equalizer (E):**
+- 4, 8, 16, 24, or 32 faders drawn over the live spectrum, with 15 presets and a balance control.
+- Shapes only the player's sound. Its spectrum pauses while the editor plays, because the EQ doesn't shape the editor.
+- Switches to Winamp's 10 octave bands while a classic .wsz skin is on.
+- Off in bit-perfect mode.
+
+**Analyzer (Y):** a studio window with panels you switch on and off:
+- Heatmap (spectrogram), spectrum bars, scrolling waveform, stereo scope with correlation.
+- Loudness strip: momentary, short-term, and integrated LUFS, loudness range (LRA), and true peak (dBTP, hot above -1).
+- Loudness restarts on a new song, a source change, a gapless track change, a click on the strip, or "Measure loudness from here".
+
+**What they listen to:** the visuals, meter, EQ spectrum, and analyzer all read one `AudioCapture`. Precedence: a live input being recorded, then the editor while it plays, then other apps' sound or a chosen input, then the player.
+
+## Windows
+
+WPF drawing (`Windows/Spectrogram*.cs`, `Windows/EqualizerSpectrum.cs`). Other apps' sound comes from WASAPI loopback; music Lucent plays in exclusive mode skips Windows' mixer, so loopback can't hear it.
+
+## Mac
+
+Avalonia drawing. Other apps' sound comes from a Core Audio process tap (macOS 14.2 or later, needs the user's OK).
+
+## Parity gaps
+
+None.
+
+## Code
+
+- `Lucent.Core/Audio/Equalizer.cs`, `EqualizerBands.cs`, `EqualizerDesign.cs`, `EqualizerPresets.cs`
+- `Lucent.Core/Audio/LoudnessMeter.cs`, `AudioCapture.cs`, `EditorFeed.cs`, `InputFeed.cs`
+- `EqualizerWindow.*`, `AnalyzerWindow.*`, `Audio/SystemAudio.cs`, `MainWindow.ListenInput.cs` in each app
+- Settings: `AnalyzerModules`, `ListenInput`, `ListenInputChannel`, `EqualizerSettings`
+
+## Checks
+
+`LoudnessSelfTest` (EBU Tech 3341/3342 tones) and `EditorFeedSelfTest` run in both apps' `--self-test`.
+
+## Adding an audio source
+
+Add a Begin/Write/End trio to `AudioCapture` and slot it into the precedence above. Don't write through the player's `Write`.
