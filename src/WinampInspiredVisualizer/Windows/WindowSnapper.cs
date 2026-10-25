@@ -54,6 +54,7 @@ public sealed class WindowSnapper
     private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int MDT_EFFECTIVE_DPI = 0;
     private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     private const int VK_CONTROL = 0x11;
     private const uint GW_HWNDNEXT = 2;
@@ -102,6 +103,12 @@ public sealed class WindowSnapper
         _main = main;
         Add(main);
     }
+
+    /// <summary>
+    /// True while a window is being dragged (not resized). The snapper places the windows then, so
+    /// nothing else should move or resize them until the drag ends.
+    /// </summary>
+    public bool IsDragging => _moving != IntPtr.Zero && !_resized && !_held;
 
     /// <summary>Raised when the user finishes moving or resizing one of the windows.</summary>
     public event EventHandler? MoveFinished;
@@ -349,16 +356,24 @@ public sealed class WindowSnapper
     /// windows would land a moment before or after the player, so during a drag they'd seem to
     /// pull apart from it and overlap it by turns.
     /// </summary>
-    private void MoveTogether(IntPtr hwnd, Rect rect)
+    /// <remarks>
+    /// While the player is changing scale (<paramref name="includePlayer"/> false), only the docked
+    /// windows move: Windows hasn't resized the player yet, and moving it at its old size to its new
+    /// spot can put most of it back on the screen it just left, so it changes scale straight back.
+    /// </remarks>
+    private void MoveTogether(IntPtr hwnd, Rect rect, bool includePlayer = true)
     {
         const uint flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE;
         var places = _carried.Select(carried =>
         {
             GetWindowRect(carried.Handle, out var own);
-            return (carried.Handle, Place: carried.PlaceBeside(rect, _carrierScale, own.Right - own.Left, own.Bottom - own.Top));
+            var width = own.Right - own.Left;
+            var height = own.Bottom - own.Top;
+            var place = carried.PlaceBeside(rect, _carrierScale, width, height);
+            return (carried.Handle, Place: Steady(carried, rect, place, width, height));
         }).ToList();
         var batch = BeginDeferWindowPos(places.Count + 1);
-        if (batch != IntPtr.Zero)
+        if (batch != IntPtr.Zero && includePlayer)
         {
             batch = DeferWindowPos(batch, hwnd, IntPtr.Zero, rect.Left, rect.Top, 0, 0, flags);
         }
@@ -398,10 +413,11 @@ public sealed class WindowSnapper
         var scale = dpi > 0 ? dpi / 96.0 : 1.0;
         if (hwnd == _moving)
         {
-            // Windows keeps the player under the mouse; the docked windows follow it there.
+            // Windows keeps the player under the mouse and puts it there itself, at its new size, once
+            // this message has been handled; the docked windows follow it there.
             _carrierRect = suggested;
             _carrierScale = scale;
-            MoveTogether(hwnd, suggested);
+            MoveTogether(hwnd, suggested, includePlayer: false);
             return;
         }
 
@@ -415,6 +431,58 @@ public sealed class WindowSnapper
         var height = suggested.Bottom - suggested.Top;
         var place = _carried[index].PlaceBeside(_carrierRect, _carrierScale, width, height);
         Marshal.StructureToPtr(new Rect { Left = place.X, Top = place.Y, Right = place.X + width, Bottom = place.Y + height }, lParam, false);
+    }
+
+    /// <summary>
+    /// Where a carried window goes so that it doesn't flip between two scales. A window changes scale
+    /// when most of it crosses onto a screen with a different scale, and grows or shrinks when it
+    /// does. Beside the player near the line between two screens, the new size can put most of it
+    /// back on the screen it came from, so it changes back, then again, every frame. When the move
+    /// would start that, the window keeps its scale and stays just far enough onto its own screen,
+    /// overlapping or leaving a gap by the player for a moment, until the player has moved far
+    /// enough for it to change scale for good.
+    /// </summary>
+    private (int X, int Y) Steady(Carried carried, Rect player, (int X, int Y) place, int width, int height)
+    {
+        var own = GetDpiForWindow(carried.Handle);
+        var here = new Rect { Left = place.X, Top = place.Y, Right = place.X + width, Bottom = place.Y + height };
+        var dpi = DpiAt(here);
+        if (own == 0 || dpi == 0 || dpi == own)
+        {
+            return place;
+        }
+
+        // At the new scale it'd be this size, and go here beside the player.
+        var ratio = dpi / (double)own;
+        var newWidth = (int)Math.Round(width * ratio);
+        var newHeight = (int)Math.Round(height * ratio);
+        var next = carried.PlaceBeside(player, _carrierScale, newWidth, newHeight);
+        var there = new Rect { Left = next.X, Top = next.Y, Right = next.X + newWidth, Bottom = next.Y + newHeight };
+        if (DpiAt(there) == dpi)
+        {
+            return place;
+        }
+
+        // Changing scale would send it straight back: it stays on the screen it's on (at its own scale)
+        // with its middle just inside that screen, so most of it is still there.
+        var current = MonitorFromWindow(carried.Handle, MONITOR_DEFAULTTONEAREST);
+        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (current == IntPtr.Zero || !GetMonitorInfo(current, ref info))
+        {
+            return place;
+        }
+
+        var screen = info.Monitor;
+        var middleX = Math.Clamp(place.X + width / 2, screen.Left + 1, screen.Right - 2);
+        var middleY = Math.Clamp(place.Y + height / 2, screen.Top + 1, screen.Bottom - 2);
+        return (middleX - width / 2, middleY - height / 2);
+    }
+
+    /// <summary>The scale (DPI) of the screen most of this rectangle is on, or 0 if it can't be told.</summary>
+    private static uint DpiAt(Rect rect)
+    {
+        var monitor = MonitorFromRect(ref rect, MONITOR_DEFAULTTONEAREST);
+        return monitor != IntPtr.Zero && GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, out var dpi, out _) == 0 ? dpi : 0;
     }
 
     /// <summary>
@@ -1268,6 +1336,12 @@ public sealed class WindowSnapper
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
