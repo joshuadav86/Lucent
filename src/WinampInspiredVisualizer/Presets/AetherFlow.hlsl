@@ -1,7 +1,7 @@
 // Name: Aether Flow
-// Silky threads of coloured light stream past a glowing glass sphere, parting smoothly round it and wrapping its surface before tumbling into slow swirling eddies behind it; the whole current surges with the bass and the glass glows from within.
+// Threads of coloured light stream out of a flower-shaped mandala of points, twist round a glass sphere and tumble into eddies behind it; each ring of threads glows with its own band of the music, every beat sends a pulse of light down the current, and a crystal icosahedron turns inside the glass.
 // Family: Particles
-// Tags: Calm, Colourful, 3D
+// Tags: Calm, Colourful, 3D, Geometric
 // Added: 2026-10-17 17:15
 // Particles: 262144
 
@@ -13,7 +13,8 @@
 static const float SphereRadius = 1.0;
 static const float Inlet = -5.5;
 static const float Outlet = 6.5;
-static const float Seeds = 380.0;
+static const float Seeds = 384.0;
+static const float SeedRings = 12.0;   // the seeds sit in rings of 32, each shaped like a six-petalled flower
 static const float SeedSpread = 2.3;
 static const float Zoom = 1.6;
 
@@ -36,16 +37,27 @@ float3 flowAt(float3 position, bool swirling)
         float wake = smoothstep(-0.2, 1.2, position.x) * exp(-rho2 * 0.55) * exp(-max(position.x, 0.0) * 0.12);
         float3 twist = float3(0.0, -position.z, position.y) * 0.75 * wake;
         float3 eddies = curlNoise(position * 0.7 - float3(Time * 0.12, 0.0, 0.0)) * (0.03 + wake * 0.55);
-        velocity += twist + eddies;
+        // The whole current turns slowly round the axis, so the rings of threads braid into spirals.
+        float3 spiral = float3(0.0, -position.z, position.y) * (0.12 + Mid * 0.18);
+        velocity += twist + eddies + spiral;
     }
     return velocity;
 }
 
-// Where thread k starts, on a disc upstream.
+// Which ring thread k starts on, 0 in the middle.
+float seedRing(float k)
+{
+    return floor(k / (Seeds / SeedRings));
+}
+
+// Where thread k starts, upstream: rings of evenly spaced points, each ring a six-petalled flower,
+// turned a little from the one inside it, so head on they make a mandala.
 float2 seedPoint(float k)
 {
-    float angle = frac(k * 0.618034) * 2.0 * PI;
-    float radius = sqrt((k + 0.5) / Seeds) * SeedSpread;
+    float ring = seedRing(k);
+    float perRing = Seeds / SeedRings;
+    float angle = (k - ring * perRing) / perRing * 2.0 * PI + ring * 0.13;
+    float radius = (ring + 1.0) / SeedRings * SeedSpread * (1.0 + 0.12 * cos(angle * 6.0));
     return float2(cos(angle), sin(angle)) * radius;
 }
 
@@ -118,12 +130,17 @@ float sphereHit(float3 origin, float3 direction, float radius, out float leave)
     return -b - h;
 }
 
-// Silky aurora colours, chosen by where a thread starts.
+// Each ring of threads has its own colour, running round the wheel from the middle outwards.
 float3 threadColour(float k)
 {
-    float2 seed = seedPoint(k);
-    float hue = atan2(seed.y, seed.x) / (2.0 * PI) * 0.6 + length(seed) * 0.12 + Time * 0.008;
+    float hue = seedRing(k) / SeedRings * 0.75 + Time * 0.008;
     return hsv2rgb(0.5 + hue, 0.65, 1.0);
+}
+
+// Seconds since the last beat.
+float sinceBeat()
+{
+    return -log(max(Beat, 1e-4)) / 5.0;
 }
 
 Sprite Show(Particle particle, uint id)
@@ -153,8 +170,12 @@ Sprite Show(Particle particle, uint id)
     float speed = length(particle.velocity) / flowSpeed();
     float ends = smoothstep(Inlet, Inlet + 3.0, particle.position.x) * smoothstep(Outlet, Outlet - 2.0, particle.position.x);
     float3 colour = threadColour(particle.data.x);
-    float band = spectrum(frac(particle.data.x * 0.618) * 0.8);
-    float brightness = 0.3 * (0.5 + speed * 0.55) * (0.7 + band * 0.9) * ends;
+    // Each ring listens to its own band: bass in the middle, treble on the outside.
+    float band = spectrum(seedRing(particle.data.x) / SeedRings * 0.8 + 0.02);
+    // Each beat sends a pulse of light down the current.
+    float front = Inlet + sinceBeat() * 6.0;
+    float pulse = 1.0 + 2.0 * exp(-pow((particle.position.x - front) / 0.4, 2.0)) * exp(-sinceBeat() * 0.6);
+    float brightness = 0.3 * (0.5 + speed * 0.55) * (0.45 + band * band * 1.6) * pulse * ends;
 
     sprite.position = seen.xy;
     sprite.streak = seen.xy - seenBefore.xy;
@@ -162,6 +183,62 @@ Sprite Show(Particle particle, uint id)
     sprite.colour = colour * brightness;
     focus(sprite, seen.z, length(eye), 0.035);
     return sprite;
+}
+
+// How close a ray (from origin along direction, for length reach) comes to the segment a..b.
+float rayToSegment(float3 origin, float3 direction, float reach, float3 a, float3 b)
+{
+    float3 edge = b - a;
+    float3 w = origin - a;
+    float ee = dot(edge, edge);
+    float de = dot(direction, edge);
+    float dw = dot(direction, w);
+    float ew = dot(edge, w);
+    float denominator = max(ee - de * de, 1e-5);
+    float s = clamp((ew - de * dw) / denominator, 0.0, 1.0);
+    float t = clamp(dot(a + edge * s - origin, direction), 0.0, reach);
+    s = clamp(dot(origin + direction * t - a, edge) / ee, 0.0, 1.0);
+    return length(origin + direction * t - (a + edge * s));
+}
+
+float3 icosahedronCorner(int i)
+{
+    const float phi = 1.618034;
+    float3 corner = i < 4 ? float3(0.0, (i & 1) ? 1.0 : -1.0, (i & 2) ? phi : -phi)
+                  : i < 8 ? float3((i & 1) ? 1.0 : -1.0, (i & 2) ? phi : -phi, 0.0)
+                          : float3((i & 2) ? phi : -phi, 0.0, (i & 1) ? 1.0 : -1.0);
+    return corner / 1.902113;
+}
+
+// A glowing crystal icosahedron turning inside the glass: the glow along one ray through it.
+float3 crystal(float3 origin, float3 direction, float reach)
+{
+    float size = 0.5 + Bass * 0.06 + Beat * 0.03;
+    float spin = Time * (0.25 + Level * 0.2);
+    float nearest = 1e3;
+    [loop]
+    for (int i = 0; i < 12; i++)
+    {
+        float3 a = icosahedronCorner(i);
+        [loop]
+        for (int j = i + 1; j < 12; j++)
+        {
+            float3 b = icosahedronCorner(j);
+            // Neighbouring corners are one edge length apart (1.05 on the unit sphere).
+            if (abs(length(a - b) - 1.0515) < 0.01)
+            {
+                float3 ta = a;
+                float3 tb = b;
+                ta.xz = rotate(ta.xz, spin);
+                tb.xz = rotate(tb.xz, spin);
+                ta.xy = rotate(ta.xy, spin * 0.6);
+                tb.xy = rotate(tb.xy, spin * 0.6);
+                nearest = min(nearest, rayToSegment(origin, direction, reach, ta * size, tb * size));
+            }
+        }
+    }
+    float3 tint = lerp(float3(0.4, 0.75, 1.0), float3(1.0, 0.55, 0.9), 0.5 + 0.5 * sin(Time * 0.1));
+    return tint * (exp(-nearest * 110.0) * 0.5 + exp(-nearest * 14.0) * 0.05) * (0.5 + Bass * 0.8 + Beat * 0.4);
 }
 
 float3 environment(float3 direction)
@@ -212,6 +289,7 @@ float3 Render(float2 uv, float2 p)
         float3 core = lerp(float3(0.3, 0.6, 1.0), float3(0.8, 0.45, 1.0), 0.5 + 0.5 * sin(Time * 0.1));
         float3 glowInside = core * (1.0 - exp(-through * 1.1)) * pulse * 0.06;
 
+        glowInside += crystal(position, inside, through);
         float3 glass = behind * float3(0.85, 0.95, 1.0) * (1.0 - fresnel) + environment(reflect(direction, normal)) * fresnel + glowInside;
         // A thin bright rim where the threads hug the surface.
         glass += core * pow(1.0 - facing, 3.0) * 0.18 * (0.6 + Level);
