@@ -7,8 +7,8 @@ name: Release
 # Run it from the Actions tab once every build of main has finished. A change only to one platform's app
 # doesn't rebuild the other, so the Windows and Mac builds on "Latest build" can be from different
 # commits (and versions); each is the newest of its own app, and the release is tagged at the newest.
-# Afterwards, raise the first two numbers of LUCENT_VERSION in build.yml (1.0 to 1.1, say) so later
-# builds count up from the new release.
+# Later builds count up from the next version along (1.0 to 1.1, say) by themselves (build.yml reads the
+# newest stable release), and the website's download buttons switch to this release (pages.yml).
 on:
   workflow_dispatch:
     inputs:
@@ -21,7 +21,7 @@ on:
 
 permissions:
   contents: write
-  actions: read
+  actions: write
 
 concurrency:
   group: release
@@ -93,3 +93,6 @@ jobs:
 
           gh release create "$tag" files/* --target "$commit" --title "$TITLE" --notes-file release-notes.md --latest
           echo "Released $version as $tag: $(gh release view "$tag" --json url --jq .url)"
+
+          # Republish the website so its download buttons point at the new release.
+          gh workflow run pages.yml --ref main
