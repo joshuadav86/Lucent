@@ -1,4 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using Avalonia.Threading;
 using Lucent.Mac.Editor;
 using Lucent.Mac.Windows;
@@ -7,7 +11,7 @@ using WinampInspiredVisualizer.Settings;
 
 namespace Lucent.Mac;
 
-// Lucent full screen (Shift+F11, Window > Full Screen Lucent, or "Full screen Lucent" on a right-click in
+// Lucent full screen (Shift+F11, Window > Full Screen Lucent, a double-click on the player's title bar, or "Full screen Lucent" on a right-click in
 // any of Lucent's windows): every open window tiled across the whole of the player's screen, edge to edge, none
 // over another. It's apart from the visuals' own fullscreen (F11). The layout is FullScreenLayout in
 // Lucent.Core, shared with the Windows app and checked on many screens and scalings by tools/LayoutCheck.
@@ -38,6 +42,9 @@ public partial class MainWindow
         var playerMenu = new ContextMenu();
         LucentFullScreen.AddTo(playerMenu, this);
         LucentPlayer.ContextMenu = playerMenu;
+        // A double-click on the player's title bar (the logo and name, not its buttons) turns it on or off,
+        // as on Windows. It's caught on the way down, before the frame starts moving the window.
+        TitleBar.AddHandler(PointerPressedEvent, OnTitleBarPressed, RoutingStrategies.Tunnel);
 
         // Every window it lays out, as it opens: the others are laid out again whenever it's shown, hidden or closed
         // while Lucent's full screen.
@@ -65,6 +72,18 @@ public partial class MainWindow
     }
 
     private readonly HashSet<Window> _tileFollowed = new();
+
+    private void OnTitleBarPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.ClickCount != 2 || IsClassic || !e.GetCurrentPoint(TitleBar).Properties.IsLeftButtonPressed
+            || (e.Source as Visual)?.FindAncestorOfType<Button>(includeSelf: true) is not null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        Dispatcher.UIThread.Post(ToggleLucentFullScreen);
+    }
 
     public void ToggleLucentFullScreen()
     {
