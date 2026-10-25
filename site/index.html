@@ -116,9 +116,10 @@ kbd {
   transition: background-color .4s;
 }
 .hero .wrap { padding-block: clamp(56px, 8vw, 104px) 56px; display: grid; gap: clamp(36px, 5vw, 56px); }
-.hero-copy { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px 56px; align-items: end; }
+.hero-copy { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px clamp(40px, 5vw, 72px); align-items: end; }
 .hero-copy .eyebrow { grid-column: 1 / -1; }
-.hero h1 { font-size: clamp(38px, 5.2vw, 72px); line-height: 1.02; }
+.hero h1 { font-size: clamp(40px, 6.4vw, 88px); line-height: 1.02; }
+@media (min-width: 901px) { .hero h1 { max-width: 6.3em; } }
 .hero-side { display: grid; gap: 22px; min-width: 0; }
 @media (max-width: 900px) { .hero-copy { grid-template-columns: 1fr; } }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
