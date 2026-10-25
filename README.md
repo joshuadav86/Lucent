@@ -92,7 +92,7 @@ Inputs like `Bass`, `Mid`, `Treble`, `Beat`, `spectrum(x)`, and `waveform(x)`, a
 
 ## Build from source
 
-You'll need the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
+You'll need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```
 dotnet run --project src/WinampInspiredVisualizer   # Windows

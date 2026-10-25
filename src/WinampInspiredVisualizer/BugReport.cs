@@ -29,8 +29,8 @@ public static class BugReport
                 ("log", ErrorLog.ReadTail(MaxLogChars)),
             };
             var query = string.Join("&", fields
-                .Where(field => field.Value.Length > 0)
-                .Select(field => $"{field.Id}={Uri.EscapeDataString(field.Value)}"));
+                .Where(entry => entry.Value.Length > 0)
+                .Select(entry => $"{entry.Id}={Uri.EscapeDataString(entry.Value)}"));
             return $"{NewIssueUrl}?{query}";
         }
     }
