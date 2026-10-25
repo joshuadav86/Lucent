@@ -89,6 +89,12 @@ public sealed class AppSettings
     /// <summary>Run each track straight into the next, with no gap between them.</summary>
     public bool Gapless { get; set; } = true;
 
+    /// <summary>Fade each track into the next, overlapping them by <see cref="CrossfadeSeconds"/>.</summary>
+    public bool Crossfade { get; set; }
+
+    /// <summary>How long a crossfade lasts, in seconds.</summary>
+    public int CrossfadeSeconds { get; set; } = 5;
+
     /// <summary>The output to play through (a Windows device id), or null for Windows' default.</summary>
     public string? OutputDevice { get; set; }
 

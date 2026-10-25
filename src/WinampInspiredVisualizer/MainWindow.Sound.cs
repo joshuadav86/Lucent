@@ -8,12 +8,18 @@ namespace WinampInspiredVisualizer;
 
 /// <summary>
 /// Gapless playback and the Sound options: which output the music plays through, exclusive
-/// (bit-perfect) mode, and lining up the next track so it follows without a gap. Kept in its own file.
+/// (bit-perfect) mode, crossfading, and lining up the next track so it follows without a gap. Kept in its own file.
 /// </summary>
 public partial class MainWindow
 {
-    // How long before a track ends the next one is opened and lined up behind it.
-    private static readonly TimeSpan LineUpLead = TimeSpan.FromSeconds(10);
+    // How long before a track ends the next one is opened and lined up behind it (sooner for a long crossfade).
+    private TimeSpan LineUpLead => TimeSpan.FromSeconds(Math.Max(10, CrossfadeSeconds + 5));
+
+    // The crossfade lengths offered, in seconds.
+    private static readonly int[] CrossfadeChoices = { 1, 2, 3, 5, 8, 10, 12 };
+
+    // How long tracks overlap, or 0 when crossfading is off.
+    private int CrossfadeSeconds => _settings.Crossfade ? Math.Clamp(_settings.CrossfadeSeconds, 1, 12) : 0;
 
     // The track chosen to play after this one, once it's been chosen (null if the queue ends here).
     private UpNext? _upNext;
@@ -78,7 +84,7 @@ public partial class MainWindow
     /// </summary>
     private void LineUpNext()
     {
-        if (!_settings.Gapless || !_player.HasTrack || _current is null || _player.Duration - _player.Position > LineUpLead)
+        if ((!_settings.Gapless && !_settings.Crossfade) || !_player.HasTrack || _current is null || _player.Duration - _player.Position > LineUpLead)
         {
             return;
         }
@@ -136,6 +142,7 @@ public partial class MainWindow
     private void ApplySoundSettings()
     {
         _player.Gapless = _settings.Gapless;
+        _player.CrossfadeSeconds = CrossfadeSeconds;
         _player.OutputDeviceId = _settings.OutputDevice;
         _player.Exclusive = _settings.ExclusiveOutput;
     }
@@ -145,6 +152,8 @@ public partial class MainWindow
     {
         ExclusiveSwitch.IsChecked = _settings.ExclusiveOutput;
         GaplessSwitch.IsChecked = _settings.Gapless;
+        CrossfadeSwitch.IsChecked = _settings.Crossfade;
+        CrossfadeLengthName.Text = $"{Math.Clamp(_settings.CrossfadeSeconds, 1, 12)} seconds  ▾";
         OutputDeviceName.Text = _settings.OutputDevice is null
             ? "Windows default output  ▾"
             : (OutputDevices.List().FirstOrDefault(device => device.Id == _settings.OutputDevice)?.Name ?? "Output not connected") + "  ▾";
@@ -218,6 +227,38 @@ public partial class MainWindow
             ForgetUpNext();
             _settings.Save();
         }
+        else if (sender == CrossfadeSwitch)
+        {
+            _settings.Crossfade = on;
+            ChangeCrossfade();
+        }
+    }
+
+    private void OnChooseCrossfadeLength(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu { PlacementTarget = CrossfadeLengthButton };
+        foreach (var seconds in CrossfadeChoices)
+        {
+            var item = new MenuItem { Header = $"{seconds} seconds", IsChecked = _settings.CrossfadeSeconds == seconds };
+            item.Click += (_, _) =>
+            {
+                _settings.CrossfadeSeconds = seconds;
+                _settings.Crossfade = true;
+                ChangeCrossfade();
+            };
+            menu.Items.Add(item);
+        }
+
+        menu.IsOpen = true;
+    }
+
+    // Hands a new crossfade to the player, lining the next track up again so it starts at the right moment.
+    private void ChangeCrossfade()
+    {
+        _player.CrossfadeSeconds = CrossfadeSeconds;
+        ForgetUpNext();
+        _settings.Save();
+        ShowSoundValues();
     }
 
     /// <summary>

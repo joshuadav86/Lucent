@@ -39,6 +39,7 @@ public sealed class AudioPlayer : IDisposable
     private VolumeSampleProvider? _volumeProvider;
     private ExclusiveDevice? _exclusive;
     private float _volume = 0.8f;
+    private double _crossfadeSeconds;
     private bool _stopRequested;
     private bool _disposed;
     private VideoStream? _shownVideo;
@@ -66,6 +67,23 @@ public sealed class AudioPlayer : IDisposable
 
     /// <summary>Whether a track lined up with <see cref="QueueNext"/> follows without a gap. Takes effect from the next track.</summary>
     public bool Gapless { get; set; } = true;
+
+    /// <summary>
+    /// How many seconds a track lined up with <see cref="QueueNext"/> overlaps the end of the one before,
+    /// fading in as it fades out. Zero for none.
+    /// </summary>
+    public double CrossfadeSeconds
+    {
+        get => _crossfadeSeconds;
+        set
+        {
+            _crossfadeSeconds = Math.Max(0, value);
+            if (_chain is not null)
+            {
+                _chain.CrossfadeSeconds = _crossfadeSeconds;
+            }
+        }
+    }
 
     /// <summary>The output to play through (an id from <see cref="OutputDevices"/>), or null for macOS's default. Takes effect from the next track.</summary>
     public string? OutputDeviceId { get; set; }
@@ -116,6 +134,7 @@ public sealed class AudioPlayer : IDisposable
             }
 
             var clamped = value < TimeSpan.Zero ? TimeSpan.Zero : value > Duration ? Duration : value;
+            _chain.EndCrossfade();
             _chain.Current.Reader.CurrentTime = clamped;
         }
     }
@@ -199,7 +218,7 @@ public sealed class AudioPlayer : IDisposable
         }
 
         // A video plays to its own clock, so nothing runs on into one or out of one without a gap.
-        if (path is null || !Gapless || Video is not null || VideoFiles.IsVideo(path))
+        if (path is null || (!Gapless && _crossfadeSeconds <= 0) || Video is not null || VideoFiles.IsVideo(path))
         {
             _chain.SetNext(null)?.Dispose();
             return false;
@@ -257,6 +276,7 @@ public sealed class AudioPlayer : IDisposable
 
         _stopRequested = true;
         _output.Stop();
+        _chain.EndCrossfade();
         if (Controlled is { } controlled)
         {
             controlled.Stopped();
@@ -352,7 +372,9 @@ public sealed class AudioPlayer : IDisposable
         if (_chain is not null)
         {
             _chain.Advanced -= OnAdvanced;
+            _chain.Finished -= OnFinished;
             _chain.SetNext(null)?.Dispose();
+            _chain.Fading?.Dispose();
             _chain.Current.Dispose();
             _chain = null;
         }
@@ -481,16 +503,17 @@ public sealed class AudioPlayer : IDisposable
         _output.Init(audio.ToWaveProvider());
         _chain = chain;
         _chain.Advanced += OnAdvanced;
+        _chain.Finished += OnFinished;
+        _chain.CrossfadeSeconds = _crossfadeSeconds;
         Output = info;
     }
 
     // On the audio thread: the chain has just moved on to the track that was lined up.
-    private void OnAdvanced(ChainedTrack finished)
+    private void OnAdvanced()
     {
         var chain = _chain;
         Dispatcher.UIThread.Post(() =>
         {
-            finished.Dispose();
             if (!_disposed && _chain is { } current && ReferenceEquals(chain, current))
             {
                 Output = Output is null ? null : Output with { SourceBits = SourceBits(current.Current.Path) };
@@ -498,6 +521,9 @@ public sealed class AudioPlayer : IDisposable
             }
         });
     }
+
+    // On the audio thread: nothing reads from this track again (it ended, or finished fading out).
+    private static void OnFinished(ChainedTrack finished) => Dispatcher.UIThread.Post(finished.Dispose);
 
     private void Reopen(string path, TimeSpan position, bool play)
     {

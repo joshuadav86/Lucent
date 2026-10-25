@@ -86,6 +86,7 @@ public static partial class SelfTest
                 (firstPath, AudioReaderFactory.Open(firstPath)), (secondPath, AudioReaderFactory.Open(secondPath)));
 
             problems += CheckPlayerQueue(firstPath, secondPath, monoPath);
+            problems += CheckCrossfade();
         }
         catch (Exception ex)
         {
@@ -123,11 +124,8 @@ public static partial class SelfTest
 
         var chain = new TrackChain(firstTrack, format);
         var advances = 0;
-        chain.Advanced += finished =>
-        {
-            advances++;
-            finished.Dispose();
-        };
+        chain.Advanced += () => advances++;
+        chain.Finished += finished => finished.Dispose();
         chain.SetNext(secondTrack);
 
         var output = new List<float>(expected.Length);
@@ -151,6 +149,60 @@ public static partial class SelfTest
         }
 
         return 0;
+    }
+
+    // Two steady tones crossfaded by a TrackChain: they overlap by the fade, the old one is let go once,
+    // and equal-power curves never push the level past what the two summed would reach.
+    private static int CheckCrossfade()
+    {
+        const double fade = 0.1;
+        var format = WaveFormat.CreateIeeeFloatWaveFormat(GaplessRate, GaplessChannels);
+        var first = ChainedTrack.Create("first", MemoryTrack(Enumerable.Repeat(0.5f, FirstTrackFrames * GaplessChannels).ToArray()), format, false)!;
+        var second = ChainedTrack.Create("second", MemoryTrack(Enumerable.Repeat(-0.25f, SecondTrackFrames * GaplessChannels).ToArray()), format, false)!;
+        var chain = new TrackChain(first, format) { CrossfadeSeconds = fade };
+        var advances = 0;
+        var finished = new List<ChainedTrack>();
+        chain.Advanced += () => advances++;
+        chain.Finished += track =>
+        {
+            finished.Add(track);
+            track.Dispose();
+        };
+        chain.SetNext(second);
+
+        var output = new List<float>();
+        var buffer = new float[1002];
+        int read;
+        while ((read = chain.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            output.AddRange(buffer.Take(read));
+        }
+
+        chain.Current.Dispose();
+        var frames = output.Count / GaplessChannels;
+        var overlap = FirstTrackFrames + SecondTrackFrames - frames;
+        var loudest = output.Max(Math.Abs);
+        Console.WriteLine($"Crossfade: {frames} frames, overlapping by {overlap}, loudest {loudest:0.000}, moved on {advances} time(s).");
+        var problems = 0;
+        if (overlap < (fade - 0.03) * GaplessRate || overlap > fade * GaplessRate + 1)
+        {
+            Console.WriteLine($"::error::Crossfade: the tracks overlapped by {overlap} frames, not about {fade * GaplessRate:0}.");
+            problems++;
+        }
+
+        if (advances != 1 || finished.Count != 1 || !ReferenceEquals(finished[0], first) || chain.Fading is not null)
+        {
+            Console.WriteLine($"::error::Crossfade: moved on {advances} time(s) and let go of {finished.Count} track(s).");
+            problems++;
+        }
+
+        if (Math.Abs(output[0] - 0.5f) > 1e-6f || Math.Abs(output[^1] + 0.25f) > 1e-6f || loudest > 0.5f + 1e-4f)
+        {
+            Console.WriteLine("::error::Crossfade: the fade didn't run from the old track at full level to the new one at full level.");
+            problems++;
+        }
+
+        return problems;
     }
 
     // The player lines a file with the same format up behind the one loaded, and turns down one it can't follow seamlessly.
