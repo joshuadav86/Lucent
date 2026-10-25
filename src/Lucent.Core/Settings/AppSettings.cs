@@ -414,6 +414,7 @@ public sealed class AppSettings
     private static readonly Dictionary<string, string> ReplacedVisuals = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Midnight Snowfall"] = "Julia Dust",
+        ["Hourglass"] = "Calabi-Yau",
     };
 
     /// <summary>Visuals that were taken out with nothing in their place.</summary>
