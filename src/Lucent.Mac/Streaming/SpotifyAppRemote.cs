@@ -15,7 +15,7 @@ namespace Lucent.Mac.Streaming;
 /// <remarks>
 /// Windows reads the Spotify app through Windows' media controls instead (see Windows' Streaming/SpotifyAppRemote.cs).
 /// </remarks>
-public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes
+public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpener
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -43,6 +43,11 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes
         """;
 
     public string Name => "Spotify";
+
+    public bool IsOpen => IsRunning();
+
+    public Task OpenAsync(CancellationToken cancel) =>
+        AppOpener.OpenAppAsync("com.spotify.client", "Lucent couldn't find Spotify on this Mac. Install it from spotify.com.", cancel);
 
     public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
@@ -165,16 +170,7 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes
         }
     }
 
-    private static bool IsRunning()
-    {
-        var processes = Process.GetProcessesByName("Spotify");
-        foreach (var process in processes)
-        {
-            process.Dispose();
-        }
-
-        return processes.Length > 0;
-    }
+    private static bool IsRunning() => AppOpener.IsRunning("Spotify");
 
     public void Dispose()
     {

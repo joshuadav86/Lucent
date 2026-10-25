@@ -44,6 +44,16 @@ public sealed class RemoteControl : IDisposable
     // Until when reads keep the position just sought to, rather than where the app was before it caught up.
     private DateTime _positionHeldUntil;
 
+    // Whether the app was running here when last asked (see IRemoteOpener), the button that failed while it wasn't,
+    // pressed again once the Open button has opened it, and whether it's being opened now.
+    private bool _appOpen = true;
+    private Func<CancellationToken, Task>? _afterOpen;
+    private bool _opening;
+
+    // How long an app gets to start after Open, and to be ready for the button pressed before it was open.
+    private static readonly TimeSpan OpenTime = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan ReadyTime = TimeSpan.FromSeconds(12);
+
     public RemoteControl(IRemotePlayer player)
     {
         Player = player;
@@ -71,6 +81,101 @@ public sealed class RemoteControl : IDisposable
     public RemoteList? List { get; private set; }
 
     public bool IsPlaying => State is { IsPlaying: true };
+
+    /// <summary>
+    /// True when the app isn't open on this computer and nothing is playing anywhere, so the player offers to open it
+    /// (<see cref="OpenAppAsync"/>) rather than leaving the user to.
+    /// </summary>
+    public bool NeedsOpening => Player is IRemoteOpener && !_appOpen && !IsPlaying && !_disposed;
+
+    /// <summary>True while <see cref="OpenAppAsync"/> waits for the app to start.</summary>
+    public bool IsOpening => _opening;
+
+    /// <summary>
+    /// Opens the app (or its web player), waits for it to start, then presses again whatever button didn't work
+    /// because it wasn't open (Play, or a playlist chosen in the library).
+    /// </summary>
+    public async Task OpenAppAsync()
+    {
+        if (_disposed || _opening || Player is not IRemoteOpener opener)
+        {
+            return;
+        }
+
+        var retry = _afterOpen;
+        _afterOpen = null;
+        _opening = true;
+        Problem = null;
+        _problemHeldUntil = default;
+        Changed?.Invoke(this, EventArgs.Empty);
+        try
+        {
+            await opener.OpenAsync(_stop.Token);
+
+            // A web player is only seen open once a read finds its tab, so reads come every couple of seconds meanwhile.
+            var startedBy = DateTime.UtcNow + OpenTime;
+            var readAt = DateTime.UtcNow;
+            while (!opener.IsOpen)
+            {
+                if (DateTime.UtcNow >= startedBy)
+                {
+                    throw new RemoteProblem($"{Player.Name} didn't open. Try opening it yourself.");
+                }
+
+                if (DateTime.UtcNow >= readAt && _readNow.CurrentCount == 0)
+                {
+                    readAt = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+                    _readNow.Release();
+                }
+
+                await Task.Delay(500, _stop.Token);
+            }
+
+            _appOpen = true;
+            if (retry is not null)
+            {
+                // Running isn't ready: the app takes a few seconds to load its last song (and Spotify to tell its Web
+                // API it's here), so the button is tried until it works.
+                var readyBy = DateTime.UtcNow + ReadyTime;
+                await Task.Delay(1000, _stop.Token);
+                while (true)
+                {
+                    try
+                    {
+                        await retry(_stop.Token);
+                        break;
+                    }
+                    catch (RemoteProblem) when (DateTime.UtcNow < readyBy)
+                    {
+                        await Task.Delay(1500, _stop.Token);
+                    }
+                }
+
+                await Task.Delay(SettleTime, _stop.Token);
+            }
+        }
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            Report(ex, fromButton: true);
+        }
+        finally
+        {
+            _opening = false;
+        }
+
+        if (!_disposed)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+            if (_readNow.CurrentCount == 0)
+            {
+                _readNow.Release();
+            }
+        }
+    }
 
     public Task PlayPauseAsync() => IsPlaying
         ? RunAsync(Player.PauseAsync, state => state with { IsPlaying = false, Position = state.PositionNow, ReadAt = DateTime.UtcNow })
@@ -357,6 +462,13 @@ public sealed class RemoteControl : IDisposable
         }
         catch (Exception ex)
         {
+            // Pressed again once the app is open, when the Open button opens it.
+            if (Player is IRemoteOpener { IsOpen: false })
+            {
+                _appOpen = false;
+                _afterOpen = command;
+            }
+
             Report(ex, fromButton: true);
         }
 
@@ -392,6 +504,7 @@ public sealed class RemoteControl : IDisposable
         }
         catch (Exception ex)
         {
+            NoteWhetherOpen();
             Report(ex);
             return;
         }
@@ -400,6 +513,8 @@ public sealed class RemoteControl : IDisposable
         {
             return;
         }
+
+        NoteWhetherOpen();
 
         // The device takes a moment to report a volume just set, so what was asked for shows until then.
         if (state is { Volume: not null } && State is { Volume: { } asked } && (_sendingVolume || DateTime.UtcNow < _volumeHeldUntil))
@@ -470,6 +585,30 @@ public sealed class RemoteControl : IDisposable
         catch (Exception)
         {
             // No cover, then (or Lucent stopped controlling the app). The song still shows.
+        }
+    }
+
+    // Asks whether the app is running here, after each read, for NeedsOpening. A button that failed while it wasn't is
+    // forgotten once it's open again by other means, so the Open button never presses an old one.
+    private void NoteWhetherOpen()
+    {
+        if (Player is not IRemoteOpener opener)
+        {
+            return;
+        }
+
+        try
+        {
+            _appOpen = opener.IsOpen;
+        }
+        catch (Exception)
+        {
+            _appOpen = true;
+        }
+
+        if (_appOpen && !_opening)
+        {
+            _afterOpen = null;
         }
     }
 

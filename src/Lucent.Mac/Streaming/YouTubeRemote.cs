@@ -52,6 +52,8 @@ public sealed class YouTubeRemote : BrowserTabRemote, IRemoteLists
 
     public override string Name => "YouTube";
 
+    protected override string Website => "https://www.youtube.com";
+
     protected override string NotOpen => "Play a YouTube video";
 
     // A video's ID is 11 letters, digits, dashes and underscores; anything else is a page without one.

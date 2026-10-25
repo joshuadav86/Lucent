@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Streaming;
@@ -175,6 +176,7 @@ public partial class MainWindow
         _shownRemoteTrack = null;
         _shownRemoteArtwork = null;
         ShowVolume();
+        ShowOpenApp();
         ShowRemoteList();
         UpdateListening();
         ShowNowPlaying(_current?.Track);
@@ -439,9 +441,11 @@ public partial class MainWindow
         // Spotify says which of the account's devices it's playing on, which may not be this computer.
         var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;
         TrackDetails.Text = SongNotice ?? remote.Problem
+            ?? (remote.NeedsOpening ? $"{remote.Player.Name} isn't open." : null)
             ?? (string.IsNullOrEmpty(track?.Album) ? $"Playing in {where}" : $"{track.Album} · in {where}");
         ToolTip.SetTip(TrackDetails, remote.Problem ?? $"The sound comes from {where}. Lucent shows it and presses its buttons.");
         ShowVolume();
+        ShowOpenApp();
 
         if (track?.Id != _shownRemoteTrack || !ReferenceEquals(remote.Artwork, _shownRemoteArtwork))
         {
@@ -450,6 +454,27 @@ public partial class MainWindow
             ArtworkWindow.ShowRemote(track, remote.Artwork);
         }
     }
+
+    /// <summary>
+    /// Shows the Open button in the volume bar's place while the controlled app isn't open on this computer (Spotify not
+    /// started, no Pandora tab), so one click opens it and carries on with what was asked for.
+    /// </summary>
+    private void ShowOpenApp()
+    {
+        var remote = _remote is { NeedsOpening: true } needs ? needs : null;
+        OpenAppButton.IsVisible = remote is not null;
+        if (remote is null)
+        {
+            return;
+        }
+
+        var name = remote.Player.Name;
+        OpenAppButton.Content = remote.IsOpening ? $"Opening {name}…" : $"Open {name}";
+        OpenAppButton.IsEnabled = !remote.IsOpening;
+        ToolTip.SetTip(OpenAppButton, $"Start {name}, then Lucent carries on");
+    }
+
+    private void OnOpenApp(object? sender, RoutedEventArgs e) => RemoteTakes(remote => remote.OpenAppAsync());
 
     /// <summary>
     /// Says in the visuals window when the controlled app plays on another device (Spotify on a TV, say), whose sound
@@ -478,7 +503,8 @@ public partial class MainWindow
             if (_remote is { } remote)
             {
                 var volume = remote.HasVolume ? remote.State?.Volume : null;
-                visible = volume is not null;
+                // The Open button takes the bar's place while the app isn't open.
+                visible = volume is not null && !remote.NeedsOpening;
                 if (volume is { } level)
                 {
                     var where = remote.State?.Device is { } device ? $"{remote.Player.Name} on {device}" : remote.Player.Name;

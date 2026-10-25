@@ -19,7 +19,7 @@ namespace Lucent.Mac.Streaming;
 /// macOS has nothing like those that other apps may press, so the Mac goes to the tab itself. Only
 /// running browsers are asked, so Lucent never opens one by itself.
 /// </remarks>
-public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLinks
+public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLinks, IRemoteOpener
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -45,12 +45,23 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     // The tab last shown, so pausing it and playing it again stays with it while another tab plays.
     private Tab? _tab;
 
+    // False when the last read found none of the site's tabs in any browser (rather than a browser that wouldn't say).
+    private bool _found = true;
+
     protected BrowserTabRemote(HttpClient http) => _http = http;
 
     public abstract string Name { get; }
 
     /// <summary>What to tell the user when no tab is playing the site, such as "Play a YouTube video".</summary>
     protected abstract string NotOpen { get; }
+
+    /// <summary>The site's web player, opened by the player's Open button when no tab has it, such as "https://www.youtube.com".</summary>
+    protected abstract string Website { get; }
+
+    public bool IsOpen => _found;
+
+    /// <summary>Opens the site in a browser Lucent can reach that's already running (Safari, say), or else the default one.</summary>
+    public Task OpenAsync(CancellationToken cancel) => AppOpener.OpenWebsiteAsync(Website, RunningBrowsers().FirstOrDefault(), cancel);
 
     /// <summary>An AppleScript condition that's true when the address in <paramref name="url"/> is one of the site's player pages.</summary>
     protected abstract string Address(string url);
@@ -130,6 +141,7 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
         }
 
         var readAt = DateTime.UtcNow;
+        _found = found.Count > 0 || problem is not null;
         if (found.Count == 0)
         {
             _tab = null;

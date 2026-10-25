@@ -1,3 +1,4 @@
+using System.IO;
 using Windows.Media.Control;
 
 namespace WinampInspiredVisualizer.Streaming;
@@ -10,13 +11,26 @@ namespace WinampInspiredVisualizer.Streaming;
 /// <remarks>
 /// The Mac reads the Spotify app through AppleScript instead (see the Mac's Streaming/SpotifyAppRemote.cs).
 /// </remarks>
-public sealed class SpotifyAppRemote : MediaControlsRemote
+public sealed class SpotifyAppRemote : MediaControlsRemote, IRemoteOpener
 {
     public override string Name => "Spotify";
 
     protected override string NotOpen => "Open Spotify and play something";
 
     public override IReadOnlyList<string> ProcessNames { get; } = ["Spotify"];
+
+    public bool IsOpen => AppOpener.IsRunning(ProcessNames);
+
+    // The spotify: link opens both Spotify's installer's app and the Store's; the installer's is found by its place too.
+    public async Task OpenAsync(CancellationToken cancel)
+    {
+        if (!AppOpener.TryLink("spotify")
+            && !AppOpener.TryProgram(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Spotify", "Spotify.exe"))
+            && !await AppOpener.TryStoreAppAsync("SpotifyAB.SpotifyMusic"))
+        {
+            throw new RemoteProblem("Lucent couldn't find Spotify on this PC. Install it from spotify.com.");
+        }
+    }
 
     protected override GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions) =>
         sessions.FirstOrDefault(session => IsSpotify(session.SourceAppUserModelId));
