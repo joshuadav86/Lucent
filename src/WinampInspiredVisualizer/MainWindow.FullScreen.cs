@@ -15,6 +15,8 @@ namespace WinampInspiredVisualizer;
 // closing a window lays the others out again around it. Switching it off puts every window back where it
 // was; D, G and K switch it off and lay the windows out their own way. Locked windows stay where they are,
 // and the rest fill the screen beside them. Lucent opens full screen again if it was closed that way.
+// Tidy layout (Shift+D, or on the same right-click) lays them out again in one of a few balanced layouts,
+// the next each time it's pressed; outside full screen it tidies them in the space they take up.
 public partial class MainWindow
 {
     private bool _tilingSoon;
@@ -23,6 +25,7 @@ public partial class MainWindow
     {
         LucentFullScreen.IsOn = () => _settings.LucentFullScreen;
         LucentFullScreen.Toggle = ToggleLucentFullScreen;
+        LucentFullScreen.Tidy = TidyLayout;
         LucentFullScreen.Covers = window => TileKindOf(window) is not null;
         _snapper.Swapped += RememberSwap;
         LucentFullScreen.AddTo(WindowToggles.ContextMenu, this);
@@ -135,8 +138,41 @@ public partial class MainWindow
         var area = ScreenArea.Of(this);
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
         var tiles = windows.Select(entry => entry.Tile).ToList();
-        var layout = FullScreenLayout.Arrange(new TileRect(area.Left, area.Top, area.Width, area.Height), tiles);
+        var layout = FullScreenLayout.Arrange(new TileRect(area.Left, area.Top, area.Width, area.Height), tiles, _settings.FullScreenStyle);
         WindowSwap.Apply(layout, tiles, _settings.FullScreenSwaps);
+        PlaceTiles(windows, layout);
+    }
+
+    /// <summary>
+    /// Tidy layout (Shift+D): lays the windows out in the next of FullScreenLayout's balanced layouts (the
+    /// visuals in the middle, the player on one side or the other), forgetting any swaps. Full screen it
+    /// fills the screen; otherwise the space the windows take up now, or the screen if they don't all fit there.
+    /// </summary>
+    public void TidyLayout()
+    {
+        RestoreAllWindows();
+        var screen = ScreenArea.Of(this);
+        var screenArea = new TileRect(screen.Left, screen.Top, screen.Width, screen.Height);
+        var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
+        var tiles = windows.Select(entry => entry.Tile).ToList();
+        var now = windows.ToDictionary(entry => entry.Tile.Key,
+            entry => new TileRect(entry.Window.Left, entry.Window.Top, SizeOf(entry.Window).Width, SizeOf(entry.Window).Height));
+        var area = _settings.LucentFullScreen ? screenArea : FullScreenLayout.GroupArea(now.Values, screenArea);
+        var (style, layout) = FullScreenLayout.Tidy(area, tiles, now, _settings.FullScreenStyle);
+        if (layout.LeftOut.Count > 0 && area != screenArea)
+        {
+            (style, layout) = FullScreenLayout.Tidy(screenArea, tiles, now, _settings.FullScreenStyle);
+        }
+
+        _settings.FullScreenStyle = style;
+        _settings.FullScreenSwaps.Clear();
+        PlaceTiles(windows, layout);
+        Toast.Show(this, FullScreenLayout.NameOf(style));
+    }
+
+    /// <summary>Puts each window where the layout says, and remembers where they went.</summary>
+    private void PlaceTiles(List<(Window Window, TileWindow Tile)> windows, TileResult layout)
+    {
         foreach (var (window, tile) in windows)
         {
             // The visuals keep their spot while they're fullscreen on their own: it's where they come back to.

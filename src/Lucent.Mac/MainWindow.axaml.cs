@@ -2239,6 +2239,9 @@ public partial class MainWindow : Window
             case Key.Q:
                 ToggleWindow(_queue);
                 break;
+            case Key.D when e.KeyModifiers == KeyModifiers.Shift:
+                TidyLayout();
+                break;
             case Key.D:
                 ArrangeWindows();
                 break;

@@ -67,7 +67,7 @@ Lucent updates itself when you close it. Choose **Every build** or switch off au
 | `Space` | Play or pause | `W` `Q` `L` | Visuals, queue, library | `V` | Visual picker |
 | `Z` / `X` | Previous, next | `E` `Y` `C` | Equalizer, analyzer, artwork | `N` / `B` | Next visual, back |
 | `S` / `R` | Shuffle, repeat | `D` `G` `K` | Dock, fill, shrink | `A` | Auto mode |
-| `H` | Favorite | `J` | Link windows to the player | `F` | Star the visual |
+| `H` | Favorite | `J` / `Shift+D` | Link windows, tidy layout | `F` | Star the visual |
 | `Ctrl+I` | Edit sound info | `O` / `M` | Options, Sources | `F11` / `Shift+F11` | Fullscreen visuals, full-screen layout |
 
 Media keys work in the background, and the playing song shows in Windows' media controls and the Mac's Now Playing.

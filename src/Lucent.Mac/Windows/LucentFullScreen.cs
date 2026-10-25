@@ -16,6 +16,9 @@ public static class LucentFullScreen
     /// <summary>The key that switches it, as menus show it.</summary>
     public static readonly KeyGesture Gesture = new(Key.F11, KeyModifiers.Shift);
 
+    /// <summary>The key for Tidy layout, as menus show it.</summary>
+    public static readonly KeyGesture TidyGesture = new(Key.D, KeyModifiers.Shift);
+
     private static readonly object Marker = new();
 
     /// <summary>Menus that tick the item as they open (a menu built again each time it opens gets the item again, but this only once).</summary>
@@ -27,10 +30,13 @@ public static class LucentFullScreen
     /// <summary>Switches it on or off.</summary>
     public static Action? Toggle { get; set; }
 
+    /// <summary>Tidy layout: lays the windows out again, balanced, the next way each time.</summary>
+    public static Action? Tidy { get; set; }
+
     /// <summary>Whether a window is one that Lucent full screen lays out, whose title bar gets the menu.</summary>
     public static Func<Window, bool>? Covers { get; set; }
 
-    /// <summary>Adds "Full screen Lucent", ticked while it's on, and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
+    /// <summary>Adds "Full screen Lucent", ticked while it's on, "Tidy layout", and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
     public static void AddTo(ContextMenu menu, Window window)
     {
         if (menu.Items.OfType<MenuItem>().Any(item => item.Tag == Marker))
@@ -50,6 +56,7 @@ public static class LucentFullScreen
         };
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
+        menu.Items.Add(TidyItem());
         menu.Items.Add(CloseItem.For(window));
         if (!Ticking.TryGetValue(menu, out _))
         {
@@ -64,7 +71,7 @@ public static class LucentFullScreen
         }
     }
 
-    /// <summary>Adds "Full screen Lucent" and "Close" to the end of a menu that's built afresh each time it opens (the classic player's).</summary>
+    /// <summary>Adds "Full screen Lucent", "Tidy layout" and "Close" to the end of a menu that's built afresh each time it opens (the classic player's).</summary>
     public static void AddTo(MenuFlyout menu, Window window)
     {
         if (menu.Items.Count > 0)
@@ -78,10 +85,19 @@ public static class LucentFullScreen
         };
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
+        menu.Items.Add(TidyItem());
         menu.Items.Add(CloseItem.For(window));
     }
 
-    /// <summary>Opens a menu with "Full screen Lucent" and "Close" at the pointer, for a right-click on a window's title bar. A window it doesn't lay out (a dialog, say) gets just "Close".</summary>
+    /// <summary>"Tidy layout", which lays the windows out again in a balanced way.</summary>
+    private static MenuItem TidyItem()
+    {
+        var tidy = new MenuItem { Header = "Tidy layout", InputGesture = TidyGesture };
+        tidy.Click += (_, _) => Tidy?.Invoke();
+        return tidy;
+    }
+
+    /// <summary>Opens a menu with "Full screen Lucent", "Tidy layout" and "Close" at the pointer, for a right-click on a window's title bar. A window it doesn't lay out (a dialog, say) gets just "Close".</summary>
     public static bool ShowWindowMenu(Window window, Control at)
     {
         var menu = new ContextMenu { Placement = PlacementMode.Pointer };

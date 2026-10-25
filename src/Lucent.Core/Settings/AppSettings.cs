@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using WinampInspiredVisualizer.Export;
+using WinampInspiredVisualizer.Layout;
 using WinampInspiredVisualizer.Library;
 using WinampInspiredVisualizer.Radio;
 using WinampInspiredVisualizer.Streaming;
@@ -153,6 +154,12 @@ public sealed class AppSettings
     /// order they were swapped: laying the windows out again keeps them swapped. Cleared as it's switched on or off.
     /// </summary>
     public List<List<string>> FullScreenSwaps { get; set; } = new();
+
+    /// <summary>
+    /// The layout Tidy layout (Shift+D) last chose, kept for laying the windows out full screen (and with G)
+    /// until it's pressed again.
+    /// </summary>
+    public TileStyle FullScreenStyle { get; set; } = TileStyle.AsTheyAre;
 
     // ---- Graphics ----
 

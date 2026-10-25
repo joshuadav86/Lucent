@@ -12,6 +12,8 @@ using WinampInspiredVisualizer.Layout;
 //   - nothing is left out on a screen big enough for everything (the windows' smallest sizes say what
 //     that is), so each set of windows fits from the screens listed in Fits below.
 //   - windows swapped while full screen only trade places that fit them, and the player never moves.
+//   - all of that again for each tidy layout (Tidy layout, Shift+D), and each press of Tidy layout
+//     moves something while there's another tidy layout to go to.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
@@ -45,19 +47,28 @@ foreach (var playerScale in new[] { 1.0, 1.5 })
         foreach (var (areaName, area) in areas)
         {
             Check($"{areaName}, player at {playerScale:P0}, {setName}", area, windows);
+            foreach (var style in FullScreenLayout.TidyStyles)
+            {
+                Check($"{areaName}, player at {playerScale:P0}, {setName}, {style}", area, windows, style);
+            }
+
+            CheckTidy($"{areaName}, player at {playerScale:P0}, {setName}", area, windows);
         }
 
         // The player locked a third of the way across, and the queue locked in the bottom-right corner.
         foreach (var (areaName, area) in areas.Where(entry => entry.Area.Width >= 1500))
         {
             var playerAt = new TileRect(area.Left + area.Width / 3, area.Top + 40, windows[0].Width, windows[0].Height);
-            Check($"{areaName}, player at {playerScale:P0}, {setName}, player locked", area,
-                windows.Select(window => window.Kind == TileKind.Player ? window with { LockedAt = playerAt } : window).ToList());
-            if (windows.Any(window => window.Kind == TileKind.Queue))
+            foreach (var style in FullScreenLayout.TidyStyles.Prepend(TileStyle.AsTheyAre))
             {
-                var queueAt = new TileRect(area.Right - 520, area.Bottom - 320, 520, 320);
-                Check($"{areaName}, player at {playerScale:P0}, {setName}, queue locked", area,
-                    windows.Select(window => window.Kind == TileKind.Queue ? window with { LockedAt = queueAt } : window).ToList());
+                Check($"{areaName}, player at {playerScale:P0}, {setName}, player locked, {style}", area,
+                    windows.Select(window => window.Kind == TileKind.Player ? window with { LockedAt = playerAt } : window).ToList(), style);
+                if (windows.Any(window => window.Kind == TileKind.Queue))
+                {
+                    var queueAt = new TileRect(area.Right - 520, area.Bottom - 320, 520, 320);
+                    Check($"{areaName}, player at {playerScale:P0}, {setName}, queue locked, {style}", area,
+                        windows.Select(window => window.Kind == TileKind.Queue ? window with { LockedAt = queueAt } : window).ToList(), style);
+                }
             }
         }
     }
@@ -114,10 +125,40 @@ if (problems.Count > 0)
 Console.WriteLine($"All {checkedCount} layouts are good.");
 return 0;
 
-void Check(string name, TileRect area, IReadOnlyList<TileWindow> windows)
+// Pressing Tidy layout again and again, from the layout as it was: each press moves something until it's
+// been through every tidy layout that's different, and it comes back round to where it started.
+void CheckTidy(string name, TileRect area, IReadOnlyList<TileWindow> windows)
+{
+    // Only the layouts that fit the most windows in count: Tidy layout passes over the others.
+    var layouts = FullScreenLayout.TidyStyles.Select(style => FullScreenLayout.Arrange(area, windows, style)).ToList();
+    var fewestOut = layouts.Min(result => result.LeftOut.Count);
+    var different = layouts
+        .Where(result => result.LeftOut.Count == fewestOut)
+        .Select(result => string.Join(";", result.Places.OrderBy(entry => entry.Key).Select(entry => $"{entry.Key}={entry.Value}")))
+        .Distinct()
+        .Count();
+    var now = FullScreenLayout.Arrange(area, windows).Places;
+    var style = TileStyle.AsTheyAre;
+    var seen = new List<TileStyle>();
+    for (var press = 0; press < FullScreenLayout.TidyStyles.Count; press++)
+    {
+        var (next, result) = FullScreenLayout.Tidy(area, windows, now, style);
+        if (press < different && seen.Count > 0 && seen.Contains(next))
+        {
+            problems.Add($"{name}: Tidy layout went back to {next} after {string.Join(", ", seen)}, with {different} different layouts to go through.");
+            return;
+        }
+
+        seen.Add(next);
+        style = next;
+        now = result.Places;
+    }
+}
+
+void Check(string name, TileRect area, IReadOnlyList<TileWindow> windows, TileStyle style = TileStyle.AsTheyAre)
 {
     checkedCount++;
-    var result = FullScreenLayout.Arrange(area, windows);
+    var result = FullScreenLayout.Arrange(area, windows, style);
     var line = $"{name}: " + string.Join(", ", result.Places.Select(place =>
         $"{place.Key} {place.Value.Left:0},{place.Value.Top:0} {place.Value.Width:0}x{place.Value.Height:0}"));
     if (result.LeftOut.Count > 0)

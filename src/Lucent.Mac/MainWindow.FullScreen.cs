@@ -14,7 +14,9 @@ namespace Lucent.Mac;
 // While it's on, opening or closing a window lays the others out again around it. Switching it off puts
 // every window back where it was; D, G and K switch it off and lay the windows out their own way. Locked
 // windows stay where they are, and the rest fill the screen beside them. Lucent opens full screen again
-// if it was closed that way.
+// if it was closed that way. Tidy layout (Shift+D, or on the same right-click) lays them out again in one
+// of a few balanced layouts, the next each time it's pressed; outside full screen it tidies them in the
+// space they take up.
 public partial class MainWindow
 {
     private bool _tilingSoon;
@@ -23,6 +25,7 @@ public partial class MainWindow
     {
         LucentFullScreen.IsOn = () => _settings.LucentFullScreen;
         LucentFullScreen.Toggle = ToggleLucentFullScreen;
+        LucentFullScreen.Tidy = TidyLayout;
         LucentFullScreen.Covers = window => TileKindOf(window) is not null;
         _snapper.Swapped += RememberSwap;
         if (WindowToggles.ContextMenu is { } menu)
@@ -160,8 +163,44 @@ public partial class MainWindow
         var area = Placement.WorkArea(this);
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
         var tiles = windows.Select(entry => entry.Tile).ToList();
-        var layout = FullScreenLayout.Arrange(new TileRect(area.X, area.Y, area.Width, area.Height), tiles);
+        var layout = FullScreenLayout.Arrange(new TileRect(area.X, area.Y, area.Width, area.Height), tiles, _settings.FullScreenStyle);
         WindowSwap.Apply(layout, tiles, _settings.FullScreenSwaps);
+        PlaceTiles(windows, layout);
+    }
+
+    /// <summary>
+    /// Tidy layout (Shift+D): lays the windows out in the next of FullScreenLayout's balanced layouts (the
+    /// visuals in the middle, the player on one side or the other), forgetting any swaps. Full screen it
+    /// fills the screen; otherwise the space the windows take up now, or the screen if they don't all fit there.
+    /// </summary>
+    public void TidyLayout()
+    {
+        RestoreAllWindows();
+        var screen = Placement.WorkArea(this);
+        var screenArea = new TileRect(screen.X, screen.Y, screen.Width, screen.Height);
+        var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
+        var tiles = windows.Select(entry => entry.Tile).ToList();
+        var now = windows.ToDictionary(entry => entry.Tile.Key, entry =>
+        {
+            var bounds = Placement.BoundsOf(entry.Window);
+            return new TileRect(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+        });
+        var area = _settings.LucentFullScreen ? screenArea : FullScreenLayout.GroupArea(now.Values, screenArea);
+        var (style, layout) = FullScreenLayout.Tidy(area, tiles, now, _settings.FullScreenStyle);
+        if (layout.LeftOut.Count > 0 && area != screenArea)
+        {
+            (style, layout) = FullScreenLayout.Tidy(screenArea, tiles, now, _settings.FullScreenStyle);
+        }
+
+        _settings.FullScreenStyle = style;
+        _settings.FullScreenSwaps.Clear();
+        PlaceTiles(windows, layout);
+        Toast.Show(this, FullScreenLayout.NameOf(style));
+    }
+
+    /// <summary>Puts each window where the layout says, and remembers where they went.</summary>
+    private void PlaceTiles(List<(Window Window, TileWindow Tile)> windows, TileResult layout)
+    {
         // The player first: macOS moves the windows that belong to it along with it, and they're placed after.
         foreach (var (window, tile) in windows)
         {
