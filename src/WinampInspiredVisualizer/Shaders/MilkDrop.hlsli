@@ -174,7 +174,9 @@ float4 md_tex3D(Texture3D t, SamplerState s, float3 uvw)
 }
 
 #define GetMain(uv) (MdMain.SampleLevel(MdLinearWrap, (uv), 0).xyz)
-#define GetPixel(uv) (MdMain.SampleLevel(MdPointClamp, (uv), 0).xyz)
+// MilkDrop 2's include.fx reads GetPixel through sampler_main too, so it wraps like GetMain.
+// Clamping it collapsed tunnel shaders such as martin - starfield sectors onto the edge pixels.
+#define GetPixel(uv) (MdMain.SampleLevel(MdLinearWrap, (uv), 0).xyz)
 #define GetBlur1(uv) (MdBlur1.SampleLevel(MdLinearClamp, (uv), 0).xyz * (blur1_max - blur1_min) + blur1_min)
 #define GetBlur2(uv) (MdBlur2.SampleLevel(MdLinearClamp, (uv), 0).xyz * (blur2_max - blur2_min) + blur2_min)
 #define GetBlur3(uv) (MdBlur3.SampleLevel(MdLinearClamp, (uv), 0).xyz * (blur3_max - blur3_min) + blur3_min)
