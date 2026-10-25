@@ -475,6 +475,7 @@ public partial class LibraryWindow : ToolWindow
         RemoteSongPlayItem.Header = $"Play in {app}";
         _openRemoteEntries = new List<RemoteListEntry>();
         RemotePlaylistView.ItemsSource = _openRemoteEntries;
+        RemoteSortButton.Visibility = Visibility.Collapsed;
         ShowRemotePlaylistNote(null);
         SearchRow.Visibility = FilterRow.Visibility = LibraryView.Visibility = EmptyLibraryHint.Visibility = Visibility.Collapsed;
         RemotePlaylistPanel.Visibility = Visibility.Visible;
@@ -527,7 +528,8 @@ public partial class LibraryWindow : ToolWindow
     {
         _openRemoteList = list;
         var chosen = (RemotePlaylistView.SelectedItem as RemoteListEntry)?.Track.Id;
-        _openRemoteEntries = (list?.Tracks ?? Array.Empty<RemoteTrack>()).Select(track => new RemoteListEntry(track)).ToList();
+        var tracks = list is null ? Array.Empty<RemoteTrack>() : RemoteListSorting.Sort(list.Tracks, ShownRemoteOrder);
+        _openRemoteEntries = tracks.Select(track => new RemoteListEntry(track)).ToList();
         RemotePlaylistView.ItemsSource = _openRemoteEntries;
         RemotePlaylistView.SelectedItem = _openRemoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
         var app = AppName(_openRemote!.RemoteApp);
@@ -539,7 +541,50 @@ public partial class LibraryWindow : ToolWindow
                 ? $"{count:N0} of {total:N0} songs  ·  {app}"
                 : $"{songs}  ·  {app}";
         ShowRemotePlaylistNote(note);
+        ShowRemoteSortButton();
         MarkRemotePlaying(Player?.RemotePlayingTrack);
+    }
+
+    // The order the queue's Sort button picked, shared with it, when the playlist can be listed that way.
+    private RemoteListOrder ShownRemoteOrder =>
+        _openRemoteList is { } list && Player?.RemoteListOrder is { } order && RemoteListSorting.OrdersFor(list).Contains(order)
+            ? order
+            : RemoteListOrder.Playlist;
+
+    private void ShowRemoteSortButton()
+    {
+        RemoteSortButton.Visibility = _openRemoteList is { Tracks.Count: > 1 } ? Visibility.Visible : Visibility.Collapsed;
+        RemoteSortLabel.Text = RemoteListSorting.Name(ShownRemoteOrder);
+    }
+
+    private void OnRemoteSortMenu(object sender, RoutedEventArgs e)
+    {
+        if (_openRemoteList is not { } list)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu { PlacementTarget = RemoteSortButton, Placement = PlacementMode.Bottom };
+        foreach (var order in RemoteListSorting.OrdersFor(list))
+        {
+            var item = new MenuItem { Header = RemoteListSorting.Name(order), IsCheckable = true, IsChecked = order == ShownRemoteOrder };
+            item.Click += (_, _) =>
+            {
+                if (Player is { } player)
+                {
+                    player.RemoteListOrder = order;
+                }
+
+                ShowRemoteSongs(list, list.Note);
+                if (_openRemoteEntries.Count > 0)
+                {
+                    RemotePlaylistView.ScrollIntoView(_openRemoteEntries[0]);
+                }
+            };
+            menu.Items.Add(item);
+        }
+
+        menu.IsOpen = true;
     }
 
     private void ShowRemotePlaylistNote(string? note)
