@@ -200,7 +200,9 @@ public partial class MainWindow
             ArrangeFirstTime();
             SavePlacements();
             Dispatcher.UIThread.Post(RedockSmallWindows, DispatcherPriority.Background);
+            // Said once the windows have settled: shown while the player was still changing size, it could open
+            // in the corner of the screen and stay there.
+            Toast.Show(this, "Default layout");
         }, DispatcherPriority.Background);
-        Toast.Show(this, "Default layout");
     }
 }
