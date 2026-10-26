@@ -7,6 +7,7 @@
 - Search, sort, store headings, and small album covers beside every song (classic skins keep plain rows).
 - PLAYLISTS view: saved playlists, favorites, imported playlists, and the controlled app's playlists (see [Streaming control](streaming-control.md)).
 - Edit sound info (Ctrl+I): tags and cover; Detect fills in BPM and key.
+- The song playing is marked with a bar and kept in the middle of the list: in folders, saved playlists, and an opened Spotify or Apple Music playlist. On each new song the list glides there (about 0.4 s, eased); a song far away jumps to a screen and a half short first, so the glide is short in any size of list. After a manual scroll or arrow key the list is left alone for 4 seconds, then catches up.
 
 **Queue (Q):** what plays next. Shuffle (S), repeat (R), favorite (H).
 
@@ -42,6 +43,6 @@
 ## Code
 
 - `Lucent.Core/Library/`, `Lucent.Core/Playlist/`, `Lucent.Core/Import/`, `Lucent.Core/Stores/`
-- `LibraryWindow.*`, `QueueWindow.*`, `ImportWindow.*`, `StoreWindow.*`, `SubfolderWindow.*`, `TrackInfoWindow.*`, `Windows/TrackThumb.cs`, `MainWindow.Sources.cs`, `MainWindow.Favorites.cs`, `MainWindow.Import.cs`, `MainWindow.DefaultPlayer.cs` in each app
+- `LibraryWindow.*`, `QueueWindow.*`, `ImportWindow.*`, `StoreWindow.*`, `SubfolderWindow.*`, `TrackInfoWindow.*`, `Windows/TrackThumb.cs`, `Windows/PlayingRowScroll.cs` (with `Lucent.Core/Layout/ScrollGlide.cs`), `MainWindow.Sources.cs`, `MainWindow.Favorites.cs`, `MainWindow.Import.cs`, `MainWindow.DefaultPlayer.cs` in each app
 - Drop handling: `ToolWindow.OnMusicDropped`
 - Settings: `LibraryFolders`, `LibraryFiles`, and the library sort and view settings in `AppSettings`

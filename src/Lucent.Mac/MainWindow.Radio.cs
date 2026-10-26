@@ -70,6 +70,7 @@ public partial class MainWindow
         {
             _current.IsCurrent = false;
             _current = null;
+            _libraryWindow.ShowLocalPlaying(null);
         }
 
         ForgetUpNext();

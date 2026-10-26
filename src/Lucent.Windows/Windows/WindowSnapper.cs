@@ -18,6 +18,10 @@ namespace WinampInspiredVisualizer.Windows;
 /// the player carries every window, docked to it or not.
 /// Drag a window by its title bar and drop it with the mouse well inside another, and the two swap places
 /// and sizes (<see cref="WindowSwap"/>); an outline over the other window shows when a drop will swap.
+/// The player and the windows it carries snap as one group, and no title bar can be dragged up off the top
+/// of the screen. A window dropped just short of another (a gap a little wider than snapping reaches)
+/// closes the gap and docks. Dragging the player away from a locked window that's docked to it (or linked)
+/// outlines the locked window, saying it's locked, and trying to drag a locked window says so too.
 /// Works on the raw window rectangles (physical pixels) while Windows moves them.
 /// </summary>
 /// <remarks>
@@ -57,6 +61,7 @@ public sealed class WindowSnapper
     private const uint MONITOR_DEFAULTTONEAREST = 2;
     private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     private const int VK_CONTROL = 0x11;
+    private const int VK_LBUTTON = 0x01;
     private const uint GW_HWNDNEXT = 2;
 
     /// <summary>How close (in pixels at 100% scaling) an edge has to come before it snaps.</summary>
@@ -71,9 +76,29 @@ public sealed class WindowSnapper
     /// </summary>
     private const double OverlapDistance = 64;
 
+    /// <summary>
+    /// How wide a gap (in pixels at 100% scaling) a window dropped beside another closes, docking to it. Wider
+    /// than the snap distance, since a window let go of just outside that would otherwise sit a sliver away.
+    /// </summary>
+    private const double DropDistance = 32;
+
+    /// <summary>How far (in pixels at 100% scaling) the mouse moves on a locked window's title bar before it says it's locked.</summary>
+    private const double LockedNudge = 4;
+
     private readonly Window _main;
     private readonly List<Window> _windows = new();
     private readonly List<Carried> _carried = new();
+
+    /// <summary>
+    /// Where each window the player carries was as the drag began, against the player's top left corner (in
+    /// pixels): so the group snaps by its outside edges, and stays on the screen, as one.
+    /// </summary>
+    private readonly List<Rect> _carriedOffsets = new();
+
+    /// <summary>Locked windows the player's being dragged away from (docked to it, or linked), outlined while it moves.</summary>
+    private readonly List<IntPtr> _leftBehind = new();
+
+    private readonly List<SwapHighlight> _lockOutlines = new();
 
     /// <summary>Where the player is right now during a drag that carries other windows, and its scale there.</summary>
     private Rect _carrierRect;
@@ -160,9 +185,11 @@ public sealed class WindowSnapper
                 && HwndSource.FromHwnd(hwnd)?.RootVisual is Window titled && LucentFullScreen.ShowWindowMenu(titled):
                 handled = true;
                 break;
-            // A locked window doesn't start moving or resizing at all (its title bar and edges do nothing).
+            // A locked window doesn't start moving or resizing at all (its title bar and edges do nothing), but
+            // says why if the mouse is dragged.
             case WM_SYSCOMMAND when (wParam.ToInt64() & 0xFFF0) is SC_MOVE or SC_SIZE && IsLocked(hwnd):
                 handled = true;
+                WatchLockedDrag(hwnd);
                 break;
             case WM_ENTERSIZEMOVE when IsLocked(hwnd):
                 // Something got it moving anyway: it's held where it is until it lets go.
@@ -181,6 +208,8 @@ public sealed class WindowSnapper
                 _moving = hwnd;
                 _resized = false;
                 _carried.Clear();
+                _carriedOffsets.Clear();
+                _leftBehind.Clear();
                 _linked.Clear();
                 _swapWith = IntPtr.Zero;
                 FindFrontToBack();
@@ -208,6 +237,11 @@ public sealed class WindowSnapper
 
                 var rect = UnsnappedMove();
                 var (dx, dy) = SnapMove(hwnd, Visible(rect, _startMargins));
+                if (_leftBehind.Count > 0 && (rect.Left + dx != _startRect.Left || rect.Top + dy != _startRect.Top))
+                {
+                    OutlineLeftBehind();
+                }
+
                 rect.Left += dx;
                 rect.Right += dx;
                 rect.Top += dy;
@@ -256,13 +290,18 @@ public sealed class WindowSnapper
                 break;
             case WM_EXITSIZEMOVE:
                 _highlight?.Hide();
+                _lockOutlines.ForEach(outline => outline.Hide());
                 if (hwnd == _moving && !_resized && _swapWith != IntPtr.Zero)
                 {
                     Swap(hwnd, _swapWith);
                 }
-                else if (hwnd == _moving && !_resized && _carried.Count == 0 && hwnd != Handle(_main))
+                else if (hwnd == _moving && !_resized && _carried.Count == 0)
                 {
-                    MatchCorners(hwnd);
+                    CloseGap(hwnd);
+                    if (hwnd != Handle(_main))
+                    {
+                        MatchCorners(hwnd);
+                    }
                 }
 
                 _swapWith = IntPtr.Zero;
@@ -278,6 +317,8 @@ public sealed class WindowSnapper
 
                 _moving = IntPtr.Zero;
                 _carried.Clear();
+                _carriedOffsets.Clear();
+                _leftBehind.Clear();
                 _linked.Clear();
                 MoveFinished?.Invoke(this, EventArgs.Empty);
                 break;
@@ -968,10 +1009,132 @@ public sealed class WindowSnapper
 
         _carrierRect = mainRect;
         _carrierScale = Scale(main);
-        foreach (var (handle, _) in group.Skip(1))
+        var visibleMain = group[0].Rect;
+        foreach (var (handle, visible) in group.Skip(1))
         {
             GetWindowRect(handle, out var rect);
             _carried.Add(new Carried(handle, Offset(rect, -mainRect.Left, -mainRect.Top), _carrierScale));
+            _carriedOffsets.Add(Offset(visible, -visibleMain.Left, -visibleMain.Top));
+        }
+
+        // The locked windows it leaves behind: shown ones docked to the group, or all shown ones when linked.
+        var linked = MoveEveryWindow?.Invoke() == true;
+        foreach (var window in _windows)
+        {
+            var handle = Handle(window);
+            if (handle != IntPtr.Zero && handle != main && window.IsVisible && window.WindowState == WindowState.Normal && IsLocked(handle)
+                && (linked || group.Any(member => Touching(member.Rect, VisibleRect(handle)))))
+            {
+                _leftBehind.Add(handle);
+            }
+        }
+    }
+
+    /// <summary>Outlines each locked window the player's leaving behind, saying it's locked.</summary>
+    private void OutlineLeftBehind()
+    {
+        while (_lockOutlines.Count < _leftBehind.Count)
+        {
+            var outline = new SwapHighlight();
+            _main.Closed += (_, _) => outline.Close();
+            _lockOutlines.Add(outline);
+        }
+
+        for (var i = 0; i < _leftBehind.Count; i++)
+        {
+            var rect = VisibleRect(_leftBehind[i]);
+            _lockOutlines[i].ShowLocked(rect.Left, rect.Top, rect.Right, rect.Bottom, WindowLocks.NameOf(HwndSource.FromHwnd(_leftBehind[i])?.RootVisual as Window));
+        }
+    }
+
+    /// <summary>
+    /// A press on a locked window's title bar or edge: Windows doesn't move it, and if the mouse is then
+    /// dragged with the button held, a note says it's locked and how to unlock it.
+    /// </summary>
+    private void WatchLockedDrag(IntPtr hwnd)
+    {
+        if (HwndSource.FromHwnd(hwnd)?.RootVisual is not Window window)
+        {
+            return;
+        }
+
+        GetCursorPos(out var start);
+        var reach = LockedNudge * Scale(hwnd);
+        var ticks = 0;
+        var timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(40) };
+        timer.Tick += (_, _) =>
+        {
+            GetCursorPos(out var now);
+            if (GetAsyncKeyState(VK_LBUTTON) >= 0 || ++ticks > 100)
+            {
+                timer.Stop();
+            }
+            else if (Math.Abs(now.X - start.X) > reach || Math.Abs(now.Y - start.Y) > reach)
+            {
+                timer.Stop();
+                Toast.Show(window, $"{WindowLocks.NameOf(window) ?? "This window"} is locked. Click its padlock to unlock it.");
+            }
+        };
+        timer.Start();
+    }
+
+    /// <summary>
+    /// After a window's dropped on its own a little way from another (further than snapping reaches, but no
+    /// further than <see cref="DropDistance"/>), moves it up against that one, so it docks instead of sitting
+    /// a sliver away. Only where it'd then be over nothing.
+    /// </summary>
+    private void CloseGap(IntPtr hwnd)
+    {
+        if (HwndSource.FromHwnd(hwnd)?.RootVisual is not Window { WindowState: WindowState.Normal })
+        {
+            return;
+        }
+
+        const int flush = 2;
+        var reach = (int)Math.Round(DropDistance * Scale(hwnd));
+        var rect = VisibleRect(hwnd);
+        var others = OtherWindows(hwnd).Select(other => other.Rect).ToList();
+        var bestX = 0;
+        var bestY = 0;
+        foreach (var other in others)
+        {
+            var besideY = rect.Top < other.Bottom - flush && other.Top < rect.Bottom - flush;
+            var besideX = rect.Left < other.Right - flush && other.Left < rect.Right - flush;
+            if (besideY)
+            {
+                Gap(ref bestX, other.Left - rect.Right);
+                Gap(ref bestX, other.Right - rect.Left);
+            }
+
+            if (besideX)
+            {
+                Gap(ref bestY, other.Top - rect.Bottom);
+                Gap(ref bestY, other.Bottom - rect.Top);
+            }
+        }
+
+        // A gap to the right (or below) is positive, one to the left (or above) negative: the nearest, inside the reach.
+        void Gap(ref int best, int gap)
+        {
+            var away = gap > 0 ? gap : -gap;
+            var facing = gap > 0 ? gap > flush : gap < -flush;
+            if (facing && away <= reach && (best == 0 || away < Math.Abs(best)))
+            {
+                best = gap;
+            }
+        }
+
+        foreach (var (dx, dy) in new[] { (bestX, bestY), (bestX, 0), (0, bestY) })
+        {
+            var moved = Offset(rect, dx, dy);
+            if (dx == 0 && dy == 0 || others.Any(other => Overlapping(moved, other)))
+            {
+                continue;
+            }
+
+            var outer = Outer(moved, Margins(hwnd));
+            SetWindowPos(hwnd, IntPtr.Zero, outer.Left, outer.Top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+            return;
         }
     }
 
@@ -1019,6 +1182,19 @@ public sealed class WindowSnapper
         var reach = (int)Math.Round(SnapDistance * Scale(hwnd));
         var bestX = reach + 1;
         var bestY = reach + 1;
+        // The player and the windows it carries snap as one: whichever of their edges is nearest an edge.
+        foreach (var member in Members(rect))
+        {
+            Nearest(hwnd, member, reach, ref bestX, ref bestY);
+        }
+
+        var (dx, dy) = KeepApart(hwnd, rect, Math.Abs(bestX) <= reach ? bestX : 0, Math.Abs(bestY) <= reach ? bestY : 0);
+        return (dx, KeepOnScreen(rect, dy));
+    }
+
+    /// <summary>The nearest edges, across and down, this rectangle could snap to.</summary>
+    private void Nearest(IntPtr hwnd, Rect rect, int reach, ref int bestX, ref int bestY)
+    {
         foreach (var target in Targets(hwnd, rect))
         {
             var overlapY = rect.Top < target.Bottom + reach && target.Top < rect.Bottom + reach;
@@ -1039,8 +1215,36 @@ public sealed class WindowSnapper
                 Consider(ref bestY, target.Bottom - rect.Bottom);
             }
         }
+    }
 
-        return KeepApart(hwnd, rect, Math.Abs(bestX) <= reach ? bestX : 0, Math.Abs(bestY) <= reach ? bestY : 0);
+    /// <summary>The window being dragged, and the windows it carries where they'd be beside it there.</summary>
+    private IEnumerable<Rect> Members(Rect rect)
+    {
+        yield return rect;
+        foreach (var offset in _carriedOffsets)
+        {
+            yield return Offset(offset, rect.Left, rect.Top);
+        }
+    }
+
+    /// <summary>
+    /// How far down to move the dragged window (and what it carries) so none of their tops goes above the
+    /// top of the screen it's on, where its title bar (and the buttons on it) couldn't be reached.
+    /// </summary>
+    private int KeepOnScreen(Rect rect, int dy)
+    {
+        foreach (var member in Members(rect))
+        {
+            var moved = Offset(member, 0, dy);
+            var monitor = MonitorFromRect(ref moved, MONITOR_DEFAULTTONEAREST);
+            var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+            if (monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref info) && moved.Top < info.Work.Top)
+            {
+                dy += info.Work.Top - moved.Top;
+            }
+        }
+
+        return dy;
     }
 
     /// <summary>
@@ -1336,6 +1540,9 @@ public sealed class WindowSnapper
 
     [DllImport("user32.dll")]
     private static extern short GetKeyState(int key);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetTopWindow(IntPtr hwnd);
