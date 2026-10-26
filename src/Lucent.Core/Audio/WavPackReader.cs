@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Numerics;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Lucent's own WavPack (.wv) decoder, the same on Windows and the Mac, since neither system nor the bundled libVLC

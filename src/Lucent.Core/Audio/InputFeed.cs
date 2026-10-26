@@ -1,7 +1,7 @@
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
-/// Where an input's sound goes (each app's Audio/LiveInputs.cs): a <see cref="WinampInspiredVisualizer.Recording.LiveRecorder"/>
+/// Where an input's sound goes (each app's Audio/LiveInputs.cs): a <see cref="Lucent.Recording.LiveRecorder"/>
 /// while recording, or an <see cref="InputFeed"/> while the visuals follow an input.
 /// </summary>
 public interface ILiveInputSink

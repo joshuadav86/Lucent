@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Water (r_water.cpp): ripples spread out from whatever changes in the picture, like the surface of water.</summary>
 [AvsEffect(20)]

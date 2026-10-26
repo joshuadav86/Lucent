@@ -1,6 +1,6 @@
 using Windows.Media.Control;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// Whatever a web browser is playing (YouTube or YouTube Music, SoundCloud, TIDAL's web player, any site),

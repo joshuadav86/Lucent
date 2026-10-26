@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>The kinds of filter an equalizer band can be.</summary>
 public enum EqualizerFilterKind

@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Settings;
+namespace Lucent.Settings;
 
 /// <summary>
 /// %AppData%\Lucent, where settings, saved playlists and the user's own visuals live. The app was called

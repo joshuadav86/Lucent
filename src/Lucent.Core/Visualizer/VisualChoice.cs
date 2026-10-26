@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>A row in the visual picker: one visual, and whether it's starred.</summary>
 public sealed class VisualChoice : INotifyPropertyChanged

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>An online radio station: where its stream is, and what the directory says about it.</summary>
 /// <remarks>Favorites and recently played stations are kept in the settings like this, so they still play when the directory can't be reached.</remarks>

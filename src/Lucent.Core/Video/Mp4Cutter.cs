@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>A problem cutting a video, with a message that can be shown to the user as it is.</summary>
 public sealed class VideoCutException : Exception

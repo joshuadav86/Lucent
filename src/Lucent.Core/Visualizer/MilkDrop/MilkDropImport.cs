@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>What importing MilkDrop presets did.</summary>
 /// <param name="Added">How many presets were copied in.</param>

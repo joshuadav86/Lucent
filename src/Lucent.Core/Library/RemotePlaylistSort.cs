@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>The orders another app's playlists (Spotify's, Music's) can be listed in under PLAYLISTS.</summary>
 public enum RemotePlaylistSort

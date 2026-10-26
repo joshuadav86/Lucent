@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// The families and tags a visual can name in its "// Family:" and "// Tags:" header lines.

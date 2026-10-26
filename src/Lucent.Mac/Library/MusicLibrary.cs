@@ -1,8 +1,8 @@
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Recording;
+using Lucent.Audio;
+using Lucent.Library;
+using Lucent.Playlist;
+using Lucent.Recording;
 
 namespace Lucent.Mac.Library;
 

@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>What a sound needs for an effect in the effects menu to make sense.</summary>
 public enum EffectNeeds

@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// What the radio browser shows, the same on Windows and the Mac: its sections (the featured networks, the user's

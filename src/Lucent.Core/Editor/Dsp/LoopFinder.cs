@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>A loop the loop maker found: where it is, and how well it loops (0 to 1).</summary>
 public sealed record LoopCandidate(FrameRange Range, int Bars, double Score)

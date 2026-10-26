@@ -6,7 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Layout;
+using Lucent.Layout;
 
 namespace Lucent.Mac.Windows;
 

@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Passes the editor's audio through unchanged while handing it to the visuals, meter, and analyzer, the way

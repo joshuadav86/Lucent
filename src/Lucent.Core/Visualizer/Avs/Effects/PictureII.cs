@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Render / Picture II (the "Picture II" plug-in, e_picture2.cpp in the later open-source AVS): shows a picture from beside the

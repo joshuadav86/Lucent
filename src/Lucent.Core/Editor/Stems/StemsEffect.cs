@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Editor.Effects;
+using Lucent.Editor.Effects;
 
-namespace WinampInspiredVisualizer.Editor.Stems;
+namespace Lucent.Editor.Stems;
 
 /// <summary>The four stems, with the names people know them by.</summary>
 public static class StemNames

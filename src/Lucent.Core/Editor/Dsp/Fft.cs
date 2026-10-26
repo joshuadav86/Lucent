@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>An in-place radix-2 complex FFT of one fixed size, with its tables worked out once.</summary>
 public sealed class Fft

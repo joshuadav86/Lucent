@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>A genre in the radio browser's left column, and the directory tag that finds its stations.</summary>
 /// <param name="Name">What the column shows.</param>

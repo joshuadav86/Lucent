@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace WinampInspiredVisualizer.Diagnostics;
+namespace Lucent.Diagnostics;
 
 /// <summary>
 /// Takes anything personal out of the text a crash report carries: file paths (they name the user's folders

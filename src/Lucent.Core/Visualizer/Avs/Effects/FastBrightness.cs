@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Fast Brightness (r_fastbright.cpp): doubles every channel (stopping at full), or halves it.</summary>
 [AvsEffect(44)]

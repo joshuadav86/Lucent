@@ -1,6 +1,6 @@
 #!/bin/bash
 # Opens Lucent.app the way people do and checks it stays up, then checks its window layout (see
-# src/Lucent.Mac/LayoutCheck.cs). The self-test never starts the app's window loop, so a crash at launch
+# src/Lucent.Mac/Diagnostics/LayoutCheck.cs). The self-test never starts the app's window loop, so a crash at launch
 # would otherwise ship. Runs on a Mac of the app's own chip. Usage: tools/mac/launch-check.sh <Lucent.app>
 set -euo pipefail
 exe="$1/Contents/MacOS/Lucent"

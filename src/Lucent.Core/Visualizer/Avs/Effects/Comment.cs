@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Misc / Comment (r_comment.cpp): a note the preset's author left; it draws nothing.</summary>
 [AvsEffect(21)]

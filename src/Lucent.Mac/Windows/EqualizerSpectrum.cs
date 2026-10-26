@@ -4,7 +4,7 @@ using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Lucent.Mac.Audio;
 using NAudio.Dsp;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
 namespace Lucent.Mac.Windows;
 

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>A tick box in the visual picker: one tag, whether it's ticked, and how many visuals have it.</summary>
 public sealed class VisualTag : INotifyPropertyChanged

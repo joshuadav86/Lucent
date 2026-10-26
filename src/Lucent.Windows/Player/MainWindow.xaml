@@ -1,0 +1,584 @@
+<Window x:Class="Lucent.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:Lucent.Windows"
+        Title="Lucent"
+        Icon="Assets/Lucent.ico"
+        Width="520" SizeToContent="Height" ResizeMode="CanMinimize"
+        Background="{DynamicResource SurfaceBrush}"
+        AllowDrop="True" PreviewDrop="OnDrop" PreviewDragEnter="OnDragOver" PreviewDragOver="OnDragOver"
+        PreviewKeyDown="OnPreviewKeyDown"
+        Closing="OnClosing"
+        Closed="OnClosed">
+
+    <!-- The player: a small window like Winamp's main window. The visuals, queue and library
+         open in their own windows, which snap to this one and move with it. -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="34" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <!-- Lucent's own player, or (with a classic skin on) the skin's player, added by MainWindow.Classic.cs. -->
+    <Grid x:Name="PlayerRoot">
+    <Border x:Name="LucentPlayer" BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <Grid x:Name="WindowRoot">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Title bar -->
+            <Grid x:Name="TitleBar" Grid.Row="0" Height="34" Background="{DynamicResource TitleBarBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                    <Image Source="/Assets/Lucent-64.png" Width="14" Height="14" VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="LUCENT (Beta)" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel x:Name="TitleButtons" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
+                    <!-- Shows once a newer build has downloaded. It installs when Lucent closes anyway; this restarts now. -->
+                    <Button x:Name="UpdateButton" Style="{StaticResource PillButton}" Height="22" Margin="0,0,6,0"
+                            Content="UPDATE" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"
+                            Click="OnShowUpdate" WindowChrome.IsHitTestVisibleInChrome="True" />
+                    <!-- Every way to bring sound in: files, radio, and the music apps Lucent can show and control. -->
+                    <ToggleButton x:Name="SourcesButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,4,0"
+                                  ToolTip="Sources: add music, tune in to online radio, or connect a music app such as Spotify, Apple Music, or TIDAL (M)"
+                                  Click="OnToggleSources" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource SourcesIcon}" />
+                    </ToggleButton>
+                    <Button Style="{StaticResource IconButton}" Width="30" Height="28" Margin="0,0,2,0"
+                            ToolTip="Buy me a coffee: support Lucent" Click="OnBuyMeACoffee"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Style="{StaticResource LineIcon}"
+                              Data="M2.5,6.5 H11 V10 A3.5,3.5 0 0 1 7.5,13.5 H6 A3.5,3.5 0 0 1 2.5,10 Z M11,7.5 H12 A1.75,1.75 0 0 1 12,11 H10.8 M5.5,4.5 C4.8,3.7 6.2,2.8 5.5,1.5 M8.5,4.5 C7.8,3.7 9.2,2.8 8.5,1.5" />
+                    </Button>
+                    <ToggleButton x:Name="AudioToolsButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
+                                  ToolTip="Record, edit, or convert sounds and videos" Click="OnAudioTools"
+                                  WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Style="{StaticResource LineIcon}" Data="M2,6.5 V9.5 M5,3.5 V12.5 M8,1.5 V14.5 M11,4.5 V11.5 M14,6.5 V9.5" />
+                    </ToggleButton>
+                    <!-- Link: every window moves with the player when it's dragged, docked or not. Then the player's own lock. -->
+                    <ToggleButton x:Name="LinkToggle" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0"
+                                  ToolTip="Link the windows: every window moves with the player when you drag it, docked or not (J)" Click="OnToggleLink"
+                                  WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource LinkIcon}" />
+                    </ToggleButton>
+                    <w:LockButton Style="{StaticResource PanelToggle}" Padding="7,0" Margin="0,0,2,0" />
+                    <ToggleButton x:Name="OptionsButton" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  ToolTip="Options: graphics, visual changes, skins, and themes (O)" Click="OnToggleOptions"
+                                  WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource OptionsIcon}" StrokeThickness="1.3" />
+                    </ToggleButton>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button Style="{StaticResource CaptionButton}" Height="34" Width="40" ToolTip="Minimize"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMinimize">
+                        <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource MinimizeIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource CloseCaptionButton}" Height="34" Width="40" ToolTip="Close Lucent"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseWindow">
+                        <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- The display: time and meter on the left, the scrolling title and track details on the right. -->
+            <!-- The skin decides how the display looks: its fill and edge, a glow, a shadow along the top
+                 and left (an inset look), and scan lines over the top. -->
+            <Border Grid.Row="1" Margin="10,0,10,0" CornerRadius="{DynamicResource PanelCorner}"
+                    BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1"
+                    Effect="{DynamicResource DisplayGlowEffect}" IsHitTestVisible="False" />
+            <Border Grid.Row="1" Margin="10,0,10,0" Padding="14,10,14,10" CornerRadius="{DynamicResource PanelCorner}"
+                    Background="{DynamicResource DisplayBrush}"
+                    BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="138" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}" BorderThickness="2,2,0,0"
+                            BorderBrush="{DynamicResource DisplayInsetBrush}" IsHitTestVisible="False" />
+                    <Border Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}"
+                            Background="{DynamicResource DisplayLinesBrush}" IsHitTestVisible="False" Panel.ZIndex="1" />
+
+                    <StackPanel Grid.Column="0">
+                        <Border Background="Transparent" Cursor="Hand" HorizontalAlignment="Left"
+                                ToolTip="Click to switch between time played and time left"
+                                MouseLeftButtonUp="OnTimeClick">
+                            <StackPanel Orientation="Horizontal">
+                                <Path x:Name="PlayStateIcon" Data="{StaticResource StopIcon}" Width="10" Height="10" Stretch="Uniform"
+                                      Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,4,10,0" />
+                                <TextBlock x:Name="TimeText" Text="0:00" FontSize="30" FontFamily="{DynamicResource DisplayFont}"
+                                           FontWeight="{DynamicResource DisplayWeight}"
+                                           Typography.NumeralAlignment="Tabular" Foreground="{DynamicResource DisplayTimeBrush}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="MeterHost" Height="26" Margin="0,6,10,0" Cursor="Hand"
+                                ToolTip="Click to switch between spectrum bars, a waveform, or nothing"
+                                MouseLeftButtonUp="OnMeterClick" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent"
+                                ContextMenuOpening="OnNowPlayingMenuOpening">
+                        <StackPanel.ContextMenu>
+                            <ContextMenu x:Name="NowPlayingMenu">
+                                <MenuItem x:Name="NowPlayingEditItem" Header="Edit info…" InputGestureText="Ctrl+I" Click="OnNowPlayingEditInfo" />
+                                <MenuItem x:Name="NowPlayingAddItem" Header="Add to playlist" />
+                                <MenuItem x:Name="NowPlayingShareItem" Header="Share">
+                                    <MenuItem Header="Copy song link" Click="OnNowPlayingCopyLink" />
+                                    <MenuItem Header="Copy song and link" Click="OnNowPlayingCopySongAndLink" />
+                                </MenuItem>
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
+                        <DockPanel>
+                            <!-- Heart: make the song that's playing a favourite. -->
+                            <Button x:Name="TrackFavoriteButton" DockPanel.Dock="Right" Style="{StaticResource IconButton}"
+                                    Width="24" Height="24" Margin="6,-2,-6,-2" IsEnabled="False"
+                                    ToolTip="Add this sound to your favorites (H)" Click="OnToggleTrackFavorite">
+                                <Path x:Name="TrackFavoriteIcon" Data="{StaticResource HeartIcon}" Width="13" Height="13" Stretch="Uniform"
+                                      Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="1.3" StrokeLineJoin="Round"
+                                      Fill="Transparent" />
+                            </Button>
+                            <!-- The title scrolls when it's too long to fit, like Winamp's. -->
+                            <Canvas x:Name="MarqueeArea" Height="20" ClipToBounds="True" SizeChanged="OnMarqueeSizeChanged">
+                                <StackPanel x:Name="MarqueeStrip" Orientation="Horizontal">
+                                    <TextBlock x:Name="NowPlayingText" Text="Nothing playing" FontSize="14" FontWeight="SemiBold"
+                                               FontFamily="{DynamicResource DisplayFont}" Foreground="{DynamicResource DisplayTitleBrush}" />
+                                    <TextBlock x:Name="NowPlayingRepeat" FontSize="14" FontWeight="SemiBold"
+                                               FontFamily="{DynamicResource DisplayFont}" Foreground="{DynamicResource DisplayTitleBrush}"
+                                               Visibility="Collapsed" />
+                                </StackPanel>
+                            </Canvas>
+                        </DockPanel>
+                        <TextBlock x:Name="TrackDetails" Text="Drop music here, or open Sources to begin" FontSize="11" Margin="0,3,0,0"
+                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
+                        <Grid Margin="0,10,0,0">
+                        <!-- Open Spotify (or Pandora, and so on) when it isn't open, in the volume bar's place, which hides then. -->
+                        <Button x:Name="OpenAppButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left" Height="22"
+                                Margin="0,-4,0,-2" Visibility="Collapsed" Click="OnOpenApp" />
+                        <DockPanel>
+                            <Grid DockPanel.Dock="Left" VerticalAlignment="Center">
+                                <Path Data="{StaticResource SpeakerIcon}" Fill="{DynamicResource MutedTextBrush}" />
+                                <Path Data="{StaticResource SpeakerWavesIcon}" Stroke="{DynamicResource MutedTextBrush}"
+                                      StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            </Grid>
+                            <TextBlock x:Name="VolumeText" DockPanel.Dock="Right" Text="80%" Width="34" FontSize="11"
+                                       TextAlignment="Right" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource FaintTextBrush}" />
+                            <Slider x:Name="VolumeSlider" Style="{StaticResource VolumeSlider}" Minimum="0" Maximum="1" Value="0.8" Margin="10,0,6,0"
+                                    ToolTip="Volume (mouse wheel over the player changes it too)"
+                                    ValueChanged="OnVolumeChanged" />
+                        </DockPanel>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Seek bar -->
+            <Slider x:Name="SeekBar" Style="{StaticResource SeekSlider}" Grid.Row="2" Minimum="0" Maximum="1" IsEnabled="False" Margin="14,8,14,0"
+                    Thumb.DragStarted="OnSeekDragStarted"
+                    Thumb.DragCompleted="OnSeekDragCompleted"
+                    ValueChanged="OnSeekValueChanged" />
+
+            <!-- Transport, shuffle and repeat, and the switches for the other windows -->
+            <DockPanel x:Name="WindowTogglesHome" Grid.Row="3" Margin="10,2,10,10">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource TransportButton}" Width="32" Height="32" ToolTip="Previous track (Z)" Click="OnPrevious">
+                        <Path Style="{StaticResource SolidIcon}" Data="{StaticResource PreviousTrackIcon}" />
+                    </Button>
+                    <Button x:Name="PlayPauseButton" Style="{StaticResource PlayButton}" Width="40" Height="40" Margin="2,0"
+                            ToolTip="Play / Pause (Space)" Click="OnPlayPause">
+                        <Path x:Name="PlayPauseIcon" Style="{StaticResource SolidIcon}" Data="{StaticResource PlayIcon}"
+                              Margin="2,0,0,0" />
+                    </Button>
+                    <Button Style="{StaticResource TransportButton}" Width="32" Height="32" ToolTip="Stop" Click="OnStop">
+                        <Path Style="{StaticResource SolidIcon}" Data="{StaticResource StopIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource TransportButton}" Width="32" Height="32" ToolTip="Next track (X)" Click="OnNext">
+                        <Path Style="{StaticResource SolidIcon}" Data="{StaticResource NextTrackIcon}" />
+                    </Button>
+                    <Button x:Name="OpenButton" Style="{StaticResource TransportButton}" Width="32" Height="32" Margin="2,0,0,0"
+                            ToolTip="Sources: add music, tune in to online radio, or connect a music app (M)" Click="OnOpenMenu">
+                        <Path Style="{StaticResource SolidIcon}" Data="{StaticResource EjectIcon}" />
+                    </Button>
+                    <ToggleButton x:Name="ShuffleButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="6,0,0,0"
+                                  ToolTip="Shuffle (S)" Click="OnToggleShuffle">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ShuffleIcon}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="RepeatButton" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  ToolTip="Repeat (R)" Click="OnCycleRepeat">
+                        <Grid>
+                            <Path Style="{StaticResource LineIcon}" Data="{StaticResource RepeatIcon}" />
+                            <TextBlock x:Name="RepeatOneBadge" Text="1" FontSize="8" FontWeight="Bold" Visibility="Collapsed"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" />
+                        </Grid>
+                    </ToggleButton>
+                    <!-- Pandora's thumbs, in shuffle and repeat's place while Lucent controls an app that has them. -->
+                    <ToggleButton x:Name="ThumbUpButton" Style="{StaticResource PanelToggle}" Padding="7,0" Margin="6,0,0,0"
+                                  Visibility="Collapsed" ToolTip="Thumbs up (T)" Click="OnThumbUp">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ThumbUpIcon}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="ThumbDownButton" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  Visibility="Collapsed" ToolTip="Thumbs down (Shift+T)" Click="OnThumbDown">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource ThumbDownIcon}" />
+                    </ToggleButton>
+                </StackPanel>
+
+                <!-- Each lights up while its window is open. -->
+                <StackPanel x:Name="WindowToggles" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Background="Transparent">
+                    <StackPanel.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Dock all windows to the player" InputGestureText="D" Click="OnArrangeWindows" />
+                            <MenuItem Header="Fill the screen" InputGestureText="G" Click="OnFillScreen" />
+                            <MenuItem Header="Shrink everything" InputGestureText="K" Click="OnShrinkWindows" />
+                            <Separator />
+                            <MenuItem x:Name="LinkMenuItem" Header="Move every window with the player" InputGestureText="J" IsCheckable="True" Click="OnToggleLink" />
+                        </ContextMenu>
+                    </StackPanel.ContextMenu>
+                    <ToggleButton x:Name="VisualsToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
+                                  Content="Visuals" ToolTip="Show or hide the visuals (W)" Click="OnToggleVisuals" />
+                    <ToggleButton x:Name="QueueToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
+                                  Content="Queue" ToolTip="Show or hide the queue (Q)" Click="OnToggleQueue" />
+                    <ToggleButton x:Name="LibraryToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
+                                  Content="Library" ToolTip="Show or hide the library (L)" Click="OnToggleLibrary" />
+                    <ToggleButton x:Name="ArtToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
+                                  Content="Art" ToolTip="Show the playing sound's artwork in its own window (C)" Click="OnToggleArtwork" />
+                    <ToggleButton x:Name="EqualizerToggle" Style="{StaticResource PanelToggle}" Padding="7,0" FontSize="11"
+                                  Content="EQ" ToolTip="Show or hide the equalizer (E)" Click="OnToggleEqualizer" />
+                    <ToggleButton x:Name="AnalyzerToggle" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  ToolTip="Show or hide the analyzer: the music's frequencies scrolling by as a heatmap (Y)"
+                                  Click="OnToggleAnalyzer">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource AnalyzerIcon}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="VideoToggle" Style="{StaticResource PanelToggle}" Padding="7,0"
+                                  ToolTip="Show or hide the video: videos and video stations, in a window of their own beside the visuals (P)"
+                                  Click="OnToggleVideo">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource VideoIcon}" />
+                    </ToggleButton>
+                </StackPanel>
+            </DockPanel>
+        </Grid>
+    </Border>
+
+    <!-- The options and sources panels, outside the player so they keep their own size when the player is scaled. -->
+    <Popup x:Name="OptionsPopup" PlacementTarget="{Binding ElementName=OptionsButton}" Placement="Bottom"
+           VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+           Opened="OnOptionsOpened" Closed="OnOptionsClosed">
+        <Border Margin="16" Width="380" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
+                Background="{DynamicResource SurfaceRaisedBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.6" />
+            </Border.Effect>
+            <StackPanel x:Name="OptionsPanel">
+                <Border Style="{StaticResource SegmentBar}">
+                    <UniformGrid Rows="1">
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Graphics" Content="Graphics" Click="OnOptionsTab" IsChecked="True" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visuals" Click="OnOptionsTab"
+                                     ToolTip="When and how visuals change" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
+                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
+                        <RadioButton x:Name="UpdatesTabButton" Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
+                    </UniformGrid>
+                </Border>
+
+                <StackPanel x:Name="GraphicsTab">
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Resolution" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Auto" Content="Auto" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Window" Content="Window" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="FullHd" Content="1080p" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="QuadHd" Content="1440p" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="UltraHd" Content="4K" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Auto draws at your window's size, and at fewer pixels while a visual can't keep up, so it stays smooth. Above your window's own size, visuals are drawn bigger and shrunk to fit: smoother and more detailed, but more work for the graphics card." />
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Detail" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="Low" Content="Low" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="Normal" Content="Normal" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="High" Content="High" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="Ultra" Content="Ultra" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Finer detail in the 3D and fractal visuals. Ultra looks best with a higher resolution." />
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Glow" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Off" Content="Off" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Soft" Content="Soft" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Normal" Content="Normal" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Strong" Content="Strong" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+
+                    <CheckBox x:Name="BuildUpsSwitch" Style="{StaticResource SwitchToggle}" Content="Build-ups and drops"
+                              Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}" Text="Visuals close in and change colour through a build-up, then burst on the drop." />
+
+                    <CheckBox x:Name="HdrSwitch" Style="{StaticResource SwitchToggle}" Content="HDR" Margin="0,18,0,0"
+                              Click="OnOptionSwitched" />
+                    <TextBlock x:Name="HdrHint" Style="{StaticResource OptionHint}" />
+                    <CheckBox x:Name="FrameRateSwitch" Style="{StaticResource SwitchToggle}" Content="Show frame rate"
+                              Margin="0,14,0,0" Click="OnOptionSwitched" />
+                </StackPanel>
+
+                <StackPanel x:Name="VisualsTab" Visibility="Collapsed">
+                    <CheckBox x:Name="AutoCycleSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Change visuals on the beat" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Change about every" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="10" Content="10 s" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="15" Content="15 s" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="25" Content="25 s" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="45" Content="45 s" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="90" Content="90 s" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="180" Content="3 min" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Also in the player bar: click the arrow next to AUTO." />
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Transition length" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="TransitionSpeed" Tag="Quick" Content="Quick" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="TransitionSpeed" Tag="Smooth" Content="Smooth" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="TransitionSpeed" Tag="Slow" Content="Slow" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Previous visual goes to" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="LastShown" Content="Last one shown" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="UpInList" Content="Up the list" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Last one shown steps back through the visuals you've seen, Auto's picks too. Up the list goes to the one above in the picker." />
+
+                    <CheckBox x:Name="MorphsOnlySwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Morphing transitions only" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Visuals melt, glow, fly, or fold into each other, without the wipes and fades." />
+
+                    <CheckBox x:Name="LucentVisualsSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Lucent originals" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="List Lucent's own visuals in the picker and play them in Auto. Off leaves MilkDrop, AVS, and your own." />
+
+                    <CheckBox x:Name="MilkDropSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="List the MilkDrop presets in the visual picker and play them in Auto." />
+
+                    <CheckBox x:Name="AvsSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Winamp AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="List the Winamp AVS presets in the visual picker and play them in Auto." />
+
+                    <CheckBox x:Name="ModernAvsSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Modern look for AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Draw AVS presets sharper, with Lucent's glow. Off shows them as Winamp drew them." />
+
+                    <CheckBox x:Name="ModernMilkDropSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Modern look for MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Light MilkDrop presets with Lucent's glow, richer colour, and HDR highlights. Off shows them as MilkDrop did." />
+                </StackPanel>
+
+                <StackPanel x:Name="SoundTab" Visibility="Collapsed">
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Output" />
+                    <Button x:Name="OutputDeviceButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left"
+                            ToolTip="The speakers, headphones, or DAC the music plays through" Click="OnChooseOutputDevice">
+                        <TextBlock x:Name="OutputDeviceName" MaxWidth="290" TextTrimming="CharacterEllipsis" />
+                    </Button>
+
+                    <CheckBox x:Name="ExclusiveSwitch" Style="{StaticResource SwitchToggle}" Content="Exclusive mode: bit-perfect"
+                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Lucent takes the output for itself and sends each track at its own sample rate and bit depth, past Windows' mixer. Other apps go quiet while it plays. Bit-perfect at 100% volume with the equalizer off." />
+                    <TextBlock x:Name="OutputStatus" Style="{StaticResource OptionHint}" Margin="2,8,0,0"
+                               Foreground="{DynamicResource AccentBrush}" />
+
+                    <CheckBox x:Name="GaplessSwitch" Style="{StaticResource SwitchToggle}" Content="Gapless playback"
+                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Each track runs straight into the next with no silence between, for live albums, DJ mixes, and albums that flow." />
+
+                    <CheckBox x:Name="CrossfadeSwitch" Style="{StaticResource SwitchToggle}" Content="Crossfade songs"
+                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Each song fades out as the next one fades in." />
+                    <Button x:Name="CrossfadeLengthButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                            ToolTip="How long the songs overlap" Click="OnChooseCrossfadeLength">
+                        <TextBlock x:Name="CrossfadeLengthName" />
+                    </Button>
+                </StackPanel>
+
+                <StackPanel x:Name="ThemeTab" Visibility="Collapsed">
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Skin: the shape, type, and finish of every window" />
+                    <UniformGrid x:Name="SkinSwatches" Columns="2" Margin="-2,0,-8,-6" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Each skin comes with a theme it was made for. Pick another theme below to mix and match." />
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Theme: colours for everything around the visuals" />
+                    <UniformGrid x:Name="ThemeSwatches" Columns="2" Margin="-2,0,-8,-6" />
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Classic skins: the player as a Winamp 2 skin" />
+                    <UniformGrid x:Name="ClassicSkinSwatches" Columns="2" Margin="-2,0,-8,-6" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Style="{StaticResource PillButton}" Content="Import a skin…" Margin="0,0,8,0"
+                                ToolTip="Adds a Winamp skin (.wsz). Dropping one on any Lucent window does the same."
+                                Click="OnImportClassicSkin" />
+                        <Button Style="{StaticResource PillButton}" Content="Find skins"
+                                ToolTip="Opens the Winamp Skin Museum, where thousands of classic skins can be downloaded"
+                                Click="OnFindClassicSkins" />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Load any classic Winamp skin and the player wears it, with the other windows in the skin and theme above. Pick a skin above to go back to Lucent's own player. Right-click the classic player for more." />
+                </StackPanel>
+
+                <StackPanel x:Name="UpdatesTab" Visibility="Collapsed">
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Update to" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Updates" Tag="Stable" Content="Stable releases" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Updates" Tag="EveryBuild" Content="Every build" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
+                    <CheckBox x:Name="AutoInstallUpdatesSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Install updates automatically" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="On, Lucent downloads updates in the background and installs them when you close it. Off, it still downloads them and tells you one is ready, but installs it only when you choose Restart and install." />
+                    <TextBlock x:Name="VersionText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" />
+                    <!-- Lucent checks on its own every four hours; this checks now and says what it found. -->
+                    <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Visibility="Collapsed" />
+                    <StackPanel x:Name="WhatsNewPanel" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource OptionLabel}" Text="What's new" />
+                        <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
+                            <TextBlock x:Name="WhatsNewText" Style="{StaticResource OptionHint}" FontSize="12" Foreground="{DynamicResource TextBrush}" Margin="2,0,0,0" />
+                        </ScrollViewer>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <Button x:Name="RestartToUpdateButton" Style="{StaticResource PillButton}" Content="Restart and install" Margin="0,0,8,0"
+                                Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Click="OnInstallUpdate" />
+                        <Button x:Name="CheckUpdatesButton" Style="{StaticResource PillButton}" Content="Check for updates"
+                                ToolTip="Looks for a newer Lucent now instead of waiting for the next regular check" Click="OnCheckForUpdates" />
+                    </StackPanel>
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Default player" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Have your music and videos open in Lucent when you double-click them." />
+                    <TextBlock x:Name="DefaultPlayerStatusText" Style="{StaticResource OptionHint}" Visibility="Collapsed" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <Button Style="{StaticResource PillButton}" Content="Make Lucent my default player"
+                                ToolTip="Opens Windows Settings at Lucent's page in Default apps" Click="OnMakeDefaultPlayer" />
+                    </StackPanel>
+                    <CheckBox x:Name="CrashReportsSwitch" Style="{StaticResource SwitchToggle}"
+                              Content="Send crash reports" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="If Lucent crashes, it sends what went wrong to its developer the next time it starts, so it can be fixed. Reports say where in Lucent it crashed, its version, your system, and your graphics card. Never your name, your files, or your music." />
+                </StackPanel>
+
+                <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->
+                <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Margin="0,16,0,0" Padding="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource OptionHint}" Margin="2,0,0,10"
+                                   Text="Enjoying Lucent? It's free, and tips keep it going. Something broken? Tell us." />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource PillButton}" Content="🐞  Report a bug" Margin="0,0,8,0"
+                                    ToolTip="Opens a bug report on GitHub with your Lucent version, Windows version, graphics card, and recent errors filled in. You can check it before sending."
+                                    Click="OnReportBug" />
+                            <Button Style="{StaticResource PillButton}" Content="☕  Buy me a coffee"
+                                    Foreground="{DynamicResource AccentBrush}" ToolTip="Opens Lucent's Buy Me a Coffee page"
+                                    Click="OnBuyMeACoffee" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Popup>
+
+    <!-- Opened by the Sources button or the eject button; placed under whichever was clicked. -->
+    <Popup x:Name="SourcesPopup" PlacementTarget="{Binding ElementName=SourcesButton}" Placement="Bottom"
+           VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+           Opened="OnSourcesOpened" Closed="OnSourcesClosed">
+        <Border Margin="16" Width="320" Padding="14,0,14,16" CornerRadius="{DynamicResource CardCorner}"
+                Background="{DynamicResource SurfaceRaisedBrush}"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.6" />
+            </Border.Effect>
+            <StackPanel>
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Your music" />
+                <WrapPanel Margin="0,0,-8,-8">
+                    <Button Style="{StaticResource PillButton}" Content="Add files…" Margin="0,0,8,8"
+                            ToolTip="Add songs to the queue" Click="OnSourcesAddFiles" />
+                    <Button Style="{StaticResource PillButton}" Content="Add a folder…" Margin="0,0,8,8"
+                            ToolTip="Add everything in a folder to the queue" Click="OnSourcesAddFolder" />
+                    <Button Style="{StaticResource PillButton}" Content="Import from another player…" Margin="0,0,8,8"
+                            ToolTip="Bring playlists, play counts and ratings over from Apple Music, MusicBee, foobar2000, Plex or YouTube Music"
+                            Click="OnSourcesImport" />
+                    <Button Style="{StaticResource PillButton}" Content="Bandcamp and Beatport…" Margin="0,0,8,8"
+                            ToolTip="Add the music you buy on Bandcamp and Beatport to the library" Click="OnSourcesStores" />
+                </WrapPanel>
+                <TextBlock Style="{StaticResource OptionHint}" Text="Or drop music on any Lucent window." />
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Online radio" Margin="2,18,0,6" />
+                <Button Style="{StaticResource PillButton}" Content="Browse stations…" HorizontalAlignment="Left"
+                        Click="OnSourcesRadio" />
+                <TextBlock Style="{StaticResource OptionHint}"
+                           Text="SomaFM, FRISKY, and thousands of other stations, by genre. The visuals play along." />
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Music apps" Margin="2,18,0,0" />
+                <TextBlock Style="{StaticResource OptionHint}" Margin="2,4,0,0"
+                           Text="Lucent shows what the app is playing and its buttons work the app. The sound stays in the app." />
+                <CheckBox x:Name="SpotifySwitch" Style="{StaticResource SwitchToggle}" Content="Spotify" Tag="Spotify"
+                          Margin="0,12,0,0" Click="OnSourcesRemoteSwitched" />
+                <CheckBox x:Name="AppleMusicSwitch" Style="{StaticResource SwitchToggle}" Content="Apple Music" Tag="AppleMusic"
+                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                <CheckBox x:Name="TidalSwitch" Style="{StaticResource SwitchToggle}" Content="TIDAL" Tag="Tidal"
+                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                <CheckBox x:Name="PandoraSwitch" Style="{StaticResource SwitchToggle}" Content="Pandora" Tag="Pandora"
+                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                <!-- YouTube, SoundCloud and every other site: Windows says which browser is playing, not which site. -->
+                <CheckBox x:Name="YouTubeSwitch" Style="{StaticResource SwitchToggle}" Content="Web browser (YouTube, SoundCloud)" Tag="YouTube"
+                          Margin="0,10,0,0" Click="OnSourcesRemoteSwitched" />
+                <Button x:Name="SpotifySignOutButton" Style="{StaticResource PillButton}" Content="Sign out of Spotify"
+                        HorizontalAlignment="Left" Margin="0,12,0,0" Click="OnSignOutOfSpotify" />
+
+                <CheckBox x:Name="ListenSwitch" Style="{StaticResource SwitchToggle}" Content="Visuals for every app's sound"
+                          Margin="0,18,0,0" Click="OnListenSwitched" />
+                <Button x:Name="ListenSourceButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                        Visibility="Collapsed" Click="OnChooseListenSource"
+                        ToolTip="What the visuals listen to: every app's sound, or an input of your audio interface (for a DAW like Ableton on ASIO)">
+                    <TextBlock x:Name="ListenSourceName" MaxWidth="270" TextTrimming="CharacterEllipsis" />
+                </Button>
+                <TextBlock x:Name="ListenHint" Style="{StaticResource OptionHint}" />
+            </StackPanel>
+        </Border>
+    </Popup>
+    </Grid>
+</Window>

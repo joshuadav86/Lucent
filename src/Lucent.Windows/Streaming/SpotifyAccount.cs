@@ -1,9 +1,9 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// The Spotify sign-in (its refresh token), kept in %AppData%\Lucent encrypted with Windows' own

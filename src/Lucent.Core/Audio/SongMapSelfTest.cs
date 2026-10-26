@@ -1,7 +1,7 @@
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Editor.Dsp;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Checks that a song's sections, build-ups and drops are found, on dance music made up on the spot whose

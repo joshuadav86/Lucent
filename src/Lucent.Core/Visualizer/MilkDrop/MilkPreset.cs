@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>
 /// A MilkDrop preset (.milk file, from MilkDrop 1 or 2 or projectM), read but not yet compiled:

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Settings;
+namespace Lucent.Settings;
 
 /// <summary>The equalizer's settings, kept between runs as part of <see cref="AppSettings"/>.</summary>
 public sealed class EqualizerSettings

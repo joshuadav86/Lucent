@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// Keeps up with what another app (an <see cref="IRemotePlayer"/>) is playing, and presses its buttons

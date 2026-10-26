@@ -1,10 +1,10 @@
 using System.IO;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Effects;
+using Lucent.Audio;
+using Lucent.Editor;
+using Lucent.Editor.Effects;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>One file to convert and where its result goes.</summary>
 public sealed record ConvertJob(string Source, string Destination, bool ReplaceExisting);

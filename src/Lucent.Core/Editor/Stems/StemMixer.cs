@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Editor.Stems;
+namespace Lucent.Editor.Stems;
 
 /// <summary>
 /// Plays a split's stems together for the stems window, with any of them muted or soloed while it plays.

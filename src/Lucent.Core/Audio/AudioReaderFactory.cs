@@ -1,9 +1,9 @@
 using System.IO;
 using NAudio.Vorbis;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Video;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Picks the right decoder for a music file. Each is tried in turn, so a file any of them reads opens everywhere: in

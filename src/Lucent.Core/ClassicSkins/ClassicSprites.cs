@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>A rectangle of one of a skin's sheets.</summary>
 public readonly record struct Sprite(string Sheet, int X, int Y, int Width, int Height);

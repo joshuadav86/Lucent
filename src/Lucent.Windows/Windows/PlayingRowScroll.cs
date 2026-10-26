@@ -5,9 +5,9 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Layout;
+using Lucent.Layout;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// Keeps the song playing in the middle of a list (the library, a streaming playlist opened in it), gliding to it

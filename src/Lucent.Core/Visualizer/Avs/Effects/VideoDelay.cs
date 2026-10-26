@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Video Delay (Holden04's r_videodelay.cpp): shows the picture as it was a number of frames ago, or a number of beats' worth of frames ago.</summary>
 [AvsEffect("Holden04: Video Delay")]

@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace WinampInspiredVisualizer.Stores;
+namespace Lucent.Stores;
 
 /// <summary>How a sync is going, for showing in the window.</summary>
 /// <param name="Done">Purchases finished so far in this sync.</param>

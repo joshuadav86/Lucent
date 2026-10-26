@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.IO;
 using System.Text;
-using WinampInspiredVisualizer.Export;
+using Lucent.Export;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>A place in a recording where a new song starts.</summary>
 /// <param name="Frame">How far in, in sample frames.</param>

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>Where a clip being slid would land, and how far it would overlap the clips either side of it.</summary>
 /// <param name="Offset">How far it moves (what was asked, kept to how far it can go).</param>

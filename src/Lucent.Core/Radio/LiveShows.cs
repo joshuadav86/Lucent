@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// A show on a live station: its name ("Razor-N-Tape with JKriv"), and its picture's address when it has one. For a

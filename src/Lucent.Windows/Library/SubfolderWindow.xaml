@@ -1,0 +1,33 @@
+<Window x:Class="Lucent.SubfolderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Library"
+        Width="420" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource SurfaceRaisedBrush}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30" ResizeBorderThickness="0" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <!-- Asks how a new library folder with folders inside it is listed. -->
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}" Padding="18,16,18,16">
+        <StackPanel>
+            <TextBlock x:Name="Heading" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextBrush}" />
+            <TextBlock FontSize="13" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}"
+                       Text="Give each folder inside its own heading in the library, or list all the music inside under the one folder." />
+            <CheckBox x:Name="RememberSwitch" Style="{StaticResource SwitchToggle}" Content="Don't ask again" Margin="0,16,0,0" />
+            <TextBlock Style="{StaticResource OptionHint}"
+                       Text="You can change it for a folder later by right-clicking its heading." />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                <Button Style="{StaticResource PickerButton}" Content="All in one folder" Height="32" Padding="16,0"
+                        Click="OnTogether" />
+                <Button Style="{StaticResource PickerButton}" Content="Separate folders" Height="32" Padding="16,0" Margin="8,0,0,0"
+                        Foreground="{DynamicResource AccentBrush}" IsDefault="True" Click="OnSeparate" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

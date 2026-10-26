@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace WinampInspiredVisualizer.Playlist;
+namespace Lucent.Playlist;
 
 /// <summary>A playlist row: the track plus whether it is the one currently loaded.</summary>
 public sealed class PlaylistEntry : INotifyPropertyChanged

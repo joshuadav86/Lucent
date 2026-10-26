@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// A stream that keeps time by itself rather than only when it's read, such as a video, which goes on showing

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Ring (r_oscring.cpp): a closed ring whose radius follows the waveform or spectrum around its edge, in cycling colours.</summary>
 [AvsEffect(14)]

@@ -1,0 +1,142 @@
+<Window x:Class="Lucent.StoreWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Bandcamp and Beatport - Lucent"
+        Icon="Assets/Lucent.ico"
+        Width="480" SizeToContent="Height" ResizeMode="NoResize"
+        Background="{DynamicResource SurfaceBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="0" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <Style x:Key="ThinProgress" TargetType="ProgressBar">
+            <Setter Property="Height" Value="4" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border x:Name="PART_Track" CornerRadius="2" Background="{DynamicResource HairlineBrush}" />
+                            <Border x:Name="PART_Indicator" CornerRadius="2" HorizontalAlignment="Left"
+                                    Background="{DynamicResource AccentGradientBrush}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DialogButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <StackPanel>
+            <!-- Title bar -->
+            <Grid Height="40">
+                <TextBlock Text="BANDCAMP AND BEATPORT" Margin="20,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <Button Style="{StaticResource CloseCaptionButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip="Close" WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseButton">
+                    <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <StackPanel Margin="20,0,20,20">
+                <!-- Importing downloads: works without signing in, and only uses files the user downloaded. -->
+                <CheckBox x:Name="BandcampImportSwitch" Style="{StaticResource SwitchToggle}" Content="Add my Bandcamp downloads to the library"
+                          Margin="0,4,0,0" Click="OnImportSwitched" />
+                <CheckBox x:Name="BeatportImportSwitch" Style="{StaticResource SwitchToggle}" Content="Add my Beatport downloads to the library"
+                          Margin="0,14,0,0" Click="OnImportSwitched" />
+                <TextBlock Style="{StaticResource OptionHint}"
+                           Text="Releases and tracks you download from these stores are filed into your library as soon as they arrive. The downloads themselves stay where they are." />
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Watch for downloads in" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource PillButton}" Content="CHANGE" Margin="10,0,0,0"
+                            Click="OnChooseWatchFolder" />
+                    <TextBlock x:Name="WatchFolderText" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource TextBrush}" />
+                </DockPanel>
+
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Put the music in" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource PillButton}" Content="CHANGE" Margin="10,0,0,0"
+                            Click="OnChooseMusicFolder" />
+                    <TextBlock x:Name="MusicFolderText" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource TextBrush}" />
+                </DockPanel>
+                <TextBlock Style="{StaticResource OptionHint}"
+                           Text="Each store gets a folder in here (Bandcamp and Beatport), with a folder for each artist and release." />
+
+                <Border Height="1" Margin="0,20,0,4" Background="{DynamicResource HairlineBrush}" />
+
+                <!-- Syncing the collection: signs in and downloads purchases itself. Unofficial, so marked experimental. -->
+                <TextBlock Style="{StaticResource OptionLabel}" Text="Sync my Bandcamp collection (experimental)" FontWeight="SemiBold" />
+                <TextBlock Style="{StaticResource OptionHint}" Margin="2,0,0,0"
+                           Text="Sign in to Bandcamp and Lucent downloads your purchases for you. Bandcamp has no official way to do this, so it may stop working if Bandcamp changes its website." />
+
+                <DockPanel Margin="0,12,0,0">
+                    <Button x:Name="SignInButton" DockPanel.Dock="Right" Style="{StaticResource PillButton}" Content="SIGN IN"
+                            Margin="10,0,0,0" Click="OnSignInOrOut" />
+                    <TextBlock x:Name="AccountText" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource TextBrush}" />
+                </DockPanel>
+
+                <StackPanel x:Name="SyncOptions">
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Download in" />
+                    <Border Style="{StaticResource SegmentBar}">
+                        <UniformGrid x:Name="FormatChoices" Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="flac" Content="FLAC" Click="OnFormatChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="mp3-320" Content="MP3 320" Click="OnFormatChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="mp3-v0" Content="MP3 V0" Click="OnFormatChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="alac" Content="ALAC" Click="OnFormatChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="aac-hi" Content="AAC" Click="OnFormatChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="vorbis" Content="Ogg" Click="OnFormatChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="FLAC and ALAC are lossless. If a release isn't offered in this format, the closest one is used." />
+
+                    <CheckBox x:Name="SyncSwitch" Style="{StaticResource SwitchToggle}" Content="Download new purchases when Lucent starts"
+                              Margin="0,16,0,0" Click="OnSyncSwitched" />
+
+                    <!-- The first sync: a whole collection can be very big, so ask before downloading all of it. -->
+                    <StackPanel x:Name="FirstSyncChoice" Visibility="Collapsed" Margin="0,14,0,0">
+                        <TextBlock x:Name="FirstSyncText" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button x:Name="DownloadAllButton" Style="{StaticResource DialogButton}" Foreground="{DynamicResource AccentBrush}"
+                                    Click="OnDownloadAll" />
+                            <Button Style="{StaticResource DialogButton}" Content="Only new purchases from now on" Margin="8,0,0,0"
+                                    Click="OnOnlyNew" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap" Margin="2,14,0,0"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <ProgressBar x:Name="SyncProgress" Style="{StaticResource ThinProgress}" Margin="0,8,0,0" Visibility="Collapsed" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                        <Button x:Name="StopButton" Style="{StaticResource DialogButton}" Content="Stop" Click="OnStop" Visibility="Collapsed" />
+                        <Button x:Name="SyncButton" Style="{StaticResource DialogButton}" Content="Sync now" Margin="8,0,0,0"
+                                Foreground="{DynamicResource AccentBrush}" Click="OnSyncNow" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

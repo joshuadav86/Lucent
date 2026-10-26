@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// "Close" at the end of Lucent's right-click menus, doing what the window's own X does: the windows around

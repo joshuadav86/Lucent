@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Layout;
+namespace Lucent.Layout;
 
 /// <summary>
 /// How a list glides to the song playing, the same on both platforms: an eased scroll of a moment, and for a song far

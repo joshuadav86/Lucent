@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// A picture drawn from a classic skin's sprites, in skin pixels (0xAARRGGBB, opaque): the equalizer and the

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
 namespace Lucent.Mac.Interop;
 

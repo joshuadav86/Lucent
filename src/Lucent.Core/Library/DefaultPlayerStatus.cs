@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>
 /// What Options > Updates says about Lucent as the default player, from what each music and video type opens in

@@ -4,7 +4,7 @@ using System.Text;
 using SharpJaad.AAC;
 using Decoder = SharpJaad.AAC.Decoder;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>
 /// Decodes the sound of an MP4, M4V or MOV with Lucent's own decoders, straight from the file's sample table, so a

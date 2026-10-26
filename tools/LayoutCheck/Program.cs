@@ -1,4 +1,4 @@
-using WinampInspiredVisualizer.Layout;
+using Lucent.Layout;
 
 // Usage: dotnet run --project tools/LayoutCheck
 // Lays Lucent's windows out full screen (FullScreenLayout, what Shift+F11 does in both apps) on the

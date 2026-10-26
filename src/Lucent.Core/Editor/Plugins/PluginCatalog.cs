@@ -1,8 +1,8 @@
 using System.IO;
 using System.Text.Json;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>An effect the editor can use: which .vst3 file it's in, and which effect in that file.</summary>
 /// <remarks><see cref="Categories"/> is the plugin's own VST3 subcategories, such as "Fx|Dynamics"; <see cref="PluginBrowser"/> turns them into a type.</remarks>

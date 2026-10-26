@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Misc / Set render mode (r_linemode.cpp): sets how the lines and dots of the effects after it are blended onto the picture, and how wide lines are.</summary>
 [AvsEffect(40)]

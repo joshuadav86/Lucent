@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// An effect list (r_list.cpp), and the preset's main list. Runs its effects in order on a picture of

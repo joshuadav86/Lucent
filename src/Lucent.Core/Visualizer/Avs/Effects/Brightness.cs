@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Brightness (r_bright.cpp): scales each channel up or down by its own amount, replacing the

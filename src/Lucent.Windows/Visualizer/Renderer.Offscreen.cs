@@ -1,9 +1,9 @@
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Drawing without a window, for recording a video: the caller asks for each frame in turn, at

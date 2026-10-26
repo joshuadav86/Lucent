@@ -3,8 +3,8 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
 
 namespace Lucent.Mac.Editor;
 

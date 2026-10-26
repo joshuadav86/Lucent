@@ -2,9 +2,9 @@ using System.IO;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using WinampInspiredVisualizer.Video;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>What the player is sending to the speakers, and how.</summary>
 /// <param name="Device">The output's name, or null for Windows' default output.</param>

@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Visuals;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Export;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac.Export;
 

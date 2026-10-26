@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Dot Fountain (r_dotfnt.cpp): a turning 3D fountain of dots shot up by the waveform, which arc out and fall back.</summary>
 [AvsEffect(19)]

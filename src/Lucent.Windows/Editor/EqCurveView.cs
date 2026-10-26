@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// The equalizer's curve, over the spectrum of the selection: a handle for each band, dragged left and right

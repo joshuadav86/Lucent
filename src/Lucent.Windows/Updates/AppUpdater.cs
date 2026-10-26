@@ -4,7 +4,7 @@ using System.Net.Http;
 using Velopack;
 using Velopack.Sources;
 
-namespace WinampInspiredVisualizer.Updates;
+namespace Lucent.Updates;
 
 /// <summary>
 /// Keeps an installed Lucent up to date from its releases on GitHub: the newest stable release (a

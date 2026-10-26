@@ -1,7 +1,7 @@
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Where a song's bars start, found by listening to the whole file ahead of time: its tempo, the

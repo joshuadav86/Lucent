@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>What a click on the classic playlist's frame asks the app to do.</summary>
 public enum ClassicPlaylistCommand

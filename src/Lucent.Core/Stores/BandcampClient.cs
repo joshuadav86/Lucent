@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace WinampInspiredVisualizer.Stores;
+namespace Lucent.Stores;
 
 /// <summary>One release or track in a Bandcamp collection.</summary>
 /// <param name="Id">Bandcamp's id for the sale, like "a1234" (an album) or "t5678" (a track).</param>

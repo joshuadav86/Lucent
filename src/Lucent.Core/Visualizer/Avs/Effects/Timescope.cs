@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Timescope (r_timescope.cpp): draws the spectrum as one column of shades each frame, the column sweeping across the picture over time.</summary>
 [AvsEffect(39)]

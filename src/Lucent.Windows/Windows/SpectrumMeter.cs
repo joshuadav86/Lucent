@@ -1,10 +1,10 @@
 using System.Windows;
 using System.Windows.Media;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Settings;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// The little meter in the player window, like Winamp's: spectrum bars with falling peak

@@ -4,9 +4,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// A song's cover, small, beside it in a list (the queue, the library, Spotify's playlist), as Spotify's own lists

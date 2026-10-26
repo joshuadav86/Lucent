@@ -28,4 +28,4 @@ One short spec per feature area: what it does, how Windows and Mac each do it, a
 
 ## Spec format
 
-Each spec has: **What it does**, **Windows**, **Mac**, **Parity gaps**, **Code**, and **Checks**. Keep it short. Paths under "Code" are relative to each app's folder unless they start with `Lucent.Core/`.
+Each spec has: **What it does**, **Windows**, **Mac**, **Parity gaps**, **Code**, and **Checks**. Keep it short. Files under "Code" are in each app's feature folders (see [LAYOUT.md](../LAYOUT.md)) unless they start with `Lucent.Core/`.

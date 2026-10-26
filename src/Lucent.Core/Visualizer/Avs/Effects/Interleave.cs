@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Interleave (r_interleave.cpp): covers every other band of rows and columns with a colour, like

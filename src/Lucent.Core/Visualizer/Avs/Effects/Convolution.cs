@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Convolution Filter (Holden03, e_convolution.cpp): each pixel becomes a weighted sum of the 7x7

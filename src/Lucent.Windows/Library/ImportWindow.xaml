@@ -1,0 +1,142 @@
+<Window x:Class="Lucent.ImportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Import from another player - Lucent"
+        Icon="Assets/Lucent.ico"
+        Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        Background="{DynamicResource SurfaceBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="0" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <Style x:Key="DialogButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SourceButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="DockPanel.Dock" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="12,2,0,0" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SourceName" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
+
+        <Style x:Key="SourceHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,3,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
+            Background="{DynamicResource PanelSheenBrush}">
+        <StackPanel>
+            <!-- Title bar -->
+            <Grid Height="40">
+                <TextBlock Text="IMPORT FROM ANOTHER PLAYER" Margin="20,0,0,0" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <Button Style="{StaticResource CloseCaptionButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip="Close" WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseButton">
+                    <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
+
+            <StackPanel x:Name="Sources" Margin="20,0,20,20">
+                <TextBlock Style="{StaticResource SourceHint}" Margin="0,0,0,6"
+                           Text="Bring your playlists, play counts, ratings and loved songs over. Songs are matched to the music in your library, so link your music folders first." />
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button Style="{StaticResource SourceButton}" Content="IMPORT" Click="OnAppleMusic" />
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SourceName}" Text="Apple Music or iTunes" />
+                        <TextBlock Style="{StaticResource SourceHint}"
+                                   Text="Choose the library file, &quot;iTunes Library.xml&quot; in the iTunes folder. In the Apple Music app, choose File &gt; Library &gt; Export Library first." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button Style="{StaticResource SourceButton}" Content="IMPORT" Click="OnMusicBee" />
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SourceName}" Text="MusicBee" />
+                        <TextBlock Style="{StaticResource SourceHint}"
+                                   Text="In MusicBee's Preferences, under Library, turn on the iTunes library XML file. Then choose the &quot;iTunes Music Library.xml&quot; it saves." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button Style="{StaticResource SourceButton}" Content="IMPORT" Click="OnPlaylistFiles" />
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SourceName}" Text="foobar2000 and other playlists" />
+                        <TextBlock Style="{StaticResource SourceHint}"
+                                   Text="Choose playlist files: foobar2000's own, or .m3u, .pls, .xspf and .wpl files from Winamp, VLC, Windows Media Player and others." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button x:Name="FileTagsButton" Style="{StaticResource SourceButton}" Content="READ" Click="OnFileTags" />
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SourceName}" Text="Ratings and play counts in your songs" />
+                        <TextBlock Style="{StaticResource SourceHint}"
+                                   Text="MusicBee, MediaMonkey and Windows Media Player can save ratings in the files themselves. In foobar2000, save the playback statistics to the files' tags first." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button x:Name="PlexButton" Style="{StaticResource SourceButton}" Content="SIGN IN" Click="OnPlex" />
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SourceName}" Text="Plex" />
+                        <TextBlock x:Name="PlexText" Style="{StaticResource SourceHint}"
+                                   Text="Sign in on Plex's website, and Lucent reads the music library and playlists on your Plex Media Server." />
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button Style="{StaticResource SourceButton}" Content="IMPORT" Click="OnYouTubeMusic" />
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SourceName}" Text="YouTube Music playlists" />
+                        <TextBlock Style="{StaticResource SourceHint}"
+                                   Text="Download your YouTube Music data from Google Takeout (takeout.google.com), unzip it, and choose the folder. Lucent finds the songs in your own library. Nothing is downloaded from YouTube." />
+                    </StackPanel>
+                </DockPanel>
+
+                <Border Height="1" Margin="0,20,0,0" Background="{DynamicResource HairlineBrush}" />
+
+                <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap" Margin="2,14,0,0" Visibility="Collapsed"
+                           Foreground="{DynamicResource TextBrush}" />
+                <TextBlock x:Name="FolderText" FontSize="12" TextWrapping="Wrap" Margin="2,10,0,0" Visibility="Collapsed"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                    <Button x:Name="MissingButton" Style="{StaticResource DialogButton}" Content="Songs not found" Visibility="Collapsed"
+                            Click="OnShowMissing" />
+                    <Button x:Name="LinkFolderButton" Style="{StaticResource DialogButton}" Content="Add folder to library" Margin="8,0,0,0"
+                            Visibility="Collapsed" Foreground="{DynamicResource AccentBrush}" Click="OnLinkFolder" />
+                    <Button x:Name="StopButton" Style="{StaticResource DialogButton}" Content="Stop" Margin="8,0,0,0" Visibility="Collapsed"
+                            Click="OnStop" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

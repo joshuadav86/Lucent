@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// The lowest and highest sample in every block of audio, at several block sizes, so the

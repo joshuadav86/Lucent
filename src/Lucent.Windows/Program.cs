@@ -1,10 +1,10 @@
 using NAudio.Wave;
 using Velopack;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Export;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Starts Lucent. Velopack runs first: when the installer or an update launches Lucent.exe to set

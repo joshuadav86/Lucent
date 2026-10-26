@@ -1,7 +1,7 @@
 using NAudio.Wave;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// A graphic equalizer that sits in the playback chain. One instance lasts for the whole session:

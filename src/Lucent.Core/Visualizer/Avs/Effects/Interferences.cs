@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Interferences (r_interf.cpp): adds together several faded copies of the picture, shifted

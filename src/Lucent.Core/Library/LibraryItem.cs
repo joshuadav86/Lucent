@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Playlist;
+using Lucent.Streaming;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>A music file found in a library folder. Shows its file name until its tags have been read.</summary>
 public sealed class LibraryItem : INotifyPropertyChanged

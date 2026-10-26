@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / OnBeat Clear (r_nfclr.cpp): fills the picture with a colour (or blends it in half way) every so many beats.</summary>
 [AvsEffect(5)]

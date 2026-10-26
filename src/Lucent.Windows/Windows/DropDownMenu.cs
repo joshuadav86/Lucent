@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// Opens a menu under (or over) the button it belongs to, kept clear of the taskbar. A long menu

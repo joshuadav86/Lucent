@@ -1,8 +1,8 @@
 using System.IO;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>
 /// The music that comes with Lucent (Kepler North's "Self Actualize"), so a first start has something to play.

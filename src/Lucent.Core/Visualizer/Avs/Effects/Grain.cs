@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Grain (r_grain.cpp): darkens a random share of the lit pixels by random amounts, like film

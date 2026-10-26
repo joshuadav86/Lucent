@@ -4,9 +4,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// Spotify, through its Web API: what's playing on whichever device the account is playing on (the

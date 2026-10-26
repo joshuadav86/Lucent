@@ -6,12 +6,12 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Video;
+using Lucent.Audio;
+using Lucent.Library;
+using Lucent.Settings;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// The ways into the audio editor and the converter, kept here so the main window only needs a few

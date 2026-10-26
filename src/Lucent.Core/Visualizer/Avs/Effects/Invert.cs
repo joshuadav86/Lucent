@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Invert (r_invert.cpp): turns every colour into its opposite (black to white, red to cyan).</summary>
 [AvsEffect(37)]

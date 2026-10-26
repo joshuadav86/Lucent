@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Reads uncompressed sound files with Lucent's own code, the same on Windows and the Mac: WAV (with RF64 and BW64 for

@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Export;
+using Lucent.Export;
 
-namespace WinampInspiredVisualizer.Editor.Stems;
+namespace Lucent.Editor.Stems;
 
 /// <summary>Saves stems as files: "Song - Vocals.flac" and so on, in a "Song stems" folder beside the song.</summary>
 public static class StemFiles

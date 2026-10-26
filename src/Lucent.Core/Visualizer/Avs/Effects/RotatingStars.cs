@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Rotating Stars (r_rotstar.cpp): two five-pointed stars circling the centre, each swelling with its channel's bass peaks.</summary>
 [AvsEffect(13)]

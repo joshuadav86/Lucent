@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// AVS's ways of putting one colour onto another (r_defs.h): pixels are 0x00RRGGBB in an int, and

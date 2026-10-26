@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// An AVS preset (a .avs file from Winamp's Advanced Visualization Studio), read but not yet running.

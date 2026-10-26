@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 // The loudness readouts along the bottom, as a loudness meter shows them (EBU R 128): momentary, short-term
 // and integrated loudness in LUFS, the loudness range in LU, and the true peak in dBTP. The capture's

@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Playlist;
+using Lucent.Playlist;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// When each frame of a recording happens, the same on Windows and the Mac: which part of the song

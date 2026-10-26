@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>A track inside a longer recording, such as one song of a DJ set.</summary>
 /// <param name="Performer">Who it's by, when that's known apart from the title (for a cue sheet's PERFORMER).</param>

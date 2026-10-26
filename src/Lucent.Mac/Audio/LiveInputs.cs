@@ -1,8 +1,8 @@
 using System.Runtime.InteropServices;
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Recording;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Recording;
+using Lucent.Settings;
 using static Lucent.Mac.Interop.CoreAudio;
 
 namespace Lucent.Mac.Audio;

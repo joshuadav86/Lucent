@@ -18,7 +18,7 @@ while IFS= read -r file; do
     case "$file" in
       README.md | docs/* | tools/ci/* | tools/test-media/* | tools/LayoutCheck/* | tools/AvsCheck/* | tools/MilkDropCheck/* \
         | tools/ParityCheck/* | tools/mac/launch-check.sh | tools/mac/make-test-music.sh \
-        | .github/workflows/drag-diagnose.yml | tools/windows/drag-diagnose.ps1 | src/Lucent.Mac/Screenshots*.cs) continue ;;
+        | .github/workflows/drag-diagnose.yml | tools/windows/drag-diagnose.ps1 | src/Lucent.Mac/Diagnostics/Screenshots*.cs) continue ;;
     esac
   fi
   case "$file" in

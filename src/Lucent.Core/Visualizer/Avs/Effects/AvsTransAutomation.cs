@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Misc / AVSTrans Automation ("Misc: AVSTrans Automation", e_eeltrans.cpp): rewrote the other effects' code

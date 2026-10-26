@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Playlist;
+namespace Lucent.Playlist;
 
 /// <summary>A file in the playlist, with whatever tag info could be read from it.</summary>
 public sealed class Track

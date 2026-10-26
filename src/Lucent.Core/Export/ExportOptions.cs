@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json.Serialization;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>The kinds of file Lucent can write.</summary>
 public enum ExportFormat

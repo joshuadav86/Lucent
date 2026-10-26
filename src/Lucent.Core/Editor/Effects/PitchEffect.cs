@@ -1,7 +1,7 @@
 using System.Globalization;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor.Effects;
+namespace Lucent.Editor.Effects;
 
 /// <summary>Changes the pitch by up to an octave either way.</summary>
 public sealed class PitchEffect : IAudioEffect

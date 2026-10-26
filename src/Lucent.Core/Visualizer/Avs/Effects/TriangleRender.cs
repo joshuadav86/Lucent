@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Render / Triangle (the "Render: Triangle" plug-in, e_triangle.cpp in the later open-source AVS): code places n

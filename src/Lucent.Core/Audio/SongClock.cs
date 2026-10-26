@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Where the song that's playing has got to, and its <see cref="BeatMap"/> once that's been

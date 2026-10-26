@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Color Modifier (r_dcolormod.cpp): code turns each level of red, green and blue (0 to 1) into a

@@ -1,7 +1,7 @@
 using Microsoft.ML.OnnxRuntime;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor.Stems;
+namespace Lucent.Editor.Stems;
 
 /// <summary>
 /// Splits music into its stems (drums, bass, vocals and everything else) with Demucs' Hybrid Transformer

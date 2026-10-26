@@ -1,7 +1,7 @@
 using System.IO;
 using TagLib;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>What to change in a file's pictures.</summary>
 public sealed class ArtworkEdit

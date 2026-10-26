@@ -1,8 +1,8 @@
 using System.IO;
 using System.Text.Json;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>
 /// How often each song has been played, when it was last played, and its star rating, by file path.

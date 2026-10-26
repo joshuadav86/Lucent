@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>
 /// A DJ's own ACRCloud project: the host it lives on and its access key and secret, from the project's page

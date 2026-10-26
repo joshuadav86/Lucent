@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>
 /// Listens to a live recording for where one song gives way to the next, so a DJ set can be skipped

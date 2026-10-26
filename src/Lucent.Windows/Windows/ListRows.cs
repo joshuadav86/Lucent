@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>Keyboard help for the lists that have a search box above them.</summary>
 public static class ListRows

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// The Automatic resolution: draws a visual that can't keep up with the screen at fewer pixels until it

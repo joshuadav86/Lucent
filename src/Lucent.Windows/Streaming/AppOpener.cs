@@ -3,7 +3,7 @@ using System.IO;
 using Microsoft.Win32;
 using Windows.Management.Deployment;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// Finds and starts the apps Lucent controls, for the player's Open button (<see cref="IRemoteOpener"/>): by a link

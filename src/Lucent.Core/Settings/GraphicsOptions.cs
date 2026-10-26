@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Settings;
+namespace Lucent.Settings;
 
 /// <summary>How many pixels the visuals are drawn with.</summary>
 public enum RenderResolution

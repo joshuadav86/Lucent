@@ -2,11 +2,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
 using TagLib;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
+using Lucent.Audio;
+using Lucent.Library;
 using File = System.IO.File;
 
-namespace WinampInspiredVisualizer.Stores;
+namespace Lucent.Stores;
 
 /// <summary>A store whose downloads Lucent can recognise and file into the library.</summary>
 public enum MusicStore

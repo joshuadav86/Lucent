@@ -3,9 +3,9 @@ using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Stores;
+using Lucent.Audio;
+using Lucent.Settings;
+using Lucent.Stores;
 
 namespace Lucent.Mac.Stores;
 

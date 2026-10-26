@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Layout;
+namespace Lucent.Layout;
 
 /// <summary>
 /// One of Lucent's windows a dragged window could trade places with: where it is, its smallest size,

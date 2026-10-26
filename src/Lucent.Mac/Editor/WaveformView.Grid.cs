@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
 namespace Lucent.Mac.Editor;
 

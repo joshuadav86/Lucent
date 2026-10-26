@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Settings;
+using Lucent.Visualizer;
+using Lucent.Visualizer.MilkDrop;
 
 namespace Lucent.Mac.Visuals;
 

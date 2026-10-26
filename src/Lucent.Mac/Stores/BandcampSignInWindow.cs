@@ -5,7 +5,7 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Stores;
+using Lucent.Stores;
 
 namespace Lucent.Mac.Stores;
 

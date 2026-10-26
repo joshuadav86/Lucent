@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Automation;
 using Windows.Media.Control;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// Pandora: its Windows app, or pandora.com in a browser. Lucent reads Pandora's own window with UI Automation (what

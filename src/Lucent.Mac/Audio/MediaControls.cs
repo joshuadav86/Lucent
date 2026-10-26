@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using Avalonia.Threading;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Library;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac.Audio;
 

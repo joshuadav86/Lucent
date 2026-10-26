@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Dot Plane (r_dotpln.cpp): a turning 3D grid of dots that the spectrum lifts like waves, rows flowing back over time.</summary>
 [AvsEffect(1)]

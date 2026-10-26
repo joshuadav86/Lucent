@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Makes an animated GIF from pictures added one at a time, written in C# so it's the same on Windows and the Mac.

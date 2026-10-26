@@ -3,7 +3,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TagLib;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>A decoded cover picture, plus the original file bytes for copying or saving it.</summary>
 public sealed class CoverImage

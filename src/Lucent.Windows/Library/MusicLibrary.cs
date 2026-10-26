@@ -1,10 +1,10 @@
 using System.IO;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Recording;
+using Lucent.Audio;
+using Lucent.Playlist;
+using Lucent.Recording;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>
 /// Every music file inside the user's library folders. Scans in the background, reads tags

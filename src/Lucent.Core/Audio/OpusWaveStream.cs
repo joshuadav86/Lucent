@@ -3,7 +3,7 @@ using Concentus;
 using Concentus.Oggfile;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>Decodes Ogg Opus files into 16-bit PCM for NAudio.</summary>
 public sealed class OpusWaveStream : WaveStream

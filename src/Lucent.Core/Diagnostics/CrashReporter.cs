@@ -4,9 +4,9 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Diagnostics;
+namespace Lucent.Diagnostics;
 
 /// <summary>What each app tells the crash reporter about itself and its operating system.</summary>
 public sealed class CrashReportHost

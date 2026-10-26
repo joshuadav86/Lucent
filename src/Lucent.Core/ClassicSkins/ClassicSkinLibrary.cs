@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// The classic skins Lucent has: its own (Lucent Classic, built in) and the .wsz files the user has imported,

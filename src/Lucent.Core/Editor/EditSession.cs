@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Editor.Effects;
+using Lucent.Editor.Effects;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>One entry in the editor's history list.</summary>
 /// <param name="Details">More about the step than its description says (a plugin chain's plugins), or null.</param>

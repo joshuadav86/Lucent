@@ -4,7 +4,7 @@ using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Listens to everything Windows is playing (Spotify, Apple Music, a browser, a game) through WASAPI

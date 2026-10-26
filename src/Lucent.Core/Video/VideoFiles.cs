@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>Which files are videos, played with libVLC (<see cref="VideoStream"/>) rather than the music decoders.</summary>
 public static class VideoFiles

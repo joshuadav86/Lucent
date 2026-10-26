@@ -2,11 +2,11 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.InteropServices;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Video;
+using Lucent.Editor.Dsp;
+using Lucent.Export;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>What a copy of a video is saved as: an MP4 video, or its sound alone.</summary>
 public enum VideoCopyFormat

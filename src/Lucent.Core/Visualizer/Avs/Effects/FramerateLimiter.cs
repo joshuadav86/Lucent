@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Misc / Framerate Limiter ("VFX FRAMERATE LIMITER", e_frameratelimiter.cpp): held AVS to a set frame rate.

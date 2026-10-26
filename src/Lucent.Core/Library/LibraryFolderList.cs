@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>
 /// Adds and removes library folders. The library is the linked folders, minus any folders inside them

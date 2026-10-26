@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// A small built-in font for Render / Text, in place of the Windows fonts AVS drew with: the classic 5x7

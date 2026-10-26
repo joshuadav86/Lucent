@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// Clip edges and fades, edited the way a DAW edits items. Near a clip's left or right edge the pointer turns into

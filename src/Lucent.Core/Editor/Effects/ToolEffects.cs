@@ -1,7 +1,7 @@
 using System.Globalization;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor.Effects;
+namespace Lucent.Editor.Effects;
 
 /// <summary>The editor's own parametric equalizer.</summary>
 public sealed class EqualizerEffect : IAudioEffect

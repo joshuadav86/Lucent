@@ -1,7 +1,7 @@
 using System.IO;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// For the self-test: decodes every file in tools/test-media/formats (half a second of a 440 Hz tone with a quiet

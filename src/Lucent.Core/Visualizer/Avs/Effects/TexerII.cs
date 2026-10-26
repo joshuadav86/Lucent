@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Render / Texer II (the "Acko.net: Texer II" plug-in, e_texer2.cpp in the later open-source AVS): code places n copies of a

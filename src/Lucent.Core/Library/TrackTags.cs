@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO;
 using TagLib;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>The bits of a track's info that can be edited in the track info window.</summary>
 public enum TagField

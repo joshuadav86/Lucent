@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Misc / Global Variables (Jheriko's "Global" APE, e_globalvariables.cpp in the modern fork): init, frame

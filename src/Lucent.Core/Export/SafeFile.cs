@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Writing files without ever leaving a half-written one behind: everything is written to a

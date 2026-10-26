@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// Copied audio, with a little of what was either side of it, so pasting it can crossfade into its new

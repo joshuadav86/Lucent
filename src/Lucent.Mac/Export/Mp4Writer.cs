@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Export;
+using Lucent.Export;
 using static Lucent.Mac.Interop.AVFoundation;
 using static Lucent.Mac.Interop.CoreMedia;
 

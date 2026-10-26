@@ -1,10 +1,10 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using WinampInspiredVisualizer.Recording;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Recording;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// The DJ's own ACRCloud key for naming the songs in a recording, kept in %AppData%\Lucent encrypted with

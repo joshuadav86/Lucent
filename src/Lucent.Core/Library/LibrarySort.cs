@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>The orders the library can be listed in.</summary>
 public enum LibrarySort

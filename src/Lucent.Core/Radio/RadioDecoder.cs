@@ -2,7 +2,7 @@ using NAudio.Wave;
 using NLayer.NAudioSupport;
 using SharpJaad.AAC;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// Turns a station's stream into audio, a frame at a time, as 32-bit float samples. There's one for MP3 (NLayer)

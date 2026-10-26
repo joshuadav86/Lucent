@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Roto Blitter (r_rotblit.cpp): copies the picture back onto itself zoomed and turned, tiling at the edges, and can swap direction or zoom on beats.</summary>
 [AvsEffect(9)]

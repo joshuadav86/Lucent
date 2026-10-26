@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Vortice.DXGI;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// What the screen showing the visualizer can do: whether Windows has HDR turned on for it,

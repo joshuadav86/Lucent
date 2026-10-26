@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// The stations the radio browser opens on: listener-supported networks audio nerds already know, built in so they

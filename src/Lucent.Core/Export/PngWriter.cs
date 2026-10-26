@@ -3,7 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Writes a picture as a PNG file: 8-bit RGB, each row filtered against the one above it ("Up", which suits video

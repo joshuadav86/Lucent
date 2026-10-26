@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Render / SuperScope (r_sscope.cpp): code places n points (x and y from -1 to 1) along the waveform or

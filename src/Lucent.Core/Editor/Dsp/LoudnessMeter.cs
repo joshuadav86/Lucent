@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// Measures integrated loudness in LUFS as defined by ITU-R BS.1770-4 (the measure streaming

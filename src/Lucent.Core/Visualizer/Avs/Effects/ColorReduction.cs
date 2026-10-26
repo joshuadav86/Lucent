@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Color Reduction (r_colorreduction.cpp): keeps only the top few bits of each channel, leaving fewer shades.</summary>
 [AvsEffect("Color Reduction")]

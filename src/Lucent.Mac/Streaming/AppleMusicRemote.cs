@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Settings;
+using Lucent.Streaming;
 
 namespace Lucent.Mac.Streaming;
 

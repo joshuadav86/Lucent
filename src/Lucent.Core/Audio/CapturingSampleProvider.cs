@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>Passes audio through unchanged while copying a mono mix and the left and right channels into an <see cref="AudioCapture"/>.</summary>
 public sealed class CapturingSampleProvider : ISampleProvider

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// Checks tempo, beat, key and loop finding on music made up on the spot, whose tempo, downbeats and key are

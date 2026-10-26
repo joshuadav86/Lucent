@@ -5,7 +5,7 @@ using System.Text;
 using Vortice.D3DCompiler;
 using Vortice.Direct3D;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Compiles HLSL and keeps the results in %LocalAppData%\Lucent\ShaderCache, so each visual

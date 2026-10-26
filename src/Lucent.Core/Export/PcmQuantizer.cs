@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Turns float samples into whole numbers for 16- or 24-bit files. 16-bit gets a touch of

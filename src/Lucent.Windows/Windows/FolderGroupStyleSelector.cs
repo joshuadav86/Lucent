@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// How the library's folder groups look. The list is grouped twice: by section (a store's one heading, or a

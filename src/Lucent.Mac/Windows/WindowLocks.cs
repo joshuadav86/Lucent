@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
 namespace Lucent.Mac.Windows;
 

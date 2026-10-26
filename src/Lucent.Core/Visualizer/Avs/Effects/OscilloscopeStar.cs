@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Oscilloscope Star (r_oscstar.cpp): five arms of waveform spinning out from a centre, like a star, in cycling colours.</summary>
 [AvsEffect(2)]

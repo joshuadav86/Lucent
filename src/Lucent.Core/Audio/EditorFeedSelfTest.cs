@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// The apps' --self-test check that the visuals and analyzer follow the editor: while an <see cref="EditorFeed"/> is

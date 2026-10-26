@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// The apps' --self-test check of the analyzer's loudness meter against EBU Tech 3341 and 3342's test signals:

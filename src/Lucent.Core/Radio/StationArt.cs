@@ -1,7 +1,7 @@
 using System.Net.Http;
 using System.Text.Json;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// Pictures for the artwork window while a station plays: the song's cover, found by its title in the iTunes Store's

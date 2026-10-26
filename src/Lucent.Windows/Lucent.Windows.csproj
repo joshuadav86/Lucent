@@ -17,11 +17,11 @@
     <AssemblyName>Lucent</AssemblyName>
     <Product>Lucent</Product>
     <ApplicationIcon>Assets\Lucent.ico</ApplicationIcon>
-    <RootNamespace>WinampInspiredVisualizer</RootNamespace>
+    <RootNamespace>Lucent</RootNamespace>
     <!-- CI sets the last number to the build number, so every build installs over the one before. -->
     <Version>0.1.0</Version>
     <!-- Program.Main, so Velopack can run before the app starts. -->
-    <StartupObject>WinampInspiredVisualizer.Program</StartupObject>
+    <StartupObject>Lucent.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>

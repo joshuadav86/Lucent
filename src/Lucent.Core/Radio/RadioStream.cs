@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// An online radio station, playing: its MP3 or AAC stream (or HLS pieces, see <see cref="HlsStream"/>) decoded as it arrives, with a few seconds held in hand so a

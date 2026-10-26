@@ -1,9 +1,9 @@
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// A song's sound for a video, decoded from its file from start to end: 16-bit stereo for the

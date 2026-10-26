@@ -3,7 +3,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// A classic Winamp skin (.wsz): a zip of .bmp sprite sheets and a few text files, laid out the way Winamp 2

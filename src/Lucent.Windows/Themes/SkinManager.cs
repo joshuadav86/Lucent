@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
-namespace WinampInspiredVisualizer.Themes;
+namespace Lucent.Themes;
 
 /// <summary>How a skin finishes its surfaces: the light, edges and texture laid over the theme's colours.</summary>
 public enum SkinFinish

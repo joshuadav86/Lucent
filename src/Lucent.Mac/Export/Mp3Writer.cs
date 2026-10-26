@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Export;
+using Lucent.Export;
 
 namespace Lucent.Mac.Export;
 

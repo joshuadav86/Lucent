@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Media;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// The beat grid: a faint line on every beat and a stronger one, numbered, at the start of every bar, drawn

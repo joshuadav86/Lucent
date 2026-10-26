@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// Finds and repairs clicks and pops (vinyl crackle, digital glitches): short bursts the music around them

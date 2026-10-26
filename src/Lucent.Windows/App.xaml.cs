@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 public partial class App : Application
 {

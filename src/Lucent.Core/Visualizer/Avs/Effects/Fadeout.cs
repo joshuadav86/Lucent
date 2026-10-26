@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Fadeout (r_fadeout.cpp): moves every channel of every pixel a step closer to a colour (black by default).</summary>
 [AvsEffect(3)]

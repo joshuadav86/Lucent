@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Xml.Linq;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>
 /// Brings the music library over from a Plex Media Server: every track with its play count, rating and

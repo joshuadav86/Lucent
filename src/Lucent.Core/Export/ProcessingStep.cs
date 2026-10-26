@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Editor.Effects;
+using Lucent.Editor.Dsp;
+using Lucent.Editor.Effects;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>The kinds of processing the converter can do to every song on the way through.</summary>
 public enum ProcessingKind

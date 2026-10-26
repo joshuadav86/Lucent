@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Texer (the "Texer" plug-in, e_texer.cpp in the later open-source AVS): puts a copy of a picture, added on, at

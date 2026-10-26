@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Misc / Buffer Save (r_stack.cpp): saves the picture into one of the eight shared buffers, or puts a saved one back, in one of several blends, or alternates between the two each frame.</summary>
 [AvsEffect(18)]

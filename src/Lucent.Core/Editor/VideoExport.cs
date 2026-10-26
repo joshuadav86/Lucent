@@ -1,9 +1,9 @@
 using System.IO;
 using LibVLCSharp.Shared;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Video;
+using Lucent.Export;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>How frames are saved: PNG (exact) or JPEG (much smaller).</summary>
 public enum FrameImageFormat

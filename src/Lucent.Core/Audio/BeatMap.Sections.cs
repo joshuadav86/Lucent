@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>A stretch of a song that keeps one feel (an intro, a verse, a drop, a breakdown), and how intense it is, 0 to 1.</summary>
 public readonly record struct SongSection(double Start, double End, double Intensity);

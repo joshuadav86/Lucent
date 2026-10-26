@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 
-namespace WinampInspiredVisualizer.Diagnostics;
+namespace Lucent.Diagnostics;
 
 /// <summary>
 /// One crash, as Lucent keeps it until it's sent: what was thrown (or what the operating system saw), where,

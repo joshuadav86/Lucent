@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Xml;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>
 /// Reads the library file iTunes and Apple Music export ("iTunes Library.xml", or File > Library >

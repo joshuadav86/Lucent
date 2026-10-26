@@ -1,6 +1,6 @@
 using System.Text;
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Recording;
+using Lucent.Recording;
 
 namespace Lucent.Mac.Audio;
 
