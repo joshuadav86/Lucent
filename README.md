@@ -108,7 +108,7 @@ dotnet run --project src/Lucent.Mac                 # Mac
 
 The Mac app needs the visuals translated to Metal first, which takes Microsoft's [`dxc`](https://github.com/microsoft/DirectXShaderCompiler/releases) on Linux or Windows: `dotnet run --project tools/MetalShaders -- content artifacts/metal-shaders`.
 
-What each feature does on Windows and Mac is written up in [`docs/specs`](docs/specs). Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
+Where the code lives is in [`docs/LAYOUT.md`](docs/LAYOUT.md), and what each feature does on Windows and Mac in [`docs/specs`](docs/specs). Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
 
 ## Bugs and crash reports
 

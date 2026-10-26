@@ -184,7 +184,7 @@
         <!-- Title bar -->
         <Grid Height="36">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
-                <Image Source="Assets/Lucent-64.png" Width="14" Height="14" VerticalAlignment="Center"
+                <Image Source="/Assets/Lucent-64.png" Width="14" Height="14" VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality" />
                 <TextBlock Text="EQUALIZER" Margin="9,0,0,0" FontSize="11" FontWeight="SemiBold"
                            Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
