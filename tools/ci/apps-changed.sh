@@ -4,6 +4,9 @@
 # visuals, shaders and starter song in content/ go into both apps, and so does the Windows app's Assets
 # folder (the Mac app takes its icon from there, see Lucent.Mac.csproj), so those count as both.
 #
+# The paths from before the folder tidy-up (PRs #328 and #332) are listed too: main's build sorts every
+# past merge by the files it changed, for the apps' what's new.
+#
 # With --shipped, it also leaves out files that don't change what people install: the docs, CI's own
 # checks and test media, and the Mac app's website screenshot code. Pull requests still build and test
 # for those; main just doesn't publish a new build (and an update prompt) for them. The next build
@@ -18,14 +21,15 @@ while IFS= read -r file; do
     case "$file" in
       README.md | docs/* | tools/ci/* | tools/test-media/* | tools/LayoutCheck/* | tools/AvsCheck/* | tools/MilkDropCheck/* \
         | tools/ParityCheck/* | tools/mac/launch-check.sh | tools/mac/make-test-music.sh \
-        | .github/workflows/drag-diagnose.yml | tools/windows/drag-diagnose.ps1 | src/Lucent.Mac/Diagnostics/Screenshots*.cs) continue ;;
+        | .github/workflows/drag-diagnose.yml | tools/windows/drag-diagnose.ps1 | src/Lucent.Mac/Diagnostics/Screenshots*.cs \
+        | tools/drag-diagnose.ps1 | src/Lucent.Mac/Screenshots*.cs) continue ;;
     esac
   fi
   case "$file" in
     site/* | .github/workflows/pages.yml | docs/specs/*) ;;
-    src/Lucent.Mac/* | tools/mac/*) mac=1 ;;
-    src/Lucent.Windows/Assets/*) windows=1 mac=1 ;;
-    src/Lucent.Windows/* | tools/windows/*) windows=1 ;;
+    src/Lucent.Mac/* | tools/mac/* | tools/build-lame-mac.sh | tools/build-pluginhost-mac.sh | tools/package-mac.sh) mac=1 ;;
+    src/Lucent.Windows/Assets/* | src/WinampInspiredVisualizer/Assets/*) windows=1 mac=1 ;;
+    src/Lucent.Windows/* | tools/windows/* | src/WinampInspiredVisualizer/* | tools/drag-diagnose.ps1) windows=1 ;;
     *) windows=1 mac=1 ;;
   esac
 done
