@@ -65,6 +65,8 @@ public partial class LibraryWindow : ToolWindow
         LibraryView.AddHandler(ContextRequestedEvent, OnLibraryMenuOpening, RoutingStrategies.Tunnel);
         LibraryView.AddHandler(Gestures.TappedEvent, OnLibraryTapped, RoutingStrategies.Bubble, handledEventsToo: true);
         RemotePlaylistView.AddHandler(ContextRequestedEvent, OnRemoteSongMenuOpening, RoutingStrategies.Tunnel);
+        _libraryScroll = new PlayingRowScroll(LibraryView);
+        _remoteScroll = new PlayingRowScroll(RemotePlaylistView);
     }
 
     private bool IsSearching => _searchWords.Length > 0;
@@ -260,6 +262,7 @@ public partial class LibraryWindow : ToolWindow
         LibraryView.SelectedItems?.Clear();
         _rows.Clear();
         _rows.AddRange(rows);
+        MarkLocalPlaying();
 
         if (selected.Count > 0)
         {
@@ -432,6 +435,10 @@ public partial class LibraryWindow : ToolWindow
         {
             RebuildLibraryView();
         }
+        else
+        {
+            MarkLocalPlaying();
+        }
 
         // Sounds outside the library folders get their titles and artists read here.
         if (untagged.Count > 0)
@@ -454,6 +461,41 @@ public partial class LibraryWindow : ToolWindow
             }
         }
     }
+
+    // ---- The song playing ----
+    // The library marks the song the player is playing, and glides to it when it changes, if it's in the list
+    // as shown (not inside a closed heading). Its own song, or the other app's in a streaming playlist opened.
+
+    private readonly PlayingRowScroll _libraryScroll;
+    private readonly PlayingRowScroll _remoteScroll;
+    private string? _playingPath;
+
+    /// <summary>Called by the player when it starts one of its own songs, or with null when it stops playing them.</summary>
+    public void ShowLocalPlaying(string? path)
+    {
+        var changed = !string.Equals(path, _playingPath, StringComparison.OrdinalIgnoreCase);
+        _playingPath = path;
+        MarkLocalPlaying();
+        if (changed && path is not null && !ShowingRemotePlaylist)
+        {
+            _libraryScroll.Show(LocalPlayingRow, glide: true);
+        }
+    }
+
+    private void MarkLocalPlaying()
+    {
+        var path = _playingPath;
+        foreach (var item in _library.Items.Concat(_playlistItems))
+        {
+            item.IsCurrent = path is not null && string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    // The row of the song playing, as the list shows it: the first, if it's in more than one playlist. Songs under
+    // a closed heading aren't rows.
+    private LibraryItem? LocalPlayingRow() => _playingPath is { } path
+        ? _rows.OfType<LibraryItem>().FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase))
+        : null;
 
     // ---- Other apps' playlists ----
     // PLAYLISTS also lists the playlists in the apps Lucent controls (Spotify, and Music on a Mac): one row a playlist,
@@ -609,6 +651,8 @@ public partial class LibraryWindow : ToolWindow
         _openRemote = row;
         _openRemoteList = null;
         _openedRemoteAt = DateTime.UtcNow;
+        _remoteMarked = false;
+        _remoteScroll.Forget();
         var app = AppName(row.RemoteApp);
         RemotePlaylistName.Text = playlist.Name;
         RemotePlaylistDetails.Text = "Reading its songs…";
@@ -683,7 +727,7 @@ public partial class LibraryWindow : ToolWindow
                 : $"{songs}  ·  {app}";
         ShowRemotePlaylistNote(note);
         ShowRemoteSortButton();
-        MarkRemotePlaying(Player?.RemotePlayingTrack);
+        MarkRemotePlaying(Player?.RemotePlayingTrack, filled: true);
     }
 
     // The order the queue's Sort button picked, shared with it, when the playlist can be listed that way.
@@ -721,8 +765,10 @@ public partial class LibraryWindow : ToolWindow
                     player.RemoteListOrder = order;
                 }
 
+                // Back to the song playing, in its new place, or else to the top.
+                _remoteMarked = false;
                 ShowRemoteSongs(list, list.Note);
-                if (_openRemoteEntries.Count > 0)
+                if (!_remoteMarked && _openRemoteEntries.Count > 0)
                 {
                     RemotePlaylistView.ScrollIntoView(_openRemoteEntries[0]);
                 }
@@ -739,13 +785,38 @@ public partial class LibraryWindow : ToolWindow
         RemotePlaylistNote.IsVisible = !string.IsNullOrEmpty(note);
     }
 
-    /// <summary>Marks the song the other app is playing in the streaming playlist that's open, if it's in it.</summary>
-    public void MarkRemotePlaying(RemoteTrack? playing)
+    /// <summary>
+    /// Marks the song the other app is playing in the streaming playlist that's open, if it's in it, and glides to it
+    /// when the song changes.
+    /// </summary>
+    public void MarkRemotePlaying(RemoteTrack? playing) => MarkRemotePlaying(playing, filled: false);
+
+    // Whether the song playing has been found in the open playlist, and that song by its title, as its ID changes a
+    // few seconds into it (see RemoteControl.ReadListIfChanged).
+    private bool _remoteMarked;
+    private string? _remotePlayingTitle;
+
+    /// <param name="filled">The list has just been filled, or more of it has arrived.</param>
+    private void MarkRemotePlaying(RemoteTrack? playing, bool filled)
     {
+        RemoteListEntry? current = null;
         foreach (var entry in _openRemoteEntries)
         {
-            entry.IsCurrent = playing is not null && entry.Track.IsSameSong(playing);
+            entry.IsCurrent = current is null && playing is not null && entry.Track.IsSameSong(playing);
+            current ??= entry.IsCurrent ? entry : null;
         }
+
+        var title = playing?.Title.Trim().ToLowerInvariant();
+        var songChanged = title != _remotePlayingTitle;
+        _remotePlayingTitle = title;
+        // Not when more of a long playlist arrives once the song's been found, as the list may have been scrolled
+        // meanwhile; straight there when the list has just been filled, gliding when the song changes.
+        if (current is not null && (songChanged || !_remoteMarked))
+        {
+            _remoteScroll.Show(() => _openRemoteEntries.FirstOrDefault(entry => entry.IsCurrent), glide: !filled);
+        }
+
+        _remoteMarked = current is not null;
     }
 
     /// <summary>Goes back from a streaming playlist's songs to the playlists.</summary>
@@ -760,6 +831,8 @@ public partial class LibraryWindow : ToolWindow
         _openRemoteStop = null;
         _openRemote = null;
         _openRemoteList = null;
+        _remoteMarked = false;
+        _remoteScroll.Forget();
         _openRemoteEntries = new List<RemoteListEntry>();
         RemotePlaylistView.ItemsSource = null;
         RemotePlaylistPanel.IsVisible = false;

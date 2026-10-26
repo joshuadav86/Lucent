@@ -173,6 +173,22 @@ public sealed class LibraryItem : INotifyPropertyChanged
         Raise(nameof(Details));
     }
 
+    /// <summary>Whether it's the song playing, marked in the library with a bar beside it.</summary>
+    public bool IsCurrent
+    {
+        get => _isCurrent;
+        set
+        {
+            if (_isCurrent != value)
+            {
+                _isCurrent = value;
+                Raise(nameof(IsCurrent));
+            }
+        }
+    }
+
+    private bool _isCurrent;
+
     /// <summary>Shows a new play count or rating.</summary>
     public void StatsChanged() => Raise(nameof(Details));
 
