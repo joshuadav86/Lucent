@@ -1,7 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Lucent.Mac.Windows;
+using WinampInspiredVisualizer.Layout;
 
 namespace Lucent.Mac;
 
@@ -142,5 +144,63 @@ public partial class MainWindow
         {
             window.Position = position;
         }
+    }
+
+    /// <summary>
+    /// Reset to default layout: the windows as Lucent opens them the very first time. The player at its usual
+    /// size, the equalizer and the visuals, laid out together in the middle of the player's screen, with the
+    /// queue, the library, the analyzer and the artwork closed, every window unlocked, and Lucent out of full
+    /// screen. The video, the radio and any editors stay open (closing them would stop what's in them) and
+    /// dock back on beside the rest.
+    /// </summary>
+    public void ResetLayout()
+    {
+        LeaveLucentFullScreen(putBack: false);
+        RestoreAllWindows();
+        if (_visuals.IsFullscreen)
+        {
+            _visuals.ToggleFullscreen();
+        }
+
+        foreach (var window in _snapper.Windows.ToList())
+        {
+            WindowLocks.SetLocked(window, false);
+        }
+
+        _settings.LockedWindows.Clear();
+        _settings.FullScreenStyle = TileStyle.AsTheyAre;
+        if (!IsClassic)
+        {
+            _settings.PlayerScale = 1;
+            ApplyPlayerSize();
+        }
+
+        _queue.Hide();
+        _libraryWindow.Hide();
+        if (AnalyzerWindow.IsOpen)
+        {
+            ToggleAnalyzer();
+        }
+
+        if (ArtworkWindow.IsOpen)
+        {
+            ToggleArtwork();
+        }
+
+        if (OpenEqualizerWindow is null)
+        {
+            OpenEqualizer();
+        }
+
+        ShowTool(_visuals);
+
+        // Once the player's at its usual size and the equalizer's open, as on the first run.
+        Dispatcher.UIThread.Post(() =>
+        {
+            ArrangeFirstTime();
+            SavePlacements();
+            Dispatcher.UIThread.Post(RedockSmallWindows, DispatcherPriority.Background);
+        }, DispatcherPriority.Background);
+        Toast.Show(this, "Default layout");
     }
 }

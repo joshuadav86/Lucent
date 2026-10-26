@@ -128,23 +128,183 @@ public static class FullScreenLayout
     }
 
     /// <summary>
-    /// Where Tidy layout lays the windows out when Lucent isn't full screen: the space they take up now,
-    /// on the screen, or the whole screen if that's too small to be worth it.
+    /// Tidy layout when Lucent isn't full screen: like <see cref="Tidy"/>, but each layout is a compact block
+    /// around the player (<see cref="ArrangeAround"/>) rather than filling an area.
     /// </summary>
-    public static TileRect GroupArea(IEnumerable<TileRect> places, TileRect screen)
+    public static (TileStyle Style, TileResult Result) TidyAround(TileRect screen, IReadOnlyList<TileWindow> windows,
+        IReadOnlyDictionary<string, TileRect> now, TileStyle current)
     {
-        var all = places.ToList();
-        if (all.Count == 0)
+        var start = TidyStyles.ToList().IndexOf(current) + 1;
+        var tried = Enumerable.Range(0, TidyStyles.Count)
+            .Select(step => TidyStyles[(start + step) % TidyStyles.Count])
+            .Select(style => (Style: style, Result: ArrangeAround(screen, windows, now, style)))
+            .ToList();
+        var fewestOut = tried.Min(entry => entry.Result.LeftOut.Count);
+        var fitting = tried.Where(entry => entry.Result.LeftOut.Count == fewestOut).ToList();
+        var moving = fitting.FindIndex(entry => Moves(entry.Result, now));
+        return fitting[Math.Max(0, moving)];
+    }
+
+    /// <summary>
+    /// Lays the windows out in a compact block around the player, which stays where it is. The block's size
+    /// comes from the player's alone, never from how big the other windows are or where they happen to be,
+    /// so Tidy layout always gives the same block, and a window left far away (or made huge) doesn't blow it
+    /// up: the player's column as tall as the player, the equalizer and a queue a little shorter than the
+    /// player is wide; the library three quarters of the player's width; the visuals a little wider than
+    /// the block is tall, but no wider than two players. The block is kept on the screen and clear of
+    /// locked windows (they stay where they are). If it can't fit everything it grows a little at a time,
+    /// and only as a last resort does it fill the screen. If even that would go over a locked window,
+    /// nothing moves (every window is left out).
+    /// </summary>
+    public static TileResult ArrangeAround(TileRect screen, IReadOnlyList<TileWindow> windows, IReadOnlyDictionary<string, TileRect> now, TileStyle style)
+    {
+        var player = windows.FirstOrDefault(window => window.Kind == TileKind.Player);
+        if (player is null || !now.TryGetValue(player.Key, out var anchor))
         {
-            return screen;
+            return Arrange(screen, windows, style);
         }
 
-        var left = Math.Max(screen.Left, all.Min(place => place.Left));
-        var top = Math.Max(screen.Top, all.Min(place => place.Top));
-        var right = Math.Min(screen.Right, all.Max(place => place.Right));
-        var bottom = Math.Min(screen.Bottom, all.Max(place => place.Bottom));
-        return right - left < 200 || bottom - top < 200 ? screen : new TileRect(left, top, right - left, bottom - top);
+        // A locked player stays where it is anyway, which is where the block's put around it: lay it out as if it
+        // were free, so it can be centred or turned round about the player too.
+        var lockedPlayer = player.LockedAt is not null;
+        var free = windows.Where(window => window.LockedAt is null || window == player)
+            .Select(window => window == player ? window with { LockedAt = null } : window)
+            .ToList();
+        var locked = windows.Where(window => window.LockedAt is not null && window != player).Select(window => window.LockedAt!.Value).ToList();
+        var (width, height, sized) = CompactSize(screen, free);
+        // Taller first (windows stacked under the visuals need height more often than width), then wider too.
+        foreach (var (wider, taller) in new[] { (1.0, 1.0), (1.0, 1.25), (1.0, 1.5), (1.0, 2.0), (1.25, 2.0), (1.5, 2.0) })
+        {
+            var area = new TileRect(screen.Left, screen.Top, Math.Min(screen.Width, width * wider), Math.Min(screen.Height, height * taller));
+            var result = Arrange(area, sized, style);
+            if (result.LeftOut.Count > 0 || !result.Places.TryGetValue(player.Key, out var placed)
+                || Shifted(result, anchor.Left - placed.Left, anchor.Top - placed.Top, screen, locked, keepPlayer: lockedPlayer) is not { } shifted)
+            {
+                continue;
+            }
+
+            if (lockedPlayer)
+            {
+                shifted.Places.Remove(player.Key);
+            }
+
+            return shifted;
+        }
+
+        var full = Arrange(screen, windows, style);
+        if (full.Places.All(entry => (entry.Value.IsInside(screen) || entry.Key == player.Key && (player.Width > screen.Width || player.Height > screen.Height))
+            && !locked.Any(at => at.Overlaps(entry.Value))))
+        {
+            return full;
+        }
+
+        var none = new TileResult();
+        none.LeftOut.AddRange(windows.Where(window => window.LockedAt is null).Select(window => window.Key));
+        return none;
     }
+
+    /// <summary>
+    /// The size of the compact block for <see cref="ArrangeAround"/>, and the windows with the sizes it'd like
+    /// them to be (Arrange shares space out by the sizes windows would like).
+    /// </summary>
+    private static (double Width, double Height, List<TileWindow> Windows) CompactSize(TileRect screen, List<TileWindow> windows)
+    {
+        var player = windows.First(window => window.Kind == TileKind.Player);
+        var equalizer = windows.FirstOrDefault(window => window.Kind == TileKind.Equalizer);
+        var queue = windows.FirstOrDefault(window => window.Kind == TileKind.Queue);
+        var side = windows.Where(window => window.Kind is TileKind.Library or TileKind.Artwork).ToList();
+        var main = windows.Where(window => window.Kind is TileKind.Visuals or TileKind.Video or TileKind.Analyzer or TileKind.Radio or TileKind.Editor)
+            .OrderBy(window => window.Kind).ToList();
+        var column = Math.Max(player.Width, equalizer?.Width ?? 0);
+
+        var height = player.Height + (equalizer?.Height ?? 0) + (queue is null ? 0 : Math.Max(queue.MinHeight, column * 0.8));
+        if (side.Count > 0 || main.Count > 0)
+        {
+            // Not so short the windows beside the column are letterboxes.
+            height = Math.Max(height, column * 0.9);
+        }
+
+        height = Math.Min(screen.Height, height);
+        var mainWidth = main.Count == 0 ? 0 : Math.Clamp(height * 1.2, NeededWidth(main), Math.Max(NeededWidth(main), column * 2));
+        var sideWidth = 0.0;
+        if (side.Count > 0)
+        {
+            // Arrange gives the side column no more than its share of the width, so ask for no more than that.
+            var least = NeededWidth(side);
+            sideWidth = Math.Max(least, Math.Min(column * 0.75, SideShare * (column + mainWidth) / (1 - SideShare)));
+        }
+
+        var sized = windows.Select(window => window.Kind switch
+        {
+            TileKind.Library or TileKind.Artwork => window with { Width = sideWidth, Height = window.Kind == TileKind.Artwork ? sideWidth : window.Height },
+            _ when main.Count > 0 && window == main[0] => window with { Width = mainWidth },
+            TileKind.Queue => window with { Height = Math.Max(window.MinHeight, column * 0.8) },
+            _ => window,
+        }).ToList();
+        return (column + sideWidth + mainWidth, height, sized);
+    }
+
+    /// <summary>
+    /// The layout moved so the player lands where it is now, then nudged back onto the screen and to one side of
+    /// any locked window it would cover. Null if it can't be: it's still over a locked window, or (with the
+    /// player locked, so it can't move) it would go off the screen.
+    /// </summary>
+    private static TileResult? Shifted(TileResult result, double dx, double dy, TileRect screen, List<TileRect> locked, bool keepPlayer)
+    {
+        var places = result.Places.Values.ToList();
+        var bounds = new TileRect(places.Min(place => place.Left) + dx, places.Min(place => place.Top) + dy, 0, 0);
+        bounds = bounds with { Width = places.Max(place => place.Right) + dx - bounds.Left, Height = places.Max(place => place.Bottom) + dy - bounds.Top };
+        var onScreen = OnScreen(bounds, screen);
+        if (keepPlayer && onScreen != bounds)
+        {
+            return null;
+        }
+
+        // Clear of locked windows: as it is if it's clear, otherwise the smallest step to beside one, on the screen.
+        bool Clear(TileRect block) => !locked.Any(at => at.Overlaps(block));
+        var candidates = new List<TileRect> { onScreen };
+        if (!keepPlayer)
+        {
+            foreach (var at in locked)
+            {
+                candidates.Add(OnScreen(onScreen with { Left = at.Right }, screen));
+                candidates.Add(OnScreen(onScreen with { Left = at.Left - onScreen.Width }, screen));
+                candidates.Add(OnScreen(onScreen with { Top = at.Bottom }, screen));
+                candidates.Add(OnScreen(onScreen with { Top = at.Top - onScreen.Height }, screen));
+            }
+        }
+
+        var clear = candidates.Where(Clear).OrderBy(block => Math.Abs(block.Left - bounds.Left) + Math.Abs(block.Top - bounds.Top)).ToList();
+        if (clear.Count == 0)
+        {
+            return null;
+        }
+
+        var moveX = clear[0].Left - places.Min(place => place.Left);
+        var moveY = clear[0].Top - places.Min(place => place.Top);
+        var shifted = new TileResult();
+        foreach (var (key, place) in result.Places)
+        {
+            shifted.Places[key] = place with { Left = place.Left + moveX, Top = place.Top + moveY };
+        }
+
+        return shifted;
+    }
+
+    /// <summary>The rectangle moved as little as it takes to be on the screen (its top left corner, if it's bigger).</summary>
+    private static TileRect OnScreen(TileRect rect, TileRect screen) => rect with
+    {
+        Left = Math.Max(screen.Left, Math.Min(rect.Left, screen.Right - rect.Width)),
+        Top = Math.Max(screen.Top, Math.Min(rect.Top, screen.Bottom - rect.Height)),
+    };
+
+    /// <summary>A short note, after Tidy layout, on the windows it left where they were because they're locked, or null if none were.</summary>
+    public static string? LockedNote(IReadOnlyList<string> locked) => locked.Count switch
+    {
+        0 => null,
+        1 => $"{locked[0]} is locked, so it stayed put",
+        _ => $"{string.Join(", ", locked.Take(locked.Count - 1))}{(locked.Count > 2 ? "," : "")} and {locked[^1]} are locked, so they stayed put",
+    };
 
     /// <summary>True when the layout puts some window somewhere other than where it is now.</summary>
     private static bool Moves(TileResult result, IReadOnlyDictionary<string, TileRect> now) =>

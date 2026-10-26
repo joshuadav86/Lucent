@@ -4,13 +4,14 @@
 
 Lucent is a set of small windows, like Winamp: player, visuals (W), queue (Q), library (L), equalizer (E), analyzer (Y), artwork (C), video (P), plus the editor, radio, record, and stems windows.
 
-- **Snapping and docking:** windows snap to each other and to the screen. Docked windows move with the player. Dock all (D), fill (G), shrink (K).
+- **Snapping and docking:** windows snap to each other and to the screen. Docked windows move with the player, and the player and its group snap as one. No title bar can be dragged above the top of the screen. A window dropped within 32 units of another closes the gap and docks. Dock all (D), fill (G), shrink (K).
 - **Link (J):** undocked windows move with the player too.
-- **Locks:** a padlock in each title bar pins that window's place and size. The player's lock pins only the player.
+- **Locks:** a padlock in each title bar pins that window's place and size. The player's lock pins only the player. Dragging the player away from a locked window that's docked (or linked) outlines it with "… is locked", and dragging a locked window shows a note saying how to unlock it.
 - **Remembered places:** every window reopens where it was, docked or not. Analyzer and artwork reopen if they were open.
 - **Swap:** drag a window well inside another and they trade places and sizes (an outline shows "Swap with …"). Not for the player, the equalizer, or locked windows.
 - **Lucent full screen (Shift+F11,** right-click "Full screen Lucent", or double-click the player's title bar): every open window tiles one screen, at any scaling. Swaps are kept while in full screen.
-- **Tidy layout (Shift+D):** cycles symmetric layouts (as they are, centred, centred mirrored, classic, mirrored). Works in and out of full screen.
+- **Tidy layout (Shift+D):** cycles symmetric layouts (centred, centred mirrored, classic, mirrored). Full screen it fills the screen. Otherwise it's a compact block around the player, which stays put: sizes come from the player's size only, so every press gives the same block, kept on screen and clear of locked windows (`FullScreenLayout.ArrangeAround`). The note names any locked windows it left alone.
+- **Reset to default layout:** right-click menu and Mac Window menu. Puts back the first-start layout: player at its usual size, equalizer and visuals, queue/library/analyzer/artwork closed, all windows unlocked, out of full screen. Video, radio and editors stay open and dock back on.
 - **Right-click > Close** on every window; the player's reads "Close Lucent".
 - **Toast** messages over the queue or player for quick confirmations.
 - Layouts use the player's own screen, never the primary screen.
@@ -56,4 +57,4 @@ Add a `TileKind`, map it in `TileKindOf()`, add it to `TiledWindows()`, and call
 
 ## Checks
 
-`tools/LayoutCheck` (parity job) checks every full-screen layout at 100 to 200% scaling and on Mac screens: no overlaps, nothing off screen, minimum sizes, locks, swaps, and every tidy style.
+`tools/LayoutCheck` (parity job) checks every full-screen layout at 100 to 200% scaling and on Mac screens: no overlaps, nothing off screen, minimum sizes, locks, swaps, and every tidy style. It also tidies out of full screen from scattered, far-off, huge and locked windows, and checks the block stays docked together, nothing is blown up, the player only moves to keep the block on screen, and two rounds of presses give the same layouts.

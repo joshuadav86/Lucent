@@ -8,7 +8,8 @@ namespace WinampInspiredVisualizer.Windows;
 
 /// <summary>
 /// The outline shown over a window while another is dragged onto it, saying that dropping there swaps
-/// the two (<see cref="WindowSnapper"/>). It sits on top of everything, in the accent colour, and the
+/// the two (<see cref="WindowSnapper"/>), or over a locked window the player's being dragged away from,
+/// saying it's locked and staying put. It sits on top of everything, in the accent colour, and the
 /// mouse goes straight through it.
 /// </summary>
 public sealed class SwapHighlight : Window
@@ -71,9 +72,16 @@ public sealed class SwapHighlight : Window
     }
 
     /// <summary>Shows the outline over this rectangle of the screen (in pixels), naming the window it's over.</summary>
-    public void ShowAt(int left, int top, int right, int bottom, string? name)
+    public void ShowAt(int left, int top, int right, int bottom, string? name) =>
+        ShowLabelled(left, top, right, bottom, string.IsNullOrEmpty(name) ? "Swap" : $"Swap with {name}");
+
+    /// <summary>Shows the outline over this rectangle of the screen (in pixels), saying the window under it is locked.</summary>
+    public void ShowLocked(int left, int top, int right, int bottom, string? name) =>
+        ShowLabelled(left, top, right, bottom, $"{(string.IsNullOrEmpty(name) ? "This window" : name)} is locked");
+
+    private void ShowLabelled(int left, int top, int right, int bottom, string text)
     {
-        _label.Text = string.IsNullOrEmpty(name) ? "Swap" : $"Swap with {name}";
+        _label.Text = text;
         if (!IsVisible)
         {
             Show();
