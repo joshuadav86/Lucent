@@ -46,3 +46,4 @@ Windows and Mac use the same folders and file names, so a file's counterpart is 
 - What a feature does: [docs/specs](specs/README.md).
 - Adding a feature: put the logic in `Lucent.Core`, the UI in the same folder in both apps, and update its spec.
 - Adding a visual: one `.hlsl` file in `content/Presets` ([README](../README.md#make-your-own-visuals)).
+- Moving or renaming a folder: keep its old path in `tools/ci/apps-changed.sh` (main sorts every past merge by its files for each app's what's new), and update the paths in `.github/workflows`, `tools/`, `docs/specs`, and this file.

@@ -5,7 +5,9 @@
 # folder (the Mac app takes its icon from there, see Lucent.Mac.csproj), so those count as both.
 #
 # The paths from before the folder tidy-up (PRs #328 and #332) are listed too: main's build sorts every
-# past merge by the files it changed, for the apps' what's new.
+# past merge by the files it changed, for the apps' what's new. Before #328 the shared visuals, shaders and
+# starter song lived in src/WinampInspiredVisualizer, so those old folders still count as both apps. Any
+# later folder move has to list its old paths here the same way.
 #
 # With --shipped, it also leaves out files that don't change what people install: the docs, CI's own
 # checks and test media, and the Mac app's website screenshot code. Pull requests still build and test
@@ -28,7 +30,8 @@ while IFS= read -r file; do
   case "$file" in
     site/* | .github/workflows/pages.yml | docs/specs/*) ;;
     src/Lucent.Mac/* | tools/mac/* | tools/build-lame-mac.sh | tools/build-pluginhost-mac.sh | tools/package-mac.sh) mac=1 ;;
-    src/Lucent.Windows/Assets/* | src/WinampInspiredVisualizer/Assets/*) windows=1 mac=1 ;;
+    src/Lucent.Windows/Assets/* | src/WinampInspiredVisualizer/Assets/* | src/WinampInspiredVisualizer/Presets/* \
+      | src/WinampInspiredVisualizer/Shaders/* | src/WinampInspiredVisualizer/StarterMusic/*) windows=1 mac=1 ;;
     src/Lucent.Windows/* | tools/windows/* | src/WinampInspiredVisualizer/* | tools/drag-diagnose.ps1) windows=1 ;;
     *) windows=1 mac=1 ;;
   esac
