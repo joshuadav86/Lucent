@@ -500,10 +500,16 @@ jobs:
           NOTES
           # Deleting the release zeroes GitHub's download counts, so send them to the private dashboard first.
           tools/ci/send-download-counts.sh
+          # GitHub refuses an empty file, so a change list with nothing in it stays off (the apps read a
+          # missing one as empty).
+          changes=()
+          for list in website-changes.txt windows-changes.txt mac-changes.txt; do
+            if [ -s "$list" ]; then changes+=("$list"); fi
+          done
           gh release delete latest --cleanup-tag --yes || true
           # The .nupkg and the releases/assets files are what installed copies of Lucent update from.
           gh release create latest Lucent-Setup.exe Lucent-win-x64.zip \
-            releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES commit-win.txt website-changes.txt windows-changes.txt mac-changes.txt \
+            releases/*.nupkg releases/releases.win.json releases/assets.win.json releases/RELEASES commit-win.txt "${changes[@]}" \
             --target "$GITHUB_SHA" --prerelease \
             --title "Latest build ($LUCENT_VERSION)" \
             --notes-file release-notes.md
