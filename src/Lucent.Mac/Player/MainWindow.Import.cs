@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Import;
-using WinampInspiredVisualizer.Library;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Import;
+using Lucent.Library;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac;
 

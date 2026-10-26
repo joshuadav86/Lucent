@@ -1,8 +1,8 @@
 using System.Net.Http;
 using System.Security.Cryptography;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Editor.Stems;
+namespace Lucent.Editor.Stems;
 
 /// <summary>
 /// The stem splitter's model file. It's too big to ship with every copy of Lucent for a tool not everyone

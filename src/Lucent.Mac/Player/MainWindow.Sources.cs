@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Streaming;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Streaming;
 
 namespace Lucent.Mac;
 

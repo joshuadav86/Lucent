@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Visuals from an input: instead of every app's sound, the visuals, meter and analyzer follow one of the
 // audio interface's inputs. It's for apps that skip Windows' mixer, which loopback can't hear: a DAW like

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Small pieces several Render effects share: colour cycling, the sound as AVS's scopes read it, and AVS's 3D matrices (matrix.cpp).</summary>
 internal static class RenderHelpers

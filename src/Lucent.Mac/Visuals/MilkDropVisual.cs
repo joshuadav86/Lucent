@@ -1,6 +1,6 @@
 using SharpMetal.Metal;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer;
+using Lucent.Visualizer.MilkDrop;
 
 namespace Lucent.Mac.Visuals;
 

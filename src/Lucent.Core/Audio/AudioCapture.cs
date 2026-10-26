@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Keeps the most recent audio that went to the speakers, as a mono mix and as its left and

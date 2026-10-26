@@ -1,12 +1,12 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Editor.Effects;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
+using Lucent.Editor.Effects;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The editor's own tools: snapping, the view and loop switches, tempo, the equalizer, the compressor and

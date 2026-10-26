@@ -7,8 +7,8 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.ClassicSkins;
-using WinampInspiredVisualizer.Playlist;
+using Lucent.ClassicSkins;
+using Lucent.Playlist;
 
 namespace Lucent.Mac;
 
@@ -265,7 +265,7 @@ public partial class QueueWindow
             case ClassicPlaylistCommand.Misc:
                 ShowClassicMenu(
                     ("Edit info…", () => OnEditInfo(this, new RoutedEventArgs())),
-                    (SelectedEntries().FirstOrDefault() is { } first ? WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(first.Track.Path).Header : "Open in editor…",
+                    (SelectedEntries().FirstOrDefault() is { } first ? Lucent.Editor.VideoEdit.EditorMenuItem(first.Track.Path).Header : "Open in editor…",
                         () => OnOpenInEditor(this, new RoutedEventArgs())),
                     ("Show in Finder", () => OnShowInExplorer(this, new RoutedEventArgs())));
                 break;

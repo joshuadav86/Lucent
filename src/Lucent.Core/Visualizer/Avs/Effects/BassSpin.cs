@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Bass Spin (r_bspin.cpp): two spinners, one per channel, whose arms sweep faster and further with the bass, drawn as lines or filled triangles.</summary>
 [AvsEffect(7)]

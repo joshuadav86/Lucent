@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Streaming;
 
 namespace Lucent.Mac.Streaming;
 

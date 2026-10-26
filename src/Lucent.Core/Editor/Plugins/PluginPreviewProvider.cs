@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>One plugin a preview plays through.</summary>
 /// <param name="Generation">From the <see cref="PluginHost.Start"/> call that set up this preview.</param>

@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>Something went wrong with a plugin. The message is written for the user.</summary>
 public sealed class PluginException : Exception

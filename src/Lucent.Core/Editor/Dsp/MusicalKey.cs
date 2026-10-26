@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// A musical key, such as A minor, with its Camelot code (8A) that DJs use to find songs that mix well:

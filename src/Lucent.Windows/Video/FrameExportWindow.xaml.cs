@@ -3,9 +3,9 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Editor;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Asks how to save a stretch of a video in the editor as pictures: as images (every frame or so many a second, PNG

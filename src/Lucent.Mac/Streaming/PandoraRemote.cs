@@ -1,5 +1,5 @@
 using System.Net.Http;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Streaming;
 
 namespace Lucent.Mac.Streaming;
 

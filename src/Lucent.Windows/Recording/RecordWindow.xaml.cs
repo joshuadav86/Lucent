@@ -14,13 +14,13 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor.Plugins;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Recording;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Editor.Plugins;
+using Lucent.Playlist;
+using Lucent.Recording;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Records from an audio interface, DJ mixer or microphone into a WAV file: a DJ set played live, say, with

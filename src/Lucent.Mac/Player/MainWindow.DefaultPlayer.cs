@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 
 namespace Lucent.Mac;
 

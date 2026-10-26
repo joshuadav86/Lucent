@@ -2,8 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Library;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

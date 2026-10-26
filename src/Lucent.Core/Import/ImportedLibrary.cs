@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>The players and services Lucent can bring a library over from.</summary>
 public enum ImportSource

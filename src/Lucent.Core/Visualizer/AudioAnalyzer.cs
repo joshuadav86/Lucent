@@ -1,7 +1,7 @@
 using NAudio.Dsp;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Turns the captured audio into the numbers visuals react to: a smoothed

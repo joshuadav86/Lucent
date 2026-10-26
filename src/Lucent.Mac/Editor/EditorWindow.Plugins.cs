@@ -9,8 +9,8 @@ using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Lucent.Mac.Interop;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Plugins;
+using Lucent.Editor;
+using Lucent.Editor.Plugins;
 
 namespace Lucent.Mac;
 

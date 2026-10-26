@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Simple (r_simple.cpp): a plain spectrum analyzer or oscilloscope, drawn solid, as lines, or as dots, in cycling colours.</summary>
 [AvsEffect(0)]

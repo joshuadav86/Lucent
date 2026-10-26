@@ -1,8 +1,8 @@
 using System.IO;
 using System.Text;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Playlist;
+namespace Lucent.Playlist;
 
 /// <summary>
 /// Music playlists the user has saved, kept as standard .m3u8 files in %AppData%\Lucent\Playlists,

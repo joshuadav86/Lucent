@@ -2,7 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>
 /// A video's pictures without its sound, for the editor: shows the picture at any moment, or plays along with the

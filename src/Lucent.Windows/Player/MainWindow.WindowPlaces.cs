@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Layout;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Layout;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Where the windows around the player go back to. Every window is opened again where it was left: as
 // Lucent starts, they all go back exactly as they were. Later, a window that was docked to the player

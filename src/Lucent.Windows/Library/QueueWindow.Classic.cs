@@ -4,11 +4,11 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shell;
-using WinampInspiredVisualizer.ClassicSkins;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Windows;
+using Lucent.ClassicSkins;
+using Lucent.Playlist;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // The queue in a classic skin: Winamp 2's playlist frame (pledit.bmp) round the queue's own list, which takes
 // on the skin's colours and font. Lucent.Core's ClassicPlaylistFrame draws the frame; the list stays Lucent's,

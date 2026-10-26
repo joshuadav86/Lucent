@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// Changes pitch without changing length: a phase vocoder stretches the audio in time,

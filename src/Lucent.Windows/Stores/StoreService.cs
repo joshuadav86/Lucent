@@ -3,10 +3,10 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Stores;
+namespace Lucent.Stores;
 
 /// <summary>
 /// Brings music bought on Bandcamp and Beatport into the library: by watching the Downloads folder for

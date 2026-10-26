@@ -6,11 +6,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Stems;
+using Lucent.Editor;
+using Lucent.Editor.Stems;
 using Path = System.Windows.Shapes.Path;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The stems of a split, to listen to before keeping or saving them: one waveform per stem, each with mute and

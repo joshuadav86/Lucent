@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// Solo and mute for each channel's lane (L and R), in small M and S buttons under the lane's name, like a mixer's.

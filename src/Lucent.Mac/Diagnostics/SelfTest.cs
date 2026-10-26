@@ -8,9 +8,9 @@ using NAudio.Wave;
 using SharpMetal.Foundation;
 using SharpMetal.Metal;
 using SkiaSharp;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Export;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac;
 
@@ -87,26 +87,26 @@ public static partial class SelfTest
 
         // Every format and codec in tools/test-media/formats, decoded as the editor does.
 
-        failures += WinampInspiredVisualizer.Audio.FormatSelfTest.Run(Console.WriteLine, formatsFolder);
+        failures += Lucent.Audio.FormatSelfTest.Run(Console.WriteLine, formatsFolder);
 
-        failures += WinampInspiredVisualizer.Video.VideoSelfTest.Run(Console.WriteLine, videos, IsVirtualMachine());
+        failures += Lucent.Video.VideoSelfTest.Run(Console.WriteLine, videos, IsVirtualMachine());
 
         failures += TestOutputDevices();
         failures += TestGapless();
         failures += TestOtherApps();
-        failures += WinampInspiredVisualizer.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
-        failures += WinampInspiredVisualizer.Audio.LoudnessSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.LoudnessSelfTest.Run(Console.WriteLine);
         // Before the visuals: their timing pass keeps CI's virtual GPU busy for minutes, and a
         // recording straight after it has stalled.
         failures += TestRecording();
-        failures += WinampInspiredVisualizer.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
+        failures += Lucent.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
         failures += TestLiveInputs();
         failures += TestVisuals(sheetPath);
         failures += TestRuntimeTranslation();
         failures += TestMediaControls();
-        failures += WinampInspiredVisualizer.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
-        failures += WinampInspiredVisualizer.Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
-        failures += WinampInspiredVisualizer.Audio.SongMapSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.SongMapSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }
@@ -871,7 +871,7 @@ public static partial class SelfTest
 
             // A file that isn't there is titled by its name, as untagged music is.
             const string title = "Lucent self-test track";
-            var track = WinampInspiredVisualizer.Playlist.Track.FromFile(Path.Combine(Path.GetTempPath(), title + ".mp3"));
+            var track = Lucent.Playlist.Track.FromFile(Path.Combine(Path.GetTempPath(), title + ".mp3"));
             controls.ShowTrack(track);
             controls.ShowState(Audio.MediaState.Playing, canSkip: true);
             controls.ShowPosition(TimeSpan.FromSeconds(42), TimeSpan.FromMinutes(3));

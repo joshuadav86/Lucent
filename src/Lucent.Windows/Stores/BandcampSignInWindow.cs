@@ -5,7 +5,7 @@ using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
-namespace WinampInspiredVisualizer.Stores;
+namespace Lucent.Stores;
 
 /// <summary>
 /// Bandcamp's own sign-in page in a small browser window. Lucent never sees the password: once the page

@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Editor;
+using Lucent.Editor;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Writes the editor's smaller copies of a video (<see cref="VideoCopy"/>) with Windows' encoders, through

@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// An HLS station (HTTP Live Streaming) read as one stream of MP3 or AAC frames. Instead of one long stream, HLS

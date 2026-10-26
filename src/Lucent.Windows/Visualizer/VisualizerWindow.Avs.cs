@@ -4,10 +4,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.Avs;
+using Lucent.Visualizer;
+using Lucent.Visualizer.Avs;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>Winamp AVS presets: switching them on or off, their look, and bringing in more. Kept in its own file.</summary>
 public partial class VisualizerWindow

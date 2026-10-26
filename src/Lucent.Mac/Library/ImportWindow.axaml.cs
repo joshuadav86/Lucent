@@ -4,8 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Import;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Import;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

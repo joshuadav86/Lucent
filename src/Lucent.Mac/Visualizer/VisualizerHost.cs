@@ -6,8 +6,8 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lucent.Mac.Visuals;
 using SharpMetal.Metal;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac.Visualizer;
 

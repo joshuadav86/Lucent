@@ -1,9 +1,9 @@
 using System.IO;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Audio;
+using Lucent.Editor;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// The steps every save and conversion goes through: encode to a hidden temporary file, copy the

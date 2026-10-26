@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac;
 

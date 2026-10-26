@@ -5,8 +5,8 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Editor;
+using Lucent.Settings;
 
 namespace Lucent.Mac.Editor;
 

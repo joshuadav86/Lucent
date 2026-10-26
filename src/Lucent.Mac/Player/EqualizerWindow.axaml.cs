@@ -11,8 +11,8 @@ using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Starfield (r_stars.cpp): stars flying out from the centre toward the viewer, optionally speeding up on beats.</summary>
 [AvsEffect(27)]

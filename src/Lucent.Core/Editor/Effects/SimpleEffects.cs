@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace WinampInspiredVisualizer.Editor.Effects;
+namespace Lucent.Editor.Effects;
 
 /// <summary>Makes the audio louder or quieter by a fixed number of decibels.</summary>
 public sealed class GainEffect : IAudioEffect

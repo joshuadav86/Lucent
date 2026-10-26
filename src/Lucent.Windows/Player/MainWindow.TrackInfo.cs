@@ -1,9 +1,9 @@
 using System.Windows;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Library;
+using Lucent.Playlist;
+using Track = Lucent.Playlist.Track;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Editing songs' info, and the artwork window. The queue and library windows call EditInfo.
 public partial class MainWindow

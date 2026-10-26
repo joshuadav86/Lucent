@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.ClassicSkins;
+using Lucent.Audio;
+using Lucent.ClassicSkins;
 
 namespace Lucent.Mac;
 

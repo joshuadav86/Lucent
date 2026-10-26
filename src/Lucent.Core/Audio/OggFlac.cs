@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.IO;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Copies the FLAC frames in an Ogg file (FLAC in Ogg, .oga) into a plain .flac file, unchanged, for the system's FLAC

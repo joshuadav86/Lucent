@@ -1,7 +1,7 @@
 using System.IO;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// One AVS preset as a visual, the part both apps share: the running preset, how big its picture is

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Multiplier (r_multiplier.cpp): multiplies every channel by 8, 4, 2, 1/2, 1/4 or 1/8, or turns

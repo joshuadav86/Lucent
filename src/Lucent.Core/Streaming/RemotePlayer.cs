@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>Which other app's player Lucent shows and controls.</summary>
 public enum RemoteApp

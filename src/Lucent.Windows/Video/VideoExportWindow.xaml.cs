@@ -6,11 +6,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Export;
+using Lucent.Playlist;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Records the song that's playing, drawn with a visual, as an MP4 video for sharing: the visual,

@@ -3,7 +3,7 @@ using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>
 /// One MilkDrop preset, ready to draw: its equations (compiled and running), its MilkDrop 2 shaders

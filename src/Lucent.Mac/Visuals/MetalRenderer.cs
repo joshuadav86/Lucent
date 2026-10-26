@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Lucent.Mac.Interop;
 using SharpMetal.Metal;
 using SharpMetal.QuartzCore;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac.Visuals;
 

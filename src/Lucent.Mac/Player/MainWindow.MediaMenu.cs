@@ -6,7 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Playlist;
+using Lucent.Playlist;
 
 namespace Lucent.Mac;
 

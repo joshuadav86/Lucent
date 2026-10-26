@@ -4,14 +4,14 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Audio;
+using Lucent.Library;
+using Lucent.Radio;
+using Lucent.Settings;
+using Lucent.Streaming;
+using Track = Lucent.Playlist.Track;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// A separate window showing the playing track's cover as big as you like. It follows the music:

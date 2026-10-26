@@ -1,7 +1,7 @@
 using System.Globalization;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// The beats and bars of a sound in the editor, to the sample: its tempo, where every beat falls, and

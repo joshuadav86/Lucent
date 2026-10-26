@@ -10,7 +10,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Lucent.Core</AssemblyName>
-    <RootNamespace>WinampInspiredVisualizer</RootNamespace>
+    <RootNamespace>Lucent</RootNamespace>
     <Version>0.1.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>

@@ -4,9 +4,9 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Editor.Plugins;
+using Lucent.Editor.Plugins;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The plugin browser, for adding a plugin to the chain. Typing finds plugins by name, maker, or type; the left

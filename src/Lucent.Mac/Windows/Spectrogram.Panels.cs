@@ -3,7 +3,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
 using Avalonia.Platform;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
 namespace Lucent.Mac.Windows;
 

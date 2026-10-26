@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WinampInspiredVisualizer.ClassicSkins;
+using Lucent.ClassicSkins;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// Shows one of a classic skin's windows (the equalizer, or the playlist's frame) blown up with hard pixel

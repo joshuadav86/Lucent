@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// A web link to share another app's song by. The app's own when it knows one (Spotify's, a YouTube video's, a TIDAL or

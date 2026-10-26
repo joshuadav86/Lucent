@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Dot Grid (r_dotgrid.cpp): a regular grid of dots that can drift across the picture, in cycling colours.</summary>
 [AvsEffect(17)]

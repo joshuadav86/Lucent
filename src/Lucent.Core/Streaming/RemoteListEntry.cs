@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>A row of another app's playlist in the queue window: the song, and whether it's the one playing.</summary>
 public sealed class RemoteListEntry : INotifyPropertyChanged

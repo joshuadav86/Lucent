@@ -3,8 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Lucent.Mac.Visuals;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.Avs;
+using Lucent.Visualizer;
+using Lucent.Visualizer.Avs;
 
 namespace Lucent.Mac;
 

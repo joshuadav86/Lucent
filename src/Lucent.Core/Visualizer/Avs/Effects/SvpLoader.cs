@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / SVP Loader (r_svp.cpp): ran a Sonique visualization plug-in (an SVP or UVS file). Those are Windows programs Lucent can't run, so it draws nothing.</summary>
 [AvsEffect(10)]

@@ -1,8 +1,8 @@
 using System.IO;
 using System.Windows;
-using WinampInspiredVisualizer.Export;
+using Lucent.Export;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>Recording the song that's playing as a video, from the visuals' right-click menu. Kept in its own file.</summary>
 public partial class MainWindow

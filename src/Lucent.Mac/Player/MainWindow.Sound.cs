@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Lucent.Mac.Audio;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Playlist;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

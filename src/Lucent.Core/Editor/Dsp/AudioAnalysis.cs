@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>Measurements of a piece of audio, as a mastering engineer would look at it.</summary>
 public sealed record AudioStats(

@@ -4,10 +4,10 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Effects;
+using Lucent.Editor;
+using Lucent.Editor.Effects;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The effects menu: every built-in effect and tool in one searchable list, like the plugin browser. Typing finds

@@ -10,9 +10,9 @@ using Avalonia.Styling;
 using Lucent.Mac.Editor;
 using Lucent.Mac.Export;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Editor.Dsp;
+using Lucent.Export;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

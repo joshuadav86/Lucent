@@ -1,8 +1,8 @@
 using System.IO;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>Writes audio to a file in the format and quality the user chose.</summary>
 public static class AudioEncoder

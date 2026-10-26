@@ -8,8 +8,8 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Radio;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

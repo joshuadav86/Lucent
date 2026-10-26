@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>
 /// The files the Record window is writing right now. The library leaves them out until they're finished:

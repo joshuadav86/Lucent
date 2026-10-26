@@ -4,8 +4,8 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Streaming;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Settings;
+using Lucent.Streaming;
 
 namespace Lucent.Mac;
 

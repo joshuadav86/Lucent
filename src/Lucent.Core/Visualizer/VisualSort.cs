@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>The orders the visual picker can list visuals in (inside each family folder, when they're on).</summary>
 public enum VisualSort

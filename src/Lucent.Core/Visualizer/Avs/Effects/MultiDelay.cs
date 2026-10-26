@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Multi Delay (Holden05's r_multidelay.cpp): six delay buffers shared by every Multi Delay in the

@@ -1,6 +1,6 @@
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Video;
+using Lucent.Video;
 
 namespace Lucent.Mac;
 

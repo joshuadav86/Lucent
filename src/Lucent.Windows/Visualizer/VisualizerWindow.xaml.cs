@@ -6,12 +6,12 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Library;
+using Lucent.Settings;
+using Lucent.Visualizer;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The visuals, in their own window with the visual picker and Auto controls underneath.</summary>
 public partial class VisualizerWindow : ToolWindow

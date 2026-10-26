@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Media;
 using NAudio.Dsp;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// The live spectrum behind the equalizer's response curve, like a studio EQ's analyzer: how loud

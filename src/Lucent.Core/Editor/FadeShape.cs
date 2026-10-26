@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>The curve a clip's fade or crossfade follows, chosen by right-clicking it, as in REAPER.</summary>
 public enum FadeShape

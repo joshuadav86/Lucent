@@ -2,11 +2,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Playlist;
+using Lucent.Streaming;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The queue: what's playing and what plays next. The player window does the work.</summary>
 public partial class QueueWindow : ToolWindow

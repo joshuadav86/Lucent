@@ -1,8 +1,8 @@
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Audio;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// Plays part of the audio in the editor through its own output, separate from the main player,

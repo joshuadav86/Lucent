@@ -6,8 +6,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Video;
+using Lucent.Settings;
+using Lucent.Video;
 
 namespace Lucent.Mac;
 
@@ -285,7 +285,7 @@ public partial class VideoWindow : Window
             {
                 // The editor cuts MP4, M4V and MOV files without re-encoding; other videos only play for now.
                 var path = video.Source;
-                var (header, editable) = WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(path);
+                var (header, editable) = Lucent.Editor.VideoEdit.EditorMenuItem(path);
                 var edit = Item(header, null, () => player.OpenInEditor(player, path));
                 edit.IsEnabled = editable;
                 menu.Items.Add(new Separator());

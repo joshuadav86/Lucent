@@ -7,15 +7,15 @@ using Avalonia.Threading;
 using Lucent.Mac.Library;
 using Lucent.Mac.Windows;
 using SkiaSharp;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
+using Lucent.Library;
+using Lucent.Playlist;
 using Lucent.Mac.Audio;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Stems;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Editor;
+using Lucent.Editor.Stems;
+using Lucent.Export;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 
@@ -92,7 +92,7 @@ public static partial class Screenshots
         ("VisualsLive", () => PreviewVisualsLive()),
         ("PlayerRadio", () => PreviewPlayerRadio()),
         ("RadioPlaying", () => PreviewRadioPlaying()),
-        ("VideoStation", () => PreviewVideo(playing: true, WinampInspiredVisualizer.Radio.FeaturedStations.TheLot)),
+        ("VideoStation", () => PreviewVideo(playing: true, Lucent.Radio.FeaturedStations.TheLot)),
         ("RadioVideo", () => PreviewRadioVideo()),
         ("RadioDesk", () => PreviewRadioDesk()),
         ("FullScreen", () => PreviewFullScreen()),
@@ -163,7 +163,7 @@ public static partial class Screenshots
         var player = new MainWindow();
         player.PreviewSkin("Lucent");
         player.ShowPreview(new[] { SampleTrack("Bicep", "Glue", TimeSpan.FromSeconds(269), 1411, 44100, 2) }, TimeSpan.FromSeconds(97));
-        player.PreviewThumbs(WinampInspiredVisualizer.Streaming.SongRating.Up, "Pandora · Bicep Radio");
+        player.PreviewThumbs(Lucent.Streaming.SongRating.Up, "Pandora · Bicep Radio");
         return player;
     }
 
@@ -204,10 +204,10 @@ public static partial class Screenshots
     }
 
     /// <summary>A track as if read from a tagged file (none is needed: the screenshots play nothing).</summary>
-    private static WinampInspiredVisualizer.Playlist.Track SampleTrack(string artist, string title, TimeSpan duration, int bitrate, int sampleRate, int channels)
+    private static Lucent.Playlist.Track SampleTrack(string artist, string title, TimeSpan duration, int bitrate, int sampleRate, int channels)
     {
-        var constructor = typeof(WinampInspiredVisualizer.Playlist.Track).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
-        return (WinampInspiredVisualizer.Playlist.Track)constructor.Invoke(new object[]
+        var constructor = typeof(Lucent.Playlist.Track).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
+        return (Lucent.Playlist.Track)constructor.Invoke(new object[]
         {
             $"/Users/you/Music/{artist}/{title}.flac", title, artist, duration, bitrate, sampleRate, channels, string.Empty,
         });
@@ -232,7 +232,7 @@ public static partial class Screenshots
             VisualLists = { ["Late night"] = new List<string> { "Lava Lamp", "Neural Bloom" } },
             ShowFrameRate = true,
         };
-        var host = new Lucent.Mac.Visualizer.VisualizerHost(new WinampInspiredVisualizer.Audio.AudioCapture())
+        var host = new Lucent.Mac.Visualizer.VisualizerHost(new Lucent.Audio.AudioCapture())
         {
             StartPresetName = settings.LastVisual,
         };
@@ -259,7 +259,7 @@ public static partial class Screenshots
 
         var path = Environment.GetEnvironmentVariable("LUCENT_PREVIEW_VIDEO")
             ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "tools", "test-media", "sync-test.mp4");
-        var video = new WinampInspiredVisualizer.Video.VideoStream(path);
+        var video = new Lucent.Video.VideoStream(path);
         video.CurrentTime = TimeSpan.FromSeconds(1.5);
         video.Playing();
         var waited = System.Diagnostics.Stopwatch.StartNew();
@@ -412,11 +412,11 @@ public static partial class Screenshots
     private static Window PreviewSpotifyQueue()
     {
         var songs = SampleSongs.Where(song => song.Album.Length > 0).ToList();
-        var tracks = songs.Select((song, i) => new WinampInspiredVisualizer.Streaming.RemoteTrack($"preview{i}", song.Title, song.Artist,
+        var tracks = songs.Select((song, i) => new Lucent.Streaming.RemoteTrack($"preview{i}", song.Title, song.Artist,
             song.Album, TimeSpan.FromSeconds(song.Seconds), ThumbnailUrl: $"https://i.scdn.co/image/preview-{song.Album}")).ToList();
         PreviewCovers(songs.Zip(tracks, (song, track) => (track.ThumbnailUrl!, song)));
         var queue = new QueueWindow();
-        queue.ShowRemoteList("Spotify", new WinampInspiredVisualizer.Streaming.RemoteList("spotify:playlist:preview", "Late night", tracks),
+        queue.ShowRemoteList("Spotify", new Lucent.Streaming.RemoteList("spotify:playlist:preview", "Late night", tracks),
             tracks[1]);
         return queue;
     }
@@ -427,13 +427,13 @@ public static partial class Screenshots
         var queue = (QueueWindow)PreviewQueue();
         queue.Width = 550;
         queue.Height = 348;
-        queue.SetClassicSkin(WinampInspiredVisualizer.ClassicSkins.ClassicSkinLibrary.Default, 2);
+        queue.SetClassicSkin(Lucent.ClassicSkins.ClassicSkinLibrary.Default, 2);
         queue.Opened += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             var entries = queue.PlaylistView.Items.OfType<PlaylistEntry>().ToList();
             queue.PlaylistView.SelectedItems?.Add(entries[3]);
             queue.PlaylistView.SelectedItems?.Add(entries[4]);
-            queue.ShowClassicState(WinampInspiredVisualizer.ClassicSkins.ClassicPlayState.Playing, TimeSpan.FromSeconds(83),
+            queue.ShowClassicState(Lucent.ClassicSkins.ClassicPlayState.Playing, TimeSpan.FromSeconds(83),
                 entries[1].Track.Duration, showRemaining: false);
         });
         return queue;
@@ -444,12 +444,12 @@ public static partial class Screenshots
     {
         var player = new Lucent.Mac.Audio.AudioPlayer();
         var settings = new AppSettings();
-        settings.Equalizer.BandCount = WinampInspiredVisualizer.Audio.EqualizerBands.Classic.Count;
+        settings.Equalizer.BandCount = Lucent.Audio.EqualizerBands.Classic.Count;
         settings.Equalizer.PresetName = "Rock";
-        settings.Equalizer.Gains = WinampInspiredVisualizer.Audio.EqualizerPresets.Find("Rock")!.Curve
-            .Sample(WinampInspiredVisualizer.Audio.EqualizerBands.Classic).ToList();
+        settings.Equalizer.Gains = Lucent.Audio.EqualizerPresets.Find("Rock")!.Curve
+            .Sample(Lucent.Audio.EqualizerBands.Classic).ToList();
         settings.Equalizer.PreampDb = -2;
-        EqualizerWindow.ClassicSkin = (WinampInspiredVisualizer.ClassicSkins.ClassicSkinLibrary.Default, 2);
+        EqualizerWindow.ClassicSkin = (Lucent.ClassicSkins.ClassicSkinLibrary.Default, 2);
         try
         {
             return EqualizerWindow.Create(player, settings);
@@ -467,8 +467,8 @@ public static partial class Screenshots
         var settings = new AppSettings();
         settings.Equalizer.BandCount = 16;
         settings.Equalizer.PresetName = "Rock";
-        settings.Equalizer.Gains = WinampInspiredVisualizer.Audio.EqualizerPresets.Find("Rock")!.Curve
-            .Sample(WinampInspiredVisualizer.Audio.EqualizerBands.ForCount(16)).ToList();
+        settings.Equalizer.Gains = Lucent.Audio.EqualizerPresets.Find("Rock")!.Curve
+            .Sample(Lucent.Audio.EqualizerBands.ForCount(16)).ToList();
         settings.Equalizer.PreampDb = -2;
         player.Equalizer.Apply(settings.Equalizer);
         var window = EqualizerWindow.Create(player, settings, fitWidth);
@@ -514,11 +514,11 @@ public static partial class Screenshots
 
     private static Window PreviewRadio(bool genre)
     {
-        var settings = new AppSettings { RadioSection = WinampInspiredVisualizer.Radio.RadioGuide.Featured };
-        var featured = WinampInspiredVisualizer.Radio.FeaturedStations.Stations;
-        WinampInspiredVisualizer.Radio.RadioGuide.SetFavorite(settings, featured[0], true);
-        WinampInspiredVisualizer.Radio.RadioGuide.SetFavorite(settings, featured[2], true);
-        WinampInspiredVisualizer.Radio.RadioGuide.Remember(settings, featured[0]);
+        var settings = new AppSettings { RadioSection = Lucent.Radio.RadioGuide.Featured };
+        var featured = Lucent.Radio.FeaturedStations.Stations;
+        Lucent.Radio.RadioGuide.SetFavorite(settings, featured[0], true);
+        Lucent.Radio.RadioGuide.SetFavorite(settings, featured[2], true);
+        Lucent.Radio.RadioGuide.Remember(settings, featured[0]);
         var window = new RadioWindow(new MainWindow(), settings);
         if (genre)
         {
@@ -530,7 +530,7 @@ public static partial class Screenshots
                 ("Chicago House Radio", "house,chicago house", "United States", 320),
                 ("Soulful House FM", "house,soulful,soul", "United Kingdom", 256),
                 ("Tech House Radio", "tech house,house,techno", "Germany", 128),
-            }.Select((station, i) => new WinampInspiredVisualizer.Radio.RadioStation
+            }.Select((station, i) => new Lucent.Radio.RadioStation
             {
                 Id = $"preview-{i}",
                 Name = station.Name,
@@ -565,13 +565,13 @@ public static partial class Screenshots
         var window = new StoreWindow(service, settings);
         if (syncing)
         {
-            service.PreviewSync(new WinampInspiredVisualizer.Stores.BandcampSyncProgress(3, 12, "Kiasmos - Blurred EP", 0.4));
+            service.PreviewSync(new Lucent.Stores.BandcampSyncProgress(3, 12, "Kiasmos - Blurred EP", 0.4));
         }
         else if (firstSync)
         {
             service.PreviewStatus("12 purchases aren't in your library yet.");
             window.PreviewFirstSync(Enumerable.Range(1, 12)
-                .Select(i => new WinampInspiredVisualizer.Stores.BandcampPurchase($"{i}", "Artist", $"Release {i}", "https://bandcamp.com/download", false))
+                .Select(i => new Lucent.Stores.BandcampPurchase($"{i}", "Artist", $"Release {i}", "https://bandcamp.com/download", false))
                 .ToList());
         }
         else
@@ -587,9 +587,9 @@ public static partial class Screenshots
         var window = new ImportWindow(new MainWindow(), new AppSettings { PlexClientId = "preview" });
         if (done)
         {
-            window.PreviewResult(new WinampInspiredVisualizer.Import.LibraryImportResult
+            window.PreviewResult(new Lucent.Import.LibraryImportResult
             {
-                Source = WinampInspiredVisualizer.Import.ImportSource.AppleMusic,
+                Source = Lucent.Import.ImportSource.AppleMusic,
                 Songs = 2140,
                 Found = 2093,
                 StatsUpdated = 1876,

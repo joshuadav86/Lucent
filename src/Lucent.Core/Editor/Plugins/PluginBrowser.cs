@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>An installed plugin as the plugin browser lists it: its type, and whether it's starred.</summary>
 /// <param name="TypeIsChosen">The user gave it this type, rather than Lucent working it out.</param>

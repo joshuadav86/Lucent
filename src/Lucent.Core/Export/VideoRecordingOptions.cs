@@ -1,7 +1,7 @@
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>How much detail the encoder keeps, and so how big the file is.</summary>
 public enum VideoQuality

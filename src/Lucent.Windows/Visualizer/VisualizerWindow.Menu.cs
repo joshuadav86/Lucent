@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The menus you get by clicking the visuals. Kept in its own file.</summary>
 public partial class VisualizerWindow

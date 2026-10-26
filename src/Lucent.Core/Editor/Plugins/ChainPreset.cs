@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>
 /// A plugin chain written down: which effects, in which order, switched on or off, with their settings.

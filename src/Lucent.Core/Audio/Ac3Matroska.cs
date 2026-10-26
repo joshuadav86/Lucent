@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Copies a raw Dolby Digital (.ac3) or Dolby Digital Plus (.eac3, .ec3) file's frames into a Matroska audio file,

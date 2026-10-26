@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Render / Text (r_text.cpp): shows words from a list separated by semicolons, one at a time, changing every so

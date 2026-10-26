@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>What a click in the classic equalizer asks the app to do.</summary>
 public enum ClassicEqualizerCommand

@@ -16,11 +16,11 @@ using Lucent.Mac.Audio;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Windows;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor.Plugins;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Recording;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Editor.Plugins;
+using Lucent.Playlist;
+using Lucent.Recording;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 
@@ -1103,7 +1103,7 @@ public partial class RecordWindow : Window
     {
         if (_finished is { } finished && Editor.AudioTools.MainWindow is { } main && File.Exists(finished.Path))
         {
-            main.AddToQueue(new[] { WinampInspiredVisualizer.Playlist.Track.FromFile(finished.Path) });
+            main.AddToQueue(new[] { Lucent.Playlist.Track.FromFile(finished.Path) });
             StatusText.Text = $"{Path.GetFileName(finished.Path)} is in the queue.";
         }
     }

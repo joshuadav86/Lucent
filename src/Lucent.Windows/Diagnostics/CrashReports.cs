@@ -1,8 +1,8 @@
 using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
-using WinampInspiredVisualizer.Diagnostics;
+using Lucent.Diagnostics;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Starts the crash reporter (Lucent.Core's <see cref="CrashReporter"/>) with what it needs from Windows: the

@@ -10,7 +10,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Lucent.Mac.Editor;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Editor.Stems;
+using Lucent.Editor.Stems;
 
 namespace Lucent.Mac;
 

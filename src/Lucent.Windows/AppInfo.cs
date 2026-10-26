@@ -1,7 +1,7 @@
 using System.Reflection;
 using Vortice.DXGI;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The facts about this copy of Lucent and this PC that a bug report needs.</summary>
 public static class AppInfo

@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Recording;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Recording;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>An audio interface, mixer, microphone or other input that can be recorded from.</summary>
 /// <param name="Id">"wasapi:" and Windows' id for the device, or "asio:" and the ASIO driver's name.</param>

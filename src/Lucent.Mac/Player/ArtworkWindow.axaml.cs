@@ -9,11 +9,11 @@ using Avalonia.Styling;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Library;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Library;
+using Lucent.Radio;
+using Lucent.Settings;
+using Lucent.Streaming;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac;
 

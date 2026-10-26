@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Editor;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The history panel beside the waveform: every step taken, with its settings and when, built on the undo

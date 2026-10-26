@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// One effect in an AVS preset (a C_RBASE in AVS): it reads its settings once, then each frame draws

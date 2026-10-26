@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
-namespace WinampInspiredVisualizer.Themes;
+namespace Lucent.Themes;
 
 /// <summary>A colour scheme for everything around the visuals. Colours are #RRGGBB.</summary>
 public sealed record Theme(

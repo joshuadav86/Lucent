@@ -1,5 +1,5 @@
 using Avalonia.Controls;
-using WinampInspiredVisualizer.Export;
+using Lucent.Export;
 
 namespace Lucent.Mac;
 

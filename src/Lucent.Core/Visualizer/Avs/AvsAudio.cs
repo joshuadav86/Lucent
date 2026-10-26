@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// The sound as AVS presets expect it (AVS's visdata[2][2][576]): for each of the two channels, 576

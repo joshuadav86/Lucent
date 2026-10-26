@@ -3,8 +3,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Playlist;
+using Lucent.Streaming;
 
 namespace Lucent.Mac;
 
@@ -107,7 +107,7 @@ public partial class QueueWindow : ToolWindow
     /// <summary>"Edit video…" when the first song picked is a video, as the Video window's menu says.</summary>
     private void ShowEditorItem(string path)
     {
-        var (header, canOpen) = WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(path);
+        var (header, canOpen) = Lucent.Editor.VideoEdit.EditorMenuItem(path);
         OpenInEditorItem.Header = header;
         OpenInEditorItem.IsEnabled = canOpen;
     }

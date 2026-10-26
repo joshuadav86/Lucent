@@ -1,9 +1,9 @@
 using System.IO;
 using System.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Audio;
+using Lucent.Editor;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Sounds dropped on the editor. Into an empty editor, the first one opens and any others go on the end of it.

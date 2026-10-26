@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Blur (r_blur.cpp): mixes each pixel with its four neighbours, lightly, medium or heavily, rounding down or up.</summary>
 [AvsEffect(6)]

@@ -1,9 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Export;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
+using Lucent.Export;
 
 namespace Lucent.Mac;
 

@@ -4,11 +4,11 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Audio;
+using Lucent.Settings;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The graphic equalizer window: an on/off switch, a choice of band counts, a preamp, one slider
@@ -83,7 +83,7 @@ public partial class EqualizerWindow : Window
         }
         // The spectrum fills the response box under the curve, whatever size the box is.
         _spectrum = new EqualizerSpectrum(player.Capture);
-        WinampInspiredVisualizer.Editor.AudioTools.EditorPlayingChanged += OnEditorPlayingChanged;
+        Lucent.Editor.AudioTools.EditorPlayingChanged += OnEditorPlayingChanged;
         CurveFrame.Child = null;
         var layers = new Grid();
         layers.Children.Add(_spectrum);
@@ -355,7 +355,7 @@ public partial class EqualizerWindow : Window
 
     private void ShowHint()
     {
-        var editorPlaying = WinampInspiredVisualizer.Editor.AudioTools.IsEditorPlaying;
+        var editorPlaying = Lucent.Editor.AudioTools.IsEditorPlaying;
         _spectrum.Paused = editorPlaying;
         if (editorPlaying)
         {
@@ -867,7 +867,7 @@ public partial class EqualizerWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
-        WinampInspiredVisualizer.Editor.AudioTools.EditorPlayingChanged -= OnEditorPlayingChanged;
+        Lucent.Editor.AudioTools.EditorPlayingChanged -= OnEditorPlayingChanged;
         if (_gliding)
         {
             CompositionTarget.Rendering -= OnGlideFrame;

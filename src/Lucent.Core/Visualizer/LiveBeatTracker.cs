@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Follows music that can't be listened to ahead of time (online radio, streams, other apps' sound) as it plays:

@@ -1,10 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Stores;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Stores;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Bandcamp and Beatport in the library: importing their downloads as they arrive, and (experimental)

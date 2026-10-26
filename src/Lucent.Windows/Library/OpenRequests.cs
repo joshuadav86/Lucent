@@ -2,7 +2,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Keeps songs opened from Explorer in one Lucent: when Lucent is already running, a second Lucent

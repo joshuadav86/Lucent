@@ -1,7 +1,7 @@
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// Plays audio through one of the editor's own tools (the equalizer, compressor or limiter) as it's heard,

@@ -7,10 +7,10 @@ using System.Windows.Media.Imaging;
 using NAudio.Wave;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Checks the Windows app works without a window, for CI: decodes the given music files with the
@@ -92,13 +92,13 @@ public static class SelfTest
 
         failures += Audio.FormatSelfTest.Run(Console.WriteLine, formatsFolder);
 
-        failures += WinampInspiredVisualizer.Video.VideoSelfTest.Run(Console.WriteLine, videos);
+        failures += Lucent.Video.VideoSelfTest.Run(Console.WriteLine, videos);
 
         failures += TestVisuals(sheetPath);
         failures += TestOtherApps();
-        failures += WinampInspiredVisualizer.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
-        failures += WinampInspiredVisualizer.Audio.LoudnessSelfTest.Run(Console.WriteLine);
-        failures += WinampInspiredVisualizer.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
+        failures += Lucent.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.LoudnessSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
         failures += TestLiveInputs();
         failures += Editor.Stems.StemSelfTest.Run(Console.WriteLine);
         failures += Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);

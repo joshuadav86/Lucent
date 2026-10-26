@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Media;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 
 namespace Lucent.Mac.Library;
 

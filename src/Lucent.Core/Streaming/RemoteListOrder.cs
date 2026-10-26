@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>How the queue window lists another app's playlist (Spotify's).</summary>
 public enum RemoteListOrder

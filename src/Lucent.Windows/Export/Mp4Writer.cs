@@ -2,7 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Vortice.MediaFoundation;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Writes an MP4 file of H.264 (or HEVC) video and AAC audio with the encoders built into Windows (Media

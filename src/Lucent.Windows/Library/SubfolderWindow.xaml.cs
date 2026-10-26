@@ -1,8 +1,8 @@
 using System.Windows;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Library;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Asks, when a library folder with folders inside it is added, whether each of those folders gets its own

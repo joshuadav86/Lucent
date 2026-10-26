@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Blitter Feedback (r_blit.cpp): copies the picture back onto itself zoomed in or shrunk into the middle, and can jump to a second zoom on beats.</summary>
 [AvsEffect(4)]

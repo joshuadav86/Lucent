@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>
 /// Reads every picture of a video, in the order they show, as fast as libVLC decodes them, each with when it shows,

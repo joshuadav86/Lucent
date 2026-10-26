@@ -3,8 +3,8 @@ using Avalonia.Interactivity;
 using Lucent.Mac.Editor;
 using NAudio.Utils;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Editor;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 
@@ -58,7 +58,7 @@ public partial class EditorWindow
         if (Waveform.SelectedChannel is not null)
         {
             // One channel can't get shorter than the other, so the cut part of it is silenced.
-            await ApplyAsync(new WinampInspiredVisualizer.Editor.Effects.SilenceEffect());
+            await ApplyAsync(new Lucent.Editor.Effects.SilenceEffect());
             ShowStatus("Copied. Only one channel is selected, so that part of it was silenced (both channels must stay the same length).");
             return;
         }

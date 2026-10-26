@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>
 /// Reads a REAPER FX chain (.RfxChain) as a Lucent chain. REAPER writes each effect as a block like

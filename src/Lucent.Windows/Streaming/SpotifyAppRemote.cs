@@ -1,7 +1,7 @@
 using System.IO;
 using Windows.Media.Control;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// The Spotify app on this PC, through Windows' media controls, which Spotify tells what's playing (title,

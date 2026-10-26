@@ -1,7 +1,7 @@
 using System.IO;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Finds the preset and engine shader files that ship next to the app. Lucent.exe carries its own

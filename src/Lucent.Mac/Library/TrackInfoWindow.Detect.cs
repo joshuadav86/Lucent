@@ -1,7 +1,7 @@
 using Avalonia.Interactivity;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Library;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
+using Lucent.Library;
 
 namespace Lucent.Mac;
 

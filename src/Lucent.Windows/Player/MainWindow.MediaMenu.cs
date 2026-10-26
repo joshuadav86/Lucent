@@ -3,9 +3,9 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Playlist;
+using Lucent.Playlist;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>Playback controls, as items for the visuals' right-click menu. Kept in its own file.</summary>
 public partial class MainWindow

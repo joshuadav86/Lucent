@@ -1,8 +1,8 @@
-using WinampInspiredVisualizer.Import;
-using WinampInspiredVisualizer.Library;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Import;
+using Lucent.Library;
+using Track = Lucent.Playlist.Track;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Bringing a library over from another player. The import window does the work; these connect it to the library.
 public partial class MainWindow

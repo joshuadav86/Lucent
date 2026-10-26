@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>What importing AVS presets did.</summary>
 /// <param name="Added">How many presets were copied in.</param>

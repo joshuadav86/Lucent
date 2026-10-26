@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.IO;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>What a recording's file name is made from, besides the template's own words.</summary>
 /// <param name="Name">What's being recorded ("DJ set", "Friday at the Loft").</param>

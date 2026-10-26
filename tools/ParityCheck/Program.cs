@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
 // Usage: dotnet run --project tools/ParityCheck
 // Checks the Windows app (src/Lucent.Windows) and the Mac app (src/Lucent.Mac) keep the same

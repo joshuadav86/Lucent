@@ -1,6 +1,6 @@
 using NAudio.CoreAudioApi;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>A sound card, headphones, DAC or other output Windows knows about.</summary>
 public sealed record OutputDevice(string Id, string Name);

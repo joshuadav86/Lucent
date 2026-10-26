@@ -6,9 +6,9 @@ using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Lucent.Mac.Editor;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Video;
+using Lucent.Editor;
+using Lucent.Export;
+using Lucent.Video;
 
 namespace Lucent.Mac;
 

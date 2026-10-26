@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// A station's audio with the song titles taken out. Shoutcast and Icecast put a block of metadata into the stream

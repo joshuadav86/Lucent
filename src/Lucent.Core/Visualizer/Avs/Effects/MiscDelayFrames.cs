@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// The frames a delay effect (Video Delay, Multi Delay) keeps, as AVS's one block of memory held them a

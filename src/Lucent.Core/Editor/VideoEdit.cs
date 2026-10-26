@@ -1,8 +1,8 @@
 using System.IO;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Video;
+using Lucent.Export;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// A video open in the editor: its sound is what the waveform shows and the editor plays, and its pictures are cut

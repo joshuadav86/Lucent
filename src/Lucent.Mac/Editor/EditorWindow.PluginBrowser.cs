@@ -6,7 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Editor.Plugins;
+using Lucent.Editor.Plugins;
 
 namespace Lucent.Mac;
 

@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The graphics options, as items for the visuals' right-click menu. Kept in its own file.</summary>
 public partial class MainWindow

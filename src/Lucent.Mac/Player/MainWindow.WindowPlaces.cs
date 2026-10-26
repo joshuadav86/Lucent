@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Layout;
+using Lucent.Layout;
 
 namespace Lucent.Mac;
 

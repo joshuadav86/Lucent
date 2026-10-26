@@ -8,7 +8,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The × in the top-right corner that leaves fullscreen. Kept in its own file.</summary>
 public partial class VisualizerWindow

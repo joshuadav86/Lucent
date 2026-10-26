@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Editor.Effects;
+using Lucent.Editor.Effects;
 
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>
 /// Runs the selection through a VST3 effect, or a chain of them one after another, with the settings they have now. Reverbs and delays ring on

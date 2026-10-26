@@ -1,8 +1,8 @@
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Lucent.Mac.Editor;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Audio;
+using Lucent.Editor;
 
 namespace Lucent.Mac;
 

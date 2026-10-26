@@ -3,11 +3,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using WinampInspiredVisualizer.Playlist;
-using Track = WinampInspiredVisualizer.Playlist.Track;
-using WinampInspiredVisualizer.Radio;
+using Lucent.Playlist;
+using Track = Lucent.Playlist.Track;
+using Lucent.Radio;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Favourite songs and saved playlists. The queue and library windows build their menus from these.
 public partial class MainWindow

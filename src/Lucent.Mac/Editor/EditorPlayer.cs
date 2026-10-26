@@ -3,9 +3,9 @@ using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Audio;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
 
 namespace Lucent.Mac.Editor;
 

@@ -1,8 +1,8 @@
 using Avalonia.Threading;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Video;
+using Lucent.Audio;
+using Lucent.Video;
 
 namespace Lucent.Mac.Audio;
 

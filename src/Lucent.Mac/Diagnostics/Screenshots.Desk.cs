@@ -6,10 +6,10 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using SkiaSharp;
-using WinampInspiredVisualizer.Layout;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Layout;
+using Lucent.Radio;
+using Lucent.Settings;
+using Lucent.Streaming;
 
 namespace Lucent.Mac;
 

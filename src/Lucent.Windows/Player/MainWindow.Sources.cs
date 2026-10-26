@@ -1,8 +1,8 @@
 using System.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Audio;
+using Lucent.Streaming;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Sources: the panel with every way to bring sound in (files and folders, online radio, and the music apps
 // Lucent can show and control), opened from the labelled button in the title bar or from the eject button.

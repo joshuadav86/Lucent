@@ -5,10 +5,10 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Radio;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The radio browser, laid out like the plugin browser: typing finds stations by name, genre, or country; the left

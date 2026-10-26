@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>What a MilkDrop preset is told about the frame it's drawing.</summary>
 /// <param name="Time">Seconds since the visualizer started.</param>

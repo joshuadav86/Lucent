@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>The headings a library file is listed under. <paramref name="Section"/> is null for a heading of its own.</summary>
 public sealed record LibraryHeading(string Folder, string? Section, string? SectionDirectory);

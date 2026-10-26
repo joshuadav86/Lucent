@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Scatter (r_scat.cpp): replaces each pixel with a random one up to three pixels away, leaving four rows at the top and bottom as they were.</summary>
 [AvsEffect(16)]

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>The shapes a <see cref="Biquad"/> can take.</summary>
 public enum FilterShape

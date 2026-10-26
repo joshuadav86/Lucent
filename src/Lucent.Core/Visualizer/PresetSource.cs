@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// A visual loaded from a .hlsl file in the Presets folder, a MilkDrop preset from a .milk file, or a Winamp

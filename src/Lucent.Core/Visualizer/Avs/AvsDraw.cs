@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>AVS's line drawing (linedraw.cpp) and dots, putting each pixel on with the line blend mode.</summary>
 public static class AvsDraw

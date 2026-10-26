@@ -1,7 +1,7 @@
 using System.Windows;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Lucent as the player that opens music and videos from Explorer: songs it's started with or handed by
 // another Lucent, and the Default player choice in Options > Updates.

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Where an equalizer's bands sit: their centre frequencies, spread evenly on a logarithmic

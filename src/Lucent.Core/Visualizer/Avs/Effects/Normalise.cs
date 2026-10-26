@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Normalise (e_normalise.cpp): stretches the picture's levels so its darkest channel becomes black and its brightest full.</summary>
 [AvsEffect("Trans: Normalise")]

@@ -1,7 +1,7 @@
 using System.IO;
 using Windows.Media.Control;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// The Apple Music app for Windows (or iTunes), through Windows' media controls. No Apple sign-in is

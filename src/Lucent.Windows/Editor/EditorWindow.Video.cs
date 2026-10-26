@@ -6,11 +6,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Video;
+using Lucent.Editor;
+using Lucent.Export;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Videos in the editor: the sound is edited as any song's is, with the picture shown above it, and Delete and

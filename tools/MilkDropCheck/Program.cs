@@ -1,5 +1,5 @@
 using System.Globalization;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.MilkDrop;
 
 // Usage: MilkDropCheck [preset files or folders...] [--shaders <output folder>]
 // With no presets given it checks the ones that ship with Lucent. Exits with 1 if anything fails.

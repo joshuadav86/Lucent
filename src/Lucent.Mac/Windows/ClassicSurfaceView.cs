@@ -4,7 +4,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using WinampInspiredVisualizer.ClassicSkins;
+using Lucent.ClassicSkins;
 
 namespace Lucent.Mac.Windows;
 

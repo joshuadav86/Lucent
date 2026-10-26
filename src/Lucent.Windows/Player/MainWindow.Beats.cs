@@ -1,7 +1,7 @@
 using System.IO;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Finds each song's bars in the background, so Auto mode can change visual right on a downbeat.

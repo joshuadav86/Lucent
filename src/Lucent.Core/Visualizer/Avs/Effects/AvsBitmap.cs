@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// A picture an effect shows, as AVS loaded them with Windows' LoadImage: a .bmp file next to the preset,

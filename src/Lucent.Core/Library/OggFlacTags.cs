@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using TagLib;
 using TagLib.Ogg;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>
 /// Teaches TagLib FLAC in Ogg (.oga), which it doesn't know: the tags are the same Vorbis comments as in Ogg Vorbis,

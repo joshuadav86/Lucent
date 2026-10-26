@@ -20,16 +20,16 @@ using Lucent.Mac.Themes;
 using Lucent.Mac.Updates;
 using Lucent.Mac.Visualizer;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Diagnostics;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Visualizer.Avs;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
-using WinampInspiredVisualizer.Video;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Audio;
+using Lucent.Diagnostics;
+using Lucent.Library;
+using Lucent.Playlist;
+using Lucent.Settings;
+using Lucent.Streaming;
+using Lucent.Visualizer.Avs;
+using Lucent.Visualizer.MilkDrop;
+using Lucent.Video;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac;
 
@@ -1317,7 +1317,7 @@ public partial class MainWindow : Window
         _visualizer.BloomStrength = GraphicsOptions.BloomStrength(_settings.Glow);
         AvsVisual.ModernLook = _settings.ModernAvs;
         MilkDropLook.Modern = _settings.ModernMilkDrop;
-        WinampInspiredVisualizer.Visualizer.SongLook.On = _settings.BuildUpsAndDrops;
+        Lucent.Visualizer.SongLook.On = _settings.BuildUpsAndDrops;
         _visualizer.Hdr = _settings.Hdr;
         _visualizer.AutoCycle = _settings.AutoCycle;
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
@@ -1424,7 +1424,7 @@ public partial class MainWindow : Window
             case "TransitionSpeed" when Enum.TryParse<TransitionSpeed>(value, out var speed):
                 _settings.TransitionSpeed = speed;
                 break;
-            case "PreviousVisual" when Enum.TryParse<WinampInspiredVisualizer.Visualizer.PreviousVisualMode>(value, out var previous):
+            case "PreviousVisual" when Enum.TryParse<Lucent.Visualizer.PreviousVisualMode>(value, out var previous):
                 _settings.PreviousVisual = previous;
                 break;
             case "Theme":

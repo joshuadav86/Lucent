@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>A small themed box that asks for a name.</summary>
 public partial class PromptWindow : Window

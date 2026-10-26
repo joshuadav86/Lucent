@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using WinampInspiredVisualizer.Diagnostics;
+using Lucent.Diagnostics;
 
 namespace Lucent.Mac;
 

@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Streaming;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Sharing the controlled app's songs (copying their links), and adding them to the app's playlists: from the player's
 // right-click menu for the song playing, and from the queue window's for the songs in the app's list.

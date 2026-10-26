@@ -6,11 +6,11 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shell;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.ClassicSkins;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Windows;
+using Lucent.ClassicSkins;
+using Lucent.Settings;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Classic skins: the player drawn by a Winamp 2 skin (.wsz) instead of Lucent's own layout, with Lucent's buttons in a strip below it. The
 // equalizer and queue take on the skin too. Lucent.Core's ClassicPlayer draws it; this feeds it the player's state and acts on its buttons.

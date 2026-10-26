@@ -4,10 +4,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>Bringing in MilkDrop presets, from the visuals' menu. Kept in its own file.</summary>
 public partial class VisualizerWindow

@@ -4,10 +4,10 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Styling;
 using Lucent.Mac.Editor;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Editor.Effects;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
+using Lucent.Editor.Effects;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

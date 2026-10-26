@@ -1,7 +1,7 @@
 using System.Windows;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Editor;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The audio editor and converter: the title bar's waveform button and the song menus. Kept in its own file.</summary>
 public partial class MainWindow

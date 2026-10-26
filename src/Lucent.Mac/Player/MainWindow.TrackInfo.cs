@@ -1,6 +1,6 @@
 using Avalonia.Interactivity;
-using WinampInspiredVisualizer.Library;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Library;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac;
 

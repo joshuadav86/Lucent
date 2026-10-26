@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// What the waveform needs to know about a clip to offer its edge and fade handles.

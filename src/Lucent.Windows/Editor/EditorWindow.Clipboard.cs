@@ -4,10 +4,10 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using NAudio.Utils;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Editor;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Cut, copy and paste. What's copied is shared by every editor window (so part of one song can go into

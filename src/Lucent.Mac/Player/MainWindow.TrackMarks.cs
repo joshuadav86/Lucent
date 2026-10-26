@@ -1,4 +1,4 @@
-using WinampInspiredVisualizer.Recording;
+using Lucent.Recording;
 
 namespace Lucent.Mac;
 

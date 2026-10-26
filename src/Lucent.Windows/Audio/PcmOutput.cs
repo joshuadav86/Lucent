@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.Reflection;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Turns the player's floating-point audio into the whole-number samples a sound card takes in

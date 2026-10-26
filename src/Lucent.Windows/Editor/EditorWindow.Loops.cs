@@ -2,11 +2,11 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Export;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
+using Lucent.Export;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The tempo, key and loop maker. Once a sound is open (and again a moment after each edit) the editor listens

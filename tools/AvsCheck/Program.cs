@@ -2,8 +2,8 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
-using WinampInspiredVisualizer.Visualizer.Avs;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer.Avs;
+using Lucent.Visualizer.MilkDrop;
 
 // Usage: AvsCheck [preset files or folders...] [--images <output folder>] [--size <width>x<height>] [--dot-scale <n>] [--strict]
 // With no presets given it checks the ones that ship with Lucent. Each preset runs for 5 seconds of

@@ -4,10 +4,10 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Import;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Import;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Brings a library over from another player: Apple Music or iTunes, MusicBee, foobar2000 and other

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Water Bump (r_waterbump.cpp): drops fall into an imaginary pool on the beat, and the picture is

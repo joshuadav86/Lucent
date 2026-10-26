@@ -5,7 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

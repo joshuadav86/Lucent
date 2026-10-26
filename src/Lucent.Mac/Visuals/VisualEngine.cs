@@ -3,10 +3,10 @@ using Lucent.Mac.Interop;
 using SharpMetal.Foundation;
 using SharpMetal.Metal;
 using Lucent.Mac.Visualizer;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.Avs;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Audio;
+using Lucent.Visualizer;
+using Lucent.Visualizer.Avs;
+using Lucent.Visualizer.MilkDrop;
 
 namespace Lucent.Mac.Visuals;
 

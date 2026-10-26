@@ -4,9 +4,9 @@ using NAudio.CoreAudioApi;
 using Windows.Media;
 using Windows.Media.Control;
 using Windows.Storage.Streams;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Streaming;
+namespace Lucent.Streaming;
 
 /// <summary>
 /// Another app's player through Windows' media controls: every player that shows up in the media panel

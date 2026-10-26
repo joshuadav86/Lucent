@@ -1,7 +1,7 @@
 using System.Windows;
-using WinampInspiredVisualizer.Updates;
+using Lucent.Updates;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Checking for updates on demand, from the Updates tab in Options. The regular check runs either way.
 public partial class MainWindow

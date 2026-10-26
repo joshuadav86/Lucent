@@ -1,11 +1,11 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Library;
+using Lucent.Playlist;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>What bringing a library over did.</summary>
 public sealed record LibraryImportResult

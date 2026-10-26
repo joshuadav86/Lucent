@@ -1,6 +1,6 @@
 using TagLib;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>Copies tags (title, artist, album, track number…) and artwork from one music file to another.</summary>
 public static class TagCopier

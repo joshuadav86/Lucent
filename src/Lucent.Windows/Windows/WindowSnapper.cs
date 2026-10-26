@@ -2,9 +2,9 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Layout;
+using Lucent.Layout;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// Makes Lucent's windows behave like Winamp's: their edges snap to each other and to the

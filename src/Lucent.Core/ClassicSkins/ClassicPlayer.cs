@@ -1,9 +1,9 @@
 using System.Globalization;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Settings;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>What a click in the classic player asks the app to do.</summary>
 public enum ClassicCommand

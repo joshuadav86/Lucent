@@ -8,8 +8,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.ClassicSkins;
-using WinampInspiredVisualizer.Settings;
+using Lucent.ClassicSkins;
+using Lucent.Settings;
 
 namespace Lucent.Mac;
 

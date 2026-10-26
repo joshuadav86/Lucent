@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// One of a skin's pictures, decoded: <see cref="Width"/> × <see cref="Height"/> pixels, top row first,

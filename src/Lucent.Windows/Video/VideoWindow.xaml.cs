@@ -8,11 +8,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Video;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Settings;
+using Lucent.Video;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The video window: a video's pictures (a file or a video station), in a window of their own, so the visuals can

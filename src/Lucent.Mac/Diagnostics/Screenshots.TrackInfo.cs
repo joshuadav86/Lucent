@@ -1,9 +1,9 @@
 using Avalonia.Controls;
 using Lucent.Mac.Audio;
 using SkiaSharp;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Export;
+using Lucent.Settings;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac;
 

@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Editor;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>
 /// The apps' --self-test check of video playback, with the clips in tools/test-media: four seconds of a dimmed test

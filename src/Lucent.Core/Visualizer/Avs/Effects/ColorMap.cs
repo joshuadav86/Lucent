@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Color Map (Unconed's colormap.ape, e_colormap.cpp): looks each pixel up in a 256-colour

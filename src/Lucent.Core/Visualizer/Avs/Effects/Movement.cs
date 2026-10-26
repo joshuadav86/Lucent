@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Movement (r_trans.cpp): moves every pixel to a new place (a swirl, a tunnel, a zoom, or what

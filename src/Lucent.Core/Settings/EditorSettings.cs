@@ -1,9 +1,9 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer.Settings;
+namespace Lucent.Settings;
 
 /// <summary>What the audio editor shows in its main view.</summary>
 public enum EditorView

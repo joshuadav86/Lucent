@@ -5,8 +5,8 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Effects;
+using Lucent.Editor;
+using Lucent.Editor.Effects;
 
 namespace Lucent.Mac;
 

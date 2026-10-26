@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// Files and folders dragged onto a Lucent window from Explorer. The windows take them on the way in

@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// Reads Windows .bmp files, which is what every classic Winamp skin is drawn in. Both apps need the same

@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Visuals;
 using SharpMetal.Metal;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
 namespace Lucent.Mac;
 

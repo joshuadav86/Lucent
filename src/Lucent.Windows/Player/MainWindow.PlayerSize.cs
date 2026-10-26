@@ -3,7 +3,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // The player's size. Lucent's own player grows as a whole: dragging any of its edges scales everything in
 // it, keeping its shape, so its type and buttons get bigger on a big or far-away screen. The windows docked

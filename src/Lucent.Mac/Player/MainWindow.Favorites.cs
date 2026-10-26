@@ -2,9 +2,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using WinampInspiredVisualizer.Playlist;
-using Track = WinampInspiredVisualizer.Playlist.Track;
-using WinampInspiredVisualizer.Radio;
+using Lucent.Playlist;
+using Track = Lucent.Playlist.Track;
+using Lucent.Radio;
 
 namespace Lucent.Mac;
 

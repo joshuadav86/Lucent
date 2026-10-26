@@ -10,12 +10,12 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lucent.Mac.Library;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
-using SavedPlaylists = WinampInspiredVisualizer.Playlist.SavedPlaylists;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Audio;
+using Lucent.Library;
+using Lucent.Settings;
+using Lucent.Streaming;
+using SavedPlaylists = Lucent.Playlist.SavedPlaylists;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac;
 
@@ -1568,7 +1568,7 @@ public partial class LibraryWindow : ToolWindow
         }
 
         // "Edit video…" when the first one picked is a video, as the Video window's menu says.
-        var (editHeader, canEdit) = WinampInspiredVisualizer.Editor.VideoEdit.EditorMenuItem(items[0].Path);
+        var (editHeader, canEdit) = Lucent.Editor.VideoEdit.EditorMenuItem(items[0].Path);
         OpenInEditorItem.Header = editHeader;
         OpenInEditorItem.IsEnabled = canEdit;
         _songMenuItems.Add(Player.FavoriteMenuItem(items.Select(item => item.Path).ToList()));

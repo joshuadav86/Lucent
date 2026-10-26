@@ -12,9 +12,9 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lucent.Mac.Visualizer;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Library;
+using Lucent.Settings;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac;
 

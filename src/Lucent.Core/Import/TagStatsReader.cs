@@ -1,8 +1,8 @@
 using System.Globalization;
 using TagLib;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>
 /// Reads the ratings and play counts other players save in the songs themselves: the "popularimeter"

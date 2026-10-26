@@ -1,8 +1,8 @@
 using System.IO;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Export;
+using Lucent.Editor.Dsp;
+using Lucent.Export;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>Saves loops from the loop maker as files of their own, named and tagged with their length, tempo and key.</summary>
 public static class LoopFiles

@@ -2,10 +2,10 @@ using System.Collections.Concurrent;
 using System.IO;
 using NAudio.Dsp;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor.Plugins;
+using Lucent.Audio;
+using Lucent.Editor.Plugins;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>A recording that has been saved.</summary>
 /// <param name="DryPath">The copy without the plugins, when one was kept.</param>

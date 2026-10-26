@@ -4,7 +4,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using SkiaSharp;
 using TagLib;
-using WinampInspiredVisualizer.Library;
+using Lucent.Library;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace Lucent.Mac.Library;

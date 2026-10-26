@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>
 /// A piece of audio held in memory as 32-bit float samples, one array per channel

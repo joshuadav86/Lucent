@@ -2,10 +2,10 @@ using System.Diagnostics;
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Threading;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Video;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Radio;
+using Lucent.Streaming;
+using Lucent.Video;
+using Track = Lucent.Playlist.Track;
 
 namespace Lucent.Mac;
 

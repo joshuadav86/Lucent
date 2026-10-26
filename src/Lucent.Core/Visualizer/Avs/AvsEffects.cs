@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// Marks an effect class with the number AVS saves for it (its place in rlib.cpp's list), or the name a

@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Audio;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Records a song played through a visual as an MP4 video. The visual is drawn off screen, frame by

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Picture (r_picture.cpp): shows a .bmp picture from beside the preset, stretched over the picture and blended in, optionally only for a while after each beat.</summary>
 [AvsEffect(34)]

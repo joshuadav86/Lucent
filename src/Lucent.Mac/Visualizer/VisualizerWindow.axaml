@@ -2,7 +2,7 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               xmlns:w="using:Lucent.Mac.Windows"
               xmlns:local="using:Lucent.Mac"
-              xmlns:vis="using:WinampInspiredVisualizer.Visualizer"
+              xmlns:vis="using:Lucent.Visualizer"
               x:Class="Lucent.Mac.VisualizerWindow"
               Title="Lucent visuals"
               Width="820" Height="560" MinWidth="360" MinHeight="240"

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// How a classic skin's playlist shows its songs, from pledit.txt: the text colour, the playing song's colour,

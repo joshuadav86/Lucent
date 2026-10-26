@@ -1,9 +1,9 @@
 using System.Windows;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Library;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
+using Lucent.Library;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Detect, beside the BPM and key: listens to the whole song for its tempo and key and fills them in, ready to save

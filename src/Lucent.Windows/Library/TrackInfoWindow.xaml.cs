@@ -9,13 +9,13 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Library;
+using Lucent.Playlist;
+using Lucent.Settings;
 using PictureType = TagLib.PictureType;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Shows and edits a track's info (title, artist, album and so on), its artwork and its file details.

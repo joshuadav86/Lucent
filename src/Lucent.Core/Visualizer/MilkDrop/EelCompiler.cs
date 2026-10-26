@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>A compiled block of MilkDrop equations, ready to run against its context's variables.</summary>
 public sealed class EelCode

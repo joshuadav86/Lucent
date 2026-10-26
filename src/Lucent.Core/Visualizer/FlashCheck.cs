@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Watches a visual's brightness frame by frame and counts how often it swings between light and dark, so the

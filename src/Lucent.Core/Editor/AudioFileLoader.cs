@@ -1,8 +1,8 @@
 using System.IO;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>What the editor knows about the file it opened, for saving it back the same way.</summary>
 public sealed record SourceFileInfo(string Path, int SampleRate, int Channels, int BitsPerSample, bool IsFloat, int BitrateKbps)

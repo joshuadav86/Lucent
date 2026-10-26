@@ -3,10 +3,10 @@ using System.Windows.Interop;
 using System.Windows.Threading;
 using Windows.Media;
 using Windows.Storage.Streams;
-using WinampInspiredVisualizer.Library;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Library;
+using Track = Lucent.Playlist.Track;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>The buttons a keyboard's media keys, a headset or Windows' media controls can press.</summary>
 public enum MediaCommand

@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Radio;
+namespace Lucent.Radio;
 
 /// <summary>
 /// A station playing: Lucent's own <see cref="RadioStream"/> for MP3 and AAC, or a video stream (libVLC) for video

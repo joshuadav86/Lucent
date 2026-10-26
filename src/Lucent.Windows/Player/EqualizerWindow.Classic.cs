@@ -2,11 +2,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Shell;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.ClassicSkins;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Audio;
+using Lucent.ClassicSkins;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // The equalizer in a classic skin: Winamp 2's equalizer (eqmain.bmp) with its ten sliders, in place of
 // Lucent's own. Lucent.Core's ClassicEqualizer draws it; this feeds it the settings and acts on its sliders.

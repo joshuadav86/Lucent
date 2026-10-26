@@ -5,7 +5,7 @@ using Avalonia.LogicalTree;
 using Avalonia.Platform.Storage;
 using Lucent.Mac.Editor;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Editor;
 
 namespace Lucent.Mac;
 

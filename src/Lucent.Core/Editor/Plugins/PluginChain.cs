@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Plugins;
+namespace Lucent.Editor.Plugins;
 
 /// <summary>One plugin in a chain: the effect, its helper, and whether it's switched off for now.</summary>
 public sealed class ChainSlot

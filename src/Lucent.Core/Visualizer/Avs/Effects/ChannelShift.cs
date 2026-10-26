@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Trans / Channel Shift (r_chanshift.cpp): swaps the red, green and blue channels round, optionally picking a new order on each beat.</summary>
 [AvsEffect("Channel Shift")]

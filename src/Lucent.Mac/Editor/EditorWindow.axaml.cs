@@ -11,12 +11,12 @@ using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Editor;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Effects;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Video;
+using Lucent.Audio;
+using Lucent.Editor;
+using Lucent.Editor.Effects;
+using Lucent.Export;
+using Lucent.Settings;
+using Lucent.Video;
 
 namespace Lucent.Mac;
 
@@ -500,7 +500,7 @@ public partial class EditorWindow : Window
             {
                 AudioFileException => ex.Message,
                 OutOfMemoryException => "There isn't enough memory for that. Try a shorter selection, or quit other apps.",
-                WinampInspiredVisualizer.Editor.Plugins.PluginException => ex.Message,
+                Lucent.Editor.Plugins.PluginException => ex.Message,
                 EditException => ex.Message,
                 _ => FileConverter.FriendlyError(ex),
             };
@@ -1831,6 +1831,6 @@ public partial class EditorWindow : Window
         ClosePluginInBackground();
         // The last split's stems can take hundreds of megabytes.
         _stemsWindow?.Close();
-        WinampInspiredVisualizer.Editor.Stems.StemCache.Clear();
+        Lucent.Editor.Stems.StemCache.Clear();
     }
 }

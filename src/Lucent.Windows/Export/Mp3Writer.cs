@@ -3,7 +3,7 @@ using NAudio.Lame;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Encodes MP3 with LAME (libmp3lame.64.dll, shipped next to Lucent.exe by the NAudio.Lame package).

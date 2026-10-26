@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Hosts a native child window inside the WPF layout for Direct3D to draw into,
@@ -11,7 +11,7 @@ namespace WinampInspiredVisualizer.Visualizer;
 /// </summary>
 public sealed class VisualizerHost : HwndHost
 {
-    private const string WindowClassName = "WinampInspiredVisualizerSurface";
+    private const string WindowClassName = "LucentSurface";
     private const int WS_CHILD = 0x40000000;
     private const int WS_VISIBLE = 0x10000000;
     private const int WS_CLIPSIBLINGS = 0x04000000;

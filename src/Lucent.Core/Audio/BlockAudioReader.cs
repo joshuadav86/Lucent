@@ -1,7 +1,7 @@
 using System.IO;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// The playing, seeking and buffering shared by Lucent's own decoders for formats stored as blocks that each decode on

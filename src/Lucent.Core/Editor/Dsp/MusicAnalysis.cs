@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// What the editor knows about a sound as music: its beats and tempo, its key, and its spectral frames (kept so

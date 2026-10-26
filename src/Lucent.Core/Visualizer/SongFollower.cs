@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Follows the song that's playing for the visuals, frame by frame: where it is in its beats, bars and

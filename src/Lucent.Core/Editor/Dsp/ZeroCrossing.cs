@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>Finds where the waveform crosses zero, so cuts land where the audio is silent for an instant and don't click.</summary>
 public static class ZeroCrossing

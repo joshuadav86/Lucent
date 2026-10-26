@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Radio;
+using Lucent.Audio;
+using Lucent.Radio;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>
 /// A video, playing through libVLC: its sound comes out of this stream, so the player plays it like any song (the

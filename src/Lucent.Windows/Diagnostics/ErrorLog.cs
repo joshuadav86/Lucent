@@ -1,9 +1,9 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// %AppData%\Lucent\errors.log: the errors that would otherwise crash Lucent without a trace. Bug reports

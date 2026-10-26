@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Editor;
+namespace Lucent.Editor;
 
 /// <summary>Reads an <see cref="AudioBuffer"/> from start to end as interleaved samples, for saving it.</summary>
 public sealed class AudioBufferSampleProvider : ISampleProvider

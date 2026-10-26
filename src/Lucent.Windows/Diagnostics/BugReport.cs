@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The options panel's "Report a bug" button: opens a new GitHub issue from the bug report form, with the

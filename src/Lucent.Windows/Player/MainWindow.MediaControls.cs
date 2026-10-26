@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // The keyboard's media keys, and Lucent in Windows' media controls (the media panel by the volume
 // flyout, and the lock screen). See MediaControls.

@@ -7,15 +7,15 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
-using SavedPlaylists = WinampInspiredVisualizer.Playlist.SavedPlaylists;
-using Track = WinampInspiredVisualizer.Playlist.Track;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Audio;
+using Lucent.Library;
+using SavedPlaylists = Lucent.Playlist.SavedPlaylists;
+using Track = Lucent.Playlist.Track;
+using Lucent.Settings;
+using Lucent.Streaming;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>The music library: every song in the linked folders, sorted and grouped by folder.</summary>
 public partial class LibraryWindow : ToolWindow

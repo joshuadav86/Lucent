@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
-using WinampInspiredVisualizer.Playlist;
+using Lucent.Playlist;
 
 namespace Lucent.Mac;
 
@@ -47,7 +47,7 @@ public partial class MainWindow
     }
 
     /// <summary>Shows <paramref name="station"/> as on, playing <paramref name="song"/>, for <paramref name="heard"/> so far.</summary>
-    internal void PreviewStation(WinampInspiredVisualizer.Radio.RadioStation station, string song, string details, TimeSpan heard)
+    internal void PreviewStation(Lucent.Radio.RadioStation station, string song, string details, TimeSpan heard)
     {
         _station = station;
         _radioList = new[] { station };
@@ -65,13 +65,13 @@ public partial class MainWindow
     }
 
     /// <summary>Shows Pandora's thumbs in shuffle and repeat's place, as while Lucent controls Pandora, with <paramref name="rating"/> lit.</summary>
-    internal void PreviewThumbs(WinampInspiredVisualizer.Streaming.SongRating rating, string details)
+    internal void PreviewThumbs(Lucent.Streaming.SongRating rating, string details)
     {
         TrackDetails.Text = details;
         ShuffleButton.IsVisible = RepeatButton.IsVisible = false;
         ThumbUpButton.IsVisible = ThumbDownButton.IsVisible = true;
-        ThumbUpButton.IsChecked = rating == WinampInspiredVisualizer.Streaming.SongRating.Up;
-        ThumbDownButton.IsChecked = rating == WinampInspiredVisualizer.Streaming.SongRating.Down;
+        ThumbUpButton.IsChecked = rating == Lucent.Streaming.SongRating.Up;
+        ThumbDownButton.IsChecked = rating == Lucent.Streaming.SongRating.Down;
     }
 
     /// <summary>Puts on a skin (with its own theme), as picking it in the options does.</summary>
@@ -85,10 +85,10 @@ public partial class MainWindow
     /// <summary>Draws the player with Lucent Classic, playing the first track at <paramref name="position"/>.</summary>
     internal void PreviewClassicSkin(TimeSpan position, bool shaded)
     {
-        _settings.ClassicSkin = WinampInspiredVisualizer.ClassicSkins.ClassicSkinLibrary.DefaultName;
+        _settings.ClassicSkin = Lucent.ClassicSkins.ClassicSkinLibrary.DefaultName;
         ApplyClassicSkin();
         var classic = _classicView!.Player;
-        classic.PlayState = WinampInspiredVisualizer.ClassicSkins.ClassicPlayState.Playing;
+        classic.PlayState = Lucent.ClassicSkins.ClassicPlayState.Playing;
         classic.Position = position;
         classic.Duration = _current?.Track.Duration ?? TimeSpan.Zero;
         classic.CanSeek = classic.Duration > TimeSpan.Zero;

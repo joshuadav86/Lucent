@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WinampInspiredVisualizer.ClassicSkins;
+using Lucent.ClassicSkins;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// Shows the classic player (a Winamp skin's main window) blown up with hard pixel edges, and passes the

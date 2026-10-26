@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Streaming;
 using Lucent.Mac.Streaming;
 using Lucent.Mac.Windows;
 

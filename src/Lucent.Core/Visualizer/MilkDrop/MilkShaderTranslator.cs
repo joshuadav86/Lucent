@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>Which of a MilkDrop 2 preset's two shaders: the warp (feeds back into the next frame) or the composite (what's shown).</summary>
 public enum MilkShaderKind

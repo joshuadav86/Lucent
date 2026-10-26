@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>
 /// Reads the YouTube Music playlists in a Google Takeout download (takeout.google.com, "YouTube and

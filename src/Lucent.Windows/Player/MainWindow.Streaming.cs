@@ -2,11 +2,11 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Streaming;
+using Lucent.Audio;
+using Lucent.Settings;
+using Lucent.Streaming;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Other apps: the visuals listening to every app's sound (see Audio/SystemAudio.cs), and the player
 // showing and controlling Spotify, Apple Music or YouTube (see RemoteControl) while their sound stays in their app.

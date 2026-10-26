@@ -1,9 +1,9 @@
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.Export;
+namespace Lucent.Export;
 
 /// <summary>
 /// Turns finished frames into NV12 pictures for the video encoder, on the graphics card

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>
 /// The variables one set of MilkDrop equations works on (the per-frame equations, the per-pixel

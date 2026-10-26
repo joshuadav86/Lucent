@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>
 /// How MilkDrop presets look on screen: modernised (the Options switch; on unless it's turned off), so their

@@ -1,5 +1,5 @@
 using Lucent.Mac.Audio;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
 namespace Lucent.Mac;
 

@@ -4,7 +4,7 @@ using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>
 /// Draws MilkDrop presets with Direct3D 11, the way MilkDrop does each frame: last frame's image is

@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>A point on an equalizer curve: a gain in decibels at a frequency in hertz.</summary>
 public readonly record struct EqualizerPoint(double Hertz, double GainDb);

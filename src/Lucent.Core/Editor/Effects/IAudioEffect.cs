@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Effects;
+namespace Lucent.Editor.Effects;
 
 /// <summary>
 /// One step of processing in the editor: it takes a piece of audio (the selection, or the

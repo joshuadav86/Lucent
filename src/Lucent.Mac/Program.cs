@@ -3,9 +3,9 @@ using Avalonia;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Export;
 using Velopack;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Export;
+using Lucent.Settings;
 
 // Metal, Core Audio and AppKit: this app only runs on macOS.
 [assembly: SupportedOSPlatform("macos")]
@@ -33,9 +33,9 @@ public static class Program
         // MP3 encoding is left to each platform too: on the Mac it's LAME, shipped inside the app.
         AudioEncoder.Mp3Encoder = Mp3Writer.Encode;
         // A video's frames saved as JPEG, by SkiaSharp's encoder.
-        WinampInspiredVisualizer.Editor.VideoExport.EncodeJpeg = Library.CoverArt.EncodeJpeg;
+        Lucent.Editor.VideoExport.EncodeJpeg = Library.CoverArt.EncodeJpeg;
         // Smaller copies of a video, by AVFoundation's encoders.
-        WinampInspiredVisualizer.Editor.VideoCopy.CreateWriter = VideoCopyWriter.Create;
+        Lucent.Editor.VideoCopy.CreateWriter = VideoCopyWriter.Create;
 
         if (args.Length > 0 && args[0] == "--self-test")
         {

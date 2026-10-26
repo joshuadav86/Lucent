@@ -1,7 +1,7 @@
-<local:ToolWindow x:Class="WinampInspiredVisualizer.LibraryWindow"
+<local:ToolWindow x:Class="Lucent.LibraryWindow"
                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                  xmlns:local="clr-namespace:WinampInspiredVisualizer.Windows"
+                  xmlns:local="clr-namespace:Lucent.Windows"
                   Title="Lucent library"
                   Width="380" Height="560" MinWidth="280" MinHeight="200"
                   Background="{DynamicResource SurfaceBrush}">

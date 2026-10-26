@@ -2,9 +2,9 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
-namespace WinampInspiredVisualizer.Recording;
+namespace Lucent.Recording;
 
 /// <summary>
 /// The apps' --self-test check of the Record window's insides, with made-up sound instead of an audio

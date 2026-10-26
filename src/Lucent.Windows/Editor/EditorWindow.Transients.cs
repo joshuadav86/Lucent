@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Input;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Tab to Transient, as in Pro Tools: with it on, Tab jumps the cursor to the next drum hit or note start,

@@ -1,12 +1,12 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Layout;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Editor;
+using Lucent.Layout;
+using Lucent.Settings;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Lucent full screen (Shift+F11, a double-click on the player's title bar, or "Full screen Lucent" on a
 // right-click in any of Lucent's windows): every open window tiled across the whole of the player's screen,

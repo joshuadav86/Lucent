@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinampInspiredVisualizer.Settings;
+namespace Lucent.Settings;
 
 /// <summary>
 /// Before 1.0, a build can give everyone who updates the same first start a new install gets: just the

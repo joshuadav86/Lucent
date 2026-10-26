@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace WinampInspiredVisualizer.Library;
+namespace Lucent.Library;
 
 /// <summary>
 /// The search boxes in the library and the visual picker. What's typed is split into words, and a row

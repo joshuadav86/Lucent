@@ -6,10 +6,10 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Video;
+using Lucent.Audio;
+using Lucent.Library;
+using Lucent.Settings;
+using Lucent.Video;
 
 namespace Lucent.Mac.Editor;
 

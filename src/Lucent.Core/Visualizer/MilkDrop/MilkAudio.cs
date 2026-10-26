@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>
 /// The sound as MilkDrop presets expect it, made from Lucent's own analysis. MilkDrop's bass, mid

@@ -5,11 +5,11 @@ using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Visualizer.Avs;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Audio;
+using Lucent.Visualizer.Avs;
+using Lucent.Visualizer.MilkDrop;
 
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>
 /// Draws the visualizer with Direct3D 11 on its own thread. Each frame the current preset reads

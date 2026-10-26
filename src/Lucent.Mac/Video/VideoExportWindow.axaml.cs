@@ -6,9 +6,9 @@ using Avalonia.LogicalTree;
 using Avalonia.Platform.Storage;
 using Lucent.Mac.Export;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Export;
+using Lucent.Playlist;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac;
 

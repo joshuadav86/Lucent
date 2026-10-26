@@ -1,6 +1,6 @@
 using LibVLCSharp.Shared;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>
 /// libVLC, the engine inside VLC, which Lucent plays videos with. It's loaded the first time a video is opened, and

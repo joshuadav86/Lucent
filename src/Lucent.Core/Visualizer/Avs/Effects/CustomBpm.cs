@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Misc / Custom BPM (r_bpm.cpp): changes which frames count as beats for the effects after it: a steady beat at a set rate, only every few beats, or every frame that isn't a beat.</summary>
 [AvsEffect(33)]

@@ -1,6 +1,6 @@
 using Lucent.Mac.Interop;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Export;
+using Lucent.Editor;
+using Lucent.Export;
 
 namespace Lucent.Mac.Export;
 

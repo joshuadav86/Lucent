@@ -7,15 +7,15 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Effects;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Video;
-using WinampInspiredVisualizer.Windows;
+using Lucent.Audio;
+using Lucent.Editor;
+using Lucent.Editor.Effects;
+using Lucent.Export;
+using Lucent.Settings;
+using Lucent.Video;
+using Lucent.Windows;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// A stereo (or mono) audio editor: shows a song's waveform or spectrogram, plays it with meters, selects part

@@ -15,9 +15,9 @@ using Avalonia.Styling;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Library;
 using Lucent.Mac.Windows;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Library;
+using Lucent.Playlist;
+using Lucent.Settings;
 using PictureType = TagLib.PictureType;
 
 namespace Lucent.Mac;

@@ -1,9 +1,9 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using WinampInspiredVisualizer.Editor.Plugins;
+using Lucent.Editor.Plugins;
 
-namespace WinampInspiredVisualizer.Settings;
+namespace Lucent.Settings;
 
 /// <summary>
 /// The Record window's choices, kept between runs in %AppData%\Lucent\recording.json (on a Mac, in

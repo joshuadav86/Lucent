@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinampInspiredVisualizer.Editor.Stems;
+namespace Lucent.Editor.Stems;
 
 /// <summary>
 /// The apps' --self-test check of the stem splitter: it loads the model on the graphics card if it can and

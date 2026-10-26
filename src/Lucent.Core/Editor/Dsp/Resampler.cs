@@ -2,7 +2,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using NAudio.Wave;
 
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// Band-limited (windowed sinc) resampling: changes the sample rate, or the speed and pitch

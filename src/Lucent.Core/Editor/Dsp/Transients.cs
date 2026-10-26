@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Editor.Dsp;
+namespace Lucent.Editor.Dsp;
 
 /// <summary>
 /// Finds the transients in a sound (drum hits, plucks, the start of each note), so Tab can jump the

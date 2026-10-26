@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace WinampInspiredVisualizer.Visualizer.Avs;
+namespace Lucent.Visualizer.Avs;
 
 /// <summary>
 /// Reads one effect's settings out of a preset, the way AVS's load_config functions do: little-endian

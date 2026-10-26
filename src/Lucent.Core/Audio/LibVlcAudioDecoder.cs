@@ -1,9 +1,9 @@
 using System.IO;
 using LibVLCSharp.Shared;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Video;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Decodes any sound libVLC reads (AC-3, DTS, WMA, Matroska and WebM, TTA, Speex, Opus or FLAC in MP4, and the rest)

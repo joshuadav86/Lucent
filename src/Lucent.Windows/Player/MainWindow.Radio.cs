@@ -2,12 +2,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Video;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Radio;
+using Lucent.Streaming;
+using Lucent.Video;
+using Track = Lucent.Playlist.Track;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 // Online radio: a station picked in the radio browser (RadioWindow) plays through Lucent's own player, so the
 // equalizer, the visuals, the meter and the analyzer get it like any song. While a station is on, the player's

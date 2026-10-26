@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Lucent.Mac.Audio;
-using WinampInspiredVisualizer.Audio;
+using Lucent.Audio;
 
 namespace Lucent.Mac;
 

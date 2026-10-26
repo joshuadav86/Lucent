@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer;
+namespace Lucent.Visualizer;
 
 /// <summary>What Previous visual (B) goes to.</summary>
 public enum PreviousVisualMode

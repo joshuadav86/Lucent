@@ -1,6 +1,6 @@
-using WinampInspiredVisualizer.Recording;
+using Lucent.Recording;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Songs inside a long recording, such as a DJ set made with the Record window: when the file has its songs

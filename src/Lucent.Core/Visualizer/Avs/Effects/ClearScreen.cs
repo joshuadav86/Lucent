@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Clear screen (r_clear.cpp): fills the picture with a colour every frame (or only the first), or blends it in.</summary>
 [AvsEffect(25)]

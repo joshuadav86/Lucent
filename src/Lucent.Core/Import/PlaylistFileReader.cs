@@ -4,7 +4,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>
 /// Reads playlists saved by other players: M3U and M3U8 (Winamp, VLC, MusicBee and most others), PLS,

@@ -1,14 +1,14 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Layout;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Radio;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Visualizer;
+using Lucent.Export;
+using Lucent.Layout;
+using Lucent.Library;
+using Lucent.Radio;
+using Lucent.Streaming;
+using Lucent.Visualizer;
 
-namespace WinampInspiredVisualizer.Settings;
+namespace Lucent.Settings;
 
 /// <summary>Preferences kept between runs, stored as JSON in %AppData%\Lucent\settings.json.</summary>
 public sealed class AppSettings

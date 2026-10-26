@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Layout;
+namespace Lucent.Layout;
 
 /// <summary>Which of Lucent's windows a <see cref="TileWindow"/> is, which decides where it goes.</summary>
 public enum TileKind

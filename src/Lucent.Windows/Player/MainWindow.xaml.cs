@@ -12,24 +12,24 @@ using System.Windows.Interop;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Diagnostics;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Settings;
-using WinampInspiredVisualizer.Stores;
-using WinampInspiredVisualizer.Streaming;
-using WinampInspiredVisualizer.Themes;
-using WinampInspiredVisualizer.Updates;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.Avs;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
-using WinampInspiredVisualizer.Windows;
-using WinampInspiredVisualizer.Video;
-using Track = WinampInspiredVisualizer.Playlist.Track;
+using Lucent.Audio;
+using Lucent.Diagnostics;
+using Lucent.Editor;
+using Lucent.Library;
+using Lucent.Playlist;
+using Lucent.Settings;
+using Lucent.Stores;
+using Lucent.Streaming;
+using Lucent.Themes;
+using Lucent.Updates;
+using Lucent.Visualizer;
+using Lucent.Visualizer.Avs;
+using Lucent.Visualizer.MilkDrop;
+using Lucent.Windows;
+using Lucent.Video;
+using Track = Lucent.Playlist.Track;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The player window, and the app's controller: it owns the audio, the queue and the

@@ -1,11 +1,11 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Stems;
-using WinampInspiredVisualizer.Export;
+using Lucent.Editor;
+using Lucent.Editor.Stems;
+using Lucent.Export;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// The stem splitter: separates the music into vocals, drums, bass and the other instruments with an AI model

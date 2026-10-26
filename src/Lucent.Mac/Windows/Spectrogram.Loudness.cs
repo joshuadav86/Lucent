@@ -1,8 +1,8 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Media;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Settings;
 
 namespace Lucent.Mac.Windows;
 

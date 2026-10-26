@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using WinampInspiredVisualizer.Editor;
+using Lucent.Editor;
 
 namespace Lucent.Mac.Editor;
 

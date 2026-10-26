@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 // The two panels beside the heatmap and waveform, as in Vision: the spectrum right now, as bars on
 // the heatmap's frequency scale with peak marks that hold and fall, and a stereo spread scope.

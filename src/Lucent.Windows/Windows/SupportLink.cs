@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>Where people can chip in for Lucent: the Buy Me a Coffee page behind the options panel's coffee button.</summary>
 public static class SupportLink

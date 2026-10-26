@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.MilkDrop;
+namespace Lucent.Visualizer.MilkDrop;
 
 /// <summary>A colour with alpha, 0..1 per channel.</summary>
 public readonly record struct MilkColor(float R, float G, float B, float A)

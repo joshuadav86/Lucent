@@ -3,10 +3,10 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Markers (named spots in the song, shown as flags over the waveform) and the analysis card, which measures

@@ -1,7 +1,7 @@
 using Lucent.Mac.Visuals;
 using Lucent.MetalShaders;
-using WinampInspiredVisualizer.Visualizer;
-using WinampInspiredVisualizer.Visualizer.MilkDrop;
+using Lucent.Visualizer;
+using Lucent.Visualizer.MilkDrop;
 
 // Usage: MetalShaders <app folder with Shaders/ and Presets/> <output folder>
 // Writes <output>/Engine.<entry>.metal, <output>/Particles.PSSprite.metal, <output>/AvsDisplay.PSMain.metal and

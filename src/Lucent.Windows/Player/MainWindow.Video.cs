@@ -1,7 +1,7 @@
 using System.Windows.Threading;
-using WinampInspiredVisualizer.Video;
+using Lucent.Video;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Videos: the player plays their sound, and the video window shows their pictures, beside the visuals. Kept in its own file.

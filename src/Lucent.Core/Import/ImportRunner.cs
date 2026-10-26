@@ -1,7 +1,7 @@
-using WinampInspiredVisualizer.Library;
-using WinampInspiredVisualizer.Playlist;
+using Lucent.Library;
+using Lucent.Playlist;
 
-namespace WinampInspiredVisualizer.Import;
+namespace Lucent.Import;
 
 /// <summary>
 /// One import, start to finish, off the UI thread: reads the source, finds its songs in the library, and

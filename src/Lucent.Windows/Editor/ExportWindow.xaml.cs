@@ -5,12 +5,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Dsp;
-using WinampInspiredVisualizer.Export;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Editor;
+using Lucent.Editor.Dsp;
+using Lucent.Export;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Format and quality choices for a new file. Two uses: converting one or more files (it then runs

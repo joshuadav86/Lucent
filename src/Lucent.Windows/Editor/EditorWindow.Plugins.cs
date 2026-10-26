@@ -8,10 +8,10 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;
 using NAudio.Wave;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Plugins;
+using Lucent.Editor;
+using Lucent.Editor.Plugins;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// VST3 effects in the editor. Plugins open into a chain, each in its own helper process with its own window;

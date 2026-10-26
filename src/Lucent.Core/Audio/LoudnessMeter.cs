@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Audio;
+namespace Lucent.Audio;
 
 /// <summary>
 /// Measures loudness the way broadcasters and streaming services do (ITU-R BS.1770-4, EBU R 128 and

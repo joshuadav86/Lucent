@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Add Borders (Virtual Effect: Addborders, e_addborders.cpp): paints a frame of one colour round the edge of the picture, its width a percentage of the picture's size.</summary>
 [AvsEffect("Virtual Effect: Addborders")]

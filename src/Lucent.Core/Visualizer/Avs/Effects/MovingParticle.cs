@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>Render / Moving Particle (r_parts.cpp): a round blob on a spring, pulled toward a new random spot on each beat, and optionally growing on beats.</summary>
 [AvsEffect(8)]

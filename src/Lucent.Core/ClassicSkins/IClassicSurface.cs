@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.ClassicSkins;
+namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// One of a classic skin's windows (the equalizer, the playlist's frame) as a picture: both apps show its

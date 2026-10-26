@@ -1,8 +1,8 @@
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
-using WinampInspiredVisualizer.Editor;
-using WinampInspiredVisualizer.Editor.Stems;
-using WinampInspiredVisualizer.Export;
+using Lucent.Editor;
+using Lucent.Editor.Stems;
+using Lucent.Export;
 
 namespace Lucent.Mac;
 

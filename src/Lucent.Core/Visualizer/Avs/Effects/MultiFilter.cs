@@ -1,4 +1,4 @@
-namespace WinampInspiredVisualizer.Visualizer.Avs.Effects;
+namespace Lucent.Visualizer.Avs.Effects;
 
 /// <summary>
 /// Trans / Multi Filter (Jheriko's MULTIFILTER, e_multifilter.cpp): "chrome" (each channel folded so middle

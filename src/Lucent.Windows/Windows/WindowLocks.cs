@@ -1,7 +1,7 @@
 using System.Windows;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer.Windows;
+namespace Lucent.Windows;
 
 /// <summary>
 /// Which of the windows around the player are locked in place. A locked window can't be moved or

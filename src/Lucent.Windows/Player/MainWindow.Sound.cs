@@ -1,10 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
-using WinampInspiredVisualizer.Audio;
-using WinampInspiredVisualizer.Playlist;
-using WinampInspiredVisualizer.Settings;
+using Lucent.Audio;
+using Lucent.Playlist;
+using Lucent.Settings;
 
-namespace WinampInspiredVisualizer;
+namespace Lucent;
 
 /// <summary>
 /// Gapless playback and the Sound options: which output the music plays through, exclusive

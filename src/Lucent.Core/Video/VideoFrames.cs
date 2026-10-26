@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace WinampInspiredVisualizer.Video;
+namespace Lucent.Video;
 
 /// <summary>
 /// The pictures of a video as libVLC decodes them, handed over one at a time to whatever shows them: 32-bit BGRA
