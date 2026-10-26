@@ -24,6 +24,18 @@ public static class Toast
                 old.IsOpen = false;
             }
 
+            // Placed over what's in a window rather than the window itself, and only over something on the screen:
+            // a popup that can't find where its target is opens in the corner of the screen.
+            if (over is Window { Content: FrameworkElement content })
+            {
+                over = content;
+            }
+
+            if (!over.IsVisible || PresentationSource.FromVisual(over) is null)
+            {
+                return;
+            }
+
             var label = new TextBlock { Text = text, FontSize = 13, TextWrapping = TextWrapping.Wrap, MaxWidth = 320, TextAlignment = TextAlignment.Center };
             label.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
             var badge = new Border
@@ -50,6 +62,8 @@ public static class Toast
             popup.IsOpen = true;
             await Task.Delay(TimeSpan.FromSeconds(2.5));
             popup.IsOpen = false;
+            popup.Child = null;
+            popup.PlacementTarget = null;
             if (s_shown == popup)
             {
                 s_shown = null;
