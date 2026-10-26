@@ -73,7 +73,7 @@ Media keys work in the background, and the playing song shows in Windows' media 
 
 ## Make your own visuals
 
-Each visual is one HLSL shader in [`src/WinampInspiredVisualizer/Presets`](src/WinampInspiredVisualizer/Presets), or the `Presets` folder next to the app. Both platforms load the same files.
+Each visual is one HLSL shader in [`content/Presets`](content/Presets), or the `Presets` folder next to the app. Both platforms load the same files.
 
 ```hlsl
 // Name: My Visual
@@ -87,25 +87,26 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-Inputs like `Bass`, `Mid`, `Treble`, `Beat`, `spectrum(x)`, and `waveform(x)`, and helpers like `kaleidoscope`, `glow`, `fbm`, and `cameraRay`, are in [`Shaders/Common.hlsli`](src/WinampInspiredVisualizer/Shaders/Common.hlsli). Your own `.milk` and `.avs` presets import too. MilkDrop and AVS credits are in each preset folder's `CREDITS.md`.
+Inputs like `Bass`, `Mid`, `Treble`, `Beat`, `spectrum(x)`, and `waveform(x)`, and helpers like `kaleidoscope`, `glow`, `fbm`, and `cameraRay`, are in [`Shaders/Common.hlsli`](content/Shaders/Common.hlsli). Your own `.milk` and `.avs` presets import too. MilkDrop and AVS credits are in each preset folder's `CREDITS.md`.
 
 ## Build from source
 
 You'll need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```
-dotnet run --project src/WinampInspiredVisualizer   # Windows
+dotnet run --project src/Lucent.Windows   # Windows
 dotnet run --project src/Lucent.Mac                 # Mac
 ```
 
 | Project | What it is |
 |---|---|
 | [`src/Lucent.Core`](src/Lucent.Core) | Everything platform-free: audio analysis, EQ, editor effects, tags, library, and settings |
-| [`src/WinampInspiredVisualizer`](src/WinampInspiredVisualizer) | The Windows app (WPF, Direct3D 11) |
+| [`src/Lucent.Windows`](src/Lucent.Windows) | The Windows app (WPF, Direct3D 11) |
+| [`content`](content) | The visuals, shaders, and starter song both apps ship |
 | [`src/Lucent.Mac`](src/Lucent.Mac) | The Mac app (Avalonia, Metal, Core Audio) |
 | [`src/PluginHost`](src/PluginHost) | The VST3 plugin helper (C++, built with CMake) |
 
-The Mac app needs the visuals translated to Metal first, which takes Microsoft's [`dxc`](https://github.com/microsoft/DirectXShaderCompiler/releases) on Linux or Windows: `dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders`.
+The Mac app needs the visuals translated to Metal first, which takes Microsoft's [`dxc`](https://github.com/microsoft/DirectXShaderCompiler/releases) on Linux or Windows: `dotnet run --project tools/MetalShaders -- content artifacts/metal-shaders`.
 
 What each feature does on Windows and Mac is written up in [`docs/specs`](docs/specs). Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
 

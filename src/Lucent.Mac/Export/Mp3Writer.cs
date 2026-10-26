@@ -5,7 +5,7 @@ using WinampInspiredVisualizer.Export;
 namespace Lucent.Mac.Export;
 
 /// <summary>
-/// Encodes MP3 with LAME (libmp3lame.dylib, shipped next to Lucent in the app; tools/build-lame-mac.sh makes it).
+/// Encodes MP3 with LAME (libmp3lame.dylib, shipped next to Lucent in the app; tools/mac/build-lame-mac.sh makes it).
 /// macOS has no MP3 encoder of its own, so unlike Windows there's nothing to fall back on: without LAME,
 /// MP3 can't be written, and the export window says so.
 /// </summary>

@@ -196,7 +196,7 @@ jobs:
           $fxc = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\fxc.exe" |
             Sort-Object FullName -Descending | Select-Object -First 1
           if (-not $fxc) { throw "fxc.exe not found" }
-          $root = "src/WinampInspiredVisualizer"
+          $root = "content"
           $common = Get-Content "$root/Shaders/Common.hlsli" -Raw
           $main = Get-Content "$root/Shaders/PresetMain.hlsli" -Raw
           $out = Join-Path $env:RUNNER_TEMP "shader.cso"
@@ -270,7 +270,7 @@ jobs:
 
       - name: Publish app
         run: >
-          dotnet publish src/WinampInspiredVisualizer/WinampInspiredVisualizer.csproj
+          dotnet publish src/Lucent.Windows/Lucent.Windows.csproj
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
           -p:Version=${{ env.LUCENT_VERSION }}
@@ -449,7 +449,7 @@ jobs:
           $signing = if ($env:SIGNING_METADATA) { @("--azureTrustedSignFile", $env:SIGNING_METADATA) } else { @() }
           .vpk/vpk pack --packId Lucid --packVersion $env:LUCENT_VERSION --packDir publish --mainExe Lucent.exe `
             --packTitle Lucent --packAuthors joshuadav86 `
-            --icon src/WinampInspiredVisualizer/Assets/Lucent.ico `
+            --icon src/Lucent.Windows/Assets/Lucent.ico `
             --splashImage assets/lucent-icon.png --splashProgressColor "#8B5CF6" `
             --outputDir releases @signing
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -558,7 +558,7 @@ jobs:
           echo "DXC=$RUNNER_TEMP/dxc/bin/dxc" >> "$GITHUB_ENV"
 
       - name: Translate the visuals to Metal
-        run: dotnet run --project tools/MetalShaders -c Release -- src/WinampInspiredVisualizer artifacts/metal-shaders
+        run: dotnet run --project tools/MetalShaders -c Release -- content artifacts/metal-shaders
 
       - uses: actions/upload-artifact@v4
         with:
@@ -716,11 +716,11 @@ jobs:
 
       - name: Build LAME for MP3 saving
         if: env.BUILD_MAC == 'true'
-        run: tools/build-lame-mac.sh
+        run: tools/mac/build-lame-mac.sh
 
       - name: Build the VST3 plugin helper
         if: env.BUILD_MAC == 'true'
-        run: tools/build-pluginhost-mac.sh
+        run: tools/mac/build-pluginhost-mac.sh
 
 
       - name: Publish the Mac app
@@ -835,7 +835,7 @@ jobs:
           MAC_KEYCHAIN: ${{ steps.signing.outputs.keychain }}
           NOTARY_PROFILE: ${{ steps.signing.outputs.notary_profile }}
         run: |
-          tools/package-mac.sh publish-mac out "$LUCENT_VERSION"
+          tools/mac/package-mac.sh publish-mac out "$LUCENT_VERSION"
           if [ -n "$NOTARY_PROFILE" ]; then
             # Notarize the plain app too, and staple the ticket so it opens without going online.
             ditto -c -k --keepParent out/Lucent.app "$RUNNER_TEMP/notarize.zip"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Wraps a published Lucent.Mac folder into Lucent.app, with its icon, and signs it. Runs on a Mac (it
-# uses sips, iconutil and codesign). Usage: tools/package-mac.sh <published folder> <output folder> <version>
+# uses sips, iconutil and codesign). Usage: tools/mac/package-mac.sh <published folder> <output folder> <version>
 #
 # Signing: ad hoc by default (Apple silicon Macs won't run unsigned code at all). To sign with a
 # Developer ID instead, set MAC_SIGN_IDENTITY to the certificate's name, e.g.
@@ -11,7 +11,7 @@ set -euo pipefail
 published="$1"
 output="$2"
 version="$3"
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 
 app="$output/Lucent.app"
 rm -rf "$app"

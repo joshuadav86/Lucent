@@ -9,7 +9,7 @@ internal static partial class LaunchServices
     private const string CoreServices = "/System/Library/Frameworks/CoreServices.framework/CoreServices";
     private const uint AllRoles = 0xFFFFFFFF;
 
-    // The file types Lucent's Info.plist says it opens (tools/package-mac.sh lists the same; its videos are
+    // The file types Lucent's Info.plist says it opens (tools/mac/package-mac.sh lists the same; its videos are
     // everything that's a public.movie), each with the extension the Default player row names it by.
     private static readonly (string Type, string Extension)[] Types =
     [

@@ -3,9 +3,9 @@
 # (Apple silicon and Intel) program, and puts it in artifacts/mac-native, where src/Lucent.Mac picks it up.
 # Runs on a Mac with the Xcode command line tools and CMake 3.20 or later; the VST3 SDK is downloaded
 # by CMake (or pass -DLUCENT_VST3SDK_DIR=... as a second argument to use a copy you have).
-# Usage: tools/build-pluginhost-mac.sh [output folder] [extra CMake arguments...]
+# Usage: tools/mac/build-pluginhost-mac.sh [output folder] [extra CMake arguments...]
 set -euo pipefail
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 output="${1:-$root/artifacts/mac-native}"
 shift || true
 build="$root/build/PluginHost-mac"

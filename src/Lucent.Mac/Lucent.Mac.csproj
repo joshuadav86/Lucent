@@ -6,8 +6,8 @@
     same HLSL files by tools/MetalShaders (it needs DXC, so it runs on Windows or Linux); point
     MetalShadersFolder at its output, or put it in artifacts/metal-shaders.
     The audio editor's native helpers are built on a Mac into artifacts/mac-native (or MacNativeFolder):
-    libmp3lame.dylib (MP3 saving, tools/build-lame-mac.sh) and LucentPluginHost (VST3 plugins,
-    tools/build-pluginhost-mac.sh). Without them the app still builds and runs, minus those two features.
+    libmp3lame.dylib (MP3 saving, tools/mac/build-lame-mac.sh) and LucentPluginHost (VST3 plugins,
+    tools/mac/build-pluginhost-mac.sh). Without them the app still builds and runs, minus those two features.
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -49,18 +49,18 @@
 
   <ItemGroup>
     <!-- The visuals' HLSL files, for their names, families, tags and particle counts. -->
-    <None Include="..\WinampInspiredVisualizer\Presets\*.hlsl" Link="Presets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\Presets\*.hlsl" Link="Presets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The MilkDrop presets that come with Lucent, and the credits for them. -->
-    <None Include="..\WinampInspiredVisualizer\Presets\MilkDrop\*.milk;..\WinampInspiredVisualizer\Presets\MilkDrop\CREDITS.md" Link="Presets\MilkDrop\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\Presets\MilkDrop\*.milk;..\..\content\Presets\MilkDrop\CREDITS.md" Link="Presets\MilkDrop\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The Winamp AVS presets that come with Lucent, and the credits for them. -->
-    <None Include="..\WinampInspiredVisualizer\Presets\AVS\*.avs;..\WinampInspiredVisualizer\Presets\AVS\CREDITS.md" Link="Presets\AVS\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\Presets\AVS\*.avs;..\..\content\Presets\AVS\CREDITS.md" Link="Presets\AVS\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The engine's HLSL, which the user's own visuals are assembled with before they're translated. -->
-    <None Include="..\WinampInspiredVisualizer\Shaders\*.hlsl*" Link="Shaders\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\Shaders\*.hlsl*" Link="Shaders\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Their Metal translations, from tools/MetalShaders. -->
     <None Include="$(MetalShadersFolder)\**\*.metal" Link="Shaders\Metal\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="..\WinampInspiredVisualizer\Assets\Lucent-64.png" Link="Assets\Lucent-64.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\Lucent.Windows\Assets\Lucent-64.png" Link="Assets\Lucent-64.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The song a first start puts in the library (see StarterMusic). -->
-    <None Include="..\WinampInspiredVisualizer\StarterMusic\*.mp3" Link="StarterMusic\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\content\StarterMusic\*.mp3" Link="StarterMusic\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The editor's native helpers, next to Lucent (Mp3Writer and PluginHost look for them there). -->
     <None Include="$(MacNativeFolder)\libmp3lame.dylib" Condition="Exists('$(MacNativeFolder)\libmp3lame.dylib')" Link="libmp3lame.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="$(MacNativeFolder)\LucentPluginHost" Condition="Exists('$(MacNativeFolder)\LucentPluginHost')" Link="LucentPluginHost" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
@@ -97,7 +97,7 @@
   </Target>
 
   <Target Name="WarnWithoutMetalShaders" BeforeTargets="Build" Condition="!Exists('$(MetalShadersFolder)')">
-    <Warning Text="No Metal shaders in $(MetalShadersFolder), so the app will have no visuals. Make them with: dotnet run --project tools/MetalShaders -- src/WinampInspiredVisualizer artifacts/metal-shaders" />
+    <Warning Text="No Metal shaders in $(MetalShadersFolder), so the app will have no visuals. Make them with: dotnet run --project tools/MetalShaders -- content artifacts/metal-shaders" />
   </Target>
 
 </Project>
