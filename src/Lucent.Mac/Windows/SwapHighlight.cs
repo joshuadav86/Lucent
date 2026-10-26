@@ -7,7 +7,8 @@ namespace Lucent.Mac.Windows;
 
 /// <summary>
 /// The outline shown over a window while another is dragged onto it, saying that dropping there swaps
-/// the two (<see cref="WindowSnapper"/>). It sits on top of everything, in the accent colour. It never
+/// the two (<see cref="WindowSnapper"/>), or over a locked window the player's being dragged away from,
+/// saying it's locked and staying put. It sits on top of everything, in the accent colour. It never
 /// takes the mouse: the dragged window holds on to it for the whole drag.
 /// </summary>
 public sealed class SwapHighlight : Window
@@ -55,9 +56,16 @@ public sealed class SwapHighlight : Window
     }
 
     /// <summary>Shows the outline over this rectangle of the screen (in the windows' units), naming the window it's over.</summary>
-    public void ShowAt(double left, double top, double width, double height, string? name)
+    public void ShowAt(double left, double top, double width, double height, string? name) =>
+        ShowLabelled(left, top, width, height, string.IsNullOrEmpty(name) ? "Swap" : $"Swap with {name}");
+
+    /// <summary>Shows the outline over this rectangle of the screen (in the windows' units), saying the window under it is locked.</summary>
+    public void ShowLocked(double left, double top, double width, double height, string? name) =>
+        ShowLabelled(left, top, width, height, $"{(string.IsNullOrEmpty(name) ? "This window" : name)} is locked");
+
+    private void ShowLabelled(double left, double top, double width, double height, string text)
     {
-        _label.Text = string.IsNullOrEmpty(name) ? "Swap" : $"Swap with {name}";
+        _label.Text = text;
         // The theme's accent colour, as it is now (it changes with the theme).
         if (Application.Current?.TryFindResource("AccentBrush", Application.Current.ActualThemeVariant, out var accent) == true && accent is IBrush brush)
         {

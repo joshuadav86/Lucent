@@ -14,6 +14,12 @@ using WinampInspiredVisualizer.Layout;
 //   - windows swapped while full screen only trade places that fit them, and the player never moves.
 //   - all of that again for each tidy layout (Tidy layout, Shift+D), and each press of Tidy layout
 //     moves something while there's another tidy layout to go to.
+//   - Tidy layout outside full screen (FullScreenLayout.TidyAround) with the player in a few spots and
+//     the other windows scattered, some far away or huge, and some locked: every window on the screen,
+//     at its smallest or more, none over another or a locked one; the windows in one block docked
+//     together; the player left where it is unless the block had to move to stay on the screen; no window
+//     blown up (wider than two players, or the widest window's smallest, with room to grow); and
+//     pressing it round every layout twice gives the same layouts both times.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
@@ -53,6 +59,7 @@ foreach (var playerScale in new[] { 1.0, 1.5 })
             }
 
             CheckTidy($"{areaName}, player at {playerScale:P0}, {setName}", area, windows);
+            CheckTidyAround($"{areaName}, player at {playerScale:P0}, {setName}", area, windows);
         }
 
         // The player locked a third of the way across, and the queue locked in the bottom-right corner.
@@ -124,6 +131,220 @@ if (problems.Count > 0)
 
 Console.WriteLine($"All {checkedCount} layouts are good.");
 return 0;
+
+// Tidy layout outside full screen, from a few starting places: the player at the top left, in the middle
+// and against the bottom right; the other windows scattered round it, one far off in a corner, one made
+// huge; and with the visuals locked beside the player or across the screen.
+void CheckTidyAround(string name, TileRect area, IReadOnlyList<TileWindow> windows)
+{
+    var player = windows.Single(window => window.Kind == TileKind.Player);
+    if (player.Width > area.Width || player.Height > area.Height)
+    {
+        return;
+    }
+
+    var spots = new (string Name, double Left, double Top)[]
+    {
+        ("top left", area.Left + 20, area.Top + 10),
+        ("middle", area.Left + (area.Width - player.Width) / 2, area.Top + (area.Height - player.Height) / 2),
+        ("bottom right", area.Right - player.Width, area.Bottom - player.Height),
+    };
+    foreach (var (spotName, left, top) in spots)
+    {
+        var playerAt = new TileRect(left, top, player.Width, player.Height);
+        var now = new Dictionary<string, TileRect> { [player.Key] = playerAt };
+        var step = 0;
+        foreach (var window in windows.Where(window => window != player))
+        {
+            // Scattered: one far off in the opposite corner, one stretched across most of the screen, the rest beside the player.
+            now[window.Key] = (step++ % 3) switch
+            {
+                0 => new TileRect(area.Right - window.Width, area.Bottom - window.Height, window.Width, window.Height),
+                1 => new TileRect(area.Left, area.Top, Math.Max(window.MinWidth, area.Width * 0.9), Math.Max(window.MinHeight, area.Height * 0.9)),
+                _ => new TileRect(playerAt.Right, playerAt.Top, window.Width, window.Height),
+            };
+        }
+
+        RunTidyAround($"{name}, tidied from the player {spotName}", area, windows, now);
+        if (windows.FirstOrDefault(window => window.Kind == TileKind.Visuals) is { } visuals)
+        {
+            // Locked beside the player (on the screen), and locked over on the far side of the screen.
+            var beside = new TileRect(Math.Min(playerAt.Right, area.Right - visuals.Width), playerAt.Top, visuals.Width, Math.Min(visuals.Height, area.Bottom - playerAt.Top));
+            var far = new TileRect(playerAt.Left > area.Left + area.Width / 2 ? area.Left : area.Right - visuals.Width, area.Top, visuals.Width, visuals.Height);
+            foreach (var (lockName, at) in new[] { ("beside the player", beside), ("far off", far) })
+            {
+                if (at.Overlaps(playerAt) || !at.IsInside(area))
+                {
+                    continue;
+                }
+
+                var lockedSet = windows.Select(window => window == visuals ? window with { LockedAt = at } : window).ToList();
+                RunTidyAround($"{name}, tidied from the player {spotName}, visuals locked {lockName}", area, lockedSet, new Dictionary<string, TileRect>(now) { [visuals.Key] = at });
+            }
+        }
+    }
+}
+
+void RunTidyAround(string name, TileRect area, IReadOnlyList<TileWindow> windows, Dictionary<string, TileRect> start)
+{
+    var player = windows.Single(window => window.Kind == TileKind.Player);
+    var style = TileStyle.AsTheyAre;
+    var now = new Dictionary<string, TileRect>(start);
+    var firstRound = new Dictionary<TileStyle, string>();
+    for (var press = 0; press < FullScreenLayout.TidyStyles.Count * 2; press++)
+    {
+        checkedCount++;
+        var (next, result) = FullScreenLayout.TidyAround(area, windows, now, style);
+        var pressName = $"{name}, press {press + 1} ({next})";
+        var placed = result.Places.ToList();
+        Console.WriteLine($"{pressName}: " + string.Join(", ", placed.Select(place =>
+            $"{place.Key} {place.Value.Left:0},{place.Value.Top:0} {place.Value.Width:0}x{place.Value.Height:0}"))
+            + (result.LeftOut.Count > 0 ? $"; left out: {string.Join(", ", result.LeftOut)}" : ""));
+
+        var full = FullScreenLayout.Arrange(area, windows, next);
+        var fullScreen = full.Places.Count == result.Places.Count && full.Places.All(entry => result.Places.GetValueOrDefault(entry.Key) == entry.Value);
+        var column = Math.Max(player.Width, windows.Where(window => window.Kind == TileKind.Equalizer).Select(window => window.Width).DefaultIfEmpty(0).Max());
+        var widest = Math.Max(column * 2, windows.Where(window => window.Kind != TileKind.Player).Select(window => window.MinWidth).DefaultIfEmpty(0).Max());
+        var before = now[player.Key];
+        foreach (var (key, place) in placed)
+        {
+            var window = windows.Single(candidate => candidate.Key == key);
+            if (window.LockedAt is not null)
+            {
+                problems.Add($"{pressName}: {key} is locked, but was moved.");
+            }
+
+            if (!place.IsInside(area))
+            {
+                problems.Add($"{pressName}: {key} at {place} is off the screen {area}.");
+            }
+
+            if (place.Width < window.MinWidth - 0.5 || place.Height < window.MinHeight - 0.5)
+            {
+                problems.Add($"{pressName}: {key} is {place.Width:0}x{place.Height:0}, smaller than its smallest, {window.MinWidth}x{window.MinHeight}.");
+            }
+
+            if (window.FixedSize && window.Kind == TileKind.Player && (Math.Abs(place.Width - window.Width) > 1 || Math.Abs(place.Height - window.Height) > 1))
+            {
+                problems.Add($"{pressName}: the player was resized to {place.Width:0}x{place.Height:0}.");
+            }
+
+            if (window.Kind == TileKind.Equalizer && Math.Abs(place.Height - window.Height) > 1)
+            {
+                problems.Add($"{pressName}: the equalizer was resized to {place.Height:0} high.");
+            }
+
+            // Blown up: wider than the block lets the big windows be (two players, or the widest one's smallest
+            // if that's wider, and three quarters as much again when the block has to grow to fit everything), unless nothing
+            // smaller fitted and it's the full screen layout.
+            if (!window.FixedSize && !fullScreen && place.Width > widest * 1.75 + 1)
+            {
+                problems.Add($"{pressName}: {key} is {place.Width:0} wide, more than the block allows ({widest * 1.75:0}).");
+            }
+
+            foreach (var (otherKey, other) in placed.Where(entry => string.CompareOrdinal(entry.Key, key) > 0))
+            {
+                if (place.Overlaps(other))
+                {
+                    problems.Add($"{pressName}: {key} {place} is over {otherKey} {other}.");
+                }
+            }
+
+            foreach (var locked in windows.Where(candidate => candidate.LockedAt is not null && candidate.Key != key))
+            {
+                if (place.Overlaps(locked.LockedAt!.Value))
+                {
+                    problems.Add($"{pressName}: {key} {place} is over the locked {locked.Key}.");
+                }
+            }
+        }
+
+        if (result.Places.Count == 0)
+        {
+            // Nothing moved: only right when even the full screen layout would go over a locked window.
+            if (!windows.Any(window => window.LockedAt is { } at && full.Places.Values.Any(place => place.Overlaps(at)) || !full.Places.Values.All(place => place.IsInside(area))))
+            {
+                problems.Add($"{pressName}: nothing was moved, though the full screen layout would do.");
+            }
+
+            style = next;
+            continue;
+        }
+
+        if (result.LeftOut.Count > 0 && full.LeftOut.Count == 0)
+        {
+            problems.Add($"{pressName}: {string.Join(", ", result.LeftOut)} left out, though full screen fits everything.");
+        }
+
+        // One block: every window docked to the player, directly or through others.
+        var docked = new List<TileRect>();
+        if (result.Places.TryGetValue(player.Key, out var playerPlace))
+        {
+            docked.Add(playerPlace);
+        }
+        else if (player.LockedAt is { } lockedPlayer)
+        {
+            docked.Add(lockedPlayer);
+        }
+
+        var rest = placed.Where(entry => entry.Key != player.Key).Select(entry => entry.Value).ToList();
+        for (var i = 0; i < docked.Count; i++)
+        {
+            foreach (var place in rest.Where(place => Touching(docked[i], place)).ToList())
+            {
+                docked.Add(place);
+                rest.Remove(place);
+            }
+        }
+
+        if (rest.Count > 0 && !fullScreen)
+        {
+            problems.Add($"{pressName}: {rest.Count} window(s) not docked to the rest of the block.");
+        }
+
+        // The player stays put unless the block had to move to stay on the screen or clear of a locked window.
+        if (playerPlace != default && !fullScreen && (Math.Abs(playerPlace.Left - before.Left) > 1 || Math.Abs(playerPlace.Top - before.Top) > 1))
+        {
+            var block = placed.Select(entry => entry.Value).ToList();
+            var atEdge = block.Any(place => Math.Abs(place.Left - area.Left) < 1 || Math.Abs(place.Right - area.Right) < 1
+                || Math.Abs(place.Top - area.Top) < 1 || Math.Abs(place.Bottom - area.Bottom) < 1)
+                || windows.Any(window => window.LockedAt is { } at && block.Any(place => Touching(place, at)));
+            if (!atEdge)
+            {
+                problems.Add($"{pressName}: the player moved from {before} to {playerPlace}, though the block wasn't kept on the screen.");
+            }
+        }
+
+        // Compared by size and place in the block, since the block can have moved (to stay on the screen).
+        var blockLeft = placed.Count == 0 ? 0 : placed.Min(entry => entry.Value.Left);
+        var blockTop = placed.Count == 0 ? 0 : placed.Min(entry => entry.Value.Top);
+        var layout = string.Join("; ", result.Places.OrderBy(entry => entry.Key)
+            .Select(entry => $"{entry.Key} {entry.Value.Left - blockLeft:0},{entry.Value.Top - blockTop:0} {entry.Value.Width:0}x{entry.Value.Height:0}"));
+        if (press < FullScreenLayout.TidyStyles.Count)
+        {
+            firstRound[next] = layout;
+        }
+        else if (firstRound.TryGetValue(next, out var firstTime) && firstTime != layout)
+        {
+            problems.Add($"{pressName}: came out different the second time round ({firstTime} then {layout}).");
+        }
+
+        style = next;
+        foreach (var (key, place) in result.Places)
+        {
+            now[key] = place;
+        }
+    }
+}
+
+static bool Touching(TileRect a, TileRect b)
+{
+    const double tolerance = 1;
+    var overlapX = a.Left < b.Right - tolerance && b.Left < a.Right - tolerance;
+    var overlapY = a.Top < b.Bottom - tolerance && b.Top < a.Bottom - tolerance;
+    return overlapY && (Math.Abs(a.Right - b.Left) <= tolerance || Math.Abs(b.Right - a.Left) <= tolerance)
+        || overlapX && (Math.Abs(a.Bottom - b.Top) <= tolerance || Math.Abs(b.Bottom - a.Top) <= tolerance);
+}
 
 // Pressing Tidy layout again and again, from the layout as it was: each press moves something until it's
 // been through every tidy layout that's different, and it comes back round to where it started.

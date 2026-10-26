@@ -33,10 +33,13 @@ public static class LucentFullScreen
     /// <summary>Tidy layout: lays the windows out again, balanced, the next way each time.</summary>
     public static Action? Tidy { get; set; }
 
+    /// <summary>Reset to default layout: the windows as Lucent first opens them.</summary>
+    public static Action? Reset { get; set; }
+
     /// <summary>Whether a window is one that Lucent full screen lays out, whose title bar gets the menu.</summary>
     public static Func<Window, bool>? Covers { get; set; }
 
-    /// <summary>Adds "Full screen Lucent", ticked while it's on, "Tidy layout", and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
+    /// <summary>Adds "Full screen Lucent", ticked while it's on, "Tidy layout", "Reset to default layout", and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
     public static void AddTo(ContextMenu menu, Window window)
     {
         if (menu.Items.OfType<MenuItem>().Any(item => item.Tag == Marker))
@@ -57,6 +60,7 @@ public static class LucentFullScreen
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
         menu.Items.Add(TidyItem());
+        menu.Items.Add(ResetItem());
         menu.Items.Add(CloseItem.For(window));
         if (!Ticking.TryGetValue(menu, out _))
         {
@@ -71,7 +75,7 @@ public static class LucentFullScreen
         }
     }
 
-    /// <summary>Adds "Full screen Lucent", "Tidy layout" and "Close" to the end of a menu that's built afresh each time it opens (the classic player's).</summary>
+    /// <summary>Adds "Full screen Lucent", "Tidy layout", "Reset to default layout" and "Close" to the end of a menu that's built afresh each time it opens (the classic player's).</summary>
     public static void AddTo(MenuFlyout menu, Window window)
     {
         if (menu.Items.Count > 0)
@@ -86,6 +90,7 @@ public static class LucentFullScreen
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
         menu.Items.Add(TidyItem());
+        menu.Items.Add(ResetItem());
         menu.Items.Add(CloseItem.For(window));
     }
 
@@ -97,7 +102,15 @@ public static class LucentFullScreen
         return tidy;
     }
 
-    /// <summary>Opens a menu with "Full screen Lucent", "Tidy layout" and "Close" at the pointer, for a right-click on a window's title bar. A window it doesn't lay out (a dialog, say) gets just "Close".</summary>
+    /// <summary>"Reset to default layout", which puts the windows back as Lucent first opens them.</summary>
+    private static MenuItem ResetItem()
+    {
+        var reset = new MenuItem { Header = "Reset to default layout" };
+        reset.Click += (_, _) => Reset?.Invoke();
+        return reset;
+    }
+
+    /// <summary>Opens a menu with "Full screen Lucent", "Tidy layout", "Reset to default layout" and "Close" at the pointer, for a right-click on a window's title bar. A window it doesn't lay out (a dialog, say) gets just "Close".</summary>
     public static bool ShowWindowMenu(Window window, Control at)
     {
         var menu = new ContextMenu { Placement = PlacementMode.Pointer };

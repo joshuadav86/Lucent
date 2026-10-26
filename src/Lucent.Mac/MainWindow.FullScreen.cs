@@ -30,6 +30,7 @@ public partial class MainWindow
         LucentFullScreen.IsOn = () => _settings.LucentFullScreen;
         LucentFullScreen.Toggle = ToggleLucentFullScreen;
         LucentFullScreen.Tidy = TidyLayout;
+        LucentFullScreen.Reset = ResetLayout;
         LucentFullScreen.Covers = window => TileKindOf(window) is not null;
         _snapper.Swapped += RememberSwap;
         if (WindowToggles.ContextMenu is { } menu)
@@ -190,7 +191,8 @@ public partial class MainWindow
     /// <summary>
     /// Tidy layout (Shift+D): lays the windows out in the next of FullScreenLayout's balanced layouts (the
     /// visuals in the middle, the player on one side or the other), forgetting any swaps. Full screen it
-    /// fills the screen; otherwise the space the windows take up now, or the screen if they don't all fit there.
+    /// fills the screen; otherwise it's a compact block around the player, which stays where it is
+    /// (FullScreenLayout.ArrangeAround). Locked windows stay put, and the note it shows says so.
     /// </summary>
     public void TidyLayout()
     {
@@ -204,17 +206,15 @@ public partial class MainWindow
             var bounds = Placement.BoundsOf(entry.Window);
             return new TileRect(bounds.X, bounds.Y, bounds.Width, bounds.Height);
         });
-        var area = _settings.LucentFullScreen ? screenArea : FullScreenLayout.GroupArea(now.Values, screenArea);
-        var (style, layout) = FullScreenLayout.Tidy(area, tiles, now, _settings.FullScreenStyle);
-        if (layout.LeftOut.Count > 0 && area != screenArea)
-        {
-            (style, layout) = FullScreenLayout.Tidy(screenArea, tiles, now, _settings.FullScreenStyle);
-        }
-
+        var (style, layout) = _settings.LucentFullScreen
+            ? FullScreenLayout.Tidy(screenArea, tiles, now, _settings.FullScreenStyle)
+            : FullScreenLayout.TidyAround(screenArea, tiles, now, _settings.FullScreenStyle);
         _settings.FullScreenStyle = style;
         _settings.FullScreenSwaps.Clear();
         PlaceTiles(windows, layout);
-        Toast.Show(this, FullScreenLayout.NameOf(style));
+        var locked = FullScreenLayout.LockedNote(tiles.Where(tile => tile.LockedAt is not null).Select(tile => tile.Key).ToList());
+        var name = layout.Places.Count == 0 ? "No room to tidy beside the locked windows" : FullScreenLayout.NameOf(style);
+        Toast.Show(this, locked is null ? name : $"{name}. {locked}.");
     }
 
     /// <summary>Puts each window where the layout says, and remembers where they went.</summary>
