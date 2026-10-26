@@ -25,6 +25,17 @@ public class ToolWindow : Window
     /// <summary>The name its position is saved under, e.g. "Queue".</summary>
     public string PlacementName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Shows the window without taking focus from the player. WPF refuses to show a maximized
+    /// window that doesn't activate, so one that was hidden while maximized (or full screen) is
+    /// activated as it comes back instead of crashing Lucent.
+    /// </summary>
+    public new void Show()
+    {
+        ShowActivated = WindowState == WindowState.Maximized;
+        base.Show();
+    }
+
     protected override void OnClosing(CancelEventArgs e)
     {
         // Closing only hides it; it goes away for good when the player closes.
