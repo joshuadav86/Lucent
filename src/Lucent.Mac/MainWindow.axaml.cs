@@ -1688,6 +1688,7 @@ public partial class MainWindow : Window
         }
 
         _current = null;
+        _libraryWindow.ShowLocalPlaying(null);
         _playlist.Clear();
         _shuffleHistory.Clear();
         ShowNowPlaying(null);
@@ -1815,6 +1816,7 @@ public partial class MainWindow : Window
             {
                 _player.Close();
                 _current = null;
+                _libraryWindow.ShowLocalPlaying(null);
             }
 
             _playlist.Remove(entry);
@@ -1861,6 +1863,7 @@ public partial class MainWindow : Window
 
         _queue.PlaylistView.SelectedItem = entry;
         _queue.PlaylistView.ScrollIntoView(entry);
+        _libraryWindow.ShowLocalPlaying(entry.Track.Path);
 
         ShowNowPlaying(entry.Track);
         OutputStatus.Text = DescribeOutput();
