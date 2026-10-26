@@ -36,6 +36,20 @@ public class ToolWindow : Window
         base.Show();
     }
 
+    /// <summary>
+    /// Windows also shows this window by itself, without going through <see cref="Show"/>: when the
+    /// player comes back from being minimized, every window it owns reappears. WPF throws if one of
+    /// them is maximized but doesn't activate, so ShowActivated follows WindowState all the time.
+    /// </summary>
+    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.Property == WindowStateProperty)
+        {
+            ShowActivated = WindowState == WindowState.Maximized;
+        }
+    }
+
     protected override void OnClosing(CancelEventArgs e)
     {
         // Closing only hides it; it goes away for good when the player closes.
