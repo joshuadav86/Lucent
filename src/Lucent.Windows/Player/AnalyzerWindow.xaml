@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:w="clr-namespace:Lucent.Windows"
         Title="Analyzer - Lucent"
-        Icon="Assets/Lucent.ico"
+        Icon="/Assets/Lucent.ico"
         Width="760" Height="460" MinWidth="440" MinHeight="220"
         Background="{DynamicResource SurfaceBrush}"
         BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"

@@ -37,7 +37,7 @@ Windows and Mac use the same folders and file names, so a file's counterpart is 
 | `Updates/` | Self-update |
 | `Diagnostics/` | Crash reports, error log, bug report, self-test (Mac also: screenshots, layout check) |
 | `Interop/` | Mac only: macOS APIs |
-| `Assets/` | Windows only: the app icons (the Mac app uses `Lucent-64.png` from here too) |
+| `Assets/` | Windows only: the app icons (the Mac app uses `Lucent-64.png` from here too). XAML refers to them from the root, `/Assets/Lucent.ico`, so the path works from any folder |
 
 `Lucent.Core` is split the same way by feature (`Audio/`, `Editor/`, `Radio/`, `Streaming/`, `Visualizer/` …).
 

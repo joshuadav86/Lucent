@@ -543,6 +543,16 @@ jobs:
             exit 1
           fi
 
+      - name: Check the Windows XAML finds its icons and images from any folder
+        # WPF reads Icon="Assets/Lucent.ico" relative to the XAML file's own folder, so once MainWindow
+        # moved into Player/ it looked for Player/Assets/Lucent.ico and 1.0.848 crashed on launch. CI never
+        # opens the Windows player, so it's caught here: paths start with / (the app's root) instead.
+        run: |
+          if grep -rnE '(Icon|Source|ImageSource)="[A-Za-z][^":]*\.(ico|png|jpe?g|bmp|gif|xaml)"' --include='*.xaml' src/Lucent.Windows; then
+            echo "::error::A XAML resource path is relative to its file's folder. Start it with / (for example /Assets/Lucent.ico) so it still resolves if the file moves."
+            exit 1
+          fi
+
   # The Mac app draws the same visuals with Metal. Their HLSL is translated to Metal Shading Language
   # here, on Linux, because Microsoft's DXC compiler (the first half of the translation) has no Mac release.
   metal-shaders:

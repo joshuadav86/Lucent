@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:w="clr-namespace:Lucent.Windows"
         Title="Artwork - Lucent"
-        Icon="Assets/Lucent.ico"
+        Icon="/Assets/Lucent.ico"
         Width="420" Height="456" MinWidth="200" MinHeight="236"
         Background="{DynamicResource BackgroundBrush}"
         ShowInTaskbar="False"

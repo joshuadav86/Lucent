@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:w="clr-namespace:Lucent.Windows"
         Title="Lucent"
-        Icon="Assets/Lucent.ico"
+        Icon="/Assets/Lucent.ico"
         Width="520" SizeToContent="Height" ResizeMode="CanMinimize"
         Background="{DynamicResource SurfaceBrush}"
         AllowDrop="True" PreviewDrop="OnDrop" PreviewDragEnter="OnDragOver" PreviewDragOver="OnDragOver"
