@@ -95,7 +95,7 @@ You'll need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ```
 dotnet run --project src/Lucent.Windows   # Windows
-dotnet run --project src/Lucent.Mac                 # Mac
+dotnet run --project src/Lucent.Mac       # Mac
 ```
 
 | Project | What it is |
