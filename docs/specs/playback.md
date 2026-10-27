@@ -9,6 +9,7 @@
 - **Output choice:** pick the output device in Options > Sound.
 - **Bit-perfect (exclusive) mode:** Lucent takes the device alone and switches it to each track's sample rate. Volume is 100% and the EQ is off.
 - **Media keys and system now-playing:** play, pause, next, and previous work in the background, and the song shows in the system's media overlay.
+- **Controls on the app icon:** Play/Pause, Next, and Previous on Lucent's icon, so a song can be skipped without bringing the player up.
 - **Long recordings with marked songs** (cue points in a WAV, or a `.cue` beside it): Next and Previous skip between songs in files of 8 minutes or more.
 - **First start** puts Kepler North's "Self Actualize" in the library.
 
@@ -17,12 +18,14 @@
 - WASAPI shared output through NAudio; exclusive mode through WASAPI exclusive (`Audio/PcmOutput.cs`).
 - Decoding falls back to Media Foundation, then libVLC.
 - Media keys and the volume flyout through Windows' media controls (SMTC, `Audio/MediaControls.cs`).
+- Previous, Play/Pause, and Next buttons under the player's taskbar preview (`Player/MainWindow.IconControls.cs`, WPF `TaskbarItemInfo`). The preview shows the song as the window's title.
 
 ## Mac
 
 - Core Audio output through an Audio Queue (`Audio/AudioQueueOutput.cs`); exclusive mode is hog mode plus the device's nominal sample rate (`Audio/ExclusiveDevice.cs`).
 - Decoding falls back to Extended Audio File Services (`Audio/MacAudioFileReader.cs`), then libVLC.
 - Now Playing and media keys through `MPNowPlayingInfoCenter` and `MPRemoteCommandCenter`.
+- The Dock menu (right-click or hold Lucent's icon) shows Now Playing with the song, then Play/Pause, Next, and Previous (`Player/MainWindow.IconControls.cs`, Avalonia `NativeDock`).
 
 ## Parity gaps
 
