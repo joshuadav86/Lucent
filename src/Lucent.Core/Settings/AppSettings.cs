@@ -42,6 +42,18 @@ public sealed class AppSettings
 
     public LibrarySort LibrarySort { get; set; } = LibrarySort.Newest;
 
+    /// <summary>
+    /// The tag the library is sorted by after a click on a column heading (or a pick under "Sort by tag"),
+    /// in place of <see cref="LibrarySort"/>; null when one of those orders is chosen.
+    /// </summary>
+    public LibraryColumn? LibrarySortColumn { get; set; }
+
+    /// <summary>Whether <see cref="LibrarySortColumn"/> runs Z to A, high to low, or newest first.</summary>
+    public bool LibrarySortDescending { get; set; }
+
+    /// <summary>The tag columns beside each song in the library, in the order they're shown. None by default.</summary>
+    public List<LibraryColumn> LibraryColumnsShown { get; set; } = new();
+
     /// <summary>The order Spotify's and Music's playlists are listed in under the library's PLAYLISTS.</summary>
     public RemotePlaylistSort RemotePlaylistSort { get; set; }
 

@@ -153,10 +153,28 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public bool HasTags => Track is not null;
 
-    /// <summary>The title, artist, album and file name, ready for the library's search box to look in.</summary>
+    /// <summary>
+    /// The title, artist, album, album artist, genre, composer and file name, ready for the library's search box to look in.
+    /// </summary>
     public string SearchKey => _searchKey ??= RemotePlaylist is { } playlist
         ? SearchText.Key(new[] { playlist.Name, playlist.Owner ?? string.Empty })
-        : SearchText.Key(new[] { _title, _artist, Album, FileName });
+        : SearchText.Key(new[]
+        {
+            _title, _artist, Album, Track?.Tags.AlbumArtist, Track?.Tags.Genre, Track?.Tags.Composer, FileName,
+        });
+
+    /// <summary>
+    /// What the row shows in each of the tag columns (<see cref="LibraryColumns.Shown"/>). A playlist's row,
+    /// or an empty playlist's stand-in, has none.
+    /// </summary>
+    public IReadOnlyList<LibraryCell> Cells => IsPlaceholder || RemotePlaylist is not null
+        ? Array.Empty<LibraryCell>()
+        : LibraryColumns.Shown
+            .Select(column => new LibraryCell(LibraryColumns.Text(column, this), LibraryColumns.Width(column), LibraryColumns.AlignRight(column)))
+            .ToList();
+
+    /// <summary>Shows a new set of tag columns.</summary>
+    public void ColumnsChanged() => Raise(nameof(Cells));
 
     public Track ToTrack() => Track ?? Track.FromFile(Path);
 
@@ -171,6 +189,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
         Raise(nameof(Artist));
         Raise(nameof(DurationText));
         Raise(nameof(Details));
+        Raise(nameof(Cells));
     }
 
     /// <summary>Whether it's the song playing, marked in the library with a bar beside it.</summary>
@@ -190,7 +209,14 @@ public sealed class LibraryItem : INotifyPropertyChanged
     private bool _isCurrent;
 
     /// <summary>Shows a new play count or rating.</summary>
-    public void StatsChanged() => Raise(nameof(Details));
+    public void StatsChanged()
+    {
+        Raise(nameof(Details));
+        if (LibraryColumns.Shown.Any(column => column is LibraryColumn.Rating or LibraryColumn.Plays or LibraryColumn.LastPlayed))
+        {
+            Raise(nameof(Cells));
+        }
+    }
 
     private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

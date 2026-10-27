@@ -26,6 +26,11 @@
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
+        <!-- Tag columns: numbers and dates line up on the right. -->
+        <Style Selector="TextBlock.cell.right">
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+
         <!-- The search box's hint is faint, as on Windows. -->
         <Style Selector="TextBox#SearchBox /template/ TextBlock#PART_Watermark">
             <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
@@ -35,7 +40,7 @@
 
     <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}">
-        <Grid Margin="6,6,4,8" RowDefinitions="Auto,Auto,Auto,*">
+        <Grid Margin="6,6,4,8" RowDefinitions="Auto,Auto,Auto,Auto,*">
 
             <!-- The title bar: it moves the window, as WindowChrome's caption does on Windows. -->
             <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34" Background="{DynamicResource TitleBarBrush}"
@@ -65,10 +70,10 @@
                 </StackPanel>
             </DockPanel>
 
-            <!-- Search: narrows the list to the songs with every typed word in their title, artist, album or file name. -->
+            <!-- Search: narrows the list to the songs with every typed word in their title, artist, album, album artist, genre, composer or file name. -->
             <Grid x:Name="SearchRow" Grid.Row="1" Margin="8,0,4,8">
                 <TextBox x:Name="SearchBox" Theme="{StaticResource SearchInput}" Watermark="Search sounds, artists, and albums"
-                         ToolTip.Tip="Find sounds by title, artist, album, or file name (⌘F). Esc clears it."
+                         ToolTip.Tip="Find sounds by title, artist, album, genre, composer, or file name (⌘F). Esc clears it."
                          TextChanged="OnSearchChanged" />
                 <Button x:Name="ClearSearchButton" Theme="{StaticResource IconButton}" Width="22" Height="22"
                         HorizontalAlignment="Right" Margin="0,0,3,0" IsVisible="False"
@@ -103,7 +108,20 @@
                 </Button>
             </DockPanel>
 
-            <ListBox x:Name="LibraryView" Grid.Row="3" Background="Transparent" BorderThickness="0"
+            <!-- The tag columns' headings, when any are shown (LibraryWindow.Columns.cs): a click sorts by one and
+                 another flips it, a drag moves one, and a right-click chooses them. They line up with the rows'
+                 cells: the rows' padding (12) and cover (36 + 2 + 10) on the left, and the padding on the right
+                 (the scroll bar floats over the list). -->
+            <Grid x:Name="ColumnHeader" Grid.Row="3" Margin="60,0,12,2" IsVisible="False" Background="Transparent"
+                  ColumnDefinitions="*,Auto,44" ContextRequested="OnColumnHeaderMenuOpening">
+                <TextBlock x:Name="TitleHeading" Grid.Column="0" Text="Title" FontSize="11" Cursor="Hand"
+                           ToolTip.Tip="Sort by title" PointerReleased="OnTitleHeadingClick" />
+                <StackPanel x:Name="ColumnHeadings" Grid.Column="1" Orientation="Horizontal" />
+                <TextBlock x:Name="LengthHeading" Grid.Column="2" Text="Length" FontSize="11" Cursor="Hand" TextAlignment="Right"
+                           ToolTip.Tip="Sort by length" PointerReleased="OnLengthHeadingClick" />
+            </Grid>
+
+            <ListBox x:Name="LibraryView" Grid.Row="4" Background="Transparent" BorderThickness="0"
                      Focusable="True" FocusAdorner="{x:Null}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionMode="Multiple"
@@ -120,6 +138,8 @@
                         <MenuItem x:Name="OpenInEditorItem" Header="Open in editor…" Click="OnLibraryOpenInEditor" />
                         <MenuItem Header="Convert to…" Click="OnLibraryConvert" />
                         <MenuItem Header="Show in Finder" Click="OnLibraryShowInExplorer" />
+                        <Separator />
+                        <MenuItem Header="Find duplicates…" Click="OnFindDuplicates" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListBox.DataTemplates>
@@ -141,7 +161,7 @@
                         </Expander>
                     </DataTemplate>
                     <DataTemplate DataType="core:LibraryItem" x:CompileBindings="True">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                             <!-- The song playing: a bar at the row's edge, as in a streaming playlist. -->
                             <Border Grid.Column="0" Width="3" Margin="-9,2,0,2" HorizontalAlignment="Left" CornerRadius="1.5"
                                     Background="{DynamicResource AccentGradientBrush}" IsVisible="{Binding IsCurrent}" />
@@ -153,14 +173,29 @@
                                 <TextBlock Text="{Binding Details}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="11"
+                            <!-- The tag columns chosen for the library, if any, each as wide as its heading. -->
+                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Cells}" VerticalAlignment="Center" Focusable="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="core:LibraryCell">
+                                        <TextBlock Classes="cell" Classes.right="{Binding AlignRight}" Text="{Binding Text}"
+                                                   Width="{Binding Width}" Padding="0,0,10,0" FontSize="12" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource MutedTextBrush}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Grid.Column="3" Text="{Binding DurationText}" FontSize="11" MinWidth="44" TextAlignment="Right"
                                        VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
                         </Grid>
                     </DataTemplate>
                 </ListBox.DataTemplates>
             </ListBox>
 
-            <StackPanel x:Name="EmptyLibraryHint" Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel x:Name="EmptyLibraryHint" Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
                 <TextBlock x:Name="EmptyLibraryTitle" Text="Link a music folder" Margin="0,12,0,0" FontSize="13"
                            HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
@@ -175,7 +210,7 @@
 
             <!-- A streaming playlist opened from PLAYLISTS: its songs, in place of the list, without playing anything.
                  Double-clicking a song plays it in the app, carrying on through the playlist. -->
-            <DockPanel x:Name="RemotePlaylistPanel" Grid.Row="1" Grid.RowSpan="3" IsVisible="False">
+            <DockPanel x:Name="RemotePlaylistPanel" Grid.Row="1" Grid.RowSpan="4" IsVisible="False">
                 <DockPanel DockPanel.Dock="Top" Margin="4,0,4,8">
                     <Button DockPanel.Dock="Left" Theme="{StaticResource IconButton}" Width="32" Height="32"
                             ToolTip.Tip="Back to your playlists (Esc)" Click="OnCloseRemotePlaylist">

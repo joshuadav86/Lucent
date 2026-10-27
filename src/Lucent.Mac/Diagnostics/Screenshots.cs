@@ -50,6 +50,8 @@ public static partial class Screenshots
         ("Prompt", () => PreviewPrompt()),
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
+        ("LibraryColumns", () => PreviewLibrary(columns: true)),
+        ("Duplicates", () => PreviewDuplicates()),
         ("Queue", () => PreviewQueue()),
         ("Queue-Spotify", () => PreviewSpotifyQueue()),
         ("Queue-ClassicSkin", () => PreviewClassicQueue()),
@@ -332,7 +334,19 @@ public static partial class Screenshots
         ("Downloads", "Kid A", "Radiohead", "Kid A", 284, 21),
     };
 
-    private static Window PreviewLibrary()
+    /// <summary>Made-up genre, year, BPM and key for the sample songs, by album (or title, for those with none).</summary>
+    private static TrackTagValues SampleTags(string album, string title) => (album.Length > 0 ? album : title) switch
+    {
+        "Isles" => new TrackTagValues { Genre = "Electronic", Year = 2021, Bpm = 124, Key = "8A" },
+        "Come Closer" => new TrackTagValues { Genre = "House", Year = 2025, Bpm = 122, Key = "5A" },
+        "Music Has the Right to Children" => new TrackTagValues { Genre = "IDM", Year = 1998, Bpm = 92, Key = "11B" },
+        "Windowlicker" => new TrackTagValues { Genre = "IDM", Year = 1999, Bpm = 130, Key = "2A" },
+        "Kid A" => new TrackTagValues { Genre = "Alternative", Year = 2000, Bpm = 100, Key = "7B" },
+        "Sunday morning" => new TrackTagValues { Genre = "Electronic", Year = 2024 },
+        _ => TrackTagValues.None,
+    };
+
+    private static Window PreviewLibrary(bool columns = false)
     {
         var root = Path.Combine(Path.GetTempPath(), "lucent-screenshots", "Music");
         var items = SampleSongs.Select(song =>
@@ -340,7 +354,7 @@ public static partial class Screenshots
             var directory = Path.Combine(root, song.Folder.Replace(" / ", "/"));
             var path = Path.Combine(directory, song.Title + ".flac");
             var item = new LibraryItem(path, song.Folder, directory, DateTime.Today.AddDays(-song.DaysAgo).AddHours(song.Seconds % 13));
-            item.ApplyTags(SampleTrack(path, song.Title, song.Artist, song.Album, song.Seconds));
+            item.ApplyTags(SampleTrack(path, song.Title, song.Artist, song.Album, song.Seconds).WithTags(SampleTags(song.Album, song.Title)));
             return item;
         }).ToList();
 
@@ -349,12 +363,61 @@ public static partial class Screenshots
             LibraryFolders = { root },
             CollapsedLibraryFolders = { "Downloads" },
         };
+        if (columns)
+        {
+            // Wide enough for the title beside the genre, year, BPM and key, sorted by BPM.
+            settings.LibraryColumnsShown = new List<LibraryColumn> { LibraryColumn.Genre, LibraryColumn.Year, LibraryColumn.Bpm, LibraryColumn.Key };
+            settings.LibrarySortColumn = LibraryColumn.Bpm;
+            settings.GroupLibraryByFolder = false;
+        }
         var library = new MusicLibrary();
         var window = new LibraryWindow();
         window.Attach(library, settings);
         PreviewCovers(SampleSongs.Zip(items, (song, item) => (item.Path, song)));
         library.ShowPreview(settings.LibraryFolders, items);
         window.LibraryView.SelectedItem = items[1];
+        if (columns)
+        {
+            window.Width = 380 + LibraryColumns.ShownWidth;
+        }
+
+        return window;
+    }
+
+    /// <summary>The duplicates window, with a few songs in the library twice in different formats.</summary>
+    private static Window PreviewDuplicates()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "lucent-screenshots", "Music");
+        var copies = new (string Folder, string Song, string Extension, int Seconds, int Bitrate, int DaysAgo)[]
+        {
+            ("Bicep/Isles", "Atlas", ".flac", 352, 1011, 30),
+            ("Downloads", "Atlas", ".mp3", 353, 320, 2),
+            ("Boards of Canada/Music Has the Right to Children", "Roygbiv", ".mp3", 151, 256, 90),
+            ("Old iTunes/Boards of Canada", "Roygbiv", ".m4a", 150, 256, 400),
+            ("Old iTunes/Boards of Canada", "Roygbiv (1)", ".m4a", 150, 128, 400),
+            ("Tomora/Come Closer", "Ring the Alarm", ".flac", 331, 948, 10),
+            ("Downloads", "Ring the Alarm", ".wav", 331, 1411, 1),
+        };
+        var items = copies.Select(copy =>
+        {
+            var song = SampleSongs.First(sample => copy.Song.StartsWith(sample.Title, StringComparison.Ordinal));
+            var directory = Path.Combine(root, copy.Folder);
+            var path = Path.Combine(directory, copy.Song + copy.Extension);
+            var item = new LibraryItem(path, copy.Folder, directory, DateTime.Today.AddDays(-copy.DaysAgo));
+            var constructor = typeof(Track).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
+            var track = (Track)constructor.Invoke(new object?[]
+            {
+                path, song.Title, song.Artist, TimeSpan.FromSeconds(copy.Seconds), copy.Bitrate, 44100, 2, song.Album,
+            });
+            item.ApplyTags(track.WithTags(SampleTags(song.Album, song.Title)));
+            return item;
+        }).ToList();
+
+        var settings = new AppSettings { LibraryFolders = { root } };
+        var library = new MusicLibrary();
+        library.ShowPreview(settings.LibraryFolders, items);
+        var window = new DuplicatesWindow();
+        window.Prepare(library, settings, null);
         return window;
     }
 
