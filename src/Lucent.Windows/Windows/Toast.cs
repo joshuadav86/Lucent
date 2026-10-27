@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Lucent.Windows;
 
@@ -14,7 +15,7 @@ public static class Toast
     private static Popup? s_shown;
 
     /// <summary>Shows <paramref name="text"/> in the middle of <paramref name="over"/>, in place of any toast already showing.</summary>
-    public static async void Show(FrameworkElement over, string text)
+    public static void Show(FrameworkElement over, string text)
     {
         // Only a nicety: the note it repeats is shown anyway, so a toast that can't open is let go.
         try
@@ -60,16 +61,37 @@ public static class Toast
             };
             s_shown = popup;
             popup.IsOpen = true;
-            await Task.Delay(TimeSpan.FromSeconds(2.5));
+            // Closed by its own timer at normal priority. Awaiting a delay instead came back at the priority of
+            // whatever called this, so a toast shown from a background callback (as after Reset to default layout)
+            // waited behind the visuals' drawing and could stay up for good.
+            var timer = new DispatcherTimer(DispatcherPriority.Normal, popup.Dispatcher) { Interval = TimeSpan.FromSeconds(2.5) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                Close(popup);
+            };
+            timer.Start();
+        }
+        catch (Exception)
+        {
+            s_shown = null;
+        }
+    }
+
+    private static void Close(Popup popup)
+    {
+        try
+        {
             popup.IsOpen = false;
             popup.Child = null;
             popup.PlacementTarget = null;
-            if (s_shown == popup)
-            {
-                s_shown = null;
-            }
         }
         catch (Exception)
+        {
+            // Let go all the same.
+        }
+
+        if (s_shown == popup)
         {
             s_shown = null;
         }
