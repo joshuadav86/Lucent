@@ -506,10 +506,8 @@ public partial class MainWindow : Window
 
         Place(_queue, Left, top + playerHeight + equalizerHeight, playerWidth, queueHeight);
         Place(_visuals, Left + playerWidth, top, visualsWidth, stackHeight);
-        if (_settings.ShowLibrary)
-        {
-            Place(_libraryWindow, left, top, libraryWidth, stackHeight);
-        }
+        // A closed library waits on the player's left too, so it opens docked there rather than wherever it was.
+        Place(_libraryWindow, Left - 360, top, 360, stackHeight);
     }
 
     /// <summary>Puts a window at that place and size, unless it's locked where it is.</summary>
@@ -561,8 +559,10 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Docks the queue or library against the player: the queue underneath (under the equalizer, if
-    /// that's docked there, or above the player if there's no room below), the library to the left
-    /// (or the right, past the visuals, if there's no room).
+    /// that's docked there, or above the player if there's no room below), the library to the left,
+    /// lined up with the player's top and the bottom of the column under it. Near the left of the screen
+    /// the player and the windows docked to it move right to make room, and the library narrows if it
+    /// still doesn't fit; only if it can't fit at all does it go on the right, past the visuals.
     /// </summary>
     private void DockToPlayer(ToolWindow window)
     {
@@ -613,10 +613,21 @@ public partial class MainWindow : Window
         }
 
         var width = Placement.SizeOf(window).Width;
+        if (Left - width < area.Left)
+        {
+            // Make room on the left rather than open the library on the far side of the visuals.
+            SlideDocked(area.Left - (Left - width));
+            if (Left - width < area.Left && Left - area.Left >= window.MinWidth)
+            {
+                width = Left - area.Left;
+                window.Width = width;
+            }
+        }
+
         var left = Left - width;
         if (left < area.Left)
         {
-            // No room on the left: go on the right, beyond the visuals if they're docked there.
+            // No room on the left even so: go on the right, beyond the visuals if they're docked there.
             left = Left + ActualWidth;
             if (_visuals.IsVisible && !_visuals.IsFullscreen && Math.Abs(_visuals.Left() - left) < 2)
             {
@@ -639,12 +650,41 @@ public partial class MainWindow : Window
     /// </summary>
     private void LiftDocked(double distance)
     {
+        var area = Placement.WorkArea(this);
+        var (group, others) = MovableGroup();
+        var lift = group.Count == 0 ? 0 : Math.Min(distance, group.Min(window => window.Top()) - area.Top);
+        if (lift > 0)
+        {
+            MoveGroup(group, others, 0, -lift);
+        }
+    }
+
+    /// <summary>
+    /// Moves the player and the windows docked to it right by up to <paramref name="distance"/>, no further
+    /// than the right of the screen, to make room on their left.
+    /// </summary>
+    private void SlideDocked(double distance)
+    {
+        var area = Placement.WorkArea(this);
+        var (group, others) = MovableGroup();
+        var slide = group.Count == 0 ? 0 : Math.Min(distance, area.Right - group.Max(window => window.Left() + window.ActualWidth()));
+        if (slide > 0)
+        {
+            MoveGroup(group, others, slide, 0);
+        }
+    }
+
+    /// <summary>
+    /// The player and the shown windows docked to it that aren't locked (none if the player can't move), and
+    /// the other shown windows that belong to it.
+    /// </summary>
+    private (List<Window> Group, List<Window> Others) MovableGroup()
+    {
         if (WindowState != WindowState.Normal || WindowLocks.IsLocked(this))
         {
-            return;
+            return (new List<Window>(), new List<Window>());
         }
 
-        var area = Placement.WorkArea(this);
         var group = new List<Window> { this };
         var others = OwnedWindows
             .Where(other => other.IsVisible && other.WindowState == WindowState.Normal
@@ -663,20 +703,19 @@ public partial class MainWindow : Window
             }
         }
 
-        var lift = Math.Min(distance, group.Min(window => window.Top()) - area.Top);
-        if (lift <= 0)
-        {
-            return;
-        }
+        return (group, others);
+    }
 
+    private void MoveGroup(List<Window> group, List<Window> others, double dx, double dy)
+    {
         // The player first: on the Mac the windows that belong to it move with it, so each of the
         // others is then put where it belongs (and the ones not docked to it back where they were).
         var before = others.Select(other => (Window: other, other.Position)).ToList();
-        var targets = group.Skip(1).Select(window => (Window: window, Top: window.Top() - lift)).ToList();
-        Top -= lift;
-        foreach (var (window, top) in targets)
+        var targets = group.Skip(1).Select(window => (Window: window, Left: window.Left() + dx, Top: window.Top() + dy)).ToList();
+        this.MoveTo(Left + dx, Top + dy);
+        foreach (var (window, left, top) in targets)
         {
-            window.SetTop(top);
+            window.MoveTo(left, top);
         }
 
         foreach (var (window, position) in before)
