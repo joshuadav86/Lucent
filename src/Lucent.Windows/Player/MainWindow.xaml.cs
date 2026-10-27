@@ -169,6 +169,7 @@ public partial class MainWindow : Window
         VideoWindow.OpenChanged += OnVideoOpenChanged;
         AudioTools.MainPlayerChanged += (_, _) => UpdatePlayPauseButton();
         AudioTools.FilesReplaced += OnTagsSaved;
+        BuildIconControls();
         UpdatePlayPauseButton();
         ShowNowPlaying(null);
     }
@@ -2313,6 +2314,7 @@ public partial class MainWindow : Window
         PlayPauseIcon.Margin = playing ? new Thickness(0) : new Thickness(2, 0, 0, 0);
         UpdatePlayState();
         UpdateMediaControls();
+        UpdateIconControls();
     }
 
     /// <summary>The little play / pause / stop mark next to the time.</summary>
