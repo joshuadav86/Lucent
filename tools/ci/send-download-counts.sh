@@ -37,13 +37,14 @@ while read -r name count; do
   esac
   echo "$name: $count"
   # GoatCounter shows visits, so each download gets its own made-up session to count once apiece
-  # (without one, a whole batch showed as a single visit). It takes at most 500 a request.
+  # (without one, a whole batch showed as a single visit). It takes at most 500 a request, and now and
+  # then answers 404 for no reason, so failed sends are retried.
   while [ "$count" -gt 0 ]; do
     batch=$(( count > 500 ? 500 : count ))
     hits=$(jq -nc --arg path "$path" --arg title "$title" --arg run "$GITHUB_RUN_ID-$GITHUB_JOB-$name" --argjson n "$batch" --argjson left "$count" \
       '[range($n) | {path: $path, title: $title, event: true, bot: 0, session: "\($run)-\($left - .)",
         user_agent: "Mozilla/5.0 (X11; Linux x86_64) Lucent-download-totals"}]')
-    curl -sS --fail-with-body -X POST "$site/api/v0/count" \
+    curl -sS --fail-with-body --retry 3 --retry-all-errors --retry-delay 5 -X POST "$site/api/v0/count" \
       -H "Authorization: Bearer $GOATCOUNTER_TOKEN" -H "Content-Type: application/json" \
       -d "{\"filter\": [], \"hits\": $hits}" > /dev/null \
       || echo "::warning::Couldn't send the $name download count to GoatCounter."
