@@ -205,7 +205,12 @@ public sealed class AppUpdater
 
         try
         {
-            _downloadedWith.WaitExitThenApplyUpdates(_downloaded, silent: true, restart: restart);
+            // The .pkg installs Lucent.app owned by root, so the first update after it needs an
+            // administrator's password. Quietly (silent), Velopack can't ask for it: the install fails and a
+            // restart opens the old build again, which made Restart and install look like it did nothing.
+            // Asked for, it may ask. On close it stays quiet, and the next start asks instead. Once an update
+            // has gone in this way, Lucent.app is the person's own and later updates need no password.
+            _downloadedWith.WaitExitThenApplyUpdates(_downloaded, silent: !restart, restart: restart);
             _applying = true;
         }
         catch (Exception ex)
