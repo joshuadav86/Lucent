@@ -87,6 +87,46 @@ public static class SavedPlaylists
         Write(name, existing);
     }
 
+    /// <summary>
+    /// Points every saved playlist's songs at new files (a duplicate that was removed, to the copy that was
+    /// kept), leaving the rest of each playlist as it was.
+    /// </summary>
+    public static void ReplacePaths(IReadOnlyDictionary<string, string> moves)
+    {
+        if (moves.Count == 0 || !Directory.Exists(Folder))
+        {
+            return;
+        }
+
+        foreach (var path in Directory.EnumerateFiles(Folder, "*.m3u8"))
+        {
+            try
+            {
+                var lines = File.ReadAllLines(path, Encoding.UTF8);
+                var changed = false;
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    if (moves.TryGetValue(lines[i].Trim(), out var replacement))
+                    {
+                        lines[i] = replacement;
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                {
+                    var temporary = path + ".saving";
+                    File.WriteAllText(temporary, string.Join('\n', lines) + "\n", new UTF8Encoding(false));
+                    File.Move(temporary, path, overwrite: true);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A playlist that can't be rewritten just leaves the removed copy out when it's next opened.
+            }
+        }
+    }
+
     public static void Delete(string name) => File.Delete(PathOf(name));
 
     public static void Rename(string name, string newName) => File.Move(PathOf(name), PathOf(newName));

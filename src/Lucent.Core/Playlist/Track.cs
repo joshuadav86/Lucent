@@ -37,6 +37,13 @@ public sealed class Track
 
     public int Channels { get; }
 
+    /// <summary>The rest of its tags (genre, year, BPM and so on), for the library's columns.</summary>
+    public TrackTagValues Tags { get; private init; } = TrackTagValues.None;
+
+    /// <summary>The same track with these tags.</summary>
+    public Track WithTags(TrackTagValues tags) =>
+        new(Path, Title, Artist, Duration, Bitrate, SampleRate, Channels, Album) { Tags = tags };
+
     /// <summary>"320 kbps · 44.1 kHz · Stereo", leaving out whatever isn't known.</summary>
     public string AudioDetails
     {
@@ -80,9 +87,24 @@ public sealed class Track
             var title = string.IsNullOrWhiteSpace(file.Tag.Title) ? fallbackTitle : file.Tag.Title;
             var artist = file.Tag.FirstPerformer ?? string.Empty;
             var properties = file.Properties;
+            var tag = file.Tag;
             return new Track(path, title, artist, properties?.Duration ?? TimeSpan.Zero,
                 properties?.AudioBitrate ?? 0, properties?.AudioSampleRate ?? 0, properties?.AudioChannels ?? 0,
-                file.Tag.Album ?? string.Empty);
+                tag.Album ?? string.Empty)
+            {
+                Tags = new TrackTagValues
+                {
+                    AlbumArtist = tag.FirstAlbumArtist ?? string.Empty,
+                    Genre = tag.FirstGenre ?? string.Empty,
+                    Year = tag.Year,
+                    TrackNumber = tag.Track,
+                    Disc = tag.Disc,
+                    Composer = tag.FirstComposer ?? string.Empty,
+                    Bpm = tag.BeatsPerMinute,
+                    Key = tag.InitialKey ?? string.Empty,
+                    Comment = FirstLine(tag.Comment),
+                },
+            };
         }
         catch (Exception)
         {
@@ -90,6 +112,38 @@ public sealed class Track
             return new Track(path, fallbackTitle, string.Empty, TimeSpan.Zero);
         }
     }
+
+    private static string FirstLine(string? text) =>
+        string.IsNullOrWhiteSpace(text) ? string.Empty : text.Trim().Split('\n', 2)[0].Trim();
+}
+
+/// <summary>
+/// The tags a track has besides its title, artist and album: what the library's columns show and sort by.
+/// Numbers are 0 and text is empty when the file doesn't say.
+/// </summary>
+public sealed record TrackTagValues
+{
+    public static TrackTagValues None { get; } = new();
+
+    public string AlbumArtist { get; init; } = string.Empty;
+
+    public string Genre { get; init; } = string.Empty;
+
+    public uint Year { get; init; }
+
+    public uint TrackNumber { get; init; }
+
+    public uint Disc { get; init; }
+
+    public string Composer { get; init; } = string.Empty;
+
+    public uint Bpm { get; init; }
+
+    /// <summary>The musical key as tagged: "Am", "8A" and so on.</summary>
+    public string Key { get; init; } = string.Empty;
+
+    /// <summary>The comment's first line.</summary>
+    public string Comment { get; init; } = string.Empty;
 }
 
 public static class TimeFormat

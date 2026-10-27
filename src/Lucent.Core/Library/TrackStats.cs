@@ -129,6 +129,30 @@ public sealed class TrackStats
         }
     }
 
+    /// <summary>
+    /// Hands a removed copy's plays and rating to the copy that's kept: the plays are added together, the
+    /// better rating and the later last play are kept, and the removed copy is forgotten. Call <see cref="Save"/> after.
+    /// </summary>
+    public void MoveInto(string from, string to)
+    {
+        lock (_gate)
+        {
+            if (!_entries.Remove(from, out var old))
+            {
+                return;
+            }
+
+            var entry = EntryFor(to);
+            entry.Plays += old.Plays;
+            entry.ImportedPlays += old.ImportedPlays;
+            entry.Rating = Math.Max(entry.Rating, old.Rating);
+            if (old.LastPlayed is { } played && (entry.LastPlayed is null || played > entry.LastPlayed))
+            {
+                entry.LastPlayed = played;
+            }
+        }
+    }
+
     public void Save()
     {
         string json;

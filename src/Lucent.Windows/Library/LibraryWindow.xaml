@@ -2,6 +2,7 @@
                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                   xmlns:local="clr-namespace:Lucent.Windows"
+                  xmlns:core="clr-namespace:Lucent.Library;assembly=Lucent.Core"
                   Title="Lucent library"
                   Width="380" Height="560" MinWidth="280" MinHeight="200"
                   Background="{DynamicResource SurfaceBrush}">
@@ -15,6 +16,7 @@
             Background="{DynamicResource PanelSheenBrush}">
         <Grid Margin="6,6,4,8">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -47,10 +49,10 @@
                 </StackPanel>
             </DockPanel>
 
-            <!-- Search: narrows the list to the songs with every typed word in their title, artist, album or file name. -->
+            <!-- Search: narrows the list to the songs with every typed word in their title, artist, album, album artist, genre, composer or file name. -->
             <Grid x:Name="SearchRow" Grid.Row="1" Margin="8,0,4,8">
                 <TextBox x:Name="SearchBox" Style="{StaticResource SearchInput}" Tag="Search sounds, artists, and albums"
-                         ToolTip="Find sounds by title, artist, album, or file name (Ctrl+F). Esc clears it."
+                         ToolTip="Find sounds by title, artist, album, genre, composer, or file name (Ctrl+F). Esc clears it."
                          TextChanged="OnSearchChanged" PreviewKeyDown="OnSearchKeyDown" />
                 <Button x:Name="ClearSearchButton" Style="{StaticResource IconButton}" Width="22" Height="22"
                         HorizontalAlignment="Right" Margin="0,0,3,0" Visibility="Collapsed"
@@ -85,7 +87,27 @@
                 </Button>
             </DockPanel>
 
-            <ListBox x:Name="LibraryView" Grid.Row="3" Background="Transparent" BorderThickness="0"
+            <!-- The tag columns' headings, when any are shown (LibraryWindow.Columns.cs): a click sorts by one and
+                 another flips it, a drag moves one, and a right-click chooses them. They line up with the rows'
+                 cells: the rows' padding (12) and cover (36 + 2 + 10) on the left, and the padding and scroll bar on the right. -->
+            <Grid x:Name="ColumnHeader" Grid.Row="3" Margin="60,0,18,2" Visibility="Collapsed" Background="Transparent"
+                  ContextMenuOpening="OnColumnHeaderMenuOpening">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="44" />
+                </Grid.ColumnDefinitions>
+                <Grid.ContextMenu>
+                    <ContextMenu />
+                </Grid.ContextMenu>
+                <TextBlock x:Name="TitleHeading" Grid.Column="0" Text="Title" FontSize="11" Cursor="Hand"
+                           ToolTip="Sort by title" MouseLeftButtonUp="OnTitleHeadingClick" />
+                <StackPanel x:Name="ColumnHeadings" Grid.Column="1" Orientation="Horizontal" />
+                <TextBlock x:Name="LengthHeading" Grid.Column="2" Text="Length" FontSize="11" Cursor="Hand" TextAlignment="Right"
+                           ToolTip="Sort by length" MouseLeftButtonUp="OnLengthHeadingClick" />
+            </Grid>
+
+            <ListBox x:Name="LibraryView" Grid.Row="4" Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.IsVirtualizingWhenGrouping="True"
@@ -105,6 +127,8 @@
                         <MenuItem x:Name="OpenInEditorItem" Header="Open in editor…" Click="OnLibraryOpenInEditor" />
                         <MenuItem Header="Convert to…" Click="OnLibraryConvert" />
                         <MenuItem Header="Show in File Explorer" Click="OnLibraryShowInExplorer" />
+                        <Separator />
+                        <MenuItem Header="Find duplicates…" Click="OnFindDuplicates" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <!-- A heading per folder. A store's folder (Bandcamp, Beatport) is one heading, with a
@@ -190,6 +214,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <!-- The song playing: a bar at the row's edge, as in a streaming playlist. -->
                             <Border Grid.Column="0" Width="3" Margin="-9,2,0,2" HorizontalAlignment="Left" CornerRadius="1.5"
@@ -204,14 +229,34 @@
                                 <TextBlock Text="{Binding Details}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="11"
+                            <!-- The tag columns chosen for the library, if any, each as wide as its heading. -->
+                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Cells}" VerticalAlignment="Center" Focusable="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type core:LibraryCell}">
+                                        <TextBlock x:Name="Cell" Text="{Binding Text}" Width="{Binding Width}" Padding="0,0,10,0"
+                                                   FontSize="12" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource MutedTextBrush}" />
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding AlignRight}" Value="True">
+                                                <Setter TargetName="Cell" Property="TextAlignment" Value="Right" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Grid.Column="3" Text="{Binding DurationText}" FontSize="11" MinWidth="44" TextAlignment="Right"
                                        VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <StackPanel x:Name="EmptyLibraryHint" Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel x:Name="EmptyLibraryHint" Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
                 <TextBlock x:Name="EmptyLibraryTitle" Text="Link a music folder" Margin="0,12,0,0" FontSize="13"
                            HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
@@ -226,7 +271,7 @@
 
             <!-- A streaming playlist opened from PLAYLISTS: its songs, in place of the list, without playing anything.
                  Double-clicking a song plays it in the app, carrying on through the playlist. -->
-            <DockPanel x:Name="RemotePlaylistPanel" Grid.Row="1" Grid.RowSpan="3" Visibility="Collapsed">
+            <DockPanel x:Name="RemotePlaylistPanel" Grid.Row="1" Grid.RowSpan="4" Visibility="Collapsed">
                 <DockPanel DockPanel.Dock="Top" Margin="4,0,4,8">
                     <Button DockPanel.Dock="Left" Style="{StaticResource IconButton}" Width="32" Height="32"
                             ToolTip="Back to your playlists (Esc)" Click="OnCloseRemotePlaylist">

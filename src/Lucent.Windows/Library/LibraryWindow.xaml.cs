@@ -65,15 +65,16 @@ public partial class LibraryWindow : ToolWindow
                     UpdateLibraryStatus();
                 }, DispatcherPriority.Background);
             }
-            else if (_settings.LibrarySort is LibrarySort.Title or LibrarySort.Artist)
+            else if (LibraryItemComparer.NeedsTags(_settings))
             {
-                // Titles and artists only become known once tags are read, so re-sort by them now.
+                // Titles, artists and the other tags only become known once they're read, so re-sort by them now.
                 _libraryView?.Refresh();
             }
         };
         library.ScanningChanged += (_, _) => UpdateLibraryStatus();
         TrackStats.Shared.Changed += (_, _) => Dispatcher.BeginInvoke(new Action(StatsChanged));
-        SortLabel.Text = LibrarySorts.Label(settings.LibrarySort);
+        SortLabel.Text = LibraryItemComparer.LabelFor(settings);
+        ApplyColumns();
         UpdateGroupFoldersButton();
         UpdateLibraryStatus();
         LoadPlaylists();
@@ -89,7 +90,7 @@ public partial class LibraryWindow : ToolWindow
             item.StatsChanged();
         }
 
-        if (!ShowingPlaylists && _settings.LibrarySort is LibrarySort.MostPlayed or LibrarySort.RecentlyPlayed or LibrarySort.Rating)
+        if (!ShowingPlaylists && LibraryItemComparer.NeedsStats(_settings))
         {
             _libraryView?.Refresh();
         }
@@ -127,7 +128,7 @@ public partial class LibraryWindow : ToolWindow
         var view = new ListCollectionView((ShowingPlaylists ? _playlistItems : _library.Items).ToList());
         if (!ShowingPlaylists)
         {
-            view.CustomSort = new LibraryItemComparer(_settings.LibrarySort);
+            view.CustomSort = LibraryItemComparer.For(_settings);
         }
 
         if (ShowingPlaylists || _settings.GroupLibraryByFolder)
@@ -1169,6 +1170,14 @@ public partial class LibraryWindow : ToolWindow
         };
         import.Click += (_, _) => Player?.ShowImport();
         menu.Items.Add(import);
+        var duplicates = new MenuItem
+        {
+            Header = "Find duplicates…",
+            ToolTip = "List the songs that are in the library more than once, and move the extra copies to the Recycle Bin",
+            IsEnabled = _library.Items.Count > 1,
+        };
+        duplicates.Click += (_, _) => FindDuplicates();
+        menu.Items.Add(duplicates);
         if (RemoveAllFoldersMenuItem() is { } removeAll)
         {
             menu.Items.Add(removeAll);
@@ -1330,17 +1339,26 @@ public partial class LibraryWindow : ToolWindow
 
         foreach (var sort in LibrarySorts.All)
         {
-            var item = new MenuItem { Header = LibrarySorts.Label(sort), IsChecked = sort == _settings.LibrarySort };
+            var item = new MenuItem
+            {
+                Header = LibrarySorts.Label(sort),
+                IsChecked = sort == _settings.LibrarySort && _settings.LibrarySortColumn is null,
+            };
             item.Click += (_, _) =>
             {
                 _settings.LibrarySort = sort;
+                _settings.LibrarySortColumn = null;
                 _settings.Save();
                 SortLabel.Text = LibrarySorts.Label(sort);
+                UpdateColumnHeadings();
                 RebuildLibraryView();
             };
             menu.Items.Add(item);
         }
 
+        menu.Items.Add(new Separator());
+        menu.Items.Add(SortByTagMenu());
+        menu.Items.Add(ColumnsMenu());
         menu.IsOpen = true;
     }
 
@@ -1368,7 +1386,8 @@ public partial class LibraryWindow : ToolWindow
 
         // Saved playlists keep their own order; under PLAYLISTS the order is the apps' playlists' (Spotify's, Music's).
         SortButton.IsEnabled = !ShowingPlaylists || _remoteItems.Any(item => item.RemotePlaylist is not null);
-        SortLabel.Text = ShowingPlaylists ? RemotePlaylistSorts.Label(_settings.RemotePlaylistSort) : LibrarySorts.Label(_settings.LibrarySort);
+        SortLabel.Text = ShowingPlaylists ? RemotePlaylistSorts.Label(_settings.RemotePlaylistSort) : LibraryItemComparer.LabelFor(_settings);
+        ApplyColumns();
         FavoritesOnlyButton.SetResourceReference(ForegroundProperty, _settings.LibraryFavoritesOnly ? "AccentBrush" : "FaintTextBrush");
     }
 
@@ -1890,6 +1909,15 @@ public partial class LibraryWindow : ToolWindow
 
     private void OnLibraryConvert(object sender, RoutedEventArgs e) =>
         Player?.ConvertFiles(this, SelectedLibraryItems().Select(item => item.Path).ToList());
+
+    private void OnFindDuplicates(object sender, RoutedEventArgs e) => FindDuplicates();
+
+    /// <summary>Opens the duplicates window on the library as it is now.</summary>
+    private void FindDuplicates()
+    {
+        var window = new DuplicatesWindow { Owner = this };
+        window.Show(_library, _settings, Player);
+    }
 
     private void OnLibraryShowInExplorer(object sender, RoutedEventArgs e)
     {

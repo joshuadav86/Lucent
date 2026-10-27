@@ -98,6 +98,9 @@ internal static partial class ObjC
     public static bool SendBool(IntPtr receiver, string selector, IntPtr argument) =>
         byte_objc_msgSend_IntPtr(receiver, Selector(selector), argument) != 0;
 
+    public static bool SendBool(IntPtr receiver, string selector, IntPtr first, IntPtr second, IntPtr third) =>
+        byte_objc_msgSend_IntPtr_IntPtr_IntPtr(receiver, Selector(selector), first, second, third) != 0;
+
     /// <summary>
     /// Makes (once) a subclass of an AppKit class, with some of its methods replaced by C# functions
     /// (each an [UnmanagedCallersOnly] function pointer and its Objective-C type string).
@@ -155,6 +158,9 @@ internal static partial class ObjC
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial byte byte_objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr argument);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial byte byte_objc_msgSend_IntPtr_IntPtr_IntPtr(IntPtr receiver, IntPtr selector, IntPtr first, IntPtr second, IntPtr third);
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial IntPtr IntPtr_objc_msgSend(IntPtr receiver, IntPtr selector);
