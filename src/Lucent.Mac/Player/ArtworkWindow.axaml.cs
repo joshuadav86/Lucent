@@ -75,6 +75,10 @@ public partial class ArtworkWindow : Window
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         PositionChanged += (_, _) => RememberNormalBounds();
         Resized += (_, _) => RememberNormalBounds();
+
+        Opened += (_, _) => CenterOnVisiblePart();
+        ArtArea.SizeChanged += (_, _) => CenterOnVisiblePart();
+        PositionChanged += (_, _) => CenterOnVisiblePart();
     }
 
     /// <summary>Raised when the artwork window opens or closes, so a toggle button can follow it.</summary>
@@ -417,6 +421,28 @@ public partial class ArtworkWindow : Window
     }
 
     private void OnCloseWindow(object? sender, RoutedEventArgs e) => Close();
+
+    /// <summary>
+    /// Centres the cover (or the placeholder) in the part of the window that's on its screen, so a window
+    /// running past the screen's edge or under the Dock doesn't leave the picture off-centre in what you see.
+    /// </summary>
+    private void CenterOnVisiblePart()
+    {
+        var margin = new Thickness(0);
+        if (IsVisible && WindowState == WindowState.Normal && ArtArea.Bounds is { Width: > 0, Height: > 0 } bounds
+            && ArtArea.TranslatePoint(new Point(0, 0), this) is { } origin)
+        {
+            var art = new Rect(this.Left() + origin.X, this.Top() + origin.Y, bounds.Width, bounds.Height);
+            var seen = art.Intersect(Placement.WorkArea(this));
+            if (seen.Width >= MinWidth / 2 && seen.Height >= MinWidth / 2)
+            {
+                margin = new Thickness(seen.Left - art.Left, seen.Top - art.Top, art.Right - seen.Right, art.Bottom - seen.Bottom);
+            }
+        }
+
+        ArtImage.Margin = margin;
+        Placeholder.Margin = margin;
+    }
 
     private void RememberNormalBounds()
     {
