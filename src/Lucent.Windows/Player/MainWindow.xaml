@@ -93,21 +93,21 @@
             <!-- The display: time and meter on the left, the scrolling title and track details on the right. -->
             <!-- The skin decides how the display looks: its fill and edge, a glow, a shadow along the top
                  and left (an inset look), and scan lines over the top. -->
-            <Border Grid.Row="1" Margin="10,0,10,0" CornerRadius="{DynamicResource PanelCorner}"
-                    BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1"
-                    Effect="{DynamicResource DisplayGlowEffect}" IsHitTestVisible="False" />
-            <Border Grid.Row="1" Margin="10,0,10,0" Padding="14,10,14,10" CornerRadius="{DynamicResource PanelCorner}"
-                    Background="{DynamicResource DisplayBrush}"
-                    BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1">
+            <w:RoundedBorder Grid.Row="1" Margin="10,0,10,0" CornerRadius="{DynamicResource PanelCorner}"
+                             BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1"
+                             Effect="{DynamicResource DisplayGlowEffect}" IsHitTestVisible="False" />
+            <w:RoundedBorder Grid.Row="1" Margin="10,0,10,0" Padding="14,10,14,10" CornerRadius="{DynamicResource PanelCorner}"
+                             Background="{DynamicResource DisplayBrush}"
+                             BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="138" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Border Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}" BorderThickness="2,2,0,0"
-                            BorderBrush="{DynamicResource DisplayInsetBrush}" IsHitTestVisible="False" />
-                    <Border Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}"
-                            Background="{DynamicResource DisplayLinesBrush}" IsHitTestVisible="False" Panel.ZIndex="1" />
+                    <w:RoundedBorder Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}" BorderThickness="2,2,0,0"
+                                     BorderBrush="{DynamicResource DisplayInsetBrush}" IsHitTestVisible="False" />
+                    <w:RoundedBorder Grid.ColumnSpan="2" Margin="-14,-10,-14,-10" CornerRadius="{DynamicResource PanelCorner}"
+                                     Background="{DynamicResource DisplayLinesBrush}" IsHitTestVisible="False" Panel.ZIndex="1" />
 
                     <StackPanel Grid.Column="0">
                         <Border Background="Transparent" Cursor="Hand" HorizontalAlignment="Left"
@@ -181,7 +181,7 @@
                         </Grid>
                     </StackPanel>
                 </Grid>
-            </Border>
+            </w:RoundedBorder>
 
             <!-- Seek bar -->
             <Slider x:Name="SeekBar" Style="{StaticResource SeekSlider}" Grid.Row="2" Minimum="0" Maximum="1" IsEnabled="False" Margin="14,8,14,0"
@@ -275,14 +275,14 @@
     <Popup x:Name="OptionsPopup" PlacementTarget="{Binding ElementName=OptionsButton}" Placement="Bottom"
            VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
            Opened="OnOptionsOpened" Closed="OnOptionsClosed">
-        <Border Margin="16" Width="380" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
-                Background="{DynamicResource SurfaceRaisedBrush}"
-                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
-            <Border.Effect>
+        <w:RoundedBorder Margin="16" Width="380" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
+                         Background="{DynamicResource SurfaceRaisedBrush}"
+                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+            <w:RoundedBorder.Effect>
                 <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.6" />
-            </Border.Effect>
+            </w:RoundedBorder.Effect>
             <StackPanel x:Name="OptionsPanel">
-                <Border Style="{StaticResource SegmentBar}">
+                <w:RoundedBorder Style="{StaticResource SegmentBar}">
                     <UniformGrid Rows="1">
                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Graphics" Content="Graphics" Click="OnOptionsTab" IsChecked="True" />
                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Visuals" Content="Visuals" Click="OnOptionsTab"
@@ -291,11 +291,11 @@
                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
                         <RadioButton x:Name="UpdatesTabButton" Style="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                     </UniformGrid>
-                </Border>
+                </w:RoundedBorder>
 
                 <StackPanel x:Name="GraphicsTab">
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Resolution" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Auto" Content="Auto" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="Window" Content="Window" Click="OnOptionChosen" />
@@ -303,31 +303,31 @@
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="QuadHd" Content="1440p" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Resolution" Tag="UltraHd" Content="4K" Click="OnOptionChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Auto draws at your window's size, and at fewer pixels while a visual can't keep up, so it stays smooth. Above your window's own size, visuals are drawn bigger and shrunk to fit: smoother and more detailed, but more work for the graphics card." />
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Detail" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="Low" Content="Low" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="Normal" Content="Normal" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="High" Content="High" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Detail" Tag="Ultra" Content="Ultra" Click="OnOptionChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Finer detail in the 3D and fractal visuals. Ultra looks best with a higher resolution." />
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Glow" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Off" Content="Off" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Soft" Content="Soft" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Normal" Content="Normal" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Glow" Tag="Strong" Content="Strong" Click="OnOptionChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
 
                     <CheckBox x:Name="BuildUpsSwitch" Style="{StaticResource SwitchToggle}" Content="Build-ups and drops"
                               Margin="0,18,0,0" Click="OnOptionSwitched" />
@@ -344,7 +344,7 @@
                     <CheckBox x:Name="AutoCycleSwitch" Style="{StaticResource SwitchToggle}"
                               Content="Change visuals on the beat" Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Change about every" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="10" Content="10 s" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="15" Content="15 s" Click="OnOptionChosen" />
@@ -353,26 +353,26 @@
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="90" Content="90 s" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="AutoCycleSeconds" Tag="180" Content="3 min" Click="OnOptionChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Also in the player bar: click the arrow next to AUTO." />
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Transition length" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="TransitionSpeed" Tag="Quick" Content="Quick" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="TransitionSpeed" Tag="Smooth" Content="Smooth" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="TransitionSpeed" Tag="Slow" Content="Slow" Click="OnOptionChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Previous visual goes to" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="LastShown" Content="Last one shown" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="PreviousVisual" Tag="UpInList" Content="Up the list" Click="OnOptionChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Last one shown steps back through the visuals you've seen, Auto's picks too. Up the list goes to the one above in the picker." />
 
@@ -460,12 +460,12 @@
 
                 <StackPanel x:Name="UpdatesTab" Visibility="Collapsed">
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Update to" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Updates" Tag="Stable" Content="Stable releases" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Updates" Tag="EveryBuild" Content="Every build" Click="OnOptionChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Stable releases have been tried out before they reach you. Every build brings each change the day it's made, bugs and all. Going back to stable keeps the build you have until a stable release passes it." />
                     <CheckBox x:Name="AutoInstallUpdatesSwitch" Style="{StaticResource SwitchToggle}"
@@ -518,19 +518,19 @@
                     </StackPanel>
                 </Border>
             </StackPanel>
-        </Border>
+        </w:RoundedBorder>
     </Popup>
 
     <!-- Opened by the Sources button or the eject button; placed under whichever was clicked. -->
     <Popup x:Name="SourcesPopup" PlacementTarget="{Binding ElementName=SourcesButton}" Placement="Bottom"
            VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
            Opened="OnSourcesOpened" Closed="OnSourcesClosed">
-        <Border Margin="16" Width="320" Padding="14,0,14,16" CornerRadius="{DynamicResource CardCorner}"
-                Background="{DynamicResource SurfaceRaisedBrush}"
-                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
-            <Border.Effect>
+        <w:RoundedBorder Margin="16" Width="320" Padding="14,0,14,16" CornerRadius="{DynamicResource CardCorner}"
+                         Background="{DynamicResource SurfaceRaisedBrush}"
+                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+            <w:RoundedBorder.Effect>
                 <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.6" />
-            </Border.Effect>
+            </w:RoundedBorder.Effect>
             <StackPanel>
                 <TextBlock Style="{StaticResource OptionLabel}" Text="Your music" />
                 <WrapPanel Margin="0,0,-8,-8">
@@ -578,7 +578,7 @@
                 </Button>
                 <TextBlock x:Name="ListenHint" Style="{StaticResource OptionHint}" />
             </StackPanel>
-        </Border>
+        </w:RoundedBorder>
     </Popup>
     </Grid>
 </Window>

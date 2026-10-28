@@ -1,6 +1,7 @@
 <Window x:Class="Lucent.StoreWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:Lucent.Windows"
         Title="Bandcamp and Beatport - Lucent"
         Icon="/Assets/Lucent.ico"
         Width="480" SizeToContent="Height" ResizeMode="NoResize"
@@ -21,9 +22,9 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ProgressBar">
                         <Grid>
-                            <Border x:Name="PART_Track" CornerRadius="2" Background="{DynamicResource HairlineBrush}" />
-                            <Border x:Name="PART_Indicator" CornerRadius="2" HorizontalAlignment="Left"
-                                    Background="{DynamicResource AccentGradientBrush}" />
+                            <w:RoundedBorder x:Name="PART_Track" CornerRadius="2" Background="{DynamicResource HairlineBrush}" />
+                            <w:RoundedBorder x:Name="PART_Indicator" CornerRadius="2" HorizontalAlignment="Left"
+                                             Background="{DynamicResource AccentGradientBrush}" />
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -99,7 +100,7 @@
 
                 <StackPanel x:Name="SyncOptions">
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Download in" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid x:Name="FormatChoices" Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="flac" Content="FLAC" Click="OnFormatChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="mp3-320" Content="MP3 320" Click="OnFormatChosen" />
@@ -108,7 +109,7 @@
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="aac-hi" Content="AAC" Click="OnFormatChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="BandcampFormat" Tag="vorbis" Content="Ogg" Click="OnFormatChosen" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="FLAC and ALAC are lossless. If a release isn't offered in this format, the closest one is used." />
 

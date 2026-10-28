@@ -79,10 +79,10 @@
                                 <Border Grid.Row="7" Style="{StaticResource FaderMark}" Margin="4,0" BorderThickness="0,1,0,1" />
                             </Grid>
                             <!-- The slot the cap slides in. -->
-                            <Border Width="6" Margin="0,3" CornerRadius="3" Background="#B0000000"
-                                    BorderBrush="#30FFFFFF" BorderThickness="0,0,0,1">
-                                <Border CornerRadius="3" BorderBrush="#C0000000" BorderThickness="0,1,0,0" />
-                            </Border>
+                            <w:RoundedBorder Width="6" Margin="0,3" CornerRadius="3" Background="#B0000000"
+                                             BorderBrush="#30FFFFFF" BorderThickness="0,0,0,1">
+                                <w:RoundedBorder CornerRadius="3" BorderBrush="#C0000000" BorderThickness="0,1,0,0" />
+                            </w:RoundedBorder>
                             <Track x:Name="PART_Track">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Style="{StaticResource BandSliderEdge}" Command="Slider.DecreaseLarge" />
@@ -95,19 +95,19 @@
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Grid Width="28" Height="14">
-                                                    <Border x:Name="Cap" CornerRadius="2.5" BorderBrush="#99000000" BorderThickness="1">
-                                                        <Border.Background>
+                                                    <w:RoundedBorder x:Name="Cap" CornerRadius="2.5" BorderBrush="#99000000" BorderThickness="1">
+                                                        <w:RoundedBorder.Background>
                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                                 <GradientStop Offset="0" Color="#F4F4F8" />
                                                                 <GradientStop Offset="0.45" Color="#C9C9D2" />
                                                                 <GradientStop Offset="0.55" Color="#B4B4BF" />
                                                                 <GradientStop Offset="1" Color="#7E7E8A" />
                                                             </LinearGradientBrush>
-                                                        </Border.Background>
-                                                        <Border.Effect>
+                                                        </w:RoundedBorder.Background>
+                                                        <w:RoundedBorder.Effect>
                                                             <DropShadowEffect BlurRadius="5" ShadowDepth="1.5" Direction="270" Opacity="0.6" />
-                                                        </Border.Effect>
-                                                    </Border>
+                                                        </w:RoundedBorder.Effect>
+                                                    </w:RoundedBorder>
                                                     <!-- Grip ridges above and below the line, and the line itself. -->
                                                     <Border Height="1" Margin="4,3,4,0" VerticalAlignment="Top" Background="#40000000" />
                                                     <Border Height="1" Margin="4,0,4,3" VerticalAlignment="Bottom" Background="#40000000" />
@@ -164,11 +164,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="8,0"
-                                Background="{DynamicResource BackgroundBrush}"
-                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="8,0"
+                                         Background="{DynamicResource BackgroundBrush}"
+                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -227,9 +227,9 @@
             <StackPanel x:Name="BandsGroup" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0">
                 <TextBlock x:Name="BandsLabel" Text="Bands" FontSize="12" Foreground="{DynamicResource MutedTextBrush}"
                            VerticalAlignment="Center" Margin="0,0,8,0" />
-                <Border Style="{StaticResource SegmentBar}" ToolTip="How many sliders: fewer for quick changes, more for fine control">
+                <w:RoundedBorder Style="{StaticResource SegmentBar}" ToolTip="How many sliders: fewer for quick changes, more for fine control">
                     <StackPanel x:Name="BandCountBar" Orientation="Horizontal" />
-                </Border>
+                </w:RoundedBorder>
             </StackPanel>
         </DockPanel>
 
@@ -247,14 +247,14 @@
 
             <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Response" FontSize="10"
                        Foreground="{DynamicResource FaintTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <Border x:Name="CurveFrame" Grid.Row="0" Grid.Column="2" Height="84" CornerRadius="{DynamicResource ControlCorner}" ClipToBounds="True"
-                    Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+            <w:RoundedBorder x:Name="CurveFrame" Grid.Row="0" Grid.Column="2" Height="84" CornerRadius="{DynamicResource ControlCorner}" ClipToBounds="True"
+                             Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                 <Canvas x:Name="CurveCanvas">
                     <Path x:Name="ZeroLine" Stroke="{DynamicResource HairlineBrush}" StrokeThickness="1" StrokeDashArray="3 3" />
                     <Path x:Name="CurveFill" Fill="{DynamicResource AccentSoftBrush}" Opacity="0.55" />
                     <Path x:Name="CurveLine" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.6" StrokeLineJoin="Round" />
                 </Canvas>
-            </Border>
+            </w:RoundedBorder>
 
             <!-- Preamp: raises or lowers everything at once. -->
             <StackPanel Grid.Row="1" Grid.Column="0" Width="48" Margin="0,12,0,0">

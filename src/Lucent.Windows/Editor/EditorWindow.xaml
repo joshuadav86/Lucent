@@ -1,6 +1,7 @@
 <Window x:Class="Lucent.EditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:Lucent.Windows"
         xmlns:editor="clr-namespace:Lucent.Editor"
         Title="Video and audio editor - Lucent"
         Icon="/Assets/Lucent.ico"
@@ -50,9 +51,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="4" Padding="4,3" Background="Transparent">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="4" Padding="4,3" Background="Transparent">
                             <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -71,10 +72,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource TinyCorner}" Padding="8,5" Margin="0,0,0,1"
-                                Background="{TemplateBinding Background}">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource TinyCorner}" Padding="8,5" Margin="0,0,0,1"
+                                         Background="{TemplateBinding Background}">
                             <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -97,10 +98,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Chrome" CornerRadius="11" Background="Transparent">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="11" Background="Transparent">
                             <Ellipse x:Name="Dot" Width="10" Height="10" Fill="Transparent" StrokeThickness="1.5"
                                      Stroke="{DynamicResource FaintTextBrush}" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource AccentBrush}" />
@@ -126,10 +127,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="6" Padding="4,0" Background="Transparent"
-                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="6" Padding="4,0" Background="Transparent"
+                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -148,9 +149,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Chrome" CornerRadius="6" Padding="10,6" Margin="0,0,0,2" Background="Transparent">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="6" Padding="10,6" Margin="0,0,0,2" Background="Transparent">
                             <ContentPresenter />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -173,9 +174,9 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ProgressBar">
                         <Grid>
-                            <Border x:Name="PART_Track" CornerRadius="2" Background="{DynamicResource HairlineBrush}" />
-                            <Border x:Name="PART_Indicator" CornerRadius="2" HorizontalAlignment="Left"
-                                    Background="{DynamicResource AccentGradientBrush}" />
+                            <w:RoundedBorder x:Name="PART_Track" CornerRadius="2" Background="{DynamicResource HairlineBrush}" />
+                            <w:RoundedBorder x:Name="PART_Indicator" CornerRadius="2" HorizontalAlignment="Left"
+                                             Background="{DynamicResource AccentGradientBrush}" />
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -398,9 +399,9 @@
             </Grid.ColumnDefinitions>
             <!-- The channel strip: the plugins in the order the sound goes through them, top to bottom, like a
                  mixer's insert slots. -->
-            <Border x:Name="PluginBar" Grid.Column="1" Width="250" Margin="10,0,0,0" Visibility="Collapsed" CornerRadius="10"
-                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
-                    Padding="8,10,8,8">
+            <w:RoundedBorder x:Name="PluginBar" Grid.Column="1" Width="250" Margin="10,0,0,0" Visibility="Collapsed" CornerRadius="10"
+                             Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                             Padding="8,10,8,8">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="6,0,0,8">
                         <Button DockPanel.Dock="Right" Style="{StaticResource ChipButton}" Click="OnInsertsToggle"
@@ -434,10 +435,10 @@
                         <StackPanel x:Name="ChainPanel" />
                     </ScrollViewer>
                 </DockPanel>
-            </Border>
-            <Border x:Name="HistoryPanel" Grid.Column="2" Width="270" Margin="10,0,0,0" Visibility="Collapsed" CornerRadius="10"
-                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
-                    Padding="8,10,8,8">
+            </w:RoundedBorder>
+            <w:RoundedBorder x:Name="HistoryPanel" Grid.Column="2" Width="270" Margin="10,0,0,0" Visibility="Collapsed" CornerRadius="10"
+                             Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
+                             Padding="8,10,8,8">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="6,0,0,6">
                         <Button DockPanel.Dock="Right" Style="{StaticResource ChipButton}" Click="OnHistoryToggle" ToolTip="Close the history">
@@ -452,21 +453,21 @@
                              ItemContainerStyle="{StaticResource HistoryItem}" SelectionChanged="OnHistoryPicked"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
                 </DockPanel>
-            </Border>
+            </w:RoundedBorder>
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <!-- A video's picture, at the cursor (or the selection's edge), and playing along while it plays -->
-                <Border x:Name="VideoPanel" Visibility="Collapsed" Height="260" Margin="0,0,0,8" CornerRadius="10"
-                        Background="Black" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" ClipToBounds="True">
+                <w:RoundedBorder x:Name="VideoPanel" Visibility="Collapsed" Height="260" Margin="0,0,0,8" CornerRadius="10"
+                                 Background="Black" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" ClipToBounds="True">
                     <Grid>
                         <Image x:Name="VideoPicture" Stretch="Uniform" RenderOptions.BitmapScalingMode="Linear" />
                         <TextBlock x:Name="PreviewTimeText" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,8"
                                    FontSize="11" Foreground="#CCF2F0EA" FontFamily="Consolas" />
                     </Grid>
-                </Border>
+                </w:RoundedBorder>
                 <editor:WaveformView x:Name="Waveform" Grid.Row="1"
                                      WaveBrush="{DynamicResource AccentBrush}"
                                      SelectedWaveBrush="#F2F0EA"
@@ -483,8 +484,8 @@
                 <ProgressBar x:Name="LoadingProgress" Style="{StaticResource ThinProgress}" Margin="0,12,0,0" />
             </StackPanel>
             <!-- With no sound open: waiting for one to be dropped in -->
-            <Border x:Name="EmptyPanel" Visibility="Collapsed" Margin="0" CornerRadius="10"
-                    BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
+            <w:RoundedBorder x:Name="EmptyPanel" Visibility="Collapsed" Margin="0" CornerRadius="10"
+                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
                     <TextBlock Text="Drop a sound or video here to edit it" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}" />
@@ -494,7 +495,7 @@
                     <Button Style="{StaticResource ToolButton}" Content="Choose a sound or video…" Margin="0,16,0,0"
                             HorizontalAlignment="Center" Click="OnChooseSound" />
                 </StackPanel>
-            </Border>
+            </w:RoundedBorder>
         </Grid>
 
         <!-- Processing -->
@@ -633,9 +634,9 @@
                     </DockPanel>
                     <TextBlock x:Name="LoopHint" Style="{StaticResource OptionHint}" TextWrapping="Wrap" />
                     <TextBlock Style="{StaticResource CardValue}" Text="Length in bars" Margin="0,12,0,6" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid x:Name="LoopBarsChoices" Rows="1" />
-                    </Border>
+                    </w:RoundedBorder>
                     <WrapPanel x:Name="LoopMoveButtons" Margin="0,10,0,0">
                         <Button x:Name="MakeLoopButton" Style="{StaticResource ToolButton}" Content="Loop here" Click="OnMakeLoop"
                                 Foreground="{DynamicResource AccentBrush}"
@@ -685,14 +686,14 @@
                         <Slider x:Name="PitchSlider" Minimum="-12" Maximum="12" Value="0" TickFrequency="0.1"
                                 IsSnapToTickEnabled="True" Margin="4,0" VerticalAlignment="Center" ValueChanged="OnPitchChanged" />
                     </DockPanel>
-                    <Border Style="{StaticResource SegmentBar}" Margin="0,12,0,0">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}" Margin="0,12,0,0">
                         <UniformGrid Rows="1">
                             <RadioButton x:Name="KeepSpeedChoice" Style="{StaticResource SegmentButton}" GroupName="PitchMode"
                                          Content="Keep the speed" IsChecked="True" Click="OnPitchModeChanged" />
                             <RadioButton x:Name="ChangeSpeedChoice" Style="{StaticResource SegmentButton}" GroupName="PitchMode"
                                          Content="Change the speed" Click="OnPitchModeChanged" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock x:Name="PitchHint" Style="{StaticResource OptionHint}" />
                     <Button Style="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
                             Click="OnApplyPitch" />
@@ -711,14 +712,14 @@
                     </DockPanel>
                     <Slider x:Name="TempoSlider" Minimum="50" Maximum="200" Value="100" TickFrequency="1"
                             IsSnapToTickEnabled="True" ValueChanged="OnTempoChanged" />
-                    <Border Style="{StaticResource SegmentBar}" Margin="0,12,0,0">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}" Margin="0,12,0,0">
                         <UniformGrid Rows="1">
                             <RadioButton x:Name="TempoKeepPitch" Style="{StaticResource SegmentButton}" GroupName="TempoMode"
                                          Content="Keep the pitch" IsChecked="True" Click="OnTempoModeChanged" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="TempoMode"
                                          Content="Pitch changes too" Click="OnTempoModeChanged" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock x:Name="TempoHint" Style="{StaticResource OptionHint}" />
                     <Button Style="{StaticResource ToolButton}" Content="Apply" HorizontalAlignment="Right" Margin="0,12,0,0"
                             Click="OnApplyTempo" />
@@ -737,18 +738,18 @@
                         <TextBlock Style="{StaticResource OptionLabel}" Margin="0" VerticalAlignment="Center"
                                    Text="Drag a handle to shape the sound. The wheel makes a band narrower or wider; double-click switches it off." TextWrapping="Wrap" />
                     </DockPanel>
-                    <Border CornerRadius="8" Background="{DynamicResource BackgroundBrush}" Padding="2">
+                    <w:RoundedBorder CornerRadius="8" Background="{DynamicResource BackgroundBrush}" Padding="2">
                         <editor:EqCurveView x:Name="EqCurve" Height="210"
                                             CurveBrush="{DynamicResource AccentBrush}" GridBrush="{DynamicResource HairlineBrush}"
                                             LabelBrush="{DynamicResource FaintTextBrush}" SpectrumBrush="{DynamicResource HoverBrush}"
                                             HandleTextBrush="{DynamicResource AccentForegroundBrush}" />
-                    </Border>
+                    </w:RoundedBorder>
                     <DockPanel Margin="0,10,0,0">
                         <CheckBox x:Name="EqBandOn" DockPanel.Dock="Right" Style="{StaticResource SwitchToggle}" Content="On"
                                   Click="OnEqBandControl" />
                         <TextBlock x:Name="EqBandTitle" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
                     </DockPanel>
-                    <Border Style="{StaticResource SegmentBar}" Margin="0,8,0,0">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}" Margin="0,8,0,0">
                         <UniformGrid x:Name="EqShapes" Rows="1">
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="EqShape" Tag="Peak" Content="Bell" Click="OnEqShape" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="EqShape" Tag="LowShelf" Content="Low shelf" Click="OnEqShape" />
@@ -757,7 +758,7 @@
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="EqShape" Tag="LowPass" Content="High cut" Click="OnEqShape" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="EqShape" Tag="Notch" Content="Notch" Click="OnEqShape" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <UniformGrid Columns="3" Margin="0,8,0,0">
                         <StackPanel Margin="0,0,10,0">
                             <DockPanel>
@@ -798,14 +799,14 @@
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnToolPopupClosed">
             <Border Style="{StaticResource PopupCard}" Width="420">
                 <StackPanel>
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
                             <RadioButton x:Name="CompressorChoice" Style="{StaticResource SegmentButton}" GroupName="Dynamics"
                                          Content="Compressor" Click="OnDynamicsMode" />
                             <RadioButton x:Name="LimiterChoice" Style="{StaticResource SegmentButton}" GroupName="Dynamics"
                                          Content="Limiter" Click="OnDynamicsMode" />
                         </UniformGrid>
-                    </Border>
+                    </w:RoundedBorder>
                     <StackPanel x:Name="CompressorPanel" />
                     <StackPanel x:Name="LimiterPanel" />
                     <DockPanel Margin="0,14,0,0">
@@ -927,11 +928,11 @@
                     <TextBlock x:Name="AnalysisHeading" Style="{StaticResource OptionLabel}" Margin="0,0,0,8" />
                     <TextBlock x:Name="AnalysisText" FontFamily="Consolas, Segoe UI" FontSize="12" Foreground="{DynamicResource TextBrush}"
                                LineHeight="19" />
-                    <Border CornerRadius="8" Background="{DynamicResource BackgroundBrush}" Padding="2" Margin="0,10,0,0">
+                    <w:RoundedBorder CornerRadius="8" Background="{DynamicResource BackgroundBrush}" Padding="2" Margin="0,10,0,0">
                         <editor:EqCurveView x:Name="AnalysisSpectrum" Height="150" ShowCurve="False" IsHitTestVisible="False"
                                             CurveBrush="{DynamicResource AccentBrush}" GridBrush="{DynamicResource HairlineBrush}"
                                             LabelBrush="{DynamicResource FaintTextBrush}" SpectrumBrush="{DynamicResource AccentSoftBrush}" />
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}" Text="The average spectrum. A sharp drop high up is the cut-off of a lossy (MP3, AAC) encode." />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
                         <Button x:Name="ShowClippingButton" Style="{StaticResource ToolButton}" Content="Show clipping" Click="OnShowClipping"

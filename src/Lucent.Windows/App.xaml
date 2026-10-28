@@ -1,6 +1,7 @@
 <Application x:Class="Lucent.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:w="clr-namespace:Lucent.Windows"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              StartupUri="Player/MainWindow.xaml" ShutdownMode="OnMainWindowClose">
     <Application.Resources>
@@ -176,9 +177,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{TemplateBinding Background}">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{TemplateBinding Background}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -201,12 +202,12 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border CornerRadius="{DynamicResource ControlCorner}" Background="{DynamicResource ButtonFaceBrush}" />
-                            <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{TemplateBinding Background}" />
-                            <Border x:Name="LightEdge" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="1,1,0,0"
-                                    BorderBrush="{DynamicResource ButtonLightEdgeBrush}" />
-                            <Border x:Name="DarkEdge" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="0,0,1,1"
-                                    BorderBrush="{DynamicResource ButtonDarkEdgeBrush}" />
+                            <w:RoundedBorder CornerRadius="{DynamicResource ControlCorner}" Background="{DynamicResource ButtonFaceBrush}" />
+                            <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{TemplateBinding Background}" />
+                            <w:RoundedBorder x:Name="LightEdge" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="1,1,0,0"
+                                             BorderBrush="{DynamicResource ButtonLightEdgeBrush}" />
+                            <w:RoundedBorder x:Name="DarkEdge" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="0,0,1,1"
+                                             BorderBrush="{DynamicResource ButtonDarkEdgeBrush}" />
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -236,18 +237,18 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="Glow" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource AccentGradientBrush}"
-                                    Opacity="{DynamicResource PlayGlowRest}">
-                                <Border.Effect>
+                            <w:RoundedBorder x:Name="Glow" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource AccentGradientBrush}"
+                                             Opacity="{DynamicResource PlayGlowRest}">
+                                <w:RoundedBorder.Effect>
                                     <BlurEffect Radius="14" />
-                                </Border.Effect>
-                            </Border>
-                            <Border CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource AccentGradientBrush}" />
-                            <Border CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource PlayGlossBrush}" />
-                            <Border x:Name="LightEdge" CornerRadius="{DynamicResource RoundCorner}" BorderThickness="1,1,0,0"
-                                    BorderBrush="{DynamicResource ButtonLightEdgeBrush}" />
-                            <Border x:Name="DarkEdge" CornerRadius="{DynamicResource RoundCorner}" BorderThickness="0,0,1,1"
-                                    BorderBrush="{DynamicResource ButtonDarkEdgeBrush}" />
+                                </w:RoundedBorder.Effect>
+                            </w:RoundedBorder>
+                            <w:RoundedBorder CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource AccentGradientBrush}" />
+                            <w:RoundedBorder CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource PlayGlossBrush}" />
+                            <w:RoundedBorder x:Name="LightEdge" CornerRadius="{DynamicResource RoundCorner}" BorderThickness="1,1,0,0"
+                                             BorderBrush="{DynamicResource ButtonLightEdgeBrush}" />
+                            <w:RoundedBorder x:Name="DarkEdge" CornerRadius="{DynamicResource RoundCorner}" BorderThickness="0,0,1,1"
+                                             BorderBrush="{DynamicResource ButtonDarkEdgeBrush}" />
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -277,11 +278,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource RoundCorner}" Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource RoundCorner}" Padding="{TemplateBinding Padding}"
+                                         Background="{TemplateBinding Background}"
+                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -306,10 +307,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
+                                         Background="{TemplateBinding Background}">
                             <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -362,9 +363,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource SegmentCorner}" Background="Transparent">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource SegmentCorner}" Background="Transparent">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -393,11 +394,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
-                                Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
+                                         Background="{DynamicResource SurfaceBrush}"
+                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -417,8 +418,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Background="{DynamicResource SurfaceBrush}"
+                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <DockPanel>
                                 <Path x:Name="Glass" DockPanel.Dock="Left" Style="{StaticResource LineIcon}" Data="{StaticResource SearchIcon}"
                                       Stroke="{DynamicResource FaintTextBrush}" Margin="8,0,4,0" />
@@ -430,7 +431,7 @@
                                     <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
                                 </Grid>
                             </DockPanel>
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="Text" Value="">
                                 <Setter TargetName="Hint" Property="Visibility" Value="Visible" />
@@ -464,11 +465,11 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <ContentPresenter VerticalAlignment="Center" Margin="2,0,12,0" />
-                            <Border x:Name="Track" Grid.Column="1" Width="36" Height="20" CornerRadius="{DynamicResource RoundCorner}"
-                                    Background="{DynamicResource FaintTextBrush}">
-                                <Border x:Name="Thumb" Width="14" Height="14" Margin="3,0" HorizontalAlignment="Left"
-                                        CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
-                            </Border>
+                            <w:RoundedBorder x:Name="Track" Grid.Column="1" Width="36" Height="20" CornerRadius="{DynamicResource RoundCorner}"
+                                             Background="{DynamicResource FaintTextBrush}">
+                                <w:RoundedBorder x:Name="Thumb" Width="14" Height="14" Margin="3,0" HorizontalAlignment="Left"
+                                                 CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
+                            </w:RoundedBorder>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
@@ -493,9 +494,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Ring" CornerRadius="{DynamicResource CardCorner}" BorderThickness="2" BorderBrush="Transparent" Padding="2">
+                        <w:RoundedBorder x:Name="Ring" CornerRadius="{DynamicResource CardCorner}" BorderThickness="2" BorderBrush="Transparent" Padding="2">
                             <ContentPresenter />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
@@ -518,11 +519,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
+                                         Background="{TemplateBinding Background}"
+                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -580,7 +581,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RepeatButton">
                         <Grid Background="Transparent">
-                            <Border Height="3" CornerRadius="{DynamicResource TrackCorner}" Background="{TemplateBinding Background}" />
+                            <w:RoundedBorder Height="3" CornerRadius="{DynamicResource TrackCorner}" Background="{TemplateBinding Background}" />
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -607,7 +608,7 @@
                                 <Thumb x:Name="Knob" Opacity="0">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Border Width="12" Height="12" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
+                                            <w:RoundedBorder Width="12" Height="12" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -633,7 +634,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RepeatButton">
                         <Grid Background="Transparent">
-                            <Border Height="6" CornerRadius="{DynamicResource TrackCorner}" Background="{TemplateBinding Background}" />
+                            <w:RoundedBorder Height="6" CornerRadius="{DynamicResource TrackCorner}" Background="{TemplateBinding Background}" />
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -658,9 +659,9 @@
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Grid Background="Transparent">
-                                                <Border x:Name="Head" Width="12" Height="12" CornerRadius="{DynamicResource RoundCorner}"
-                                                        Background="{DynamicResource TextBrush}"
-                                                        BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2" />
+                                                <w:RoundedBorder x:Name="Head" Width="12" Height="12" CornerRadius="{DynamicResource RoundCorner}"
+                                                                 Background="{DynamicResource TextBrush}"
+                                                                 BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2" />
                                             </Grid>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
@@ -701,7 +702,7 @@
                                 <Thumb x:Name="Knob" Opacity="0">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Border Width="10" Height="10" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
+                                            <w:RoundedBorder Width="10" Height="10" CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -732,7 +733,7 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Border CornerRadius="{DynamicResource TrackCorner}" Background="{DynamicResource HoverBrush}" />
+                                            <w:RoundedBorder CornerRadius="{DynamicResource TrackCorner}" Background="{DynamicResource HoverBrush}" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -753,9 +754,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Row" Padding="12,8" Margin="0,1" CornerRadius="{DynamicResource ControlCorner}" Background="Transparent">
+                        <w:RoundedBorder x:Name="Row" Padding="12,8" Margin="0,1" CornerRadius="{DynamicResource ControlCorner}" Background="Transparent">
                             <ContentPresenter />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Row" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
@@ -778,14 +779,14 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
                         <!-- Scrolls when there are more items than fit on the screen. -->
-                        <Border MinWidth="190" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
-                                Background="{DynamicResource SurfaceRaisedBrush}"
-                                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <w:RoundedBorder MinWidth="190" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
+                                         Background="{DynamicResource SurfaceRaisedBrush}"
+                                         BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ScrollViewer Focusable="False" CanContentScroll="False"
                                           HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                 <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                             </ScrollViewer>
-                        </Border>
+                        </w:RoundedBorder>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -798,7 +799,7 @@
                     <!-- An item with items of its own (like Resolution) shows an arrow and opens them beside it. -->
                     <ControlTemplate TargetType="MenuItem">
                         <Grid>
-                            <Border x:Name="Row" Padding="10,7" CornerRadius="{DynamicResource TinyCorner}" Background="Transparent">
+                            <w:RoundedBorder x:Name="Row" Padding="10,7" CornerRadius="{DynamicResource TinyCorner}" Background="Transparent">
                                 <DockPanel>
                                     <Path x:Name="Check" DockPanel.Dock="Left" Width="14" Margin="0,0,8,0"
                                           Data="{StaticResource CheckIcon}" Stroke="{DynamicResource AccentBrush}"
@@ -811,18 +812,18 @@
                                     <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
                                                       TextBlock.FontSize="12" VerticalAlignment="Center" />
                                 </DockPanel>
-                            </Border>
+                            </w:RoundedBorder>
                             <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="6" VerticalOffset="-5"
                                    AllowsTransparency="True" Focusable="False" PopupAnimation="Fade"
                                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
-                                <Border MinWidth="150" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
-                                        Background="{DynamicResource SurfaceRaisedBrush}"
-                                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                                <w:RoundedBorder MinWidth="150" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
+                                                 Background="{DynamicResource SurfaceRaisedBrush}"
+                                                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                                     <ScrollViewer Focusable="False" CanContentScroll="False"
                                                   HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                                     </ScrollViewer>
-                                </Border>
+                                </w:RoundedBorder>
                             </Popup>
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -863,8 +864,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="Transparent"
-                                BorderThickness="1" BorderBrush="Transparent">
+                        <w:RoundedBorder x:Name="Chrome" Padding="8,8,8,6" CornerRadius="{DynamicResource TinyCorner}" Background="Transparent"
+                                         BorderThickness="1" BorderBrush="Transparent">
                             <DockPanel>
                                 <Path x:Name="Chevron" DockPanel.Dock="Left" Margin="2,0,10,0" VerticalAlignment="Center"
                                       Data="{StaticResource ChevronRightIcon}" Stroke="{DynamicResource MutedTextBrush}"
@@ -872,7 +873,7 @@
                                       StrokeLineJoin="Round" RenderTransformOrigin="0.5,0.5" />
                                 <ContentPresenter VerticalAlignment="Center" />
                             </DockPanel>
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Chevron" Property="RenderTransform">

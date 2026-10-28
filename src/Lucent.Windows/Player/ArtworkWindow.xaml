@@ -71,10 +71,10 @@
             <!-- Shown when the track has no artwork: a soft card in the theme's colours. -->
             <Viewbox x:Name="Placeholder" Stretch="Uniform" MaxWidth="440" MaxHeight="440">
                 <Grid Width="240" Height="240">
-                    <Border CornerRadius="22" Background="{DynamicResource SurfaceRaisedBrush}"
-                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" />
-                    <Border CornerRadius="22" Background="{DynamicResource AccentGradientBrush}" Opacity="0.14" />
-                    <Border CornerRadius="22" Margin="18" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" />
+                    <w:RoundedBorder CornerRadius="22" Background="{DynamicResource SurfaceRaisedBrush}"
+                                     BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" />
+                    <w:RoundedBorder CornerRadius="22" Background="{DynamicResource AccentGradientBrush}" Opacity="0.14" />
+                    <w:RoundedBorder CornerRadius="22" Margin="18" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" />
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <Viewbox Width="64" Height="56" HorizontalAlignment="Center">
                             <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource AccentGradientBrush}" />

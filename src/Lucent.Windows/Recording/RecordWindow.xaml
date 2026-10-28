@@ -1,6 +1,7 @@
 <Window x:Class="Lucent.RecordWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:Lucent.Windows"
         Title="Record - Lucent"
         Icon="/Assets/Lucent.ico"
         Width="820" SizeToContent="Height" ResizeMode="CanMinimize"
@@ -78,23 +79,23 @@
                     </Button>
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Sample rate" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid x:Name="RatePanel" Rows="1" />
-                    </Border>
+                    </w:RoundedBorder>
 
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Bit depth" />
-                    <Border Style="{StaticResource SegmentBar}">
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid x:Name="BitsPanel" Rows="1" />
-                    </Border>
+                    </w:RoundedBorder>
                     <TextBlock x:Name="FormatHint" Style="{StaticResource OptionHint}" />
 
                     <!-- Level -->
                     <DockPanel Margin="2,16,0,6">
-                        <Border x:Name="ClipLight" DockPanel.Dock="Right" CornerRadius="3" Padding="6,1" Opacity="0.25"
-                                Background="#E5484D" ToolTip="Lights up when the sound reaches full scale. Click to clear it."
-                                MouseLeftButtonDown="OnClearClip" Cursor="Hand">
+                        <w:RoundedBorder x:Name="ClipLight" DockPanel.Dock="Right" CornerRadius="3" Padding="6,1" Opacity="0.25"
+                                         Background="#E5484D" ToolTip="Lights up when the sound reaches full scale. Click to clear it."
+                                         MouseLeftButtonDown="OnClearClip" Cursor="Hand">
                             <TextBlock Text="CLIP" FontSize="10" FontWeight="SemiBold" Foreground="White" />
-                        </Border>
+                        </w:RoundedBorder>
                         <TextBlock x:Name="PeakText" DockPanel.Dock="Right" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center"
                                    Foreground="{DynamicResource MutedTextBrush}" />
                         <TextBlock Text="Level" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
@@ -197,7 +198,7 @@
                        Foreground="#E5484D" />
 
             <!-- Transport -->
-            <Border Margin="20,16,20,18" Padding="14,10" CornerRadius="8" Background="{DynamicResource SurfaceRaisedBrush}">
+            <w:RoundedBorder Margin="20,16,20,18" Padding="14,10" CornerRadius="8" Background="{DynamicResource SurfaceRaisedBrush}">
                 <DockPanel LastChildFill="True">
                     <Button x:Name="RecordButton" DockPanel.Dock="Left" Style="{StaticResource DialogButton}" Click="OnRecord"
                             ToolTip="Start recording (R)">
@@ -223,7 +224,7 @@
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
                 </DockPanel>
-            </Border>
+            </w:RoundedBorder>
         </StackPanel>
     </Border>
 </Window>
