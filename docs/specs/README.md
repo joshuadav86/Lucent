@@ -8,6 +8,7 @@ One short spec per feature area: what it does, how Windows and Mac each do it, a
 | [Equalizer and analyzer](equalizer-and-analyzer.md) | EQ, presets, spectrum, analyzer panels, LUFS |
 | [Library and queue](library-and-queue.md) | Library, queue, favorites, playlists, imports, Bandcamp, tags, drag and drop, default player |
 | [Streaming control](streaming-control.md) | Spotify, Apple Music, TIDAL, YouTube, SoundCloud, Pandora |
+| [Last.fm scrobbling](lastfm.md) | Sign-in, now playing, scrobbles from your music, music apps, and radio |
 | [Online radio](radio.md) | Station directory, featured stations, HLS, video radio, live shows |
 | [Visuals](visuals.md) | Lucent originals, MilkDrop, AVS, picker, Auto, build-ups and drops, recording a visual |
 | [Video](video.md) | Video files, the Video window, video in the editor |

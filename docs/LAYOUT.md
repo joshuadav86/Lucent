@@ -28,6 +28,7 @@ Windows and Mac use the same folders and file names, so a file's counterpart is 
 | `Stores/` | Bandcamp and Beatport |
 | `Streaming/` | Control of Spotify, Apple Music, TIDAL, YouTube, SoundCloud, Pandora |
 | `Radio/` | The radio window |
+| `Lastfm/` | The Last.fm sign-in, kept safe (scrobbling itself is in `Lucent.Core/Lastfm`) |
 | `Recording/` | The Record window |
 | `Video/` | The video window and video export windows |
 | `Audio/` | Output, inputs, media keys, system audio capture |
@@ -39,7 +40,7 @@ Windows and Mac use the same folders and file names, so a file's counterpart is 
 | `Interop/` | Mac only: macOS APIs |
 | `Assets/` | Windows only: the app icons (the Mac app uses `Lucent-64.png` from here too). XAML refers to them from the root, `/Assets/Lucent.ico`, so the path works from any folder |
 
-`Lucent.Core` is split the same way by feature (`Audio/`, `Editor/`, `Radio/`, `Streaming/`, `Visualizer/` …).
+`Lucent.Core` is split the same way by feature (`Audio/`, `Editor/`, `Lastfm/`, `Radio/`, `Streaming/`, `Visualizer/` …).
 
 ## Where to start
 

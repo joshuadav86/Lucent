@@ -276,6 +276,8 @@ jobs:
           -p:Version=${{ env.LUCENT_VERSION }}
           -p:SpotifyClientId=${{ secrets.SPOTIFY_CLIENT_ID }}
           -p:CrashReportDsn=${{ secrets.LUCENT_CRASH_DSN }}
+          -p:LastfmApiKey=${{ secrets.LASTFM_API_KEY }}
+          -p:LastfmSharedSecret=${{ secrets.LASTFM_SHARED_SECRET }}
           -o publish
 
       - name: Check the MP3 encoder, plugin helper, WebView2 loader, ONNX Runtime and libVLC are next to Lucent.exe
@@ -747,6 +749,8 @@ jobs:
           -p:Version=${{ env.LUCENT_VERSION }}
           -p:SpotifyClientId=${{ secrets.SPOTIFY_CLIENT_ID }}
           -p:CrashReportDsn=${{ secrets.LUCENT_CRASH_DSN }}
+          -p:LastfmApiKey=${{ secrets.LASTFM_API_KEY }}
+          -p:LastfmSharedSecret=${{ secrets.LASTFM_SHARED_SECRET }}
           -o publish-mac
 
       - name: Make test music

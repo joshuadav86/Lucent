@@ -400,6 +400,20 @@ public sealed class AppSettings
     /// <summary>How the queue window lists the other app's playlist: its own order, by date added, title or artist.</summary>
     public RemoteListOrder RemoteListOrder { get; set; }
 
+    // ---- Last.fm ----
+
+    /// <summary>
+    /// The Last.fm account songs are scrobbled to, or null when not signed in. Its session key is kept with the
+    /// other sign-ins (the keychain on a Mac, encrypted in the settings folder on Windows), not here.
+    /// </summary>
+    public string? LastfmUser { get; set; }
+
+    /// <summary>Scrobble the songs of the music apps Lucent controls (Spotify, Apple Music and so on) too.</summary>
+    public bool LastfmScrobbleApps { get; set; } = true;
+
+    /// <summary>Scrobble the songs online radio stations play too.</summary>
+    public bool LastfmScrobbleRadio { get; set; } = true;
+
     // ---- Online radio ----
 
     /// <summary>Stations starred in the radio browser, kept whole so they play even when the directory is down.</summary>
