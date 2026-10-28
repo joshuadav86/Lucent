@@ -130,7 +130,15 @@ public partial class LibraryWindow
             var needed = LibraryColumns.ShownWidth + LibraryColumns.Width(column) + TitleRoom;
             if (Bounds.Width < needed)
             {
-                Width = needed;
+                // Through the player, so a library docked on its left grows leftward and stays docked.
+                if (Player is not null)
+                {
+                    Player.WidenLibrary(needed);
+                }
+                else
+                {
+                    Width = needed;
+                }
             }
         }
 
