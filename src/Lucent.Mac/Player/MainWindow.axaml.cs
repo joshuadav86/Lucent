@@ -839,6 +839,48 @@ public partial class MainWindow : Window
     private bool IsDockedLeft(Window window) =>
         Math.Abs(window.Left() + window.ActualWidth() - Left) < 2 && window.Top() < Top + ActualHeight && window.Top() + window.ActualHeight() > Top;
 
+    /// <summary>
+    /// Widens the library to <paramref name="width"/>, for a tag column it's just been given. Docked on the
+    /// player's left, or with any other window against its right edge, it grows to the left, so it stays
+    /// docked instead of sliding over that window and coming loose. Near the left of the screen the player's
+    /// group moves right to make room, and past that it grows only as far as fits. A locked library keeps its size.
+    /// </summary>
+    public void WidenLibrary(double width)
+    {
+        var library = _libraryWindow;
+        var current = library.ActualWidth();
+        if (width <= current || WindowLocks.IsLocked(library))
+        {
+            return;
+        }
+
+        if (library.WindowState != WindowState.Normal || !HasWindowOnRight(library))
+        {
+            library.Width = width;
+            return;
+        }
+
+        var area = Placement.WorkArea(library);
+        if (IsDockedLeft(library) && library.Left() - (width - current) < area.Left)
+        {
+            SlideDocked(area.Left - (library.Left() - (width - current)));
+        }
+
+        var right = library.Left() + current;
+        var left = Math.Max(area.Left, right - width);
+        library.MoveTo(left, library.Top());
+        library.Width = right - left;
+    }
+
+    /// <summary>True when the player or another of its windows sits against this window's right edge.</summary>
+    private bool HasWindowOnRight(Window window)
+    {
+        var right = window.Left() + window.ActualWidth();
+        return OwnedWindows.Append(this).Any(other => other != window && other.IsVisible && other.WindowState == WindowState.Normal
+            && Math.Abs(other.Left() - right) < 2
+            && other.Top() < window.Top() + window.ActualHeight() && other.Top() + other.ActualHeight() > window.Top());
+    }
+
     private void OnArrangeWindows(object? sender, RoutedEventArgs e) => ArrangeWindows();
 
     /// <summary>Puts every window back together around the player, as on the first run, and remembers it.</summary>

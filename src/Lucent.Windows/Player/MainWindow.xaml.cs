@@ -749,6 +749,48 @@ public partial class MainWindow : Window
     private bool IsDockedLeft(Window window) =>
         Math.Abs(window.Left + window.ActualWidth - Left) < 2 && window.Top < Top + ActualHeight && window.Top + window.ActualHeight > Top;
 
+    /// <summary>
+    /// Widens the library to <paramref name="width"/>, for a tag column it's just been given. Docked on the
+    /// player's left, or with any other window against its right edge, it grows to the left, so it stays
+    /// docked instead of sliding over that window and coming loose. Near the left of the screen the player's
+    /// group moves right to make room, and past that it grows only as far as fits. A locked library keeps its size.
+    /// </summary>
+    public void WidenLibrary(double width)
+    {
+        var library = _libraryWindow;
+        var current = SizeOf(library).Width;
+        if (width <= current || WindowLocks.IsLocked(library))
+        {
+            return;
+        }
+
+        if (library.WindowState != WindowState.Normal || !HasWindowOnRight(library))
+        {
+            library.Width = width;
+            return;
+        }
+
+        var area = ScreenArea.Of(library);
+        if (IsDockedLeft(library) && library.Left - (width - current) < area.Left)
+        {
+            SlideDocked(area.Left - (library.Left - (width - current)));
+        }
+
+        var right = library.Left + current;
+        var left = Math.Max(area.Left, right - width);
+        library.Left = left;
+        library.Width = right - left;
+    }
+
+    /// <summary>True when the player or another of its windows sits against this window's right edge.</summary>
+    private bool HasWindowOnRight(Window window)
+    {
+        var right = window.Left + window.ActualWidth;
+        return Application.Current.Windows.Cast<Window>().Any(other => other != window && (other == this || other.Owner == this)
+            && other.IsVisible && other.WindowState == WindowState.Normal && Math.Abs(other.Left - right) < 2
+            && other.Top < window.Top + window.ActualHeight && other.Top + other.ActualHeight > window.Top);
+    }
+
     // A window that hasn't been shown yet has no actual size, only the one it's been given.
     private static Size SizeOf(Window window) => new(
         window.ActualWidth > 0 ? window.ActualWidth : window.Width,
