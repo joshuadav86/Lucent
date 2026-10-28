@@ -53,6 +53,11 @@ public partial class ArtworkWindow : Window
 
         Topmost = settings.ArtworkWindowOnTop;
         OnTopToggle.IsChecked = Topmost;
+
+        Loaded += (_, _) => CenterOnVisiblePart();
+        ArtArea.SizeChanged += (_, _) => CenterOnVisiblePart();
+        LocationChanged += (_, _) => CenterOnVisiblePart();
+        DpiChanged += (_, _) => CenterOnVisiblePart();
     }
 
     /// <summary>Raised when the artwork window opens or closes, so a toggle button can follow it.</summary>
@@ -325,6 +330,29 @@ public partial class ArtworkWindow : Window
     {
         // A maximized borderless window hangs slightly off-screen; pad it back in.
         WindowRoot.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+        CenterOnVisiblePart();
+    }
+
+    /// <summary>
+    /// Centres the cover (or the placeholder) in the part of the window that's on its screen, so a window
+    /// running past the screen's edge or under the taskbar doesn't leave the picture off-centre in what you see.
+    /// </summary>
+    private void CenterOnVisiblePart()
+    {
+        var margin = new Thickness(0);
+        if (IsLoaded && WindowState == WindowState.Normal && ArtArea.ActualWidth > 0 && ArtArea.ActualHeight > 0)
+        {
+            var origin = ArtArea.TranslatePoint(new Point(0, 0), this);
+            var art = new Rect(Left + origin.X, Top + origin.Y, ArtArea.ActualWidth, ArtArea.ActualHeight);
+            var seen = Rect.Intersect(art, Windows.ScreenArea.Of(this));
+            if (!seen.IsEmpty && seen.Width >= MinWidth / 2 && seen.Height >= MinWidth / 2)
+            {
+                margin = new Thickness(seen.Left - art.Left, seen.Top - art.Top, art.Right - seen.Right, art.Bottom - seen.Bottom);
+            }
+        }
+
+        ArtImage.Margin = margin;
+        Placeholder.Margin = margin;
     }
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
