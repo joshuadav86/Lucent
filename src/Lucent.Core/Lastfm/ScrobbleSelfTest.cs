@@ -5,8 +5,8 @@ namespace Lucent.Lastfm;
 
 /// <summary>
 /// Checks Last.fm's rules for when a song counts, on a made-up clock with a stand-in for Last.fm: half the song or
-/// four minutes, not songs under 30 seconds, not while paused, again when played again, a minute for radio songs, and
-/// scrobbles kept and sent later when Last.fm can't be reached. Also checks calls are signed as Last.fm checks them.
+/// four minutes, not songs under 30 seconds, not while paused, again when played again, a minute for radio songs,
+/// scrobbles kept and sent later when Last.fm can't be reached, and hearts as loves. Also checks calls are signed as Last.fm checks them.
 /// Both apps run it in their self-tests.
 /// </summary>
 public static class ScrobbleSelfTest
@@ -112,6 +112,14 @@ public static class ScrobbleSelfTest
             Check(signedOut, "a sign-in Last.fm no longer takes didn't sign Lucent out.");
         }
 
+        // A heart in Lucent loves the song on Last.fm, and taking it off takes the love back.
+        {
+            var (scrobbler, lastfm, _) = Make();
+            scrobbler.Love("Bicep", "Glue", love: true);
+            scrobbler.Love("Bicep", "Glue", love: false);
+            Check(lastfm.Loves.SequenceEqual(new[] { ("Bicep", "Glue", true), ("Bicep", "Glue", false) }), "hearting a song didn't love it on Last.fm and back.");
+        }
+
         // Signed as Last.fm checks it: fields by name, format left out, the secret on the end, MD5 in lowercase hex.
         var fields = new Dictionary<string, string> { ["token"] = "T0k", ["method"] = "auth.getSession", ["api_key"] = "K3y", ["format"] = "json" };
         var expected = Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes("api_keyK3ymethodauth.getSessiontokenT0ks3cret")));
@@ -158,6 +166,14 @@ public static class ScrobbleSelfTest
         public Task NowPlayingAsync(ScrobbleSong song, CancellationToken cancel)
         {
             NowPlaying.Add(song);
+            return Task.CompletedTask;
+        }
+
+        public List<(string Artist, string Title, bool Love)> Loves { get; } = new();
+
+        public Task LoveAsync(string artist, string title, bool love, CancellationToken cancel)
+        {
+            Loves.Add((artist, title, love));
             return Task.CompletedTask;
         }
 

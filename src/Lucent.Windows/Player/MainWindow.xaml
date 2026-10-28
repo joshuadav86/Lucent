@@ -513,7 +513,7 @@
                 <StackPanel x:Name="LastfmTab" Visibility="Collapsed">
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Scrobble to Last.fm" />
                     <TextBlock Style="{StaticResource OptionHint}"
-                               Text="Last.fm keeps a record of everything you listen to, and suggests music from it. Sign in, and each song you play in Lucent is added." />
+                               Text="Last.fm keeps a record of everything you listen to, and suggests music from it. Sign in, and each song you play in Lucent is added. Heart the playing song to love it there too." />
                     <TextBlock x:Name="LastfmAccountText" Style="{StaticResource OptionHint}" Margin="2,8,0,0"
                                Foreground="{DynamicResource AccentBrush}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">

@@ -11,7 +11,7 @@ Signed in from Options › Last.fm, Lucent tells Last.fm what's playing ("now pl
 | YouTube | YouTube Music songs only (they have an album). A plain video's "artist" is its channel, so videos are skipped. |
 | Online radio | With the "Online radio" switch (on to start), when the station names the song as "Artist - Title". The length isn't known, so it counts after a minute heard, as not chosen by the user. Show names (live DJ stations) are skipped. |
 
-Sign-in uses Last.fm's desktop flow: the browser opens Last.fm's page, the user allows Lucent, and Lucent asks every 3 s (for up to 5 minutes) for the session. The session never expires; if Last.fm takes it back (error 9), Lucent signs out and says so on the tab. Signing out forgets waiting scrobbles. "My Last.fm" opens the user's profile.
+Sign-in uses Last.fm's desktop flow: the browser opens Last.fm's page, the user allows Lucent, and Lucent asks every 3 s (for up to 5 minutes) for the session. The session never expires; if Last.fm takes it back (error 9), Lucent signs out and says so on the tab. Signing out forgets waiting scrobbles. "My Last.fm" opens the user's profile. Hearting the playing song (heart button or its right-click menu) loves it on Last.fm, and taking the heart off unloves it; hearts given to other songs in the library aren't sent, as only a path is known for them.
 
 ## Windows
 
@@ -34,7 +34,7 @@ None beyond the browser note above, which comes from Windows' media controls.
 
 ## Checks
 
-- `ScrobbleSelfTest` in both self-tests: half or four minutes, under 30 s, pausing, repeat, radio, no artist, offline batching, sign-in taken back, and the call signature.
+- `ScrobbleSelfTest` in both self-tests: half or four minutes, under 30 s, pausing, repeat, radio, no artist, offline batching, sign-in taken back, loves, and the call signature.
 - Mac screenshot `Player-Options-Lastfm`.
 
 ## Not verified
