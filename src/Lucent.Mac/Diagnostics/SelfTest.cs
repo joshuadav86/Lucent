@@ -107,6 +107,7 @@ public static partial class SelfTest
         failures += Lucent.Editor.Stems.StemSelfTest.Run(Console.WriteLine);
         failures += Lucent.Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.SongMapSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Lastfm.ScrobbleSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }

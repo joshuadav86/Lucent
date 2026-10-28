@@ -112,6 +112,7 @@ public partial class MainWindow
         SoundTab.IsVisible = tab == "Sound";
         ThemeTab.IsVisible = tab == "Theme";
         UpdatesTab.IsVisible = tab == "Updates";
+        LastfmTab.IsVisible = tab == "Lastfm";
         BuildSkinSwatches(Themes.ThemeManager.Find(_settings.Theme));
         BuildClassicSkinSwatches();
         var panel = OptionsPopup.Child!;

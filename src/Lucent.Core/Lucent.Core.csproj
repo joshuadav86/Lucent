@@ -53,6 +53,12 @@
       Sentry project's DSN, passed by CI as -p:CrashReportDsn. A build without it sends no crash reports.
     -->
     <AssemblyMetadata Include="CrashReportDsn" Value="$(CrashReportDsn)" />
+    <!--
+      Lucent's Last.fm app, for scrobbling (see Lastfm/LastfmClient.cs): the LASTFM_API_KEY and LASTFM_SHARED_SECRET
+      repository secrets, passed by CI as -p:LastfmApiKey and -p:LastfmSharedSecret. A build without them can't sign in.
+    -->
+    <AssemblyMetadata Include="LastfmApiKey" Value="$(LastfmApiKey)" />
+    <AssemblyMetadata Include="LastfmSharedSecret" Value="$(LastfmSharedSecret)" />
   </ItemGroup>
 
 </Project>

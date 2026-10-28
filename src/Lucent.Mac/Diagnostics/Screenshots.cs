@@ -45,6 +45,7 @@ public static partial class Screenshots
         ("Player-Options-Sound", () => PreviewOptions("Sound")),
         ("Player-Options-Look", () => PreviewOptions("Theme")),
         ("Player-Options-Updates", () => PreviewOptions("Updates")),
+        ("Player-Options-Lastfm", () => PreviewOptions("Lastfm")),
         ("Player-Sources", () => PreviewSources()),
         ("Player-Pandora", () => PreviewPandoraPlayer()),
         ("Prompt", () => PreviewPrompt()),
@@ -198,7 +199,7 @@ public static partial class Screenshots
         var panel = player.TakeOptionsPanel(tab);
         return new Window
         {
-            Width = 372,
+            Width = 412,
             SizeToContent = SizeToContent.Height,
             Background = Avalonia.Media.Brushes.Transparent,
             Content = panel,

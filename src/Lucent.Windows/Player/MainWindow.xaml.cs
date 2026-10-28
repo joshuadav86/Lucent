@@ -110,8 +110,10 @@ public partial class MainWindow : Window
             UpdateSongClock();
             LineUpNext();
             UpdateStationStatus();
+            ObserveForScrobbling();
         };
         _positionTimer.Start();
+        StartScrobbling();
 
         _meter = new SpectrumMeter(_player.Capture) { Mode = _settings.Meter };
         MeterHost.Child = _meter;
@@ -1303,7 +1305,7 @@ public partial class MainWindow : Window
 
         // Line the panel's right edge up with the button's (the panel has a 16px margin for its shadow), or
         // with the classic player's.
-        OptionsPopup.HorizontalOffset = ((FrameworkElement)OptionsPopup.PlacementTarget).ActualWidth - 356;
+        OptionsPopup.HorizontalOffset = ((FrameworkElement)OptionsPopup.PlacementTarget).ActualWidth - 396;
         OptionsPopup.IsOpen = true;
     }
 
@@ -1323,6 +1325,7 @@ public partial class MainWindow : Window
         SoundTab.Visibility = tab == "Sound" ? Visibility.Visible : Visibility.Collapsed;
         ThemeTab.Visibility = tab == "Theme" ? Visibility.Visible : Visibility.Collapsed;
         UpdatesTab.Visibility = tab == "Updates" ? Visibility.Visible : Visibility.Collapsed;
+        LastfmTab.Visibility = tab == "Lastfm" ? Visibility.Visible : Visibility.Collapsed;
         if (tab == "Updates")
         {
             ShowDefaultPlayerState();
@@ -1499,6 +1502,7 @@ public partial class MainWindow : Window
         AutoInstallUpdatesSwitch.IsChecked = _settings.InstallUpdatesAutomatically;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
+        ShowLastfmState();
     }
 
     /// <summary>Applies the chosen theme and skin to every window.</summary>

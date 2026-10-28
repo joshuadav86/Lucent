@@ -247,14 +247,14 @@
     <Popup x:Name="OptionsPopup" PlacementTarget="{Binding #OptionsButton}" Placement="BottomEdgeAlignedRight"
            HorizontalOffset="16" VerticalOffset="-8" IsLightDismissEnabled="True"
            Opened="OnOptionsOpened" Closed="OnOptionsClosed">
-        <Border Margin="16" Width="380" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
+        <Border Margin="16" Width="420" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
                 Background="{DynamicResource SurfaceRaisedBrush}"
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                 BoxShadow="0 0 24 0 #99000000">
             <StackPanel x:Name="OptionsPanel">
                 <Border Theme="{StaticResource SegmentBar}">
                     <UniformGrid Rows="1">
-                        <!-- Five tabs in the panel's width: a little less room around each label, so "Graphics" fits. -->
+                        <!-- Six tabs in the panel's width: a little less room around each label, so "Graphics" fits. -->
                         <UniformGrid.Styles>
                             <Style Selector="RadioButton">
                                 <Setter Property="Padding" Value="2,0" />
@@ -266,6 +266,8 @@
                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
                         <RadioButton x:Name="UpdatesTabButton" Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Lastfm" Content="Last.fm" Click="OnOptionsTab"
+                                     ToolTip.Tip="Scrobble what you play to Last.fm" />
                     </UniformGrid>
                 </Border>
 
@@ -476,6 +478,31 @@
                               Content="Send crash reports" Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Theme="{StaticResource OptionHint}"
                                Text="If Lucent crashes, it sends what went wrong to its developer the next time it starts, so it can be fixed. Reports say where in Lucent it crashed, its version, your system, and your graphics card. Never your name, your files, or your music." />
+                </StackPanel>
+
+                <StackPanel x:Name="LastfmTab" IsVisible="False">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Scrobble to Last.fm" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Last.fm keeps a record of everything you listen to, and suggests music from it. Sign in, and each song you play in Lucent is added." />
+                    <TextBlock x:Name="LastfmAccountText" Theme="{StaticResource OptionHint}" Margin="2,8,0,0"
+                               Foreground="{DynamicResource AccentBrush}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <Button x:Name="LastfmProfileButton" Theme="{StaticResource PillButton}" Content="My Last.fm" Margin="0,0,8,0"
+                                ToolTip.Tip="Opens your Last.fm profile, with what you've scrobbled" Click="OnLastfmProfile" />
+                        <Button x:Name="LastfmSignInButton" Theme="{StaticResource PillButton}" Content="Sign in to Last.fm"
+                                ToolTip.Tip="Opens Last.fm in your browser to let Lucent scrobble to your account" Click="OnLastfmSignIn" />
+                    </StackPanel>
+                    <TextBlock x:Name="LastfmStatusText" Theme="{StaticResource OptionHint}" FontSize="12"
+                               Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" IsVisible="False" />
+
+                    <CheckBox x:Name="LastfmAppsSwitch" Theme="{StaticResource SwitchToggle}" Content="Songs in music apps"
+                              Margin="0,18,0,0" Click="OnLastfmSwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Spotify, Apple Music, TIDAL, Pandora, SoundCloud, and YouTube Music, while Lucent controls them. Spotify and TIDAL can scrobble by themselves: if yours does, turn this off so songs don't count twice." />
+                    <CheckBox x:Name="LastfmRadioSwitch" Theme="{StaticResource SwitchToggle}" Content="Online radio"
+                              Margin="0,18,0,0" Click="OnLastfmSwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Songs a station names, once you've heard a minute of them." />
                 </StackPanel>
 
                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->

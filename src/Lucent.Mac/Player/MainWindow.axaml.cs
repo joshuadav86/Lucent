@@ -137,8 +137,10 @@ public partial class MainWindow : Window
             UpdateSongClock();
             LineUpNext();
             UpdateStationStatus();
+            ObserveForScrobbling();
         };
         _positionTimer.Start();
+        StartScrobbling();
 
         _meter = new SpectrumMeter(_player.Capture) { Mode = _settings.Meter };
         MeterHost.Child = _meter;
@@ -1464,6 +1466,7 @@ public partial class MainWindow : Window
         SoundTab.IsVisible = tab == "Sound";
         ThemeTab.IsVisible = tab == "Theme";
         UpdatesTab.IsVisible = tab == "Updates";
+        LastfmTab.IsVisible = tab == "Lastfm";
         if (tab == "Updates")
         {
             ShowDefaultPlayerState();
@@ -1653,6 +1656,7 @@ public partial class MainWindow : Window
         AutoInstallUpdatesSwitch.IsChecked = _settings.InstallUpdatesAutomatically;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
+        ShowLastfmState();
     }
 
     /// <summary>Applies the chosen theme and skin to every window.</summary>
