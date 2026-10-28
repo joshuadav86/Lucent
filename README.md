@@ -19,6 +19,7 @@ A free music player for Windows and Mac, with 448 live GPU visuals, a video and 
 - **Windows like Winamp's.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
 - **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
+- **A real library.** Show any tag as a column, sort by it, find duplicates, and scrobble to Last.fm. Your queue is still there next time.
 - **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
 - **Skins and themes.** Five skins, eight themes, Lucent Classic for the full Winamp 2 look, and any .wsz skin.
 - **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.
@@ -69,7 +70,7 @@ Lucent updates itself when you close it. Choose **Every build** or switch off au
 | `H` | Favorite | `J` / `Shift+D` | Link windows, tidy layout | `F` | Star the visual |
 | `Ctrl+I` | Edit sound info | `O` / `M` | Options, Sources | `F11` / `Shift+F11` | Fullscreen visuals, full-screen layout |
 
-Media keys work in the background, and the playing song shows in Windows' media controls and the Mac's Now Playing.
+Media keys work in the background, the Dock and taskbar have play controls, and the playing song shows in Windows' media controls and the Mac's Now Playing.
 
 ## Make your own visuals
 
