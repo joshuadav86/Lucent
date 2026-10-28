@@ -51,8 +51,21 @@ public sealed class AppSettings
     /// <summary>Whether <see cref="LibrarySortColumn"/> runs Z to A, high to low, or newest first.</summary>
     public bool LibrarySortDescending { get; set; }
 
-    /// <summary>The tag columns beside each song in the library, in the order they're shown. None by default.</summary>
+    /// <summary>
+    /// The tag columns beside each song in the library, in the order they're shown. Genre and Year to start with
+    /// (<see cref="OfferLibraryColumns"/>); Lucent from before columns starts with none.
+    /// </summary>
     public List<LibraryColumn> LibraryColumnsShown { get; set; } = new();
+
+    /// <summary>Whether Genre and Year have been put in the library once, so they're added only the once.</summary>
+    public bool LibraryColumnsOffered { get; set; }
+
+    /// <summary>
+    /// Set when <see cref="OfferLibraryColumns"/> has just added columns, so the library widens once to fit them
+    /// the first time it's shown. Not saved.
+    /// </summary>
+    [JsonIgnore]
+    public bool LibraryNeedsWidening { get; set; }
 
     /// <summary>The order Spotify's and Music's playlists are listed in under the library's PLAYLISTS.</summary>
     public RemotePlaylistSort RemotePlaylistSort { get; set; }
@@ -424,6 +437,7 @@ public sealed class AppSettings
                 settings.CarryOverReplacedVisuals();
                 settings.OfferAutoResolution();
                 settings.OfferAnalyzerLoudness();
+                settings.OfferLibraryColumns();
                 return settings;
             }
         }
@@ -433,7 +447,9 @@ public sealed class AppSettings
             return new AppSettings { AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
         }
 
-        return new AppSettings { AddStarterMusic = true, AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
+        var fresh = new AppSettings { AddStarterMusic = true, AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
+        fresh.OfferLibraryColumns();
+        return fresh;
     }
 
     /// <summary>
@@ -493,6 +509,25 @@ public sealed class AppSettings
         {
             AnalyzerLoudnessOffered = true;
             AnalyzerModules |= AnalyzerModules.Loudness;
+        }
+    }
+
+    /// <summary>
+    /// Puts Genre and Year beside the songs once, so the tag columns are there to be found (Joshua, 2026-10-28),
+    /// unless columns have been chosen already. Taking them off again is up to the user.
+    /// </summary>
+    private void OfferLibraryColumns()
+    {
+        if (LibraryColumnsOffered)
+        {
+            return;
+        }
+
+        LibraryColumnsOffered = true;
+        if ((LibraryColumnsShown ??= new()).Count == 0)
+        {
+            LibraryColumnsShown.AddRange(new[] { LibraryColumn.Genre, LibraryColumn.Year });
+            LibraryNeedsWidening = true;
         }
     }
 

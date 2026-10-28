@@ -31,6 +31,11 @@
             <Setter Property="TextAlignment" Value="Right" />
         </Style>
 
+        <!-- With tag columns, a divider line before the song's time too. -->
+        <Style Selector="Border.divided">
+            <Setter Property="BorderThickness" Value="1,0,0,0" />
+        </Style>
+
         <!-- The search box's hint is faint, as on Windows. -->
         <Style Selector="TextBox#SearchBox /template/ TextBlock#PART_Watermark">
             <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
@@ -113,12 +118,14 @@
                  cells: the rows' padding (12) and cover (36 + 2 + 10) on the left, and the padding on the right
                  (the scroll bar floats over the list). -->
             <Grid x:Name="ColumnHeader" Grid.Row="3" Margin="60,0,12,2" IsVisible="False" Background="Transparent"
-                  ColumnDefinitions="*,Auto,44" ContextRequested="OnColumnHeaderMenuOpening">
+                  ColumnDefinitions="*,Auto,45" ContextRequested="OnColumnHeaderMenuOpening">
                 <TextBlock x:Name="TitleHeading" Grid.Column="0" Text="Title" FontSize="11" Cursor="Hand"
                            ToolTip.Tip="Sort by title" PointerReleased="OnTitleHeadingClick" />
                 <StackPanel x:Name="ColumnHeadings" Grid.Column="1" Orientation="Horizontal" />
-                <TextBlock x:Name="LengthHeading" Grid.Column="2" Text="Length" FontSize="11" Cursor="Hand" TextAlignment="Right"
-                           ToolTip.Tip="Sort by length" PointerReleased="OnLengthHeadingClick" />
+                <Border Grid.Column="2" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource HairlineBrush}">
+                    <TextBlock x:Name="LengthHeading" Text="Length" FontSize="11" Cursor="Hand" TextAlignment="Right"
+                               ToolTip.Tip="Sort by length" PointerReleased="OnLengthHeadingClick" />
+                </Border>
             </Grid>
 
             <ListBox x:Name="LibraryView" Grid.Row="4" Background="Transparent" BorderThickness="0"
@@ -173,8 +180,10 @@
                                 <TextBlock Text="{Binding Details}" FontSize="11" Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
                             </StackPanel>
-                            <!-- The tag columns chosen for the library, if any, each as wide as its heading. -->
-                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Cells}" VerticalAlignment="Center" Focusable="False">
+                            <!-- The tag columns chosen for the library, if any, each as wide as its heading. Each has a divider
+                                 line on its left that runs through the row's padding (8) and margin (1), so the lines join up
+                                 from row to row. -->
+                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Cells}" Margin="0,-9" Focusable="False">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <StackPanel Orientation="Horizontal" />
@@ -182,14 +191,20 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="core:LibraryCell">
-                                        <TextBlock Classes="cell" Classes.right="{Binding AlignRight}" Text="{Binding Text}"
-                                                   Width="{Binding Width}" Padding="0,0,10,0" FontSize="12" TextTrimming="CharacterEllipsis"
-                                                   Foreground="{DynamicResource MutedTextBrush}" />
+                                        <Border Width="{Binding Width}" Padding="8,0" BorderThickness="1,0,0,0"
+                                                BorderBrush="{DynamicResource HairlineBrush}">
+                                            <TextBlock Classes="cell" Classes.right="{Binding AlignRight}" Text="{Binding Text}"
+                                                       FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock Grid.Column="3" Text="{Binding DurationText}" FontSize="11" MinWidth="44" TextAlignment="Right"
-                                       VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                            <Border Grid.Column="3" Margin="0,-9" Classes.divided="{Binding HasCells}"
+                                    BorderBrush="{DynamicResource HairlineBrush}">
+                                <TextBlock Text="{Binding DurationText}" FontSize="11" MinWidth="44" TextAlignment="Right"
+                                           VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                            </Border>
                         </Grid>
                     </DataTemplate>
                 </ListBox.DataTemplates>
