@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Lucent.Mac.Interop;
 using Shape = Avalonia.Controls.Shapes.Path;
 
@@ -10,7 +11,8 @@ namespace Lucent.Mac.Windows;
 /// <summary>
 /// Full screen for a window with Lucent's own title bar (the audio editor and the analyzer): the
 /// window covers its whole screen, and everything in it grows to fill the space. The Dock and the
-/// menu bar hide, sliding back in if the mouse goes to them. The title bar stays, so the same button
+/// menu bar hide, sliding back in if the mouse goes to them, and the window covers the menu bar's strip beside
+/// a MacBook's notch too. The title bar stays, so the same button
 /// takes it back. ⌃⌘F (or F11, as on Windows) or the button toggles it; Esc leaves it.
 /// </summary>
 /// <remarks>
@@ -34,6 +36,7 @@ public sealed class FullScreen
         _icon = icon;
         _button.Click += (_, _) => Toggle();
         UpdateButton();
+        CoverScreenWhile(window, () => IsOn);
     }
 
     public bool IsOn { get; private set; }
@@ -76,11 +79,13 @@ public sealed class FullScreen
             }
 
             AppKit.AutoHideDockAndMenuBar(true);
+            CoverScreen(_window, () => IsOn);
             _window.Activate();
         }
         else
         {
             AppKit.AutoHideDockAndMenuBar(false);
+            AppKit.CoverScreen(_window, false);
             Chrome.UseLucentFrame(_window);
             _window.CanResize = true;
             _window.WindowState = _stateBefore;
@@ -94,6 +99,44 @@ public sealed class FullScreen
 
         UpdateButton();
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// While <paramref name="isOn"/>, keeps <paramref name="window"/> over its whole screen whenever it's the window
+    /// in front. A dialog or another app taking over puts it back at an ordinary window's level, so they show.
+    /// </summary>
+    public static void CoverScreenWhile(Window window, Func<bool> isOn)
+    {
+        window.Activated += (_, _) =>
+        {
+            if (isOn())
+            {
+                CoverScreen(window, isOn);
+            }
+        };
+        window.Deactivated += (_, _) =>
+        {
+            if (isOn())
+            {
+                AppKit.CoverScreen(window, false);
+            }
+        };
+    }
+
+    /// <summary>
+    /// Covers the whole screen, the menu bar's strip beside the notch included: now, and again once the window's
+    /// new size has been applied, which would otherwise leave it short of the top.
+    /// </summary>
+    public static void CoverScreen(Window window, Func<bool> isOn)
+    {
+        AppKit.CoverScreen(window, true);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (isOn() && window.IsActive)
+            {
+                AppKit.CoverScreen(window, true);
+            }
+        }, DispatcherPriority.Background);
     }
 
     private void UpdateButton()

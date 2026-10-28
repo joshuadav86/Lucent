@@ -71,6 +71,9 @@ internal static partial class ObjC
     public static void SendVoid(IntPtr receiver, string selector, CGSize argument) =>
         void_objc_msgSend_CGSize(receiver, Selector(selector), argument);
 
+    public static void SendVoid(IntPtr receiver, string selector, CGRect rect, bool argument) =>
+        void_objc_msgSend_CGRect_Byte(receiver, Selector(selector), rect, argument ? (byte)1 : (byte)0);
+
     /// <summary>A size or rectangle property read through key-value coding, so it needs no struct-returning call.</summary>
     public static unsafe T ReadValue<T>(IntPtr receiver, string key) where T : unmanaged
     {
@@ -191,6 +194,9 @@ internal static partial class ObjC
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial void void_objc_msgSend_CGSize(IntPtr receiver, IntPtr selector, CGSize argument);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial void void_objc_msgSend_CGRect_Byte(IntPtr receiver, IntPtr selector, CGRect rect, byte argument);
 }
 
 /// <summary>An autorelease pool for one pass of a background loop, so the objects Metal hands back autoreleased are freed.</summary>

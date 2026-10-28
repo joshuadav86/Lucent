@@ -38,7 +38,8 @@ public partial class VisualizerWindow
 
     /// <summary>
     /// Fills the screen with the visuals (Esc, double-click or the × in the corner to leave). Like the
-    /// Windows app, the window itself grows to cover the whole screen, Dock and menu bar too, rather
+    /// Windows app, the window itself grows to cover the whole screen, Dock and menu bar (and the strip beside a
+    /// MacBook's notch) too, rather
     /// than moving to a fullscreen Space of its own: it belongs to the player window, and stays with it.
     /// </summary>
     public void ToggleFullscreen()
@@ -76,11 +77,13 @@ public partial class VisualizerWindow
             }
 
             AppKit.AutoHideDockAndMenuBar(true);
+            FullScreen.CoverScreen(this, () => _isFullscreen);
             Activate();
         }
         else
         {
             AppKit.AutoHideDockAndMenuBar(false);
+            AppKit.CoverScreen(this, false);
             Chrome.UseLucentFrame(this);
             CanResize = true;
             WindowState = _stateBeforeFullscreen;
