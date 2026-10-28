@@ -77,22 +77,25 @@ public static class LibraryColumns
         _ => Label(column),
     };
 
-    /// <summary>The column's width in device-independent pixels (WPF's and Avalonia's units).</summary>
+    /// <summary>
+    /// The column's width in device-independent pixels (WPF's and Avalonia's units), with its divider line and the
+    /// space either side of the text.
+    /// </summary>
     public static double Width(LibraryColumn column) => column switch
     {
-        LibraryColumn.Artist or LibraryColumn.AlbumArtist or LibraryColumn.Composer => 120,
-        LibraryColumn.Album => 130,
-        LibraryColumn.Genre => 96,
-        LibraryColumn.Year or LibraryColumn.Bpm => 54,
-        LibraryColumn.Track or LibraryColumn.Disc => 46,
-        LibraryColumn.Key => 50,
-        LibraryColumn.Bitrate => 74,
-        LibraryColumn.SampleRate => 70,
-        LibraryColumn.Format => 64,
-        LibraryColumn.Rating => 70,
-        LibraryColumn.Plays => 58,
-        LibraryColumn.LastPlayed or LibraryColumn.Added => 80,
-        _ => 150,
+        LibraryColumn.Artist or LibraryColumn.AlbumArtist or LibraryColumn.Composer => 126,
+        LibraryColumn.Album => 136,
+        LibraryColumn.Genre => 102,
+        LibraryColumn.Year or LibraryColumn.Bpm => 60,
+        LibraryColumn.Track or LibraryColumn.Disc => 52,
+        LibraryColumn.Key => 56,
+        LibraryColumn.Bitrate => 80,
+        LibraryColumn.SampleRate => 76,
+        LibraryColumn.Format => 70,
+        LibraryColumn.Rating => 76,
+        LibraryColumn.Plays => 64,
+        LibraryColumn.LastPlayed or LibraryColumn.Added => 86,
+        _ => 156,
     };
 
     /// <summary>Numbers and dates line up on the right; names on the left.</summary>

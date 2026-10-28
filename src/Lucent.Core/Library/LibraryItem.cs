@@ -173,8 +173,15 @@ public sealed class LibraryItem : INotifyPropertyChanged
             .Select(column => new LibraryCell(LibraryColumns.Text(column, this), LibraryColumns.Width(column), LibraryColumns.AlignRight(column)))
             .ToList();
 
+    /// <summary>Whether the row has tag columns, so its time gets a divider line before it too.</summary>
+    public bool HasCells => LibraryColumns.Shown.Count > 0 && !IsPlaceholder && RemotePlaylist is null;
+
     /// <summary>Shows a new set of tag columns.</summary>
-    public void ColumnsChanged() => Raise(nameof(Cells));
+    public void ColumnsChanged()
+    {
+        Raise(nameof(Cells));
+        Raise(nameof(HasCells));
+    }
 
     public Track ToTrack() => Track ?? Track.FromFile(Path);
 

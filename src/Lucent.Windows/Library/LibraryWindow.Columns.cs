@@ -51,7 +51,6 @@ public partial class LibraryWindow
             {
                 Text = HeadingText(column),
                 FontSize = 11,
-                Padding = new Thickness(0, 0, 10, 0),
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 TextAlignment = LibraryColumns.AlignRight(column) ? TextAlignment.Right : TextAlignment.Left,
             };
@@ -59,12 +58,15 @@ public partial class LibraryWindow
             {
                 Child = text,
                 Width = LibraryColumns.Width(column),
+                Padding = new Thickness(8, 0, 8, 0),
+                BorderThickness = new Thickness(1, 0, 0, 0),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Tag = column,
                 ToolTip = $"Sort by {LibraryColumns.Label(column).ToLowerInvariant()}. Drag to move it.",
             };
             text.SetResourceReference(TextBlock.ForegroundProperty, HeadingBrush(column));
+            heading.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
             heading.MouseLeftButtonDown += OnHeadingMouseDown;
             heading.MouseMove += OnHeadingMouseMove;
             heading.MouseLeftButtonUp += OnHeadingMouseUp;
@@ -108,23 +110,46 @@ public partial class LibraryWindow
         if (!_settings.LibraryColumnsShown.Remove(column))
         {
             _settings.LibraryColumnsShown.Add(column);
-            var needed = LibraryColumns.ShownWidth + LibraryColumns.Width(column) + TitleRoom;
-            if (ActualWidth < needed)
-            {
-                // Through the player, so a library docked on its left grows leftward and stays docked.
-                if (Player is not null)
-                {
-                    Player.WidenLibrary(needed);
-                }
-                else
-                {
-                    Width = needed;
-                }
-            }
+            WidenToFit(LibraryColumns.ShownWidth + LibraryColumns.Width(column) + TitleRoom);
         }
 
         _settings.Save();
         ApplyColumns();
+    }
+
+    /// <summary>Widens the window to <paramref name="needed"/> if it's narrower.</summary>
+    private void WidenToFit(double needed)
+    {
+        if (ActualWidth < needed)
+        {
+            // Through the player, so a library docked on its left grows leftward and stays docked.
+            if (Player is not null)
+            {
+                Player.WidenLibrary(needed);
+            }
+            else
+            {
+                Width = needed;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The first time the window is shown after Genre and Year were put in it for the user (the settings'
+    /// LibraryNeedsWidening), it widens once to fit them.
+    /// </summary>
+    private void WidenForNewColumnsWhenShown()
+    {
+        ContentRendered += (_, _) => WidenForNewColumns();
+    }
+
+    private void WidenForNewColumns()
+    {
+        if (_settings.LibraryNeedsWidening && !ShowingPlaylists)
+        {
+            _settings.LibraryNeedsWidening = false;
+            WidenToFit(LibraryColumns.ShownWidth + TitleRoom);
+        }
     }
 
     private void MoveColumn(LibraryColumn column, int index)

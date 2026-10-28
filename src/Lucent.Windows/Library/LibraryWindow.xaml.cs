@@ -75,6 +75,7 @@ public partial class LibraryWindow : ToolWindow
         TrackStats.Shared.Changed += (_, _) => Dispatcher.BeginInvoke(new Action(StatsChanged));
         SortLabel.Text = LibraryItemComparer.LabelFor(settings);
         ApplyColumns();
+        WidenForNewColumnsWhenShown();
         UpdateGroupFoldersButton();
         UpdateLibraryStatus();
         LoadPlaylists();
