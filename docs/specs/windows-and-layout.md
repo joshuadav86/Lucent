@@ -41,6 +41,8 @@ Own window snapper on Win32 messages (`Windows/WindowSnapper.cs`); locks block m
 
 Avalonia windows with custom chrome (`Windows/Chrome.cs`). Locks make the window non-resizable. A menu bar carries the same commands (Window > Tidy Layout has no key, since ⇧D would eat typing). Positions are in points, so mixed scaling needs no special handling.
 
+A window's own full screen (visuals, video, editor, analyzer) grows the window over its screen rather than moving to a Space, and lifts it above the menu bar's level (`AppKit.CoverScreen`) so it covers the strip beside a MacBook's notch too. It drops back to a normal level while a dialog or another app is in front.
+
 ## Parity gaps
 
 Mac-only menu bar (Windows has the same commands in right-click menus and keys). See [PARITY.md](../PARITY.md).

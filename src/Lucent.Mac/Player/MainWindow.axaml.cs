@@ -117,6 +117,7 @@ public partial class MainWindow : Window
             _shuffleHistory.RemoveAll(entry => !_playlist.Contains(entry));
             ForgetUpNext();
             ShowNowPlaying(_current?.Track);
+            SaveQueueSoon();
         };
 
         VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
@@ -363,6 +364,7 @@ public partial class MainWindow : Window
         _updater.EveryBuild = _settings.EveryBuild;
         _updater.InstallAutomatically = _settings.InstallUpdatesAutomatically;
         _ = _updater.RunAsync();
+        RestoreQueue();
         AddStarterMusic();
         StartOpeningFiles();
         StartStreaming();
@@ -1938,6 +1940,7 @@ public partial class MainWindow : Window
 
         _current = entry;
         _current.IsCurrent = true;
+        SaveQueueSoon();
         if (!_shuffleHistory.Contains(entry))
         {
             _shuffleHistory.Add(entry);
@@ -2693,6 +2696,7 @@ public partial class MainWindow : Window
         VideoWindow.OpenChanged -= OnVideoOpenChanged;
         AudioTools.MainPlayerChanged -= OnMainPlayerChanged;
         AudioTools.FilesReplaced -= OnTagsSaved;
+        SaveQueue();
         _settings.CollapsedLibraryFolders = _libraryWindow.CollapsedFolders.ToList();
         _settings.Save();
 

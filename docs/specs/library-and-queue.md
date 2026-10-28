@@ -11,7 +11,7 @@
 - Edit sound info (Ctrl+I): tags and cover; Detect fills in BPM and key.
 - The song playing is marked with a bar and kept in the middle of the list: in folders, saved playlists, and an opened Spotify or Apple Music playlist. On each new song the list glides there (about 0.4 s, eased); a song far away jumps to a screen and a half short first, so the glide is short in any size of list. After a manual scroll or arrow key the list is left alone for 4 seconds, then catches up.
 
-**Queue (Q):** what plays next. Shuffle (S), repeat (R), favorite (H).
+**Queue (Q):** what plays next. Shuffle (S), repeat (R), favorite (H). The queue is kept between runs (`Queue.m3u8` in the app data folder, saved 2 s after a change and on closing); on the next start it comes back with the song that was playing selected, and Play starts it. Files that are gone are left out.
 
 **Sources panel (M):** add music, tune in to radio, or connect a music app.
 
@@ -47,7 +47,7 @@
 ## Code
 
 - `Lucent.Core/Library/` (tag columns: `LibraryColumns.cs`, `LibrarySort.cs`; duplicates: `DuplicateFinder.cs`), `Lucent.Core/Playlist/`, `Lucent.Core/Import/`, `Lucent.Core/Stores/`
-- `LibraryWindow.*` (columns in `LibraryWindow.Columns.cs`), `DuplicatesWindow.*`, `QueueWindow.*`, `ImportWindow.*`, `StoreWindow.*`, `SubfolderWindow.*`, `TrackInfoWindow.*`, `Windows/TrackThumb.cs`, `Windows/PlayingRowScroll.cs` (with `Lucent.Core/Layout/ScrollGlide.cs`), `MainWindow.Sources.cs`, `MainWindow.Favorites.cs`, `MainWindow.Import.cs`, `MainWindow.DefaultPlayer.cs` in each app
+- `LibraryWindow.*` (columns in `LibraryWindow.Columns.cs`), `DuplicatesWindow.*`, `QueueWindow.*`, `ImportWindow.*`, `StoreWindow.*`, `SubfolderWindow.*`, `TrackInfoWindow.*`, `Windows/TrackThumb.cs`, `Windows/PlayingRowScroll.cs` (with `Lucent.Core/Layout/ScrollGlide.cs`), `MainWindow.Sources.cs`, `MainWindow.Favorites.cs`, `MainWindow.Import.cs`, `MainWindow.DefaultPlayer.cs`, `MainWindow.SavedQueue.cs` (with `Lucent.Core/Playlist/SavedQueue.cs`) in each app
 - Drop handling: `ToolWindow.OnMusicDropped`
 - Settings: `LibraryFolders`, `LibraryFiles`, `LibraryColumnsShown`, `LibrarySortColumn`, `LibrarySortDescending`, and the other library sort and view settings in `AppSettings`
 - Screenshots (Mac): `LibraryColumns`, `Duplicates`

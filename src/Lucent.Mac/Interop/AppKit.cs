@@ -1,3 +1,6 @@
+using Avalonia.Controls;
+using Avalonia.Platform;
+
 namespace Lucent.Mac.Interop;
 
 /// <summary>
@@ -49,6 +52,49 @@ internal static class AppKit
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
             // Not on a Mac (the screenshot tool): nothing to hide.
+        }
+    }
+
+    // NSMainMenuWindowLevel + 1. On a MacBook with a notch the strip beside it, where the menu bar is, is kept
+    // clear of ordinary windows even while the menu bar is hidden; a window above the menu bar's level isn't.
+    private const ulong AboveMenuBarLevel = 25;
+    private const ulong NormalLevel = 0;
+    private const ulong FloatingLevel = 3;
+
+    /// <summary>
+    /// Stretches a window that's filling its screen over the whole of it, the menu bar's strip beside the notch
+    /// too, by lifting it above the menu bar. <paramref name="cover"/> false puts it back at its usual level
+    /// (the window's frame is left to the caller), so a dialog or another app can come in front of it.
+    /// </summary>
+    public static void CoverScreen(Window window, bool cover)
+    {
+        if (!OperatingSystem.IsMacOS()
+            || window.TryGetPlatformHandle() is not IMacOSTopLevelPlatformHandle { NSWindow: var native }
+            || native == IntPtr.Zero)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!cover)
+            {
+                ObjC.SendVoid(native, "setLevel:", window.Topmost ? FloatingLevel : NormalLevel);
+                return;
+            }
+
+            var screen = ObjC.Send(native, "screen");
+            if (screen == IntPtr.Zero)
+            {
+                return;
+            }
+
+            ObjC.SendVoid(native, "setLevel:", AboveMenuBarLevel);
+            ObjC.SendVoid(native, "setFrame:display:", ObjC.ReadValue<ObjC.CGRect>(screen, "frame"), true);
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            // Not on a Mac (the screenshot tool).
         }
     }
 

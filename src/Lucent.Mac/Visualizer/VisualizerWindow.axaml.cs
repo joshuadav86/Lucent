@@ -53,6 +53,7 @@ public partial class VisualizerWindow : ToolWindow
         InitializeComponent();
         Chrome.UseLucentFrame(this);
         PlacementName = "Visuals";
+        FullScreen.CoverScreenWhile(this, () => _isFullscreen);
         PresetList.ItemsSource = _rows;
         PresetList.ContainerPrepared += OnPresetRowPrepared;
         PresetList.SelectionChanged += OnPresetListSelectionChanged;
