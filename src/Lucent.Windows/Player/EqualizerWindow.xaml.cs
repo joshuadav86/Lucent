@@ -283,7 +283,8 @@ public partial class EqualizerWindow : Window
     private double LabelWidth(string label, double size)
     {
         var font = TryFindResource("UiFont") as FontFamily ?? new FontFamily("Segoe UI");
-        return new FormattedText(label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(font), size,
+        return new FormattedText(label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            new Typeface(font, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), size,
             Brushes.Black, VisualTreeHelper.GetDpi(this).PixelsPerDip).Width;
     }
 
