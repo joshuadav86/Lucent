@@ -1,6 +1,7 @@
 <Window x:Class="Lucent.TrackInfoWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:Lucent.Windows"
         Title="Edit info - Lucent"
         Icon="/Assets/Lucent.ico"
         Width="900" Height="660" MinWidth="740" MinHeight="560"
@@ -43,8 +44,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource SegmentCorner}" BorderThickness="1"
-                                Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource SegmentCorner}" BorderThickness="1"
+                                         Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}">
                             <Grid>
                                 <TextBlock x:Name="Hint" Margin="{TemplateBinding Padding}" Padding="2,0,0,0"
                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -55,7 +56,7 @@
                                 <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                             </Grid>
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="Text" Value="">
                                 <Setter TargetName="Hint" Property="Visibility" Value="Visible" />
@@ -96,10 +97,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
-                                Background="{DynamicResource AccentGradientBrush}">
+                        <w:RoundedBorder x:Name="Chrome" CornerRadius="{DynamicResource ControlCorner}" Padding="{TemplateBinding Padding}"
+                                         Background="{DynamicResource AccentGradientBrush}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Opacity" Value="0.88" />
@@ -132,10 +133,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Ring" Margin="0,0,6,6" Padding="2" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="2"
-                                BorderBrush="Transparent" Background="Transparent">
+                        <w:RoundedBorder x:Name="Ring" Margin="0,0,6,6" Padding="2" CornerRadius="{DynamicResource ControlCorner}" BorderThickness="2"
+                                         BorderBrush="Transparent" Background="Transparent">
                             <ContentPresenter />
-                        </Border>
+                        </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
@@ -179,11 +180,11 @@
 
             <!-- Artwork: the chosen picture big, the file's other pictures below, and what can be done with them. -->
             <StackPanel Grid.Column="0">
-                <Border x:Name="ArtworkFrame" Width="264" Height="264" CornerRadius="{DynamicResource CardCorner}"
-                        Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}"
-                        BorderThickness="1" AllowDrop="True"
-                        DragEnter="OnArtworkDragOver" DragOver="OnArtworkDragOver" DragLeave="OnArtworkDragLeave"
-                        Drop="OnArtworkDrop">
+                <w:RoundedBorder x:Name="ArtworkFrame" Width="264" Height="264" CornerRadius="{DynamicResource CardCorner}"
+                                 Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}"
+                                 BorderThickness="1" AllowDrop="True"
+                                 DragEnter="OnArtworkDragOver" DragOver="OnArtworkDragOver" DragLeave="OnArtworkDragLeave"
+                                 Drop="OnArtworkDrop">
                     <Grid>
                         <Image x:Name="ArtworkImage" Margin="6" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
                         <StackPanel x:Name="ArtworkEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
@@ -194,15 +195,15 @@
                                        TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource MutedTextBrush}"
                                        Text="Drop a picture here, or copy one and press Ctrl+V." />
                         </StackPanel>
-                        <Border x:Name="DropHint" Visibility="Collapsed" CornerRadius="{DynamicResource CardCorner}" BorderThickness="2"
-                                Background="{DynamicResource AccentSoftBrush}" BorderBrush="{DynamicResource AccentBrush}"
-                                Opacity="0.94" IsHitTestVisible="False">
+                        <w:RoundedBorder x:Name="DropHint" Visibility="Collapsed" CornerRadius="{DynamicResource CardCorner}" BorderThickness="2"
+                                         Background="{DynamicResource AccentSoftBrush}" BorderBrush="{DynamicResource AccentBrush}"
+                                         Opacity="0.94" IsHitTestVisible="False">
                             <TextBlock Text="Drop to use as the cover" FontSize="13" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Foreground="{DynamicResource AccentBrush}" />
-                        </Border>
+                        </w:RoundedBorder>
                     </Grid>
-                </Border>
+                </w:RoundedBorder>
 
                 <TextBlock x:Name="ArtworkInfo" Margin="2,10,0,0" FontSize="11" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource MutedTextBrush}" />
@@ -225,7 +226,7 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Width="46" Height="46" ToolTip="{Binding Label}">
-                                <Border CornerRadius="5" Background="{DynamicResource SurfaceRaisedBrush}" />
+                                <w:RoundedBorder CornerRadius="5" Background="{DynamicResource SurfaceRaisedBrush}" />
                                 <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
                                        RenderOptions.BitmapScalingMode="HighQuality" />
                             </Grid>
@@ -252,7 +253,7 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Style="{StaticResource SegmentBar}" HorizontalAlignment="Left">
+                <w:RoundedBorder Style="{StaticResource SegmentBar}" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal">
                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="InfoTab" Tag="Song" Content="Sound"
                                      MinWidth="86" IsChecked="True" Click="OnTab" />
@@ -261,7 +262,7 @@
                         <RadioButton Style="{StaticResource SegmentButton}" GroupName="InfoTab" Tag="File" Content="File details"
                                      MinWidth="104" Click="OnTab" />
                     </StackPanel>
-                </Border>
+                </w:RoundedBorder>
 
                 <ScrollViewer x:Name="SongTab" Grid.Row="1" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" Focusable="False">
                     <Grid Margin="0,0,10,0">
@@ -352,18 +353,18 @@
                             <Popup x:Name="GenrePopup" PlacementTarget="{Binding ElementName=GenreBox}" Placement="Bottom"
                                    VerticalOffset="-10" HorizontalOffset="-16" StaysOpen="False" AllowsTransparency="True"
                                    PopupAnimation="Fade" Closed="OnGenrePopupClosed">
-                                <Border Margin="16" Width="380" Padding="12,12,6,6" CornerRadius="{DynamicResource CardCorner}"
-                                        Background="{DynamicResource SurfaceRaisedBrush}"
-                                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
-                                    <Border.Effect>
+                                <w:RoundedBorder Margin="16" Width="380" Padding="12,12,6,6" CornerRadius="{DynamicResource CardCorner}"
+                                                 Background="{DynamicResource SurfaceRaisedBrush}"
+                                                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                                    <w:RoundedBorder.Effect>
                                         <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.6" />
-                                    </Border.Effect>
+                                    </w:RoundedBorder.Effect>
                                     <StackPanel>
                                         <TextBlock Text="COMMON GENRES" Margin="2,0,0,10" FontSize="10" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource MutedTextBrush}" />
                                         <WrapPanel x:Name="GenreChips" />
                                     </StackPanel>
-                                </Border>
+                                </w:RoundedBorder>
                             </Popup>
                         </StackPanel>
                         <StackPanel Grid.Row="4" Grid.Column="2" Margin="0,0,0,14">
@@ -403,8 +404,8 @@
         </Grid>
 
         <!-- Files that couldn't be read or saved, and why. -->
-        <Border x:Name="ProblemPanel" Grid.Row="2" Margin="24,0,24,14" Padding="14,10" CornerRadius="{DynamicResource PanelCorner}"
-                Background="{DynamicResource SurfaceRaisedBrush}" BorderThickness="1" Visibility="Collapsed">
+        <w:RoundedBorder x:Name="ProblemPanel" Grid.Row="2" Margin="24,0,24,14" Padding="14,10" CornerRadius="{DynamicResource PanelCorner}"
+                         Background="{DynamicResource SurfaceRaisedBrush}" BorderThickness="1" Visibility="Collapsed">
             <StackPanel>
                 <TextBlock x:Name="ProblemTitle" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
                 <ScrollViewer MaxHeight="110" Margin="0,6,0,0" VerticalScrollBarVisibility="Auto" Focusable="False">
@@ -418,7 +419,7 @@
                     </ItemsControl>
                 </ScrollViewer>
             </StackPanel>
-        </Border>
+        </w:RoundedBorder>
 
         <!-- Footer: the date switch, messages, and the buttons. -->
         <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}"

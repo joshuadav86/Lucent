@@ -40,6 +40,8 @@ public partial class EqualizerWindow : Window
     // How narrow columns may get to fit the player's width with 32 bands, and the knob they hold.
     private const double NarrowestFittedColumn = 12;
     private const double SliderKnobWidth = 30;
+    // The least space kept between two band labels.
+    private const double LabelGap = 4;
     // True while the sliders are being set from code (and during start-up), so their change
     // handlers stay quiet.
     private bool _updating = true;
@@ -211,6 +213,19 @@ public partial class EqualizerWindow : Window
             _columnWidth = Math.Clamp(Math.Floor(room / _bands.Count), narrowest, Math.Max(narrowest, WidestColumn));
         }
 
+        // A label wider than its column (32 bands docked under the player leaves 12 px each) hangs over its
+        // neighbours' columns instead of being cut off. Where even that would run labels together, only every
+        // second, third or fourth is shown; the slider's tooltip still names its frequency.
+        var labelSize = _bands.Count >= 24 || _columnWidth < 30 ? 9 : 10;
+        var widestLabel = _bands.Labels.Max(label => LabelWidth(label, labelSize));
+        var labelEvery = 1;
+        while (labelEvery < 4 && labelEvery * _columnWidth < widestLabel + LabelGap)
+        {
+            labelEvery++;
+        }
+
+        var overhang = Math.Ceiling(Math.Max(0, widestLabel - _columnWidth) / 2);
+
         BandPanel.Children.Clear();
         _bandSliders.Clear();
         for (var band = 0; band < _bands.Count; band++)
@@ -232,15 +247,14 @@ public partial class EqualizerWindow : Window
                 slider.LayoutTransform = new ScaleTransform(Math.Max(0.35, (_columnWidth - 4) / SliderKnobWidth), 1);
             }
 
-            var text = new TextBlock { Style = (Style)Resources["BandLabel"], Text = label };
-            if (_bands.Count >= 24 || _columnWidth < 30)
+            var text = new TextBlock
             {
-                text.FontSize = 9;
-            }
-
-            // In very narrow columns every other label is left out so they don't run together; the
-            // slider's tooltip still names its frequency.
-            if (_columnWidth < 20 && band % 2 == 1)
+                Style = (Style)Resources["BandLabel"],
+                Text = label,
+                FontSize = labelSize,
+                Margin = new Thickness(-overhang, 6, -overhang, 0),
+            };
+            if (band % labelEvery != 0)
             {
                 text.Visibility = Visibility.Hidden;
             }
@@ -263,6 +277,14 @@ public partial class EqualizerWindow : Window
 
         CurveFrame.Width = _columnWidth * _bands.Count;
         FitToContent();
+    }
+
+    // How wide a band's label is drawn at this size.
+    private double LabelWidth(string label, double size)
+    {
+        var font = TryFindResource("UiFont") as FontFamily ?? new FontFamily("Segoe UI");
+        return new FormattedText(label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(font), size,
+            Brushes.Black, VisualTreeHelper.GetDpi(this).PixelsPerDip).Width;
     }
 
     // Sized by hand rather than with SizeToContent, which leaves a stray strip with custom chrome.

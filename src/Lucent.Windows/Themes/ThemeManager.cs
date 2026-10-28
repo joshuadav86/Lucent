@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Lucent.Windows;
 
 namespace Lucent.Themes;
 
@@ -97,7 +98,7 @@ public static class ThemeManager
         row.Children.Add(accent);
         row.Children.Add(name);
 
-        var preview = new Border
+        var preview = new RoundedBorder
         {
             Height = 38,
             Padding = new Thickness(10, 0, 10, 0),

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using Lucent.Windows;
 
 namespace Lucent.Themes;
 
@@ -262,15 +263,15 @@ public static class SkinManager
         var accentGradient = ThemeManager.Gradient(theme);
 
         var play = new Grid { Width = 20, Height = 20, VerticalAlignment = VerticalAlignment.Center };
-        play.Children.Add(new Border { CornerRadius = round, Background = accentGradient });
-        play.Children.Add(new Border { CornerRadius = round, Background = (Brush)look["PlayGlossBrush"] });
-        play.Children.Add(new Border
+        play.Children.Add(new RoundedBorder { CornerRadius = round, Background = accentGradient });
+        play.Children.Add(new RoundedBorder { CornerRadius = round, Background = (Brush)look["PlayGlossBrush"] });
+        play.Children.Add(new RoundedBorder
         {
             CornerRadius = round,
             BorderThickness = new Thickness(1, 1, 0, 0),
             BorderBrush = (Brush)look["ButtonLightEdgeBrush"],
         });
-        play.Children.Add(new Border
+        play.Children.Add(new RoundedBorder
         {
             CornerRadius = round,
             BorderThickness = new Thickness(0, 0, 1, 1),
@@ -297,7 +298,7 @@ public static class SkinManager
         };
 
         var time = new Grid { VerticalAlignment = VerticalAlignment.Center };
-        time.Children.Add(new Border
+        time.Children.Add(new RoundedBorder
         {
             CornerRadius = (CornerRadius)look["TinyCorner"],
             Background = (Brush)look["DisplayBrush"],
@@ -305,7 +306,7 @@ public static class SkinManager
             BorderThickness = new Thickness(1),
             Effect = look.TryGetValue("DisplayGlowEffect", out var glow) ? (Effect)glow : null,
         });
-        time.Children.Add(new Border
+        time.Children.Add(new RoundedBorder
         {
             CornerRadius = (CornerRadius)look["TinyCorner"],
             Background = (Brush)look["DisplayLinesBrush"],
@@ -329,12 +330,12 @@ public static class SkinManager
 
         // A short seek bar under them, a third of the way through, so the swatch reads as a little player.
         var seek = new Grid { Height = 3, Margin = new Thickness(0, 6, 0, 0) };
-        seek.Children.Add(new Border
+        seek.Children.Add(new RoundedBorder
         {
             CornerRadius = (CornerRadius)look["TrackCorner"],
             Background = ThemeManager.Solid(theme.Hairline),
         });
-        seek.Children.Add(new Border
+        seek.Children.Add(new RoundedBorder
         {
             CornerRadius = (CornerRadius)look["TrackCorner"],
             Background = accentGradient,
@@ -347,8 +348,8 @@ public static class SkinManager
 
         var corner = (CornerRadius)look["BarCorner"];
         var card = new Grid { Height = 52, ToolTip = skin.Description };
-        card.Children.Add(new Border { CornerRadius = corner, Background = ThemeManager.Solid(theme.Surface) });
-        card.Children.Add(new Border
+        card.Children.Add(new RoundedBorder { CornerRadius = corner, Background = ThemeManager.Solid(theme.Surface) });
+        card.Children.Add(new RoundedBorder
         {
             CornerRadius = corner,
             Background = (Brush)look["PanelSheenBrush"],
