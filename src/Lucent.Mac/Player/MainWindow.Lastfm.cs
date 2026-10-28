@@ -75,6 +75,19 @@ public partial class MainWindow
             _player.IsPlaying, _player.Position);
     }
 
+    /// <summary>
+    /// Loves the playing song on Last.fm when it's hearted (or takes the love back). Only the playing song: the others'
+    /// paths say nothing of their artist and title.
+    /// </summary>
+    private void LoveOnLastfm(IEnumerable<string> paths, bool favorite)
+    {
+        if (_scrobbler is { } scrobbler && _station is null && _current?.Track is { } track
+            && paths.Contains(track.Path, StringComparer.OrdinalIgnoreCase))
+        {
+            scrobbler.Love(track.Artist, track.Title, favorite);
+        }
+    }
+
     private async void OnLastfmSignIn(object? sender, RoutedEventArgs e)
     {
         if (_lastfmSigningIn is not null)

@@ -46,6 +46,9 @@ public interface IScrobbleService
 
     /// <summary>Sends up to <see cref="Scrobbler.MaxBatch"/> scrobbles. Throws <see cref="LastfmProblem"/> when Last.fm says no.</summary>
     Task ScrobbleAsync(IReadOnlyList<Scrobble> scrobbles, CancellationToken cancel);
+
+    /// <summary>Marks a song as loved on Last.fm, or takes the love back.</summary>
+    Task LoveAsync(string artist, string title, bool love, CancellationToken cancel);
 }
 
 /// <summary>
@@ -198,6 +201,32 @@ public sealed class Scrobbler
         if (_waiting.Count > 0 && !_sending && at >= _sendAfter)
         {
             _ = SendAsync();
+        }
+    }
+
+    /// <summary>
+    /// Loves the song on Last.fm, or takes the love back, as the user hearts it in Lucent. Nothing is kept if Last.fm
+    /// can't be reached: a heart is the user's own choice, so it isn't sent again later behind their back.
+    /// </summary>
+    public async void Love(string artist, string title, bool love)
+    {
+        if (artist.Trim().Length == 0 || title.Trim().Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await _service.LoveAsync(artist.Trim(), title.Trim(), love, CancellationToken.None);
+        }
+        catch (LastfmProblem problem) when (problem.SignInGone)
+        {
+            ForgetSignIn(problem);
+        }
+        catch (Exception ex) when (ex is LastfmProblem or HttpRequestException or TaskCanceledException or IOException)
+        {
+            Problem = love ? "Couldn't love that song on Last.fm." : "Couldn't take the love back on Last.fm.";
+            Changed?.Invoke(this, EventArgs.Empty);
         }
     }
 

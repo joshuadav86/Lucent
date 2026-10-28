@@ -43,6 +43,7 @@ public partial class MainWindow
         _settings.Save();
         UpdateTrackFavoriteButton();
         _libraryWindow.FavoritesChanged();
+        LoveOnLastfm(paths, favorite);
     }
 
     private void OnToggleTrackFavorite(object? sender, RoutedEventArgs e) => ToggleTrackFavorite();

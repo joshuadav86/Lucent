@@ -159,6 +159,15 @@ public sealed class LastfmClient : IScrobbleService
         await CallAsync(_http, _app, fields, post: true, cancel);
     }
 
+    public async Task LoveAsync(string artist, string title, bool love, CancellationToken cancel) =>
+        await CallAsync(_http, _app, new Dictionary<string, string>
+        {
+            ["method"] = love ? "track.love" : "track.unlove",
+            ["artist"] = artist,
+            ["track"] = title,
+            ["sk"] = _sessionKey,
+        }, post: true, cancel);
+
     /// <summary>
     /// The signature Last.fm checks every call by: each field's name and value, in order of name (leaving out
     /// format), then the app's secret, hashed with MD5.
