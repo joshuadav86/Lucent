@@ -124,6 +124,12 @@ public partial class MainWindow
             // Its best stream couldn't be reached, so the backup's quality is what's shown. It's still saved as itself.
             _station = heard;
         }
+        else if (stream is RadioStream radio && RadioGuide.NamedByStream(station, radio.StationName) is var named && named != station)
+        {
+            // A station added by its address takes the name its stream gives itself, and is saved with it.
+            station = named;
+            _station = named;
+        }
 
         try
         {
@@ -334,6 +340,20 @@ public partial class MainWindow
         RadioGuide.SetFavorite(_settings, station, favorite);
         _settings.Save();
         UpdateTrackFavoriteButton();
+        StationChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Renames a saved station (one added by its address), in the favorites and recently played both.</summary>
+    public void RenameStation(RadioStation station, string name)
+    {
+        var renamed = RadioGuide.Rename(_settings, station, name);
+        _settings.Save();
+        if (_station?.Id == station.Id)
+        {
+            _station = renamed;
+            ShowStation();
+        }
+
         StationChanged?.Invoke(this, EventArgs.Empty);
     }
 

@@ -202,17 +202,114 @@ public static class RadioGuide
         }
     }
 
-    /// <summary>A station for an address typed in by hand.</summary>
-    public static RadioStation FromAddress(string address)
+    /// <summary>
+    /// A station for an address typed in by hand, called <paramref name="name"/>, or when that's blank the address's
+    /// host until its stream says what it's called (<see cref="NamedByStream"/>).
+    /// </summary>
+    public static RadioStation FromAddress(string address, string? name = null)
     {
         address = address.Trim();
-        var name = Uri.TryCreate(address, UriKind.Absolute, out var uri) ? uri.Host : address;
-        return new RadioStation { Id = "address:" + address, Name = name, StreamUrl = address };
+        name = name?.Trim();
+        return new RadioStation
+        {
+            Id = AddressPrefix + address,
+            Name = string.IsNullOrEmpty(name) ? DefaultName(address) : name,
+            StreamUrl = address,
+        };
     }
 
     /// <summary>True when <paramref name="address"/> looks like a stream Lucent could open.</summary>
     public static bool IsStreamAddress(string address) =>
         Uri.TryCreate(address.Trim(), UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https";
+
+    /// <summary>True for a station added by its address rather than picked from a list. These can be renamed.</summary>
+    public static bool IsFromAddress(RadioStation station) => station.Id.StartsWith(AddressPrefix, StringComparison.Ordinal);
+
+    /// <summary>
+    /// A station added by its address with the name its stream gives itself (icy-name), when it hasn't been named
+    /// yet, so it isn't saved as "ice1.somafm.com". Any other station comes back as it is.
+    /// </summary>
+    public static RadioStation NamedByStream(RadioStation station, string? streamName)
+    {
+        var name = streamName?.Trim();
+        return IsFromAddress(station) && station.Name == DefaultName(station.StreamUrl)
+            && !string.IsNullOrEmpty(name) && !PlaceholderNames.Contains(name)
+            ? station with { Name = name }
+            : station;
+    }
+
+    /// <summary>Renames a station in the favorites and the recently played list both, and returns it renamed.</summary>
+    public static RadioStation Rename(AppSettings settings, RadioStation station, string name)
+    {
+        var renamed = station with { Name = name.Trim() };
+        foreach (var list in new[] { settings.RadioFavorites, settings.RadioRecent })
+        {
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (list[i].Id == station.Id)
+                {
+                    list[i] = list[i] with { Name = renamed.Name };
+                }
+            }
+        }
+
+        return renamed;
+    }
+
+    /// <summary>
+    /// The first web stream a .pls or .m3u playlist file lists, and its title if the file gives one, or null when
+    /// it lists none. Stations hand these out as downloads ("Listen.pls").
+    /// </summary>
+    public static (string Address, string? Name)? FirstStreamIn(string playlist)
+    {
+        string? title = null;
+        var plsTitles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var plsFiles = new List<(string Number, string Address)>();
+        foreach (var raw in playlist.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.StartsWith("#EXTINF:", StringComparison.OrdinalIgnoreCase))
+            {
+                // #EXTINF:-1,Groove Salad
+                var comma = line.IndexOf(',');
+                title = comma >= 0 ? line[(comma + 1)..].Trim() : null;
+            }
+            else if (line.StartsWith("File", StringComparison.OrdinalIgnoreCase) && line.IndexOf('=') is var equals and > 4)
+            {
+                // .pls: File1=http://…
+                plsFiles.Add((line[4..equals], line[(equals + 1)..].Trim()));
+            }
+            else if (line.StartsWith("Title", StringComparison.OrdinalIgnoreCase) && line.IndexOf('=') is var at and > 5)
+            {
+                plsTitles[line[5..at]] = line[(at + 1)..].Trim();
+            }
+            else if (line.Length > 0 && !line.StartsWith('#') && IsStreamAddress(line))
+            {
+                return (line, string.IsNullOrEmpty(title) ? null : title);
+            }
+        }
+
+        foreach (var (number, address) in plsFiles)
+        {
+            if (IsStreamAddress(address))
+            {
+                return (address, plsTitles.TryGetValue(number, out var name) && name.Length > 0 ? name : null);
+            }
+        }
+
+        return null;
+    }
+
+    private const string AddressPrefix = "address:";
+
+    /// <summary>What some servers send as their name when nobody set one.</summary>
+    private static readonly HashSet<string> PlaceholderNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Unspecified name", "Unspecified", "no name", "Stream", "-", "Icecast", "SHOUTcast Server",
+    };
+
+    private static string DefaultName(string address) =>
+        Uri.TryCreate(address.Trim(), UriKind.Absolute, out var uri) ? uri.Host : address.Trim();
 
     private static int NetworkOrder(string network)
     {

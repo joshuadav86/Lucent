@@ -3,6 +3,7 @@
 ## What it does
 
 - Search, sort, and filter thousands of stations from Radio Browser (free, no key), by genre, country, and minimum bitrate. Favorites and recents.
+- **Add a station:** a station that isn't listed can be added by its stream's address, its .pls/.m3u/.m3u8 link, or a .pls/.m3u file from the station's site, then played or kept in Favorites. It takes the name its stream gives itself (icy-name) unless one is typed, and can be renamed from its right-click menu (`AddStationWindow`).
 - **Featured:** SomaFM, Radio Paradise, FRISKY, NTS, and The Lot Radio, high quality only (MP3 192k+, AAC/Opus/Ogg 128k+, FLAC, video). Each keeps a backup stream if the best one fails.
 - **Formats:** MP3, ADTS AAC/HE-AAC, and HLS (TS segments, starts 30 s behind live). Anything else, and video stations, plays through libVLC.
 - **Live video radio:** The Lot Radio's picture shows in the Video window; stations with video get a camera icon.
@@ -22,7 +23,7 @@ None.
 
 - `Lucent.Core/Radio/` (`RadioDirectory`, `RadioGuide`, `FeaturedStations`, `RadioStream`, `IcyStream`, `HlsStream`, `RadioDecoder`, `LiveShows`, `StationArt`)
 - `Lucent.Core/Video/VideoStream.cs` (`OpenStation`) for libVLC stations
-- `RadioWindow.*`, `MainWindow.Radio.cs` in each app
+- `RadioWindow.*`, `AddStationWindow.*`, `MainWindow.Radio.cs` in each app
 - Settings: `RadioFavorites`, `RadioRecent`, `RadioSection`, `RadioSort`, `RadioMinBitrate`, `RadioCountry`, `RadioDetailsWidth`
 
 ## Not supported

@@ -601,6 +601,13 @@ public partial class RadioWindow : Window
         star.Click += (_, _) => _player.SetStationFavorite(station, !favorite);
         menu.Items.Add(star);
 
+        if (RadioGuide.IsFromAddress(station))
+        {
+            var rename = new MenuItem { Header = "Rename…" };
+            rename.Click += (_, _) => RenameStation(station);
+            menu.Items.Add(rename);
+        }
+
         if (Section == RadioGuide.Recent)
         {
             var forget = new MenuItem { Header = "Remove from recently played" };
@@ -836,14 +843,32 @@ public partial class RadioWindow : Window
         e.Handled = true;
     }
 
-    private void OnPlayAddress(object sender, RoutedEventArgs e)
+    private void OnAddStation(object sender, RoutedEventArgs e)
     {
-        var address = PromptWindow.Ask(this, "Play a station by its address",
-            "The stream's address, or its .pls, .m3u or .m3u8 link, from the station's website. Audio and video stations both play.", "PLAY",
-            check: text => RadioGuide.IsStreamAddress(text) ? null : "That doesn't look like a web address (http:// or https://).");
-        if (address is not null)
+        if (AddStationWindow.Ask(this) is { } added)
         {
-            Play(RadioGuide.FromAddress(address));
+            AddStation(added.Station, added.Favorite);
+        }
+    }
+
+    /// <summary>Plays a station added by its address, kept in the favorites first when <paramref name="favorite"/>.</summary>
+    private void AddStation(RadioStation station, bool favorite)
+    {
+        if (favorite)
+        {
+            _player.SetStationFavorite(station, true);
+        }
+
+        Play(station);
+    }
+
+    private void RenameStation(RadioStation station)
+    {
+        var name = PromptWindow.Ask(this, "Rename station", "A name for this station, as it shows in your favorites and recently played.",
+            "Rename", station.Name);
+        if (name is not null)
+        {
+            _player.RenameStation(station, name);
         }
     }
 
