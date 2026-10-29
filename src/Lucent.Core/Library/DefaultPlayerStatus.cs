@@ -11,8 +11,10 @@ public static class DefaultPlayerStatus
     /// <summary>
     /// A sentence or two for the Default player row. <paramref name="elsewhere"/> is each music or video type
     /// (its extension, ".wav") that opens in another app, with that app's name, or null if it has none.
+    /// <paramref name="musicOpensInLucent"/> says the common music types open in Lucent already, as on the
+    /// Mac once its button has set them, so what's left reads as the rest rather than as not done.
     /// </summary>
-    public static string Describe(IReadOnlyList<(string Extension, string? App)> elsewhere)
+    public static string Describe(IReadOnlyList<(string Extension, string? App)> elsewhere, bool musicOpensInLucent = false)
     {
         if (elsewhere.Count == 0)
         {
@@ -25,7 +27,9 @@ public static class DefaultPlayerStatus
             .Select(group => $"{Types(group.Select(type => type.Extension).ToList())} in {(group.Key == "" ? "another app" : group.Key)}")
             .ToList();
         var lines = byApp.Count <= 2 ? string.Join(", and ", byApp) : $"{byApp[0]}, and other types in other apps";
-        return $"Lucent isn't your default player yet: {lines}.";
+        return musicOpensInLucent
+            ? $"Music you double-click opens in Lucent. {lines}."
+            : $"Lucent isn't your default player yet: {lines}.";
     }
 
     // ".wav", ".flac" and ".ogg" as "WAV, FLAC, and OGG files open", naming at most five.
