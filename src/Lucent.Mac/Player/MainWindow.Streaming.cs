@@ -18,6 +18,9 @@ public partial class MainWindow
     private SystemAudio? _systemAudio;
     private RemoteControl? _remote;
     private CancellationTokenSource? _signingIn;
+
+    // Finds sharper covers than the apps give (kept between apps, so a song's cover isn't looked up twice).
+    private SharperCover? _sharperCover;
     private string? _shownRemoteTrack;
     private byte[]? _shownRemoteArtwork;
 
@@ -137,7 +140,7 @@ public partial class MainWindow
 
         _settings.RemoteApp = app;
         _settings.Save();
-        _remote = new RemoteControl(player);
+        _remote = new RemoteControl(player, _sharperCover ??= new SharperCover(StreamingHttp));
         _remote.Changed += OnRemoteChanged;
         _libraryWindow.RemoteAppChanged();
         if (pending is { } wanted && wanted.App == app)

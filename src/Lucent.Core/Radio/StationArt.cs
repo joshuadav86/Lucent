@@ -24,17 +24,21 @@ public sealed class StationArt
     private readonly Queue<string> _songOrder = new();
     private readonly Dictionary<string, byte[]?> _logos = new(StringComparer.OrdinalIgnoreCase);
     private Task<Dictionary<string, string>?>? _somaChannels;
+    private readonly int _coverSize;
 
-    public StationArt(HttpClient http)
+    /// <param name="coverSize">How many pixels square a song's cover is fetched at.</param>
+    public StationArt(HttpClient http, int coverSize = 600)
     {
         _http = http;
+        _coverSize = coverSize;
     }
 
     /// <summary>
     /// The cover of the song a station says is on, or null when none is found. <paramref name="artist"/> may be empty,
-    /// for stations that send only a title.
+    /// for stations that send only a title. Given the <paramref name="album"/>, the song's copy on that album is
+    /// preferred to a single or a compilation.
     /// </summary>
-    public async Task<byte[]?> SongCoverAsync(string artist, string title, CancellationToken cancel)
+    public async Task<byte[]?> SongCoverAsync(string artist, string title, CancellationToken cancel, string? album = null)
     {
         var term = SearchTerm(artist, title);
         if (term is null)
@@ -42,9 +46,10 @@ public sealed class StationArt
             return null;
         }
 
+        var key = album is { Length: > 0 } ? $"{term}\n{album}" : term;
         lock (_songs)
         {
-            if (_songs.TryGetValue(term, out var known))
+            if (_songs.TryGetValue(key, out var known))
             {
                 return known;
             }
@@ -53,12 +58,12 @@ public sealed class StationArt
         byte[]? cover = null;
         try
         {
-            var address = $"https://itunes.apple.com/search?media=music&entity=song&limit=5&term={Uri.EscapeDataString(term)}";
+            var address = $"https://itunes.apple.com/search?media=music&entity=song&limit=10&term={Uri.EscapeDataString(term)}";
             using var response = await _http.GetAsync(address, cancel);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync(cancel);
-                if (BestCover(json, artist, title) is { } picture)
+                if (BestCover(json, artist, title, album, _coverSize) is { } picture)
                 {
                     cover = await DownloadAsync(picture, cancel);
                 }
@@ -72,9 +77,9 @@ public sealed class StationArt
 
         lock (_songs)
         {
-            if (_songs.TryAdd(term, cover))
+            if (_songs.TryAdd(key, cover))
             {
-                _songOrder.Enqueue(term);
+                _songOrder.Enqueue(key);
                 while (_songOrder.Count > KeptSongs)
                 {
                     _songs.Remove(_songOrder.Dequeue());
@@ -161,10 +166,11 @@ public sealed class StationArt
     }
 
     /// <summary>
-    /// The address of the best cover in an iTunes search's answer, made 600 pixels square: the first song whose artist
-    /// matches, or the first song when the station gave no artist. Null when nothing fits.
+    /// The address of the best cover in an iTunes search's answer, made <paramref name="size"/> pixels square: the first
+    /// song whose artist matches, or the first song when the station gave no artist, and of those the first on
+    /// <paramref name="album"/> when it's given. Null when nothing fits.
     /// </summary>
-    internal static string? BestCover(string json, string artist, string title)
+    internal static string? BestCover(string json, string artist, string title, string? album = null, int size = 600)
     {
         using var document = JsonDocument.Parse(json);
         if (!document.RootElement.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
@@ -174,6 +180,8 @@ public sealed class StationArt
 
         var wantedArtist = Simple(Tidy(artist));
         var wantedTitle = Simple(Tidy(title));
+        var wantedAlbum = Simple(Tidy(album ?? string.Empty));
+        string? fits = null;
         foreach (var result in results.EnumerateArray())
         {
             if (!result.TryGetProperty("artworkUrl100", out var art) || art.GetString() is not { Length: > 0 } picture)
@@ -187,11 +195,18 @@ public sealed class StationArt
             var titleFits = foundTitle.Contains(wantedTitle) || wantedTitle.Contains(foundTitle);
             if (artistFits && titleFits && foundTitle.Length > 0)
             {
-                return picture.Replace("100x100bb", "600x600bb");
+                var sized = picture.Replace("100x100bb", $"{size}x{size}bb");
+                var foundAlbum = result.TryGetProperty("collectionName", out var collection) ? Simple(Tidy(collection.GetString() ?? string.Empty)) : string.Empty;
+                if (wantedAlbum.Length == 0 || foundAlbum == wantedAlbum)
+                {
+                    return sized;
+                }
+
+                fits ??= sized;
             }
         }
 
-        return null;
+        return fits;
     }
 
     // Letters and digits only, lowercase, so "Bonobo & Nicole Miglis" finds "Bonobo and Nicole Miglis" closely enough.

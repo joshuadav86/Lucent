@@ -1,3 +1,4 @@
+using Lucent.Library;
 using Lucent.Settings;
 
 namespace Lucent.Streaming;
@@ -14,7 +15,11 @@ public sealed class RemoteControl : IDisposable
 
     private readonly CancellationTokenSource _stop = new();
     private readonly SemaphoreSlim _readNow = new(0);
+    private readonly SharperCover? _sharperCover;
+
+    // The song the artwork is for, and its ID then (an app can give the same song another ID a few seconds later).
     private string? _artworkFor;
+    private RemoteTrack? _artworkTrack;
 
     // What the list was last read for: the list's ID, and the song for a list that follows the song.
     private (string? List, string? Song)? _listFor;
@@ -58,9 +63,11 @@ public sealed class RemoteControl : IDisposable
     private static readonly TimeSpan OpenTime = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan ReadyTime = TimeSpan.FromSeconds(12);
 
-    public RemoteControl(IRemotePlayer player)
+    /// <param name="sharperCover">Finds a sharper cover when the app's is small, or null to show the app's as it is.</param>
+    public RemoteControl(IRemotePlayer player, SharperCover? sharperCover = null)
     {
         Player = player;
+        _sharperCover = sharperCover;
         _limitList = player is not IRemoteLists && player.ListLimit is { } why ? new RemoteList(null, "Up next", Array.Empty<RemoteTrack>(), why) : null;
         _ = ReadLoopAsync();
     }
@@ -578,8 +585,22 @@ public sealed class RemoteControl : IDisposable
             return;
         }
 
+        // The same song under another ID (Spotify's app here names it one way, its Web API another a few seconds
+        // later) keeps its cover, unless that's still small and the new read says where the app keeps a larger one.
+        var sameSong = track is not null && Artwork is not null && track.IsSameSong(_artworkTrack);
+        var before = _artworkTrack;
         _artworkFor = track?.Id;
-        Artwork = null;
+        _artworkTrack = track;
+        if (sameSong && (track!.ArtworkUrl is null || track.ArtworkUrl == before!.ArtworkUrl || SharperCover.IsSharp(Artwork)))
+        {
+            return;
+        }
+
+        if (!sameSong)
+        {
+            Artwork = null;
+        }
+
         if (track is null)
         {
             return;
@@ -588,7 +609,8 @@ public sealed class RemoteControl : IDisposable
         try
         {
             var artwork = await Player.ArtworkAsync(track, _stop.Token);
-            if (!_disposed && _artworkFor == track.Id)
+            if (artwork is not null && !_disposed && _artworkFor == track.Id
+                && (Artwork is null || ImageFormats.WidthOf(artwork) > ImageFormats.WidthOf(Artwork)))
             {
                 Artwork = artwork;
                 Changed?.Invoke(this, EventArgs.Empty);
@@ -597,6 +619,32 @@ public sealed class RemoteControl : IDisposable
         catch (Exception)
         {
             // No cover, then (or Lucent stopped controlling the app). The song still shows.
+        }
+
+        await ShowSharperCoverAsync(track);
+    }
+
+    // The app's cover shows straight away; a sharper one, when it's small and one can be found, replaces it.
+    private async Task ShowSharperCoverAsync(RemoteTrack track)
+    {
+        if (_sharperCover is null || _disposed || _artworkFor != track.Id)
+        {
+            return;
+        }
+
+        var shown = Artwork;
+        try
+        {
+            var sharper = await _sharperCover.FindAsync(track, shown, _stop.Token);
+            if (sharper is not null && !_disposed && _artworkFor == track.Id && ReferenceEquals(Artwork, shown))
+            {
+                Artwork = sharper;
+                Changed?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        catch (Exception)
+        {
+            // The app's cover stays.
         }
     }
 
