@@ -243,7 +243,9 @@ public sealed class AudioPlayer : IDisposable
         return next is not null;
     }
 
-    public void Play()
+    public void Play() => Play(reopenIfLost: true);
+
+    private void Play(bool reopenIfLost)
     {
         if (_output is null)
         {
@@ -251,13 +253,51 @@ public sealed class AudioPlayer : IDisposable
         }
 
         _stopRequested = false;
-        _output.Play();
+        try
+        {
+            _output.Play();
+        }
+        catch (Exception ex)
+        {
+            // The output went away while paused (headphones unplugged, a Bluetooth speaker gone, a driver updated): open the
+            // track again on whatever output there is now and carry on from the same place.
+            ErrorLog.Write("Resume playback", ex);
+            if (!reopenIfLost || CurrentPath is not { } path || path.Contains("://"))
+            {
+                PlaybackFailed?.Invoke(this, ex);
+                return;
+            }
+
+            var position = Position;
+            try
+            {
+                Load(path);
+                Position = position;
+                Play(reopenIfLost: false);
+            }
+            catch (Exception reopenEx)
+            {
+                PlaybackFailed?.Invoke(this, reopenEx);
+            }
+
+            return;
+        }
+
         Controlled?.Playing();
     }
 
     public void Pause()
     {
-        _output?.Pause();
+        try
+        {
+            _output?.Pause();
+        }
+        catch (Exception ex)
+        {
+            // An output that's gone is silent anyway; Play opens a new one.
+            ErrorLog.Write("Pause playback", ex);
+        }
+
         Controlled?.Paused();
     }
 
