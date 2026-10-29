@@ -310,6 +310,73 @@ public static class ImageFormats
         return "image/jpeg";
     }
 
+    /// <summary>
+    /// How many pixels wide a JPEG, PNG, GIF, BMP or WebP picture is, read from its header without decoding it, or 0
+    /// when that can't be told.
+    /// </summary>
+    public static int WidthOf(ReadOnlySpan<byte> data)
+    {
+        try
+        {
+            switch (MimeTypeOf(data))
+            {
+                case "image/png" when data.Length >= 24:
+                    return (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
+                case "image/gif" when data.Length >= 10:
+                    return data[6] | (data[7] << 8);
+                case "image/bmp" when data.Length >= 22:
+                    return Math.Abs(data[18] | (data[19] << 8) | (data[20] << 16) | (data[21] << 24));
+                case "image/webp" when data.Length >= 30:
+                    // The first chunk, VP8 (lossy), VP8L (lossless) or VP8X (extended), each keeps the width its own way.
+                    return data[15] switch
+                    {
+                        (byte)' ' => (data[26] | (data[27] << 8)) & 0x3FFF,
+                        (byte)'L' => 1 + (data[21] | ((data[22] & 0x3F) << 8)),
+                        (byte)'X' => 1 + (data[24] | (data[25] << 8) | (data[26] << 16)),
+                        _ => 0,
+                    };
+                case "image/jpeg" when data.Length >= 4 && data[0] == 0xFF && data[1] == 0xD8:
+                    return JpegWidth(data);
+                default:
+                    return 0;
+            }
+        }
+        catch (IndexOutOfRangeException)
+        {
+            return 0;
+        }
+    }
+
+    // A JPEG's size is in its start-of-frame segment (SOF0 to SOF15, but for the markers that share their numbers).
+    private static int JpegWidth(ReadOnlySpan<byte> data)
+    {
+        var at = 2;
+        while (at + 9 < data.Length)
+        {
+            if (data[at] != 0xFF)
+            {
+                at++;
+                continue;
+            }
+
+            var marker = data[at + 1];
+            if (marker is 0xFF or 0x01 or (>= 0xD0 and <= 0xD8))
+            {
+                at += marker == 0xFF ? 1 : 2;
+                continue;
+            }
+
+            if (marker is >= 0xC0 and <= 0xCF and not (0xC4 or 0xC8 or 0xCC))
+            {
+                return (data[at + 7] << 8) | data[at + 8];
+            }
+
+            at += 2 + ((data[at + 2] << 8) | data[at + 3]);
+        }
+
+        return 0;
+    }
+
     public static string ExtensionFor(string mimeType) => mimeType.ToLowerInvariant() switch
     {
         "image/png" => ".png",
