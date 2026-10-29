@@ -127,6 +127,10 @@ public sealed partial class Spectrogram : Control
     private SpectrogramPalette _paletteChoice = SpectrogramPalette.Classic;
     private double _columnsPerSecond = 50;
     private double _carry;
+    // Whole columns scrolled so far, kept only as far as the dotted lines' pattern repeats, so their
+    // dots glide along with the heatmap and waveform instead of sitting still on top of them.
+    private int _scrolled;
+    private float _sensitivityDb;
     private double _sinceMark;
     private TimeSpan _lastFrame;
     private bool _running;
@@ -244,6 +248,19 @@ public sealed partial class Spectrogram : Control
         get => _columnsPerSecond;
         set => _columnsPerSecond = Math.Clamp(value, 5, 400);
     }
+
+    /// <summary>
+    /// How much brighter the heatmap and spectrum paint the music, in dB: higher shows quieter
+    /// sounds, lower keeps loud music from filling everything with the top colours.
+    /// </summary>
+    public double SensitivityDb
+    {
+        get => _sensitivityDb;
+        set => _sensitivityDb = (float)Math.Clamp(value, MinSensitivityDb, MaxSensitivityDb);
+    }
+
+    public const double MinSensitivityDb = -12;
+    public const double MaxSensitivityDb = 24;
 
     /// <summary>The frequency at a height in the heatmap or spectrum, or null outside them.</summary>
     public double? FrequencyAt(double y)
@@ -495,6 +512,8 @@ public sealed partial class Spectrogram : Control
                 _head = (_head + 1) % _columns;
             }
 
+            _scrolled = (_scrolled + count) % DotRepeat;
+
             PaintColumns(first, count);
         }
 
@@ -562,7 +581,7 @@ public sealed partial class Spectrogram : Control
                 }
             }
 
-            var decibels = 10f * MathF.Log10(power + 1e-12f) + _rowTilt[row];
+            var decibels = 10f * MathF.Log10(power + 1e-12f) + _rowTilt[row] + _sensitivityDb;
             var level = Math.Clamp((decibels - FloorDb) / (CeilingDb - FloorDb), 0f, 1f);
             _levels[row * _columns + column] = (byte)(level * 255 + 0.5f);
             _latest[row] = level;
@@ -632,7 +651,9 @@ public sealed partial class Spectrogram : Control
             return;
         }
 
-        var grid = _gridPen ??= new ImmutablePen(GridBrush.ToImmutable(), 1, new ImmutableDashStyle(new[] { 1.0, 1.0 }, 0));
+        var grid = _gridPen ??= new ImmutablePen(GridBrush.ToImmutable(), 1, new ImmutableDashStyle(Dots, 0));
+        // The same dots, shifted along by however far the picture has scrolled, for lines across it.
+        var gliding = new ImmutablePen(GridBrush.ToImmutable(), 1, new ImmutableDashStyle(Dots, _scrolled + _carry));
 
         // The history runs right to left from each part's right edge; a part narrower than the
         // history shows only its newest end. Everything is shifted by the same fraction of a pixel.
@@ -647,7 +668,7 @@ public sealed partial class Spectrogram : Control
 
         if (!IsEmpty(_axis))
         {
-            DrawScale(dc, grid);
+            DrawScale(dc, grid, gliding);
         }
 
         if (Usable(_spectrum))
@@ -660,7 +681,7 @@ public sealed partial class Spectrogram : Control
             using (dc.PushClip(_wave))
             {
                 DrawMarks(dc, grid, _wave);
-                DrawWave(dc, grid);
+                DrawWave(dc, gliding);
             }
         }
 
@@ -691,6 +712,11 @@ public sealed partial class Spectrogram : Control
         }
     }
 
+    // The dotted lines' pattern: a dot every fourth pixel. Spaced that far apart the dots are seen to
+    // glide with the picture; a dot every other pixel would only shimmer as it scrolls.
+    private const int DotRepeat = 4;
+    private static readonly double[] Dots = { 1.0, DotRepeat - 1.0 };
+
     private static bool Usable(Rect rect) => rect.Width >= 2 && rect.Height >= 2;
 
     // Faint lines every few seconds, moving with the music.
@@ -711,7 +737,7 @@ public sealed partial class Spectrogram : Control
     /// The frequency scale, in its own strip so the numbers never sit on top of the colours:
     /// larger, bolder type in the theme's text colour, with a tick and a faint line across.
     /// </summary>
-    private void DrawScale(DrawingContext dc, IPen grid)
+    private void DrawScale(DrawingContext dc, IPen grid, IPen gliding)
     {
         dc.DrawRectangle(AxisBrush, null, _axis);
         var tick = _tickPen ??= new ImmutablePen(LabelBrush.ToImmutable(), 1);
@@ -726,14 +752,22 @@ public sealed partial class Spectrogram : Control
             }
 
             lastLabel = y;
-            dc.DrawLine(grid, new Point(AxisWidth, y), new Point(Bounds.Width, y));
+            // Across the heatmap the dots scroll with it; across the spectrum beside it they hold still.
+            var from = AxisWidth;
+            if (Usable(_heatmap))
+            {
+                dc.DrawLine(gliding, new Point(_heatmap.Left, y), new Point(_heatmap.Right, y));
+                from = _heatmap.Right;
+            }
+
+            dc.DrawLine(grid, new Point(from, y), new Point(Bounds.Width, y));
             dc.DrawLine(tick, new Point(AxisWidth - 5, y), new Point(AxisWidth, y));
             var formatted = Text(label, LabelSize);
             dc.DrawText(formatted, new Point(AxisWidth - 8 - formatted.Width, y - formatted.Height / 2));
         }
     }
 
-    // The waveform: the swing of each column's audio, centred on a line.
+    // The waveform: the swing of each column's audio, centred on a line whose dots scroll with it.
     private void DrawWave(DrawingContext dc, IPen grid)
     {
         var middle = _wave.Top + _wave.Height / 2;

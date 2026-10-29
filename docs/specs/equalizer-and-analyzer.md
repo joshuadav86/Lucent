@@ -10,6 +10,8 @@
 
 **Analyzer (Y):** a studio window with panels you switch on and off:
 - Heatmap (spectrogram), spectrum bars, scrolling waveform, stereo scope with correlation.
+- Sensitivity slider in the title bar (-12 to +24 dB, saved) brightens or calms the heatmap and spectrum bars.
+- The dotted frequency lines across the heatmap, and the waveform's centre line, scroll with the picture.
 - Loudness strip: momentary, short-term, and integrated LUFS, loudness range (LRA), and true peak (dBTP, hot above -1).
 - Loudness restarts on a new song, a source change, a gapless track change, a click on the strip, or "Measure loudness from here".
 
@@ -32,7 +34,7 @@ None.
 - `Lucent.Core/Audio/Equalizer.cs`, `EqualizerBands.cs`, `EqualizerDesign.cs`, `EqualizerPresets.cs`
 - `Lucent.Core/Audio/LoudnessMeter.cs`, `AudioCapture.cs`, `EditorFeed.cs`, `InputFeed.cs`
 - `EqualizerWindow.*`, `AnalyzerWindow.*`, `Audio/SystemAudio.cs`, `MainWindow.ListenInput.cs` in each app
-- Settings: `AnalyzerModules`, `ListenInput`, `ListenInputChannel`, `EqualizerSettings`
+- Settings: `AnalyzerModules`, `AnalyzerSensitivity`, `ListenInput`, `ListenInputChannel`, `EqualizerSettings`
 
 ## Checks
 
