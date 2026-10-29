@@ -49,6 +49,13 @@ public partial class MainWindow
 
     private void ToggleTrackFavorite()
     {
+        // While another app plays, the heart loves its song on Last.fm.
+        if (_remote is not null)
+        {
+            ToggleRemoteLove();
+            return;
+        }
+
         // While a radio station is on, the heart stars the station.
         if (_station is { } station)
         {
@@ -64,13 +71,25 @@ public partial class MainWindow
 
     private void UpdateTrackFavoriteButton()
     {
+        if (_remote is not null)
+        {
+            ShowRemoteHeart(_remote.State?.Track);
+            return;
+        }
+
         var favorite = _station is not null ? RadioGuide.IsFavorite(_settings, _station) : _current is not null && IsFavoriteTrack(_current.Track.Path);
-        var has = _current is not null || _station is not null;
-        TrackFavoriteButton.IsEnabled = has;
-        TrackFavoriteButton.Opacity = has ? 1 : 0.4;
         var thing = _station is not null ? "station" : "sound";
-        TrackFavoriteButton.ToolTip = favorite ? $"Remove this {thing} from your favorites (H)" : $"Add this {thing} to your favorites (H)";
-        if (favorite)
+        ShowHeart(favorite, _current is not null || _station is not null,
+            favorite ? $"Remove this {thing} from your favorites (H)" : $"Add this {thing} to your favorites (H)");
+    }
+
+    /// <summary>Draws the heart: filled in the accent when <paramref name="lit"/>, faded when it can't be pressed.</summary>
+    private void ShowHeart(bool lit, bool enabled, string tip)
+    {
+        TrackFavoriteButton.IsEnabled = enabled;
+        TrackFavoriteButton.Opacity = enabled ? 1 : 0.4;
+        TrackFavoriteButton.ToolTip = tip;
+        if (lit)
         {
             TrackFavoriteIcon.SetResourceReference(Shape.FillProperty, "AccentBrush");
             TrackFavoriteIcon.SetResourceReference(Shape.StrokeProperty, "AccentBrush");

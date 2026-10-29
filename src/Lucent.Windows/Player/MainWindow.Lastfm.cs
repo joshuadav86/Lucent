@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Windows;
 using Lucent.Lastfm;
+using Lucent.Streaming;
 
 namespace Lucent;
 
@@ -9,6 +10,11 @@ namespace Lucent;
 public partial class MainWindow
 {
     private Scrobbler? _scrobbler;
+
+    // The heart while another app plays: the song it's for, whether it's loved on Last.fm, and the look-up asking.
+    private RemoteTrack? _heartSong;
+    private bool _heartLoved;
+    private CancellationTokenSource? _heartLookup;
     private CancellationTokenSource? _lastfmSigningIn;
 
     // Why Lucent isn't signed in when it should be (the sign-in didn't work out, or Last.fm took it back), for the tab.
@@ -30,7 +36,7 @@ public partial class MainWindow
             return;
         }
 
-        var scrobbler = new Scrobbler(new LastfmClient(StreamingHttp, key), Scrobbler.WaitingFile);
+        var scrobbler = new Scrobbler(new LastfmClient(StreamingHttp, key, _settings.LastfmUser), Scrobbler.WaitingFile);
         scrobbler.Changed += (_, _) => ShowLastfmState();
         scrobbler.SignedOut += (_, _) =>
         {
@@ -40,6 +46,8 @@ public partial class MainWindow
             ShowLastfmState();
         };
         _scrobbler = scrobbler;
+        _heartSong = null;
+        UpdateTrackFavoriteButton();
     }
 
     /// <summary>Tells the scrobbler what's playing. The player's position timer calls it five times a second.</summary>
@@ -84,7 +92,61 @@ public partial class MainWindow
         if (_scrobbler is { } scrobbler && _station is null && _current?.Track is { } track
             && paths.Contains(track.Path, StringComparer.OrdinalIgnoreCase))
         {
-            scrobbler.Love(track.Artist, track.Title, favorite);
+            _ = scrobbler.LoveAsync(track.Artist, track.Title, favorite);
+        }
+    }
+
+    /// <summary>
+    /// Sets the heart up for the song another app is playing: it loves the song on Last.fm, so it's lit as Last.fm has
+    /// it, and can be pressed only while signed in (and not for a plain YouTube video, which isn't a song).
+    /// </summary>
+    private void ShowRemoteHeart(RemoteTrack? track)
+    {
+        if (track is null || _heartSong is null || !_heartSong.IsSameSong(track))
+        {
+            _heartSong = track;
+            _heartLoved = false;
+            _heartLookup?.Cancel();
+            _heartLookup = null;
+            if (track is not null && _scrobbler is { } scrobbler && ScrobbleSong.FromApp(_settings.RemoteApp, track) is not null)
+            {
+                _heartLookup = new CancellationTokenSource();
+                LookUpLove(scrobbler, track, _heartLookup);
+            }
+        }
+
+        var canLove = track is not null && _scrobbler is not null && ScrobbleSong.FromApp(_settings.RemoteApp, track) is not null;
+        ShowHeart(canLove && _heartLoved, canLove,
+            !canLove ? (_scrobbler is null ? "Sign in to Last.fm in Options to love the songs other apps play" : "Only songs can be loved on Last.fm")
+            : _heartLoved ? "Take back your love for this song on Last.fm (H)" : "Love this song on Last.fm (H)");
+    }
+
+    private async void LookUpLove(Scrobbler scrobbler, RemoteTrack track, CancellationTokenSource lookup)
+    {
+        var loved = await scrobbler.IsLovedAsync(track.Artist, track.Title, lookup.Token);
+        if (_heartLookup == lookup && !lookup.IsCancellationRequested)
+        {
+            _heartLoved = loved;
+            ShowRemoteHeart(_heartSong);
+        }
+    }
+
+    /// <summary>Loves the other app's song on Last.fm, or takes the love back; the heart goes back if Last.fm says no.</summary>
+    private async void ToggleRemoteLove()
+    {
+        if (_scrobbler is not { } scrobbler || _heartSong is not { } track || ScrobbleSong.FromApp(_settings.RemoteApp, track) is null)
+        {
+            return;
+        }
+
+        var love = !_heartLoved;
+        _heartLoved = love;
+        _heartLookup?.Cancel();
+        ShowRemoteHeart(track);
+        if (!await scrobbler.LoveAsync(track.Artist, track.Title, love) && _heartSong?.IsSameSong(track) == true)
+        {
+            _heartLoved = !love;
+            ShowRemoteHeart(track);
         }
     }
 
@@ -141,6 +203,8 @@ public partial class MainWindow
         LastfmAccount.Clear();
         _settings.LastfmUser = null;
         _settings.Save();
+        _heartSong = null;
+        UpdateTrackFavoriteButton();
     }
 
     private void OnLastfmProfile(object sender, RoutedEventArgs e)

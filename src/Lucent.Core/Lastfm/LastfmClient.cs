@@ -52,12 +52,15 @@ public sealed class LastfmClient : IScrobbleService
     private readonly HttpClient _http;
     private readonly LastfmApp _app;
     private readonly string _sessionKey;
+    private readonly string _userName;
 
-    public LastfmClient(HttpClient http, string sessionKey)
+    /// <param name="userName">The account the session is for, whose loved songs <see cref="IsLovedAsync"/> reads.</param>
+    public LastfmClient(HttpClient http, string sessionKey, string userName)
     {
         _http = http;
         _app = App ?? throw new LastfmProblem(NoApp);
         _sessionKey = sessionKey;
+        _userName = userName;
     }
 
     private const string NoApp = "This copy of Lucent wasn't built with a Last.fm app to sign in with.";
@@ -157,6 +160,27 @@ public sealed class LastfmClient : IScrobbleService
         }
 
         await CallAsync(_http, _app, fields, post: true, cancel);
+    }
+
+    public async Task<bool?> IsLovedAsync(string artist, string title, CancellationToken cancel)
+    {
+        try
+        {
+            var track = (await CallAsync(_http, _app, new Dictionary<string, string>
+            {
+                ["method"] = "track.getInfo",
+                ["artist"] = artist,
+                ["track"] = title,
+                ["username"] = _userName,
+                ["autocorrect"] = "1",
+            }, post: false, cancel)).GetProperty("track");
+            return track.TryGetProperty("userloved", out var loved) ? loved.ToString() == "1" : null;
+        }
+        catch (LastfmProblem problem) when (problem.Code == 6)
+        {
+            // Last.fm has never heard of the song.
+            return null;
+        }
     }
 
     public async Task LoveAsync(string artist, string title, bool love, CancellationToken cancel) =>
