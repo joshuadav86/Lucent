@@ -73,11 +73,14 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
     // The playlist's name, then its songs' IDs, names, artists, albums and lengths, up to 1,000 songs. Each property comes
     // for every song at once (one request to Music, not one a song), each a list split by character 30, and they're
     // split from one another by character 31: characters no song name has.
-    private static readonly string ListScript = SongsScript("current playlist");
+    private static readonly string ListScript = SongsScript("current playlist", details: false);
 
-    // The same for any playlist, named as PlaylistReference names it (see SongsAsync).
-    private static string SongsScript(string playlist) => $$"""
+    // The same for any playlist, named as PlaylistReference names it (see SongsAsync). With details, for the library's
+    // columns, its songs' album artists, genres, years, track and disc numbers, and how many minutes ago each was
+    // added (a date as text would be in the Mac's own language). Those are left empty if Music won't give them.
+    private static string SongsScript(string playlist, bool details) => $$"""
         if application "Music" is not running then return ""
+        set nowDate to current date
         tell application "Music"
             try
                 set p to {{playlist}}
@@ -94,8 +97,35 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
             set artists to (artist of tracks 1 thru n of p) as text
             set albums to (album of tracks 1 thru n of p) as text
             set lengths to (duration of tracks 1 thru n of p) as text
+            set found to (name of p) & sep & ids & sep & names & sep & artists & sep & albums & sep & lengths
+            if {{(details ? "true" : "false")}} then
+                set albumArtistList to ""
+                set genreList to ""
+                set yearList to ""
+                set trackList to ""
+                set discList to ""
+                set addedList to ""
+                try
+                    set albumArtistList to (album artist of tracks 1 thru n of p) as text
+                    set genreList to (genre of tracks 1 thru n of p) as text
+                    set yearList to (year of tracks 1 thru n of p) as text
+                    set trackList to (track number of tracks 1 thru n of p) as text
+                    set discList to (disc number of tracks 1 thru n of p) as text
+                    set addedDates to (date added of tracks 1 thru n of p)
+                    set agoList to {}
+                    repeat with d in addedDates
+                        try
+                            set end of agoList to (nowDate - (contents of d)) div 60
+                        on error
+                            set end of agoList to ""
+                        end try
+                    end repeat
+                    set addedList to agoList as text
+                end try
+                set found to found & sep & albumArtistList & sep & genreList & sep & yearList & sep & trackList & sep & discList & sep & addedList
+            end if
             set AppleScript's text item delimiters to ""
-            return (name of p) & sep & ids & sep & names & sep & artists & sep & albums & sep & lengths
+            return found
         end tell
         """;
 
@@ -167,7 +197,7 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
         }
 
         // PlayFromListAsync finds the playlist by its persistent ID, so the list carries that.
-        return ParseList(id, await RunAsync(SongsScript(p), cancel))
+        return ParseList(id, await RunAsync(SongsScript(p, details: true), cancel))
             ?? new RemoteList(id, playlist.Name, Array.Empty<RemoteTrack>());
     }
 
@@ -357,14 +387,33 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
         {
             var columns = sections[1..6].Select(section => section.Split('\u001e')).ToArray();
             var count = columns.Min(column => column.Length);
+
+            // The details, when asked for: each list on its own, as one Music wouldn't give is empty.
+            var details = sections.Skip(6).Take(6).Select(section => section.Split('\u001e')).ToArray();
+            string Detail(int which, int i) => which < details.Length && i < details[which].Length ? details[which][i] : string.Empty;
+            var now = DateTime.UtcNow;
             for (var i = 0; i < count; i++)
             {
-                tracks.Add(new RemoteTrack(columns[0][i], columns[1][i], columns[2][i], columns[3][i], Seconds(columns[4][i])));
+                tracks.Add(new RemoteTrack(columns[0][i], columns[1][i], columns[2][i], columns[3][i], Seconds(columns[4][i]))
+                {
+                    AlbumArtist = Detail(0, i),
+                    Genre = Detail(1, i),
+                    Year = Number(Detail(2, i)),
+                    TrackNumber = Number(Detail(3, i)),
+                    Disc = Number(Detail(4, i)),
+                    AddedAt = long.TryParse(Detail(5, i), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var minutes) && minutes >= 0
+                        ? now - TimeSpan.FromMinutes(minutes)
+                        : null,
+                });
             }
         }
 
         return new RemoteList(id, sections[0], tracks);
     }
+
+    // Music gives 0 for a year or number it doesn't know.
+    private static uint Number(string text) =>
+        uint.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : 0;
 
     // Music's persistent IDs are hexadecimal; anything else is left out, so an ID can't end the script's quotes.
     private static string Hex(string? id) => new((id ?? string.Empty).Where(Uri.IsHexDigit).ToArray());

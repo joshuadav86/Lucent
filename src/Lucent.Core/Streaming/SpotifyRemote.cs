@@ -348,7 +348,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     }
 
     // A track or podcast episode. An album's own list of tracks leaves the album out, so it's passed in.
-    private static RemoteTrack? ParseTrack(JsonElement item, JsonElement? fromAlbum)
+    internal static RemoteTrack? ParseTrack(JsonElement item, JsonElement? fromAlbum)
     {
         if (item.ValueKind != JsonValueKind.Object)
         {
@@ -359,21 +359,23 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         var duration = item.TryGetProperty("duration_ms", out var length) && length.ValueKind == JsonValueKind.Number
             ? TimeSpan.FromMilliseconds(length.GetInt64())
             : TimeSpan.Zero;
-        var artist = string.Empty;
+        var artist = Artists(item);
         var album = string.Empty;
+        var albumArtist = string.Empty;
+        uint year = 0;
         string? artwork = null;
         string? thumbnail = null;
-        if (item.TryGetProperty("artists", out var artists) && artists.ValueKind == JsonValueKind.Array)
-        {
-            artist = string.Join(", ", artists.EnumerateArray().Select(entry => Text(entry, "name")).Where(name => name.Length > 0));
-        }
-
         var albumObject = fromAlbum ?? (item.TryGetProperty("album", out var albumJson) ? albumJson : default);
         if (albumObject.ValueKind == JsonValueKind.Object)
         {
             album = Text(albumObject, "name");
+            albumArtist = Artists(albumObject);
             artwork = LargestImage(albumObject);
             thumbnail = SmallestImage(albumObject);
+
+            // "1998-04-20", "1998-04" or "1998", by how much the label told Spotify.
+            var released = Text(albumObject, "release_date");
+            year = released.Length >= 4 && uint.TryParse(released[..4], NumberStyles.None, CultureInfo.InvariantCulture, out var found) ? found : 0;
         }
         else if (item.TryGetProperty("show", out var show) && show.ValueKind == JsonValueKind.Object)
         {
@@ -386,8 +388,23 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
 
         var id = Text(item, "id") is { Length: > 0 } value ? value : $"{artist}|{title}";
         var uri = Text(item, "uri") is { Length: > 0 } itemUri ? itemUri : null;
-        return new RemoteTrack(id, title, artist, album, duration, artwork, uri, thumbnail);
+        return new RemoteTrack(id, title, artist, album, duration, artwork, uri, thumbnail)
+        {
+            AlbumArtist = albumArtist,
+            Year = year,
+            TrackNumber = Number(item, "track_number"),
+            Disc = Number(item, "disc_number"),
+        };
     }
+
+    // Every artist of a song or album, "Ulrich Schnauss, Mark Peters".
+    private static string Artists(JsonElement owner) =>
+        owner.TryGetProperty("artists", out var artists) && artists.ValueKind == JsonValueKind.Array
+            ? string.Join(", ", artists.EnumerateArray().Select(entry => Text(entry, "name")).Where(name => name.Length > 0))
+            : string.Empty;
+
+    private static uint Number(JsonElement owner, string name) =>
+        owner.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetUInt32(out var number) ? number : 0;
 
     public async Task<RemoteList?> ListAsync(RemoteState state, CancellationToken cancel)
     {

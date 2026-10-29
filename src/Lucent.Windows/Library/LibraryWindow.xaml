@@ -301,10 +301,10 @@
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
                 </DockPanel>
-                <!-- How the songs are listed: the playlist's own order, by date added, title or artist, as in the queue. -->
+                <!-- How the songs are listed: the playlist's own order, or by any of its columns. -->
                 <Button x:Name="RemoteSortButton" DockPanel.Dock="Top" Style="{StaticResource PickerButton}" Height="28" Padding="10,0"
                         Margin="8,0,4,8" HorizontalAlignment="Left" Visibility="Collapsed"
-                        ToolTip="List the playlist in its own order, by date added, by title or by artist. It still plays in its own order."
+                        ToolTip="List the playlist in its own order, or by title, artist, album, date added and more. It still plays in its own order."
                         Click="OnRemoteSortMenu">
                     <StackPanel Orientation="Horizontal">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource SortIcon}"
@@ -314,6 +314,28 @@
                               Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                     </StackPanel>
                 </Button>
+                <!-- The playlist's column headings (LibraryWindow.PlaylistColumns.cs), as the library's: a click sorts by one
+                     and another flips it, a drag moves one, and a right-click chooses them. They line up with the rows' cells:
+                     the rows' padding (12), playing bar (3) and cover (8 + 36 + 10) on the left, and the padding and scroll
+                     bar on the right. -->
+                <Grid x:Name="PlaylistColumnHeader" DockPanel.Dock="Top" Margin="69,0,18,2" Visibility="Collapsed" Background="Transparent"
+                      ContextMenuOpening="OnPlaylistColumnHeaderMenuOpening">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="45" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.ContextMenu>
+                        <ContextMenu />
+                    </Grid.ContextMenu>
+                    <TextBlock x:Name="PlaylistTitleHeading" Grid.Column="0" Text="Title" FontSize="11" Cursor="Hand"
+                               ToolTip="Sort by title" MouseLeftButtonUp="OnPlaylistTitleHeadingClick" />
+                    <StackPanel x:Name="PlaylistColumnHeadings" Grid.Column="1" Orientation="Horizontal" />
+                    <Border Grid.Column="2" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource HairlineBrush}">
+                        <TextBlock x:Name="PlaylistLengthHeading" Text="Length" FontSize="11" Cursor="Hand" TextAlignment="Right"
+                                   ToolTip="Sort by length" MouseLeftButtonUp="OnPlaylistLengthHeadingClick" />
+                    </Border>
+                </Grid>
                 <TextBlock x:Name="RemotePlaylistNote" DockPanel.Dock="Bottom" Visibility="Collapsed" Margin="10,6,8,0" FontSize="11"
                            TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
                 <ListBox x:Name="RemotePlaylistView" Background="Transparent" BorderThickness="0"
@@ -337,6 +359,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <local:RoundedBorder Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
                                                      Background="{DynamicResource AccentGradientBrush}"
@@ -349,9 +372,38 @@
                                                TextTrimming="CharacterEllipsis"
                                                Foreground="{DynamicResource MutedTextBrush}" />
                                 </StackPanel>
-                                <TextBlock Grid.Column="3" Text="{Binding Track.DurationText}" FontSize="11"
-                                           VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                                <!-- The playlist's columns, as the library's tag columns. -->
+                                <ItemsControl Grid.Column="3" ItemsSource="{Binding Cells}" Margin="0,-9" Focusable="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type core:LibraryCell}">
+                                            <Border Width="{Binding Width}" Padding="8,0" BorderThickness="1,0,0,0"
+                                                    BorderBrush="{DynamicResource HairlineBrush}">
+                                                <TextBlock x:Name="Cell" Text="{Binding Text}" FontSize="12" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
+                                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding AlignRight}" Value="True">
+                                                    <Setter TargetName="Cell" Property="TextAlignment" Value="Right" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Border x:Name="TimeCell" Grid.Column="4" Margin="0,-9" BorderBrush="{DynamicResource HairlineBrush}">
+                                    <TextBlock Text="{Binding Track.DurationText}" FontSize="11" MinWidth="44" TextAlignment="Right"
+                                               VerticalAlignment="Center" Foreground="{DynamicResource FaintTextBrush}" />
+                                </Border>
                             </Grid>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding HasCells}" Value="True">
+                                    <Setter TargetName="TimeCell" Property="BorderThickness" Value="1,0,0,0" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

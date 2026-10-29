@@ -51,7 +51,7 @@ public static class RemoteListSorting
     private static readonly StringComparer Comparer = StringComparer.CurrentCultureIgnoreCase;
 
     // "... Passing By" files under P and "The Cure" under C, as Spotify's own sort does.
-    private static string SortKey(string text)
+    internal static string SortKey(string text)
     {
         var key = text.TrimStart(' ', '.', '…', '"', '\'', '(', '[', '-', '#', '*');
         return key.StartsWith("The ", StringComparison.OrdinalIgnoreCase) && key.Length > 4 ? key[4..] : key;

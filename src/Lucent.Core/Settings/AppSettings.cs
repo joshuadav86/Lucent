@@ -70,6 +70,21 @@ public sealed class AppSettings
     /// <summary>The order Spotify's and Music's playlists are listed in under the library's PLAYLISTS.</summary>
     public RemotePlaylistSort RemotePlaylistSort { get; set; }
 
+    /// <summary>
+    /// The columns beside the songs of a streaming playlist opened from PLAYLISTS, in the order they're shown, as
+    /// Spotify shows a playlist. A column the app doesn't fill (Spotify has no genres) is left out of its playlists.
+    /// </summary>
+    public List<PlaylistColumn> PlaylistColumnsShown { get; set; } = new() { PlaylistColumn.Album, PlaylistColumn.Added };
+
+    /// <summary>What an opened streaming playlist's songs are sorted by; it still plays in its own order.</summary>
+    public PlaylistColumn PlaylistSortColumn { get; set; }
+
+    /// <summary>Whether <see cref="PlaylistSortColumn"/> runs Z to A, high to low, or newest first.</summary>
+    public bool PlaylistSortDescending { get; set; }
+
+    /// <summary>Whether the library has widened once to fit an opened playlist's columns.</summary>
+    public bool PlaylistColumnsFitted { get; set; }
+
     /// <summary>Whether the library has headings (<see cref="LibraryGrouping"/>), or is one long list.</summary>
     public bool GroupLibraryByFolder { get; set; } = true;
 
