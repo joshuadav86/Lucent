@@ -23,6 +23,8 @@ public sealed class LibraryItem : INotifyPropertyChanged
         Added = added;
         FileName = System.IO.Path.GetFileNameWithoutExtension(path);
         _title = FileName;
+        Heading = Section;
+        Subheading = Folder;
     }
 
     /// <summary>A row standing in for an empty playlist, so its heading still shows. It isn't a file.</summary>
@@ -112,6 +114,34 @@ public sealed class LibraryItem : INotifyPropertyChanged
     public string SubFolder => IsInSection && Folder.StartsWith(Section + " / ", StringComparison.Ordinal)
         ? Folder[(Section.Length + 3)..]
         : Folder;
+
+    /// <summary>
+    /// The heading the song is listed under: its <see cref="Section"/>, or with the library's headings by artist or
+    /// album (<see cref="LibraryGroups.Assign"/>), its artist's or album's.
+    /// </summary>
+    public string Heading { get; private set; }
+
+    /// <summary>
+    /// The subheading it's listed under inside <see cref="Heading"/>: its <see cref="Folder"/>, or its album under its
+    /// artist's heading. The same as <see cref="Heading"/> when it sits right under the heading.
+    /// </summary>
+    public string Subheading { get; private set; }
+
+    /// <summary>Whether <see cref="Subheading"/> is a subheading of its own under <see cref="Heading"/>.</summary>
+    public bool HasSubheading => !string.Equals(Heading, Subheading, StringComparison.Ordinal);
+
+    /// <summary>What the subheading shows: the folder inside a store's ("Artist / Album"), or the album ("Isles (2021)").</summary>
+    public string SubheadingLabel => _subheadingLabel ?? SubFolder;
+
+    private string? _subheadingLabel;
+
+    /// <summary>Lists the song under other headings. Set by <see cref="LibraryGroups.Assign"/>.</summary>
+    internal void SetHeadings(string heading, string subheading, string subheadingLabel)
+    {
+        Heading = heading;
+        Subheading = subheading;
+        _subheadingLabel = subheadingLabel;
+    }
 
     /// <summary>When the file arrived: the later of its created and modified times.</summary>
     public DateTime Added { get; }

@@ -85,7 +85,11 @@ public sealed class AppSettings
     /// <summary>Whether the library has widened once to fit an opened playlist's columns.</summary>
     public bool PlaylistColumnsFitted { get; set; }
 
+    /// <summary>Whether the library has headings (<see cref="LibraryGrouping"/>), or is one long list.</summary>
     public bool GroupLibraryByFolder { get; set; } = true;
+
+    /// <summary>What the library's headings stand for: folders, artists, or albums.</summary>
+    public LibraryGrouping LibraryGrouping { get; set; } = LibraryGrouping.Folders;
 
     /// <summary>Whether the library lists only the favourite songs.</summary>
     public bool LibraryFavoritesOnly { get; set; }

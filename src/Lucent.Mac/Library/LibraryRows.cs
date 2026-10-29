@@ -53,7 +53,7 @@ public sealed class FolderHeading : INotifyPropertyChanged
         }
 
         // Any songs right in the store's folder come first, then each subheading.
-        return Items.Where(item => !item.IsInSection)
+        return Items.Where(item => !item.HasSubheading)
             .Concat(Subheadings.SelectMany(sub => sub.IsExpanded ? sub.Items.Prepend<object>(sub) : new object[] { sub }));
     }
 

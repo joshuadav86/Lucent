@@ -78,6 +78,10 @@ public sealed class Track
     public static Track ForStation(string address, string title, string artist, string station, int bitrate) =>
         new(address, title, artist, TimeSpan.Zero, bitrate, album: station);
 
+    /// <summary>A made-up track, for self-tests.</summary>
+    internal static Track Sample(string path, string title, string artist, string album, TrackTagValues tags) =>
+        new(path, title, artist, TimeSpan.FromMinutes(4), album: album) { Tags = tags };
+
     public static Track FromFile(string path)
     {
         var fallbackTitle = System.IO.Path.GetFileNameWithoutExtension(path);

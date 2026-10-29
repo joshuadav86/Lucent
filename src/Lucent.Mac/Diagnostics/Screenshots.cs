@@ -53,6 +53,8 @@ public static partial class Screenshots
         ("Message", () => PreviewMessage()),
         ("Library", () => PreviewLibrary()),
         ("LibraryColumns", () => PreviewLibrary(columns: true)),
+        ("LibraryArtists", () => PreviewLibrary(grouping: LibraryGrouping.Artists)),
+        ("LibraryAlbums", () => PreviewLibrary(grouping: LibraryGrouping.Albums)),
         ("Duplicates", () => PreviewDuplicates()),
         ("Queue", () => PreviewQueue()),
         ("Queue-Spotify", () => PreviewSpotifyQueue()),
@@ -349,7 +351,21 @@ public static partial class Screenshots
         _ => TrackTagValues.None,
     };
 
-    private static Window PreviewLibrary(bool columns = false)
+    /// <summary>Made-up track numbers for the sample songs, so albums list in their own order.</summary>
+    private static uint SampleTrackNumber(string title) => title switch
+    {
+        "Atlas" => 1,
+        "Apricots" => 3,
+        "Saku" => 4,
+        "Ring the Alarm" => 2,
+        "Come Closer" => 1,
+        "Roygbiv" => 10,
+        "Aquarius" => 4,
+        "Turquoise Hexagon Sun" => 7,
+        _ => 1,
+    };
+
+    private static Window PreviewLibrary(bool columns = false, LibraryGrouping? grouping = null)
     {
         var root = Path.Combine(Path.GetTempPath(), "lucent-screenshots", "Music");
         var items = SampleSongs.Select(song =>
@@ -357,7 +373,8 @@ public static partial class Screenshots
             var directory = Path.Combine(root, song.Folder.Replace(" / ", "/"));
             var path = Path.Combine(directory, song.Title + ".flac");
             var item = new LibraryItem(path, song.Folder, directory, DateTime.Today.AddDays(-song.DaysAgo).AddHours(song.Seconds % 13));
-            item.ApplyTags(SampleTrack(path, song.Title, song.Artist, song.Album, song.Seconds).WithTags(SampleTags(song.Album, song.Title)));
+            var tags = SampleTags(song.Album, song.Title) with { TrackNumber = SampleTrackNumber(song.Title) };
+            item.ApplyTags(SampleTrack(path, song.Title, song.Artist, song.Album, song.Seconds).WithTags(tags));
             return item;
         }).ToList();
 
@@ -365,6 +382,7 @@ public static partial class Screenshots
         {
             LibraryFolders = { root },
             CollapsedLibraryFolders = { "Downloads" },
+            LibraryGrouping = grouping ?? LibraryGrouping.Folders,
         };
         if (columns)
         {

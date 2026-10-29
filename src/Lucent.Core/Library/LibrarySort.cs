@@ -1,4 +1,5 @@
 using System.Collections;
+using Lucent.Playlist;
 using Lucent.Settings;
 
 namespace Lucent.Library;
@@ -59,10 +60,13 @@ public sealed class LibraryItemComparer : IComparer
         ? LibraryColumns.SortLabel(column, settings.LibrarySortDescending)
         : LibrarySorts.Label(settings.LibrarySort);
 
-    /// <summary>Whether the order depends on tags, so it has to be sorted again once they've been read.</summary>
-    public static bool NeedsTags(AppSettings settings) => settings.LibrarySortColumn is { } column
+    /// <summary>
+    /// Whether the order depends on tags, so it has to be sorted again once they've been read. With headings it always
+    /// does: songs go in album order under them, and artist and album headings are the tags.
+    /// </summary>
+    public static bool NeedsTags(AppSettings settings) => settings.GroupLibraryByFolder || (settings.LibrarySortColumn is { } column
         ? column is not (LibraryColumn.Added or LibraryColumn.FileName or LibraryColumn.Rating or LibraryColumn.Plays or LibraryColumn.LastPlayed)
-        : settings.LibrarySort is LibrarySort.Title or LibrarySort.Artist;
+        : settings.LibrarySort is LibrarySort.Title or LibrarySort.Artist);
 
     /// <summary>Whether the order depends on plays or ratings, so it has to be sorted again when they change.</summary>
     public static bool NeedsStats(AppSettings settings) => settings.LibrarySortColumn is { } column
@@ -99,7 +103,7 @@ public sealed class LibraryItemComparer : IComparer
         return result != 0 ? result : string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Songs that tie on plays or rating are listed by artist, then title.</summary>
+    /// <summary>Songs that tie on plays or rating are listed by artist, then as on their albums.</summary>
     private static int Then(int result, LibraryItem a, LibraryItem b) => result != 0 ? result : CompareArtists(a, b);
 
     private static int CompareArtists(LibraryItem a, LibraryItem b)
@@ -112,7 +116,35 @@ public sealed class LibraryItemComparer : IComparer
         }
 
         var artist = CompareText(a.Artist, b.Artist);
-        return artist != 0 ? artist : CompareText(a.Title, b.Title);
+        return artist != 0 ? artist : AlbumOrder(a, b);
+    }
+
+    /// <summary>
+    /// The order songs go in under a heading: album by album, each in disc and track order. A song without a disc
+    /// number counts as disc 1; songs without a track number, or an album, come after, by file name.
+    /// </summary>
+    public static int TrackOrder(LibraryItem a, LibraryItem b)
+    {
+        var result = LibraryColumns.Compare(LibraryColumn.Album, a, b, descending: false);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        var (aTags, bTags) = (a.Track?.Tags ?? TrackTagValues.None, b.Track?.Tags ?? TrackTagValues.None);
+        result = Math.Max(aTags.Disc, 1u).CompareTo(Math.Max(bTags.Disc, 1u));
+        if (result != 0)
+        {
+            return result;
+        }
+
+        result = (aTags.TrackNumber == 0).CompareTo(bTags.TrackNumber == 0);
+        if (result == 0)
+        {
+            result = aTags.TrackNumber.CompareTo(bTags.TrackNumber);
+        }
+
+        return result != 0 ? result : CompareText(a.FileName, b.FileName);
     }
 
     private static int AlbumOrder(LibraryItem a, LibraryItem b)
