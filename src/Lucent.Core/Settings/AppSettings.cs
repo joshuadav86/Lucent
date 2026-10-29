@@ -341,6 +341,9 @@ public sealed class AppSettings
 
     public AnalyzerSpeed AnalyzerSpeed { get; set; } = AnalyzerSpeed.Normal;
 
+    /// <summary>How much brighter the analyzer's heatmap and spectrum paint the music, in dB (0 is as it came).</summary>
+    public double AnalyzerSensitivity { get; set; }
+
     /// <summary>Which parts of the analyzer are shown.</summary>
     public AnalyzerModules AnalyzerModules { get; set; } = AnalyzerModules.All;
 

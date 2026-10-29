@@ -48,6 +48,7 @@ public partial class AnalyzerWindow : Window
             Palette = settings.AnalyzerPalette,
             Modules = settings.AnalyzerModules,
             ColumnsPerSecond = ColumnsPerSecond(settings.AnalyzerSpeed),
+            SensitivityDb = settings.AnalyzerSensitivity,
         };
         Display.Child = _spectrogram;
 
@@ -70,6 +71,11 @@ public partial class AnalyzerWindow : Window
             button.Click += OnPaletteChosen;
             PaletteBar.Children.Add(button);
         }
+
+        SensitivitySlider.Minimum = Spectrogram.MinSensitivityDb;
+        SensitivitySlider.Maximum = Spectrogram.MaxSensitivityDb;
+        SensitivitySlider.Value = _spectrogram.SensitivityDb;
+        ReadoutText.Text = string.Empty;
 
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         Closing += OnClosing;
@@ -177,6 +183,19 @@ public partial class AnalyzerWindow : Window
 
             _settings.AnalyzerModules = shown;
             _spectrogram.Modules = shown;
+            _settings.Save();
+        }
+    }
+
+    private void OnSensitivityChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        var decibels = Math.Round(e.NewValue);
+        ReadoutText.Text = "Sensitivity " + (decibels > 0 ? "+" : decibels < 0 ? "\u2212" : string.Empty)
+            + Math.Abs(decibels).ToString(CultureInfo.InvariantCulture) + " dB";
+        _spectrogram.SensitivityDb = decibels;
+        if (_settings.AnalyzerSensitivity != decibels)
+        {
+            _settings.AnalyzerSensitivity = decibels;
             _settings.Save();
         }
     }

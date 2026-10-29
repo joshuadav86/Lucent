@@ -16,6 +16,11 @@
             <!-- Title bar: the frequency under the mouse, the colours, and close. -->
             <DockPanel Grid.Row="0" Background="{DynamicResource TitleBarBrush}" w:Chrome.IsCaption="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- How brightly the heatmap and spectrum paint the music. -->
+                    <Slider x:Name="SensitivitySlider" Theme="{StaticResource VolumeSlider}" Width="80" Margin="0,0,10,0"
+                            VerticalAlignment="Center" Focusable="False" TickFrequency="1" IsSnapToTickEnabled="True"
+                            ValueChanged="OnSensitivityChanged" PointerExited="OnDisplayMouseLeave"
+                            ToolTip.Tip="Sensitivity: slide right to show quieter sounds in the heatmap and spectrum, left to calm loud music down" />
                     <!-- Which parts show: the heatmap, spectrum, waveform, stereo scope and loudness. -->
                     <Button x:Name="PanelsButton" Theme="{StaticResource PickerButton}" Height="28" Padding="10,0" Margin="0,0,6,0"
                             ToolTip.Tip="Choose which parts of the analyzer to show" Click="OnPanelsClicked">
