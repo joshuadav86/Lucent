@@ -162,8 +162,11 @@ public sealed class SpectralFrames
 
     public double FramesPerSecond => (double)SampleRate / Hop;
 
-    /// <summary>Measures every frame of the sound, mixed to mono. A few hundred milliseconds for a song.</summary>
-    public static SpectralFrames Measure(AudioBuffer audio, CancellationToken cancel = default)
+    /// <summary>
+    /// Measures every frame of the sound, mixed to mono. A few hundred milliseconds for a song, on every core unless
+    /// <paramref name="cores"/> says how many to use.
+    /// </summary>
+    public static SpectralFrames Measure(AudioBuffer audio, CancellationToken cancel = default, int cores = -1)
     {
         var rate = audio.SampleRate;
         var count = audio.Frames / Size;
@@ -196,7 +199,7 @@ public sealed class SpectralFrames
             window[i] = 0.5 - 0.5 * Math.Cos(2 * Math.PI * i / (Size - 1));
         }
 
-        Parallel.For(0, count, new ParallelOptions { CancellationToken = cancel }, () => (new Fft(Size), new double[Size], new double[Size]),
+        Parallel.For(0, count, new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = cores }, () => (new Fft(Size), new double[Size], new double[Size]),
             (f, _, scratch) =>
             {
                 var (fft, re, im) = scratch;

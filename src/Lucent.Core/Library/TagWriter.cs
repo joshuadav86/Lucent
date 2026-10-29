@@ -110,8 +110,8 @@ public sealed class TagSaveException : Exception
 /// </summary>
 public static class TagWriter
 {
-    private const string TempSuffix = ".lucent-saving";
-    private const string BackupSuffix = ".lucent-backup";
+    internal const string TempSuffix = ".lucent-saving";
+    internal const string BackupSuffix = ".lucent-backup";
 
     static TagWriter()
     {
@@ -519,7 +519,7 @@ public static class TagWriter
     }
 
     // Windows error codes: 32 = in use by another process, 33 = part of it is locked.
-    private static bool IsInUse(IOException ex) => (ex.HResult & 0xFFFF) is 32 or 33;
+    internal static bool IsInUse(IOException ex) => (ex.HResult & 0xFFFF) is 32 or 33;
 
     // 112 = not enough space on the disk, 39 = the disk is full.
     private static bool IsDiskFull(IOException ex) => (ex.HResult & 0xFFFF) is 112 or 39;

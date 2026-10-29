@@ -275,7 +275,7 @@
     <Popup x:Name="OptionsPopup" PlacementTarget="{Binding ElementName=OptionsButton}" Placement="Bottom"
            VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
            Opened="OnOptionsOpened" Closed="OnOptionsClosed">
-        <w:RoundedBorder Margin="16" Width="420" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
+        <w:RoundedBorder Margin="16" Width="480" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
                          Background="{DynamicResource SurfaceRaisedBrush}"
                          BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
             <w:RoundedBorder.Effect>
@@ -284,7 +284,7 @@
             <StackPanel x:Name="OptionsPanel">
                 <w:RoundedBorder Style="{StaticResource SegmentBar}">
                     <UniformGrid Rows="1">
-                        <!-- Six tabs in the panel's width: a little less room around each label, so "Graphics" fits. -->
+                        <!-- Seven tabs in the panel's width: a little less room around each label, so "Graphics" fits. -->
                         <UniformGrid.Resources>
                             <Style TargetType="RadioButton" BasedOn="{StaticResource SegmentButton}">
                                 <Setter Property="Padding" Value="2,0" />
@@ -295,6 +295,8 @@
                                      ToolTip="When and how visuals change" />
                         <RadioButton GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
                         <RadioButton GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
+                        <RadioButton GroupName="OptionsTab" Tag="Library" Content="Library" Click="OnOptionsTab"
+                                     ToolTip="Fill in songs' missing BPM and key" />
                         <RadioButton x:Name="UpdatesTabButton" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                         <RadioButton GroupName="OptionsTab" Tag="Lastfm" Content="Last.fm" Click="OnOptionsTab"
                                      ToolTip="Scrobble what you play to Last.fm" />
@@ -533,6 +535,20 @@
                               Margin="0,18,0,0" Click="OnLastfmSwitched" />
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Songs a station names, once you've heard a minute of them." />
+                </StackPanel>
+
+                <StackPanel x:Name="LibraryTab" Visibility="Collapsed">
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="BPM and key" />
+                    <CheckBox x:Name="FillTempoKeySwitch" Style="{StaticResource SwitchToggle}" Content="Fill in missing BPM and key"
+                              Click="OnTempoKeySwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="When a song without them plays, Lucent listens for its tempo and key and saves them in the file, where DJ apps and other players see them too. A BPM or key already there is never changed." />
+                    <CheckBox x:Name="FillTempoKeyLibrarySwitch" Style="{StaticResource SwitchToggle}" Content="Check the whole library too"
+                              Margin="0,18,0,0" Click="OnTempoKeySwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Slowly, one song at a time on one core, resting between songs, so nothing else slows down. Turn it off to pause." />
+                    <TextBlock x:Name="TempoKeyStatusText" Style="{StaticResource OptionHint}" FontSize="12"
+                               Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" Visibility="Collapsed" />
                 </StackPanel>
 
                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->

@@ -104,6 +104,7 @@ public static class SelfTest
         failures += Editor.Dsp.MusicSelfTest.Run(Console.WriteLine);
         failures += Audio.SongMapSelfTest.Run(Console.WriteLine);
         failures += Lucent.Lastfm.ScrobbleSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Library.TempoKeySelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }
