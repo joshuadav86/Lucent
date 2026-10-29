@@ -49,6 +49,9 @@ public interface IScrobbleService
 
     /// <summary>Marks a song as loved on Last.fm, or takes the love back.</summary>
     Task LoveAsync(string artist, string title, bool love, CancellationToken cancel);
+
+    /// <summary>Whether the signed-in user has loved the song on Last.fm, or null when Last.fm doesn't know the song.</summary>
+    Task<bool?> IsLovedAsync(string artist, string title, CancellationToken cancel);
 }
 
 /// <summary>
@@ -208,16 +211,18 @@ public sealed class Scrobbler
     /// Loves the song on Last.fm, or takes the love back, as the user hearts it in Lucent. Nothing is kept if Last.fm
     /// can't be reached: a heart is the user's own choice, so it isn't sent again later behind their back.
     /// </summary>
-    public async void Love(string artist, string title, bool love)
+    /// <returns>Whether Last.fm took it.</returns>
+    public async Task<bool> LoveAsync(string artist, string title, bool love)
     {
         if (artist.Trim().Length == 0 || title.Trim().Length == 0)
         {
-            return;
+            return false;
         }
 
         try
         {
             await _service.LoveAsync(artist.Trim(), title.Trim(), love, CancellationToken.None);
+            return true;
         }
         catch (LastfmProblem problem) when (problem.SignInGone)
         {
@@ -227,6 +232,29 @@ public sealed class Scrobbler
         {
             Problem = love ? "Couldn't love that song on Last.fm." : "Couldn't take the love back on Last.fm.";
             Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether the user has loved the song on Last.fm, for the heart while another app plays it: false when Last.fm
+    /// doesn't know the song or can't be reached.
+    /// </summary>
+    public async Task<bool> IsLovedAsync(string artist, string title, CancellationToken cancel)
+    {
+        if (artist.Trim().Length == 0 || title.Trim().Length == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await _service.IsLovedAsync(artist.Trim(), title.Trim(), cancel) == true;
+        }
+        catch (Exception ex) when (ex is LastfmProblem or HttpRequestException or IOException or OperationCanceledException)
+        {
+            return false;
         }
     }
 

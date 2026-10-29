@@ -115,9 +115,13 @@ public static class ScrobbleSelfTest
         // A heart in Lucent loves the song on Last.fm, and taking it off takes the love back.
         {
             var (scrobbler, lastfm, _) = Make();
-            scrobbler.Love("Bicep", "Glue", love: true);
-            scrobbler.Love("Bicep", "Glue", love: false);
-            Check(lastfm.Loves.SequenceEqual(new[] { ("Bicep", "Glue", true), ("Bicep", "Glue", false) }), "hearting a song didn't love it on Last.fm and back.");
+            var loved = scrobbler.LoveAsync("Bicep", "Glue", love: true).Result;
+            var shown = scrobbler.IsLovedAsync("Bicep", "Glue", CancellationToken.None).Result;
+            var unloved = scrobbler.LoveAsync("Bicep", "Glue", love: false).Result;
+            Check(loved && unloved && lastfm.Loves.SequenceEqual(new[] { ("Bicep", "Glue", true), ("Bicep", "Glue", false) }),
+                "hearting a song didn't love it on Last.fm and back.");
+            Check(shown && !scrobbler.IsLovedAsync("Bicep", "Glue", CancellationToken.None).Result,
+                "a loved song didn't show as loved, or still did after the love was taken back.");
         }
 
         // Signed as Last.fm checks it: fields by name, format left out, the secret on the end, MD5 in lowercase hex.
@@ -176,6 +180,9 @@ public static class ScrobbleSelfTest
             Loves.Add((artist, title, love));
             return Task.CompletedTask;
         }
+
+        public Task<bool?> IsLovedAsync(string artist, string title, CancellationToken cancel) =>
+            Task.FromResult<bool?>(Loves.LastOrDefault(love => love.Artist == artist && love.Title == title).Love);
 
         public Task ScrobbleAsync(IReadOnlyList<Scrobble> scrobbles, CancellationToken cancel)
         {

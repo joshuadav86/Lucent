@@ -434,7 +434,7 @@ public partial class MainWindow
         }
 
         var track = remote.State?.Track;
-        TrackFavoriteButton.IsEnabled = false;
+        ShowRemoteHeart(track);
         var name = track is null ? null : string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Artist} – {track.Title}";
         var marquee = name ?? (remote.State is null && remote.Problem is null
             ? $"Connecting to {remote.Player.Name}…"
