@@ -36,7 +36,7 @@
 ## Mac
 
 - Duplicates go to the Trash with `NSFileManager trashItemAtURL` (`Library/Trash.cs`).
-- Default player: set directly with LaunchServices (`Interop/LaunchServices.cs`).
+- Default player: set with LaunchServices (`Interop/LaunchServices.cs`). macOS 26.4 and later asks the user to confirm each type, so the button sets only the common music types (MP3, M4A, FLAC, WAV, AAC, AIFF, OGG, Opus), one at a time, skipping ones already Lucent's, and stops at the first one the user keeps. An Every file type button adds videos and rarer types. On Windows, Set default in Settings covers every type at once.
 - macOS sends opened songs to the running app (`App.axaml.cs`).
 - Bandcamp sign-in is stored in the login keychain.
 
