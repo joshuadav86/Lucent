@@ -17,12 +17,14 @@ public sealed class EqualizerSpectrum : FrameworkElement
     private const double Step = 2;
 
     // The loudness range shown, bottom to top, after the tilt below.
-    private const float FloorDb = -84;
-    private const float CeilingDb = -6;
+    private const float FloorDb = -89;
+    private const float CeilingDb = -11;
 
-    // Music has far more energy in the bass, so each octave up is lifted 4.5 dB (as studio
-    // analyzers do) to make a balanced mix look roughly level.
-    private const float TiltDbPerOctave = 4.5f;
+    // Each FFT bin is the same width in hertz, so an octave up holds twice as many. Lifting each
+    // octave 3 dB turns that into how much energy each slice of an octave holds, the way the ear
+    // and the sliders divide the range: pink noise draws flat, and music falls away at the top
+    // as much as it really does. (It was 4.5 dB, which drew even a dull mix rising into the treble.)
+    private const float TiltDbPerOctave = 3f;
 
     private static readonly Brush FillBrush = Frozen(new LinearGradientBrush(
         Color.FromArgb(0x55, 0xF2, 0xF0, 0xEA), Color.FromArgb(0x08, 0xF2, 0xF0, 0xEA), 90));
@@ -170,7 +172,8 @@ public sealed class EqualizerSpectrum : FrameworkElement
             var last = Math.Clamp((int)Math.Ceiling(high / binHz), first, lastBin);
 
             // Low down a column is narrower than one bin, so it reads between the two nearest;
-            // higher up it takes the loudest bin it covers.
+            // higher up it averages the bins it covers. (Taking the loudest bin overstated the
+            // treble, where a column covers dozens of bins and one of them is always high.)
             float power;
             if (last - first <= 1)
             {
@@ -184,8 +187,10 @@ public sealed class EqualizerSpectrum : FrameworkElement
                 power = 0;
                 for (var bin = first; bin <= last; bin++)
                 {
-                    power = MathF.Max(power, Power(bin));
+                    power += Power(bin);
                 }
+
+                power /= last - first + 1;
             }
 
             var hertz = Frequency(i * Step, width);
