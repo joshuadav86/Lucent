@@ -770,6 +770,45 @@ public partial class LibraryWindow : ToolWindow
         }
 
         RemotePlaylistView.SelectedItem = row;
+        FillRemoteSongAddMenu(row);
+    }
+
+    // ---- Adding the open playlist's songs to the app's playlists, and sharing them, as in the queue window ----
+
+    /// <summary>Fills Add to playlist for the song right-clicked, with the playlists of the app the open playlist is from.</summary>
+    private void FillRemoteSongAddMenu(RemoteListEntry row)
+    {
+        if (_openRemote is { } playlist)
+        {
+            Player?.FillAddToPlaylistMenu(RemoteSongAddItem, row.Track, ShowRemoteSongNotice, playlist.RemoteApp);
+        }
+    }
+
+    private void OnRemoteSongCopyLink(object sender, RoutedEventArgs e) => CopyRemoteSong(withTitle: false);
+
+    private void OnRemoteSongCopySongAndLink(object sender, RoutedEventArgs e) => CopyRemoteSong(withTitle: true);
+
+    private void CopyRemoteSong(bool withTitle)
+    {
+        if ((RemotePlaylistView.SelectedItem as RemoteListEntry)?.Track is { } track && _openRemote is { } playlist)
+        {
+            Player?.CopySongLink(track, withTitle, ShowRemoteSongNotice, playlist.RemoteApp);
+        }
+    }
+
+    private int _remoteSongNotice;
+
+    /// <summary>Shows <paramref name="text"/> under the songs for a few seconds, then the playlist's own note again.</summary>
+    private async void ShowRemoteSongNotice(string text)
+    {
+        var notice = ++_remoteSongNotice;
+        ShowRemotePlaylistNote(text);
+        Toast.Show(RemotePlaylistView, text);
+        await Task.Delay(TimeSpan.FromSeconds(4));
+        if (notice == _remoteSongNotice)
+        {
+            ShowRemotePlaylistNote(_openRemoteList?.Note);
+        }
     }
 
     /// <summary>The items for the apps' playlists: play the one right-clicked, or read them all again.</summary>

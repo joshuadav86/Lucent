@@ -7,7 +7,8 @@ using Lucent.Windows;
 namespace Lucent;
 
 // Sharing the controlled app's songs (copying their links), and adding them to the app's playlists: from the player's
-// right-click menu for the song playing, and from the queue window's for the songs in the app's list.
+// right-click menu for the song playing, from the queue window's for the songs in the app's list, and from the library's
+// for the songs of a playlist opened there (Spotify's, or Music's on a Mac), whichever app Lucent is controlling.
 public partial class MainWindow
 {
     private string? _songNotice;
@@ -46,21 +47,70 @@ public partial class MainWindow
     /// or collaborates on (read at most every ten minutes), or Music's own on a Mac. Empty when the app can't add songs.
     /// </summary>
     /// <exception cref="RemoteProblem">When the app won't list them, worded for the user.</exception>
-    public async Task<IReadOnlyList<RemotePlaylist>> RemotePlaylistsToAddToAsync() => _remote?.Player switch
+    /// <param name="app">The app the song is from, when it may not be the one being controlled (see <see cref="Controls"/>).</param>
+    public async Task<IReadOnlyList<RemotePlaylist>> RemotePlaylistsToAddToAsync(RemoteApp? app = null)
     {
-        SpotifyRemote => await SpotifyPlaylistsToAddToAsync(),
-        IRemotePlaylists playlists => (await playlists.PlaylistsAsync(CancellationToken.None)).Where(playlist => playlist.CanAdd).ToList(),
-        _ => Array.Empty<RemotePlaylist>(),
-    };
+        if (Controls(app) ? _remote!.Player is SpotifyRemote : app == RemoteApp.Spotify)
+        {
+            return await SpotifyPlaylistsToAddToAsync();
+        }
+
+        IReadOnlyList<RemotePlaylist> found = Array.Empty<RemotePlaylist>();
+        await WithPlaylistsAsync(app, async playlists =>
+            found = (await playlists.PlaylistsAsync(CancellationToken.None)).Where(playlist => playlist.CanAdd).ToList());
+        return found;
+    }
+
+    /// <summary>
+    /// Whether a song from <paramref name="app"/> goes through the app being controlled: a song of a playlist opened in the
+    /// library can be Spotify's while Lucent controls another app, or none. Null stands for the controlled app's own songs.
+    /// </summary>
+    private bool Controls(RemoteApp? app) => _remote is not null && (app is null || _settings.RemoteApp == app);
+
+    /// <summary>
+    /// Asks <paramref name="app"/> about its playlists: through the app being controlled when it's that one, or else a
+    /// connection made just for this (Spotify's from the saved sign-in). False when it can't be reached (signed out).
+    /// </summary>
+    private async Task<bool> WithPlaylistsAsync(RemoteApp? app, Func<IRemotePlaylists, Task> ask)
+    {
+        if (Controls(app))
+        {
+            if (_remote!.Player is not IRemotePlaylists controlled)
+            {
+                return false;
+            }
+
+            await ask(controlled);
+            return true;
+        }
+
+        switch (app)
+        {
+            case RemoteApp.Spotify:
+                return await WithSpotifyAsync<object>(async spotify =>
+                {
+                    await ask(spotify);
+                    return spotify;
+                }) is not null;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>The app's name for what's said about its songs, as <see cref="Controls"/> picks the app.</summary>
+    private string NameOf(RemoteApp? app) => Controls(app)
+        ? _remote!.Player.Name
+        : app == RemoteApp.AppleMusic ? "Apple Music" : app?.ToString() ?? "the app";
 
     /// <summary>
     /// Fills <paramref name="menu"/> (an Add to playlist item) with the playlists <paramref name="track"/> can be added to,
-    /// once they're read. <paramref name="notice"/> says how adding went.
+    /// once they're read. <paramref name="notice"/> says how adding went. <paramref name="app"/> is the app the song is
+    /// from, when it may not be the one being controlled (a playlist opened in the library).
     /// </summary>
-    public async void FillAddToPlaylistMenu(MenuItem menu, RemoteTrack track, Action<string> notice)
+    public async void FillAddToPlaylistMenu(MenuItem menu, RemoteTrack track, Action<string> notice, RemoteApp? app = null)
     {
         menu.Items.Clear();
-        if (!CanAddToRemotePlaylists)
+        if (Controls(app) ? !CanAddToRemotePlaylists : app is null)
         {
             menu.Items.Add(new MenuItem { Header = _remote?.Player.PlaylistsLimit ?? "This app can't add songs to playlists.", IsEnabled = false });
             return;
@@ -72,7 +122,10 @@ public partial class MainWindow
         {
             // A Spotify sign-in from before Lucent added songs can't, so the menu offers to sign in again instead of
             // listing playlists that would only refuse.
-            if (_remote?.Player is SpotifyRemote spotify && !await spotify.CanAddSongsAsync(CancellationToken.None))
+            var canAdd = true;
+            await WithPlaylistsAsync(app, async playlists =>
+                canAdd = playlists is not SpotifyRemote spotify || await spotify.CanAddSongsAsync(CancellationToken.None));
+            if (!canAdd)
             {
                 menu.Items.Clear();
                 var signIn = new MenuItem { Header = "Sign in to Spotify again to add songs…" };
@@ -81,14 +134,14 @@ public partial class MainWindow
                 return;
             }
 
-            playlists = await RemotePlaylistsToAddToAsync();
+            playlists = await RemotePlaylistsToAddToAsync(app);
         }
         catch (Exception ex)
         {
             menu.Items.Clear();
             menu.Items.Add(new MenuItem
             {
-                Header = ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach {_remote?.Player.Name ?? "the app"} to list your playlists.",
+                Header = ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach {NameOf(app)} to list your playlists.",
                 IsEnabled = false,
             });
             return;
@@ -99,7 +152,7 @@ public partial class MainWindow
         {
             var playlist = playlists[i];
             var item = new MenuItem { Header = playlist.Name };
-            item.Click += (_, _) => AddToRemotePlaylist(playlist, track, notice);
+            item.Click += (_, _) => AddToRemotePlaylist(playlist, track, notice, app);
             menu.Items.Add(item);
             // Liked Songs (or Favorite Songs) comes first, apart from the playlists.
             if (playlist.IsLiked && i < playlists.Count - 1)
@@ -114,36 +167,37 @@ public partial class MainWindow
         }
     }
 
-    private async void AddToRemotePlaylist(RemotePlaylist playlist, RemoteTrack track, Action<string> notice)
+    private async void AddToRemotePlaylist(RemotePlaylist playlist, RemoteTrack track, Action<string> notice, RemoteApp? app)
     {
-        if (_remote?.Player is not IRemotePlaylists app)
-        {
-            return;
-        }
-
-        var name = _remote.Player.Name;
-
-        // Like Spotify, a song already in the playlist isn't added twice without asking. When the app can't say, it's added.
-        var already = false;
+        var name = NameOf(app);
         try
         {
-            already = await app.ContainsAsync(playlist, track, CancellationToken.None);
-        }
-        catch (Exception)
-        {
-            // Couldn't check; adding still works.
-        }
+            var reached = await WithPlaylistsAsync(app, async playlists =>
+            {
+                // Like Spotify, a song already in the playlist isn't added twice without asking. When the app can't say, it's added.
+                var already = false;
+                try
+                {
+                    already = await playlists.ContainsAsync(playlist, track, CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    // Couldn't check; adding still works.
+                }
 
-        if (already && (playlist.IsLiked || !await AskAddAgainAsync(playlist, track)))
-        {
-            notice($"{track.Title} is already in {playlist.Name}.");
-            return;
-        }
+                if (already && (playlist.IsLiked || !await AskAddAgainAsync(playlist, track)))
+                {
+                    notice($"{track.Title} is already in {playlist.Name}.");
+                    return;
+                }
 
-        try
-        {
-            await app.AddToPlaylistAsync(playlist, track, CancellationToken.None);
-            notice($"Added {track.Title} to {playlist.Name}.");
+                await playlists.AddToPlaylistAsync(playlist, track, CancellationToken.None);
+                notice($"Added {track.Title} to {playlist.Name}.");
+            });
+            if (!reached)
+            {
+                notice($"Sign in to {name} from the Add music menu to add {track.Title}.");
+            }
         }
         catch (Exception ex)
         {
@@ -175,11 +229,12 @@ public partial class MainWindow
 
     /// <summary>
     /// Copies <paramref name="track"/>'s web link (see <see cref="SongLinks"/>), with its title and artist first when
-    /// <paramref name="withTitle"/>, to paste into a message. <paramref name="notice"/> says how it went.
+    /// <paramref name="withTitle"/>, to paste into a message. <paramref name="notice"/> says how it went. <paramref name="app"/>
+    /// is the app the song is from, when it may not be the one being controlled (a playlist opened in the library).
     /// </summary>
-    public async void CopySongLink(RemoteTrack track, bool withTitle, Action<string> notice)
+    public async void CopySongLink(RemoteTrack track, bool withTitle, Action<string> notice, RemoteApp? app = null)
     {
-        if (_remote is not { } remote)
+        if (!Controls(app) && app is null)
         {
             return;
         }
@@ -187,7 +242,9 @@ public partial class MainWindow
         string? link;
         try
         {
-            link = await SongLinks.FindAsync(StreamingHttp, remote.Player, track, CancellationToken.None);
+            link = Controls(app) ? await SongLinks.FindAsync(StreamingHttp, _remote!.Player, track, CancellationToken.None)
+                : app == RemoteApp.Spotify ? SpotifyRemote.LinkOf(track)
+                : null;
         }
         catch (Exception)
         {
