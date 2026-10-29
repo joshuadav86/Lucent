@@ -183,7 +183,7 @@ public partial class LibraryWindow : ToolWindow
 
         if (!ShowingPlaylists)
         {
-            var comparer = LibraryItemComparer.For(_settings);
+            var comparer = LibraryOrder();
             items.Sort(comparer.Compare);
         }
 
@@ -199,25 +199,26 @@ public partial class LibraryWindow : ToolWindow
         _groups = new List<FolderHeading>();
         if (ShowingPlaylists || _settings.GroupLibraryByFolder)
         {
-            // A store's folder (Bandcamp, Beatport) is one heading, with a subheading for each folder inside it.
+            // A store's folder (Bandcamp, Beatport) is one heading, with a subheading for each folder inside it;
+            // an artist's heading has a subheading for each album.
             var sections = new List<FolderHeading>();
             var byName = new Dictionary<string, FolderHeading>(StringComparer.Ordinal);
             foreach (var item in items)
             {
-                if (!byName.TryGetValue(item.Section, out var heading))
+                if (!byName.TryGetValue(item.Heading, out var heading))
                 {
-                    heading = NewHeading(item.Section);
-                    byName[item.Section] = heading;
+                    heading = NewHeading(item.Heading);
+                    byName[item.Heading] = heading;
                     sections.Add(heading);
                 }
 
                 heading.Items.Add(item);
-                if (item.IsInSection)
+                if (item.HasSubheading)
                 {
-                    var key = "\0" + item.Folder;
+                    var key = "\0" + item.Subheading;
                     if (!byName.TryGetValue(key, out var sub))
                     {
-                        sub = NewHeading(item.Folder, item.SubFolder);
+                        sub = NewHeading(item.Subheading, item.SubheadingLabel);
                         byName[key] = sub;
                         heading.Subheadings.Add(sub);
                     }
@@ -283,6 +284,25 @@ public partial class LibraryWindow : ToolWindow
         UpdateFoldAllButton();
     }
 
+    /// <summary>
+    /// The library's order. With headings, each song is put under its folder's, artist's or album's heading first,
+    /// and the songs under a heading go in album order (<see cref="LibraryGroups.Comparer"/>).
+    /// </summary>
+    private System.Collections.IComparer LibraryOrder()
+    {
+        if (!_settings.GroupLibraryByFolder)
+        {
+            return LibraryItemComparer.For(_settings);
+        }
+
+        var items = _library.Items.ToList();
+        LibraryGroups.Assign(items, _settings.LibraryGrouping);
+        return LibraryGroups.Comparer(items, _settings);
+    }
+
+    /// <summary>Whether the headings are artists or albums, not folders on disk, so they can't be taken out of the library.</summary>
+    private bool HeadingsAreTags => !ShowingPlaylists && _settings.GroupLibraryByFolder && _settings.LibraryGrouping != LibraryGrouping.Folders;
+
     /// <summary>Which songs the list shows: the favourites when FAVOURITES is on, and the ones matching the search. Null shows them all.</summary>
     private Func<LibraryItem, bool>? LibraryFilter()
     {
@@ -336,10 +356,13 @@ public partial class LibraryWindow : ToolWindow
         }
 
         // While folder headings are picked, say how many, and what Delete does with them.
+        var heading = LibraryGroups.Noun(_settings.LibraryGrouping);
         LibraryCount.Text = !linked
             ? "No folder linked"
             : picked > 0
-                ? $"{picked} {(picked == 1 ? "folder" : "folders")} selected  ·  Delete to remove"
+                ? HeadingsAreTags
+                    ? $"{picked} {(picked == 1 ? heading : heading + "s")} selected"
+                    : $"{picked} {(picked == 1 ? "folder" : "folders")} selected  ·  Delete to remove"
                 : _library.IsScanning && count == 0
                     ? "Looking for music…"
                     : countText;
@@ -1135,7 +1158,7 @@ public partial class LibraryWindow : ToolWindow
 
         // In the folders view, ⌘A picks every folder heading, ready for Delete, unless songs are chosen.
         if (e.Key == Key.A && e.KeyModifiers == KeyModifiers.Meta && !SearchBox.IsKeyboardFocusWithin
-            && _settings.GroupLibraryByFolder && !ShowingPlaylists
+            && _settings.GroupLibraryByFolder && !ShowingPlaylists && !HeadingsAreTags
             && (_highlightedFolders.Count > 0 || LibraryView.SelectedItems is not { Count: > 0 }))
         {
             HighlightFolders(GroupNames());
@@ -1323,7 +1346,7 @@ public partial class LibraryWindow : ToolWindow
     }
 
     /// <summary>The folders Delete acts on: the highlighted headings', else those of the chosen songs.</summary>
-    private List<string> FoldersToDelete() => _highlightedFolders.Count > 0
+    private List<string> FoldersToDelete() => _highlightedFolders.Count > 0 && !HeadingsAreTags
         ? HighlightedDirectories()
         : SelectedLibraryItems().Where(item => !item.IsPlaceholder).Select(item => item.Directory)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -1480,17 +1503,46 @@ public partial class LibraryWindow : ToolWindow
         menu.Open(SortButton);
     }
 
+    /// <summary>The headings menu: by folder, artist, or album, or none (one long list).</summary>
     private void OnToggleGroupFolders(object? sender, RoutedEventArgs e)
     {
+        var menu = new ContextMenu { PlacementTarget = GroupFoldersButton, Placement = PlacementMode.BottomEdgeAlignedLeft };
+        foreach (var grouping in LibraryGroups.All)
+        {
+            var item = new MenuItem
+            {
+                Header = LibraryGroups.Label(grouping),
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = !ShowingPlaylists && _settings.GroupLibraryByFolder && _settings.LibraryGrouping == grouping,
+            };
+            item.Click += (_, _) => SetLibraryHeadings(true, grouping);
+            menu.Items.Add(item);
+        }
+
+        menu.Items.Add(new Separator());
+        var none = new MenuItem
+        {
+            Header = "No headings",
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = !ShowingPlaylists && !_settings.GroupLibraryByFolder,
+        };
+        none.Click += (_, _) => SetLibraryHeadings(false, _settings.LibraryGrouping);
+        menu.Items.Add(none);
+        menu.Open(GroupFoldersButton);
+    }
+
+    private void SetLibraryHeadings(bool on, LibraryGrouping grouping)
+    {
+        _settings.GroupLibraryByFolder = on;
+        _settings.LibraryGrouping = grouping;
+        HighlightFolders(Array.Empty<string>());
         if (ShowingPlaylists)
         {
-            // Back from the playlists to the library folders, with their headings on.
-            _settings.GroupLibraryByFolder = true;
+            // Back from the playlists to the library.
             SetShowingPlaylists(false);
             return;
         }
 
-        _settings.GroupLibraryByFolder = !_settings.GroupLibraryByFolder;
         _settings.Save();
         UpdateGroupFoldersButton();
         RebuildLibraryView();
@@ -1500,6 +1552,7 @@ public partial class LibraryWindow : ToolWindow
     {
         GroupFoldersButton.SetResourceReference(ForegroundProperty,
             _settings.GroupLibraryByFolder && !ShowingPlaylists ? "AccentBrush" : "FaintTextBrush");
+        GroupFoldersButton.Content = LibraryGroups.ButtonLabel(_settings.LibraryGrouping);
         PlaylistsButton.SetResourceReference(ForegroundProperty, ShowingPlaylists ? "AccentBrush" : "FaintTextBrush");
 
         // Saved playlists keep their own order; under PLAYLISTS the order is the apps' playlists' (Spotify's, Music's).
@@ -1537,6 +1590,7 @@ public partial class LibraryWindow : ToolWindow
         }
 
         _songMenuItems.Clear();
+        PlayFolderItem.Header = HeadingsAreTags ? "Play this album" : "Play this folder";
         var source = e.Source as Visual;
         if (source?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: LibraryItem { RemotePlaylist: not null } row })
         {
@@ -1563,6 +1617,10 @@ public partial class LibraryWindow : ToolWindow
             if (ShowingPlaylists)
             {
                 OpenPlaylistMenu();
+            }
+            else if (HeadingsAreTags)
+            {
+                OpenTagHeadingMenu();
             }
             else
             {
@@ -1621,6 +1679,36 @@ public partial class LibraryWindow : ToolWindow
             LibraryMenu.Items.Add(item);
             _songMenuItems.Add(item);
         }
+    }
+
+    /// <summary>The menu for the highlighted artist or album headings: play them, or add them to the queue.</summary>
+    private void OpenTagHeadingMenu()
+    {
+        var groups = HighlightedGroups();
+        var songs = groups.SelectMany(group => group.Items).Distinct().ToList();
+        if (songs.Count == 0)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu { PlacementTarget = LibraryView, Placement = PlacementMode.Pointer };
+        var noun = LibraryGroups.Noun(_settings.LibraryGrouping);
+        var play = new MenuItem { Header = groups.Count == 1 ? $"Play this {noun}" : $"Play these {noun}s" };
+        play.Click += async (_, _) =>
+        {
+            var tracks = await Task.Run(() => songs.Select(item => item.ToTrack()).ToList());
+            Player?.ReplaceQueue(tracks, 0);
+        };
+        var queue = new MenuItem { Header = "Add to queue" };
+        queue.Click += async (_, _) =>
+        {
+            var tracks = await Task.Run(() => songs.Select(item => item.ToTrack()).ToList());
+            Player?.AddToQueue(tracks);
+        };
+        menu.Items.Add(play);
+        menu.Items.Add(queue);
+        Windows.LucentFullScreen.AddTo(menu, this);
+        menu.Open(LibraryView);
     }
 
     /// <summary>The menu for the highlighted folder headings: play them, or add and remove library folders.</summary>
@@ -1723,9 +1811,10 @@ public partial class LibraryWindow : ToolWindow
         else
         {
             // A plain click opens or closes the folder. Under FOLDERS it also picks that folder on its own, so it's
-            // clear what Delete acts on; playlists can't be removed that way, so there it just ends any highlight.
-            HighlightFolders(ShowingPlaylists ? Array.Empty<string>() : new[] { name });
-            if (ShowingPlaylists)
+            // clear what Delete acts on; playlists, artists and albums can't be removed that way, so there it just
+            // ends any highlight.
+            HighlightFolders(ShowingPlaylists || HeadingsAreTags ? Array.Empty<string>() : new[] { name });
+            if (ShowingPlaylists || HeadingsAreTags)
             {
                 return;
             }
@@ -1878,7 +1967,8 @@ public partial class LibraryWindow : ToolWindow
             FoldAllIcon.Data = geometry;
         }
 
-        ToolTip.SetTip(FoldAllButton, collapse ? "Close every folder" : "Open every folder");
+        var noun = ShowingPlaylists ? "playlist" : LibraryGroups.Noun(_settings.LibraryGrouping);
+        ToolTip.SetTip(FoldAllButton, collapse ? $"Close every {noun}" : $"Open every {noun}");
     }
 
     // ---- Keyboard ----
@@ -1954,7 +2044,7 @@ public partial class LibraryWindow : ToolWindow
         if (_groups.Count > 0)
         {
             // A store's heading lists only the songs right in its folder; its subheadings list the rest.
-            return _groups.SelectMany(group => group.Subheadings.Count == 0 ? group.Items : group.Items.Where(item => !item.IsInSection))
+            return _groups.SelectMany(group => group.Subheadings.Count == 0 ? group.Items : group.Items.Where(item => !item.HasSubheading))
                 .Where(item => !item.IsPlaceholder)
                 .ToList();
         }
@@ -2040,7 +2130,9 @@ public partial class LibraryWindow : ToolWindow
             return;
         }
 
-        var folder = LibraryInViewOrder().Where(item => item.Folder == chosen.Folder).ToList();
+        // Under artist or album headings, the song's album (or, for a song without one, the others without one beside it).
+        Func<LibraryItem, string> key = HeadingsAreTags ? item => item.Subheading : item => item.Folder;
+        var folder = LibraryInViewOrder().Where(item => key(item) == key(chosen)).ToList();
         var tracks = await Task.Run(() => folder.Select(item => item.ToTrack()).ToList());
         Player?.ReplaceQueue(tracks, folder.IndexOf(chosen));
     }

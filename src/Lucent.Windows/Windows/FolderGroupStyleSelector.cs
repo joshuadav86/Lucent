@@ -6,9 +6,10 @@ using Lucent.Library;
 namespace Lucent.Windows;
 
 /// <summary>
-/// How the library's folder groups look. The list is grouped twice: by section (a store's one heading, or a
-/// folder's own), then by folder. A section gets a heading; inside a store's, each folder gets a subheading;
-/// anywhere else the folder is the section itself, so it shows just its songs.
+/// How the library's folder groups look. The list is grouped twice: by heading (a store's one heading, a
+/// folder's own, or an artist's), then by subheading (a folder, or an album). A heading shows; inside a store's,
+/// each folder gets a subheading, and inside an artist's each album does; anywhere else the subheading is the
+/// heading itself, so it shows just its songs.
 /// </summary>
 public sealed class FolderGroupStyleSelector : StyleSelector
 {
@@ -21,7 +22,7 @@ public sealed class FolderGroupStyleSelector : StyleSelector
     public override Style? SelectStyle(object item, DependencyObject container) => item switch
     {
         CollectionViewGroup { IsBottomLevel: false } => Heading,
-        CollectionViewGroup group when group.Items.OfType<LibraryItem>().FirstOrDefault() is { IsInSection: true } => Subheading,
+        CollectionViewGroup group when group.Items.OfType<LibraryItem>().FirstOrDefault() is { HasSubheading: true } => Subheading,
         _ => NoHeading,
     };
 }

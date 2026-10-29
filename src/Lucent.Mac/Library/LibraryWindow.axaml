@@ -94,7 +94,7 @@
                     <Path x:Name="FoldAllIcon" Theme="{StaticResource LineIcon}" Data="{StaticResource CollapseAllIcon}" />
                 </Button>
                 <Button x:Name="GroupFoldersButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}"
-                        Content="FOLDERS" ToolTip.Tip="Show or hide folder headings" Click="OnToggleGroupFolders" />
+                        Content="FOLDERS" ToolTip.Tip="Headings by folder, artist, or album, or none" Click="OnToggleGroupFolders" />
                 <Button x:Name="PlaylistsButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Margin="0,0,6,0"
                         Content="PLAYLISTS" ToolTip.Tip="Show your saved playlists, or go back to your library folders" Click="OnTogglePlaylists" />
                 <Button x:Name="FavoritesOnlyButton" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Margin="0,0,6,0"
@@ -139,7 +139,7 @@
                     <ContextMenu x:Name="LibraryMenu">
                         <MenuItem Header="Play now" Click="OnLibraryPlayNow" />
                         <MenuItem Header="Add to queue" Click="OnLibraryAddToQueue" />
-                        <MenuItem Header="Play this folder" Click="OnLibraryPlayFolder" />
+                        <MenuItem x:Name="PlayFolderItem" Header="Play this folder" Click="OnLibraryPlayFolder" />
                         <Separator x:Name="SongMenuItemsStart" />
                         <MenuItem Header="Edit info…" InputGesture="Cmd+I" Click="OnLibraryEditInfo" />
                         <MenuItem x:Name="OpenInEditorItem" Header="Open in editor…" Click="OnLibraryOpenInEditor" />

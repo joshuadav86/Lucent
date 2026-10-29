@@ -70,7 +70,11 @@ public sealed class AppSettings
     /// <summary>The order Spotify's and Music's playlists are listed in under the library's PLAYLISTS.</summary>
     public RemotePlaylistSort RemotePlaylistSort { get; set; }
 
+    /// <summary>Whether the library has headings (<see cref="LibraryGrouping"/>), or is one long list.</summary>
     public bool GroupLibraryByFolder { get; set; } = true;
+
+    /// <summary>What the library's headings stand for: folders, artists, or albums.</summary>
+    public LibraryGrouping LibraryGrouping { get; set; } = LibraryGrouping.Folders;
 
     /// <summary>Whether the library lists only the favourite songs.</summary>
     public bool LibraryFavoritesOnly { get; set; }
