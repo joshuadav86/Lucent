@@ -280,6 +280,12 @@
                     <ListBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem x:Name="RemoteSongPlayItem" Header="Play" Click="OnRemotePlaylistPlaySong" />
+                            <Separator />
+                            <MenuItem x:Name="RemoteSongAddItem" Header="Add to playlist" />
+                            <MenuItem Header="Share">
+                                <MenuItem Header="Copy song link" Click="OnRemoteSongCopyLink" />
+                                <MenuItem Header="Copy song and link" Click="OnRemoteSongCopySongAndLink" />
+                            </MenuItem>
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListBox.ItemTemplate>
