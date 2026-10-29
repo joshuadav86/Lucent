@@ -303,6 +303,12 @@ public sealed class AppSettings
     /// </summary>
     public bool KeepFileDatesWhenEditing { get; set; } = true;
 
+    /// <summary>Listen to songs that play without a BPM or key in their file, and write what's heard into it (TempoKeyFiller).</summary>
+    public bool FillMissingTempoAndKey { get; set; }
+
+    /// <summary>Go through the whole library for them too, slowly, while <see cref="FillMissingTempoAndKey"/> is on.</summary>
+    public bool FillTempoAndKeyInLibrary { get; set; }
+
     /// <summary>Where the artwork window was last placed (null until it has been opened).</summary>
     public double? ArtworkWindowLeft { get; set; }
 

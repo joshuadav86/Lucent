@@ -10,10 +10,13 @@ public sealed record MusicAnalysis(BeatGrid? Grid, MusicalKey? Key, SpectralFram
     /// <summary>Neither a beat nor a key: what's known about a sound that couldn't be measured.</summary>
     public static MusicAnalysis Nothing { get; } = new(null, null, SpectralFrames.Measure(AudioBuffer.Silent(1, 0, 44100)));
 
-    /// <summary>Measures the whole sound. About a second for a song, so run it in the background.</summary>
-    public static MusicAnalysis Analyze(AudioBuffer audio, CancellationToken cancel = default)
+    /// <summary>
+    /// Measures the whole sound. About a second for a song, so run it in the background. <paramref name="cores"/> limits
+    /// how many cores it uses (all of them unless it's set).
+    /// </summary>
+    public static MusicAnalysis Analyze(AudioBuffer audio, CancellationToken cancel = default, int cores = -1)
     {
-        var frames = SpectralFrames.Measure(audio, cancel);
+        var frames = SpectralFrames.Measure(audio, cancel, cores);
         var key = KeyDetector.Analyze(frames, 0, int.MaxValue);
         cancel.ThrowIfCancellationRequested();
         var grid = BeatGrid.Analyze(audio, cancel);

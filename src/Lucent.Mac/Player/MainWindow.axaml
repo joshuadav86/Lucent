@@ -247,14 +247,14 @@
     <Popup x:Name="OptionsPopup" PlacementTarget="{Binding #OptionsButton}" Placement="BottomEdgeAlignedRight"
            HorizontalOffset="16" VerticalOffset="-8" IsLightDismissEnabled="True"
            Opened="OnOptionsOpened" Closed="OnOptionsClosed">
-        <Border Margin="16" Width="420" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
+        <Border Margin="16" Width="480" Padding="16,14,16,16" CornerRadius="{DynamicResource CardCorner}"
                 Background="{DynamicResource SurfaceRaisedBrush}"
                 BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                 BoxShadow="0 0 24 0 #99000000">
             <StackPanel x:Name="OptionsPanel">
                 <Border Theme="{StaticResource SegmentBar}">
                     <UniformGrid Rows="1">
-                        <!-- Six tabs in the panel's width: a little less room around each label, so "Graphics" fits. -->
+                        <!-- Seven tabs in the panel's width: a little less room around each label, so "Graphics" fits. -->
                         <UniformGrid.Styles>
                             <Style Selector="RadioButton">
                                 <Setter Property="Padding" Value="2,0" />
@@ -265,6 +265,8 @@
                                      ToolTip.Tip="When and how visuals change" />
                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Sound" Content="Sound" Click="OnOptionsTab" />
                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Theme" Content="Look" Click="OnOptionsTab" />
+                        <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Library" Content="Library" Click="OnOptionsTab"
+                                     ToolTip.Tip="Fill in songs' missing BPM and key" />
                         <RadioButton x:Name="UpdatesTabButton" Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Updates" Content="Updates" Click="OnOptionsTab" />
                         <RadioButton Theme="{StaticResource SegmentButton}" GroupName="OptionsTab" Tag="Lastfm" Content="Last.fm" Click="OnOptionsTab"
                                      ToolTip.Tip="Scrobble what you play to Last.fm" />
@@ -507,6 +509,20 @@
                               Margin="0,18,0,0" Click="OnLastfmSwitched" />
                     <TextBlock Theme="{StaticResource OptionHint}"
                                Text="Songs a station names, once you've heard a minute of them." />
+                </StackPanel>
+
+                <StackPanel x:Name="LibraryTab" IsVisible="False">
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="BPM and key" />
+                    <CheckBox x:Name="FillTempoKeySwitch" Theme="{StaticResource SwitchToggle}" Content="Fill in missing BPM and key"
+                              Click="OnTempoKeySwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="When a song without them plays, Lucent listens for its tempo and key and saves them in the file, where DJ apps and other players see them too. A BPM or key already there is never changed." />
+                    <CheckBox x:Name="FillTempoKeyLibrarySwitch" Theme="{StaticResource SwitchToggle}" Content="Check the whole library too"
+                              Margin="0,18,0,0" Click="OnTempoKeySwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Slowly, one song at a time on one core, resting between songs, so nothing else slows down. Turn it off to pause." />
+                    <TextBlock x:Name="TempoKeyStatusText" Theme="{StaticResource OptionHint}" FontSize="12"
+                               Foreground="{DynamicResource MutedTextBrush}" Margin="2,8,0,0" IsVisible="False" />
                 </StackPanel>
 
                 <!-- Under every tab: a way to chip in for Lucent, and to report what's wrong with it. -->

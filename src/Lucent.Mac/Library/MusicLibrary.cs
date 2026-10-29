@@ -315,7 +315,8 @@ public sealed class MusicLibrary : IDisposable
     private void OnFolderChanged(object sender, FileSystemEventArgs e)
     {
         // A recording being made rewrites its header every couple of seconds; it's listed once it's finished.
-        if (!RecordingsInProgress.Contains(e.FullPath))
+        // And Lucent writing a song's BPM and key changes nothing the library needs to look for again.
+        if (!RecordingsInProgress.Contains(e.FullPath) && !TempoKeyFiller.IsWriting(e.FullPath))
         {
             ScheduleRescan();
         }

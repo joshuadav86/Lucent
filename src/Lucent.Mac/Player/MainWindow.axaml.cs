@@ -166,6 +166,7 @@ public partial class MainWindow : Window
         _library.SetFolders(_settings.LibraryFolders, _settings.HiddenLibraryFolders, _settings.LibraryFiles,
             _settings.LibraryFoldersTogether);
         _stores.Start();
+        SetUpTempoKey();
 
         foreach (var window in ToolWindows)
         {
@@ -1467,6 +1468,7 @@ public partial class MainWindow : Window
         ThemeTab.IsVisible = tab == "Theme";
         UpdatesTab.IsVisible = tab == "Updates";
         LastfmTab.IsVisible = tab == "Lastfm";
+        LibraryTab.IsVisible = tab == "Library";
         if (tab == "Updates")
         {
             ShowDefaultPlayerState();
@@ -1656,6 +1658,7 @@ public partial class MainWindow : Window
         AutoInstallUpdatesSwitch.IsChecked = _settings.InstallUpdatesAutomatically;
         VersionText.Text = $"You have Lucent {AppInfo.Version}.";
         ShowSoundValues();
+        ShowTempoKeyState();
         ShowLastfmState();
     }
 
@@ -1960,6 +1963,7 @@ public partial class MainWindow : Window
         UpdatePosition();
         UpdateSongClock();
         FindBeats(entry.Track.Path);
+        _tempoKey?.Played(entry.Track.Path);
     }
 
     private void OnTrackEnded()
@@ -2710,6 +2714,7 @@ public partial class MainWindow : Window
             window.Close();
         }
 
+        _tempoKey?.Dispose();
         _library.Dispose();
         _stores.Dispose();
         _positionTimer.Stop();
