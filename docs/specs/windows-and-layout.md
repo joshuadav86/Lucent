@@ -12,6 +12,7 @@ Lucent is a set of small windows, like Winamp: player, visuals (W), queue (Q), l
 - **Swap:** drag a window well inside another and they trade places and sizes (an outline shows "Swap with …"). Not for the player, the equalizer, or locked windows.
 - **Lucent full screen (Shift+F11,** right-click "Full screen Lucent", or double-click the player's title bar): every open window tiles one screen, at any scaling. Swaps are kept while in full screen.
 - **Tidy layout (Shift+D):** cycles symmetric layouts (centred, centred mirrored, classic, mirrored). Full screen it fills the screen. Otherwise it's a compact block around the player, which stays put: sizes come from the player's size only, so every press gives the same block, kept on screen and clear of locked windows (`FullScreenLayout.ArrangeAround`). The note names any locked windows it left alone.
+- **Saved layouts:** right-click › Layouts in any window (Mac also Window › Layouts). "Save current layout…" asks for a name (a taken name replaces that layout after a warning) and keeps which windows are open, their places and sizes, locks, link, the player's size, and full screen with its tidy style and swaps (saved full screen, it keeps where the windows go back to, and opens full screen again). Picking one, or pressing 1 to 9 for the first nine, puts it back: the visuals, queue, library, equalizer, analyzer and artwork open or close to match, while video, radio and editors stay as they are and only move. A layout saved on a screen that's gone moves onto the player's screen whole. Rename layout and Delete layout are in the same submenu.
 - **Reset to default layout:** right-click menu and Mac Window menu. Puts back the first-start layout: player at its usual size, equalizer and visuals, queue/library/analyzer/artwork closed, all windows unlocked, out of full screen. Video, radio and editors stay open and dock back on.
 - **Right-click > Close** on every window; the player's reads "Close Lucent".
 - **Toast** messages over the queue or player for quick confirmations.
@@ -28,6 +29,7 @@ Lucent is a set of small windows, like Winamp: player, visuals (W), queue (Q), l
 | W Q L E Y C P | Visuals, queue, library, equalizer, analyzer, artwork, video |
 | D G K | Dock, fill, shrink |
 | J / Shift+D | Link windows, tidy layout |
+| 1 to 9 | Saved layouts |
 | O / M | Options, Sources |
 | V / N / B / A / F | Picker, next visual, back, Auto, star the visual |
 | F11 / Shift+F11 | Fullscreen visuals, Lucent full screen |
@@ -49,15 +51,15 @@ Mac-only menu bar (Windows has the same commands in right-click menus and keys).
 
 ## Code
 
-- `Lucent.Core/Layout/FullScreenLayout.cs`, `WindowSwap.cs`
-- `Windows/` in each app (`WindowSnapper`, `WindowLocks`, `LockButton`, `LucentFullScreen`, `SwapHighlight`, `CloseItem`, `ToolWindow`, `Toast`)
-- `MainWindow.WindowPlaces.cs`, `MainWindow.FullScreen.cs`, `MainWindow.PlayerSize.cs` in each app
-- Settings: `Windows`, `LockedWindows`, `LinkWindows`, `LucentFullScreen`, `WindowsBeforeFullScreen`, `FullScreenSwaps`, `FullScreenStyle`
+- `Lucent.Core/Layout/FullScreenLayout.cs`, `WindowSwap.cs`, `SavedLayouts.cs`
+- `Windows/` in each app (`WindowSnapper`, `WindowLocks`, `LockButton`, `LucentFullScreen`, `SavedLayoutsMenu`, `SwapHighlight`, `CloseItem`, `ToolWindow`, `Toast`)
+- `MainWindow.WindowPlaces.cs`, `MainWindow.FullScreen.cs`, `MainWindow.Layouts.cs`, `MainWindow.PlayerSize.cs` in each app
+- Settings: `Windows`, `LockedWindows`, `LinkWindows`, `LucentFullScreen`, `WindowsBeforeFullScreen`, `FullScreenSwaps`, `FullScreenStyle`, `Layouts`
 
 ## Adding a window
 
-Add a `TileKind`, map it in `TileKindOf()`, add it to `TiledWindows()`, and call `LucentFullScreen.AddTo(menu, this)` on its right-click menu (gives "Full screen Lucent" and Close).
+Add a `TileKind`, map it in `TileKindOf()`, add it to `TiledWindows()`, and call `LucentFullScreen.AddTo(menu, this)` on its right-click menu (gives "Full screen Lucent", Layouts and Close). To have saved layouts open and close it, add its name to `SavedLayouts.Openable` and to `OpenLayout` in both apps.
 
 ## Checks
 
-`tools/LayoutCheck` (parity job) checks every full-screen layout at 100 to 200% scaling and on Mac screens: no overlaps, nothing off screen, minimum sizes, locks, swaps, and every tidy style. It also tidies out of full screen from scattered, far-off, huge and locked windows, and checks the block stays docked together, nothing is blown up, the player only moves to keep the block on screen, and two rounds of presses give the same layouts.
+`tools/LayoutCheck` (parity job) checks every full-screen layout at 100 to 200% scaling and on Mac screens: no overlaps, nothing off screen, minimum sizes, locks, swaps, and every tidy style. It also tidies out of full screen from scattered, far-off, huge and locked windows, and checks the block stays docked together, nothing is blown up, the player only moves to keep the block on screen, and two rounds of presses give the same layouts. Saved layouts: a taken name replaces that layout in place, renames can't clash, only the first nine have keys, and a layout from a missing screen moves onto another whole.

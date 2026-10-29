@@ -22,6 +22,7 @@ using Lucent.Mac.Visualizer;
 using Lucent.Mac.Windows;
 using Lucent.Audio;
 using Lucent.Diagnostics;
+using Lucent.Layout;
 using Lucent.Library;
 using Lucent.Playlist;
 using Lucent.Settings;
@@ -204,6 +205,7 @@ public partial class MainWindow : Window
         SeekBar.AddHandler(Thumb.DragCompletedEvent, (_, _) => OnSeekDragCompleted());
 
         SetUpWindowPlaces();
+        SetUpSavedLayouts();
         SetUpLucentFullScreen();
         if (Saved("Player") is { } placement)
         {
@@ -2384,6 +2386,10 @@ public partial class MainWindow : Window
             case Key.M:
                 Activate();
                 ToggleSources(SourcesButton);
+                break;
+            case var key when e.KeyModifiers == KeyModifiers.None && LayoutNumber(key) is { } number
+                && SavedLayouts.ForKey(_settings.Layouts, number) is { } layout:
+                OpenLayout(layout);
                 break;
             default:
                 return;

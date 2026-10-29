@@ -22,6 +22,8 @@ public static class LucentFullScreen
 
     private static readonly object Marker = new();
 
+    private static readonly object LayoutsMarker = new();
+
     /// <summary>Menus that tick the item as they open (a menu built again each time it opens gets the item again, but this only once).</summary>
     private static readonly ConditionalWeakTable<ContextMenu, object> Ticking = new();
 
@@ -40,7 +42,7 @@ public static class LucentFullScreen
     /// <summary>Whether a window is one that Lucent full screen lays out, whose title bar gets the menu.</summary>
     public static Func<Window, bool>? Covers { get; set; }
 
-    /// <summary>Adds "Full screen Lucent", ticked while it's on, "Tidy layout", "Reset to default layout", and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
+    /// <summary>Adds "Full screen Lucent", ticked while it's on, "Tidy layout", "Layouts" (<see cref="SavedLayoutsMenu"/>), "Reset to default layout", and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
     public static void AddTo(ContextMenu menu, Window window)
     {
         if (menu.Items.OfType<MenuItem>().Any(item => item.Tag == Marker))
@@ -60,6 +62,9 @@ public static class LucentFullScreen
         var tidy = new MenuItem { Header = "Tidy layout", InputGestureText = TidyGesture };
         tidy.Click += (_, _) => Tidy?.Invoke();
         menu.Items.Add(tidy);
+        var layouts = SavedLayoutsMenu.Item(window);
+        layouts.Tag = LayoutsMarker;
+        menu.Items.Add(layouts);
         var reset = new MenuItem { Header = "Reset to default layout" };
         reset.Click += (_, _) => Reset?.Invoke();
         menu.Items.Add(reset);
@@ -73,11 +78,17 @@ public static class LucentFullScreen
                 {
                     shown.IsChecked = IsOn?.Invoke() == true;
                 }
+
+                // Layouts saved, renamed or deleted since it last opened.
+                foreach (var shown in menu.Items.OfType<MenuItem>().Where(entry => entry.Tag == LayoutsMarker))
+                {
+                    SavedLayoutsMenu.Fill(shown, window);
+                }
             };
         }
     }
 
-    /// <summary>Opens a menu with "Full screen Lucent", "Tidy layout", "Reset to default layout" and "Close" at the mouse, for a right-click on a window's title bar. A window it doesn't lay out (a dialog, say) gets just "Close".</summary>
+    /// <summary>Opens a menu with "Full screen Lucent", "Tidy layout", "Layouts", "Reset to default layout" and "Close" at the mouse, for a right-click on a window's title bar. A window it doesn't lay out (a dialog, say) gets just "Close".</summary>
     public static bool ShowWindowMenu(Window window)
     {
         if (window.Content is not UIElement content)

@@ -15,6 +15,7 @@ using Microsoft.Win32;
 using Lucent.Audio;
 using Lucent.Diagnostics;
 using Lucent.Editor;
+using Lucent.Layout;
 using Lucent.Library;
 using Lucent.Playlist;
 using Lucent.Settings;
@@ -152,6 +153,7 @@ public partial class MainWindow : Window
 
         PreviewMouseWheel += OnPreviewMouseWheel;
         SetUpWindowPlaces();
+        SetUpSavedLayouts();
         SetUpLucentFullScreen();
         if (Saved("Player") is { } placement)
         {
@@ -2230,6 +2232,10 @@ public partial class MainWindow : Window
             case Key.M:
                 Activate();
                 ToggleSources(SourcesButton);
+                break;
+            case var key when Keyboard.Modifiers == ModifierKeys.None && LayoutNumber(key) is { } number
+                && SavedLayouts.ForKey(_settings.Layouts, number) is { } layout:
+                OpenLayout(layout);
                 break;
             default:
                 return;
