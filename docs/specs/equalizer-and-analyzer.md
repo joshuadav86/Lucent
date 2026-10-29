@@ -4,6 +4,7 @@
 
 **Equalizer (E):**
 - 4, 8, 16, 24, or 32 faders drawn over the live spectrum, with 15 presets and a balance control.
+- The spectrum shows energy per slice of an octave (bins averaged, 3 dB per octave lift), so pink noise draws flat and music falls away at the top as much as it really does.
 - Shapes only the player's sound. Its spectrum pauses while the editor plays, because the EQ doesn't shape the editor.
 - Switches to Winamp's 10 octave bands while a classic .wsz skin is on.
 - Off in bit-perfect mode.
