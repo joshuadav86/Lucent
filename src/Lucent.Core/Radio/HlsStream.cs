@@ -9,13 +9,14 @@ namespace Lucent.Radio;
 /// An HLS station (HTTP Live Streaming) read as one stream of MP3 or AAC frames. Instead of one long stream, HLS
 /// sends a playlist of short pieces (segments) a few seconds each, and keeps adding new ones to the end; this
 /// fetches them in turn, reloading the playlist for more, and passes on the audio inside them for the decoders to
-/// read as they read any station. Segments are either plain audio (ADTS AAC, or MP3) or MPEG transport stream
-/// (.ts), which the audio is taken out of. Songs come as ID3 tags inside the segments.
+/// read as they read any station. Segments are plain audio (ADTS AAC, or MP3), MPEG transport stream (.ts), or MP4
+/// pieces (fragmented MP4, see <see cref="Mp4Pieces"/>), which the audio is taken out of. Songs come as ID3 tags
+/// inside the segments.
 /// </summary>
 /// <remarks>
 /// A station's top playlist may list the same station at several qualities; the best one Lucent can play is taken.
-/// Encrypted streams and fragmented MP4 segments aren't supported. Reading blocks while segments are fetched, so it's
-/// read on the station's own thread.
+/// Encrypted streams aren't supported, nor MP4 pieces of sound other than AAC and MP3 (FLAC, Opus), which the video
+/// player (libVLC) plays instead. Reading blocks while segments are fetched, so it's read on the station's own thread.
 /// </remarks>
 internal sealed class HlsStream : Stream
 {
@@ -44,6 +45,8 @@ internal sealed class HlsStream : Stream
     private byte[] _current = Array.Empty<byte>();
     private int _offset;
     private TransportStream _transport = new();
+    private Mp4Pieces? _mp4;
+    private Map? _mp4Map;
     private volatile string? _title;
 
     private HlsStream(HttpClient http, Uri playlist, string userAgent, int bitrate)
@@ -57,8 +60,8 @@ internal sealed class HlsStream : Stream
     /// <summary>The song that's on, as the station last said, or null.</summary>
     public string? Title => _title;
 
-    /// <summary>Kilobits per second, as the playlist says, or 0 when it doesn't.</summary>
-    public int Bitrate { get; }
+    /// <summary>Kilobits per second, as the playlist (or an MP4 stream's first piece) says, or 0 when it doesn't.</summary>
+    public int Bitrate { get; private set; }
 
     /// <summary>The audio in the segments.</summary>
     public RadioCodec Codec { get; private set; }
@@ -107,7 +110,11 @@ internal sealed class HlsStream : Stream
                 throw new RadioProblem("The station's HLS stream has nothing to play right now. It may be off the air.");
             }
 
-            stream.Codec = stream._transport.Codec ?? (IsAdts(stream._current, stream._offset) ? RadioCodec.Aac : RadioCodec.Mp3);
+            stream.Codec = stream._mp4?.Codec ?? stream._transport.Codec ?? (IsAdts(stream._current, stream._offset) ? RadioCodec.Aac : RadioCodec.Mp3);
+            if (stream.Bitrate == 0 && stream._mp4 is { Kbps: > 0 } mp4)
+            {
+                stream.Bitrate = Kbps(mp4.Kbps * 1000);
+            }
             return stream;
         }
         catch
@@ -249,6 +256,7 @@ internal sealed class HlsStream : Stream
         long sequence = 0;
         var found = new List<Segment>();
         string? extinf = null;
+        Map? map = null;
         foreach (var line in Lines(playlist))
         {
             if (line.StartsWith("#EXT-X-TARGETDURATION:", StringComparison.OrdinalIgnoreCase)
@@ -267,7 +275,14 @@ internal sealed class HlsStream : Stream
             }
             else if (line.StartsWith("#EXT-X-MAP:", StringComparison.OrdinalIgnoreCase))
             {
-                throw new RadioProblem("The station's HLS stream is in MP4 pieces, which Lucent can't play yet.") { Unreadable = true };
+                // MP4 pieces: this first piece says what's in the ones after it.
+                var attributes = Attributes(line[(line.IndexOf(':') + 1)..]);
+                if (!attributes.TryGetValue("URI", out var uri) || !Uri.TryCreate(_playlist, uri, out var address))
+                {
+                    throw new RadioProblem("The station's HLS stream doesn't say where its first MP4 piece is.") { Unreadable = true };
+                }
+
+                map = new Map(address, attributes.GetValueOrDefault("BYTERANGE"));
             }
             else if (line.StartsWith("#EXT-X-ENDLIST", StringComparison.OrdinalIgnoreCase))
             {
@@ -281,7 +296,7 @@ internal sealed class HlsStream : Stream
             {
                 if (Uri.TryCreate(_playlist, line, out var address))
                 {
-                    found.Add(new Segment(sequence, address, TitleInExtinf(extinf), DurationInExtinf(extinf) ?? _targetDuration));
+                    found.Add(new Segment(sequence, address, TitleInExtinf(extinf), DurationInExtinf(extinf) ?? _targetDuration, map));
                 }
 
                 sequence++;
@@ -347,7 +362,13 @@ internal sealed class HlsStream : Stream
                 continue;
             }
 
-            var audio = Audio(bytes, out var id3Title);
+            if (segment.Map is { } map && map != _mp4Map)
+            {
+                _mp4 = Mp4Pieces.Read(await GetMapAsync(map, cancel));
+                _mp4Map = map;
+            }
+
+            var audio = segment.Map is not null && _mp4 is { } mp4 ? mp4.Audio(bytes, out var id3Title) : Audio(bytes, out id3Title);
             if (audio.Length == 0)
             {
                 continue;
@@ -437,6 +458,23 @@ internal sealed class HlsStream : Stream
         return await response.Content.ReadAsByteArrayAsync(timeout.Token);
     }
 
+    // An MP4 stream's first piece, cut to its byte range when it has one.
+    private async Task<byte[]> GetMapAsync(Map map, CancellationToken cancel)
+    {
+        var bytes = await GetBytesAsync(map.Address, cancel);
+        var range = map.ByteRange?.Split('@');
+        if (range is not null && int.TryParse(range[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var length))
+        {
+            var offset = range.Length > 1 && int.TryParse(range[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var start) ? start : 0;
+            if (offset >= 0 && length > 0 && offset + length <= bytes.Length)
+            {
+                return bytes[offset..(offset + length)];
+            }
+        }
+
+        return bytes;
+    }
+
     private static async Task<string> GetTextAsync(HttpClient http, Uri address, string userAgent, CancellationToken cancel)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancel);
@@ -496,7 +534,10 @@ internal sealed class HlsStream : Stream
         return attributes;
     }
 
-    private sealed record Segment(long Sequence, Uri Address, string? Title, TimeSpan Duration);
+    private sealed record Segment(long Sequence, Uri Address, string? Title, TimeSpan Duration, Map? Map);
+
+    /// <summary>An MP4 stream's first piece: where it is, and its "length@offset" when it's part of a bigger file.</summary>
+    private sealed record Map(Uri Address, string? ByteRange);
 
     /// <summary>
     /// The audio in MPEG transport stream segments: 188-byte packets, each for one stream of the program, which the

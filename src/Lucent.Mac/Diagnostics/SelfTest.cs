@@ -89,6 +89,10 @@ public static partial class SelfTest
 
         failures += Lucent.Audio.FormatSelfTest.Run(Console.WriteLine, formatsFolder);
 
+        // An HLS station in MP4 pieces (as SomaFM sends its 320k AAC), from tools/test-media/hls-fmp4 beside the formats.
+        failures += Lucent.Radio.RadioSelfTest.Run(Console.WriteLine,
+            formatsFolder is null ? null : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(formatsFolder))!, "hls-fmp4"));
+
         failures += Lucent.Video.VideoSelfTest.Run(Console.WriteLine, videos, IsVirtualMachine());
 
         failures += TestOutputDevices();
