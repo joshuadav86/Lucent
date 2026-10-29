@@ -192,6 +192,9 @@ public sealed class AppSettings
     /// </summary>
     public TileStyle FullScreenStyle { get; set; } = TileStyle.AsTheyAre;
 
+    /// <summary>The window layouts saved by name (right-click › Layouts), in the order of their keys, 1 to 9.</summary>
+    public List<SavedLayout> Layouts { get; set; } = new();
+
     // ---- Graphics ----
 
     public RenderResolution Resolution { get; set; } = RenderResolution.Auto;

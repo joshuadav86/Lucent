@@ -181,6 +181,9 @@ public partial class MainWindow
         window.Add(fullScreen);
         // No key here: a menu key of ⇧D would take capital Ds typed in the search boxes. Shift+D works in Lucent's windows.
         window.Add(Item("Tidy Layout", TidyLayout));
+        var layouts = new NativeMenu();
+        FillLayoutsMenu(layouts);
+        window.Add(new NativeMenuItem("Layouts") { Menu = layouts });
         window.Add(Item("Reset to Default Layout", ResetLayout));
         window.Add(Item("Shrink Everything", ShrinkWindows));
         var link = Check("Move Every Window with the Player", ToggleLink);
@@ -198,6 +201,7 @@ public partial class MainWindow
             showVideo.IsChecked = VideoWindow.IsOpen;
             link.IsChecked = _settings.LinkWindows;
             fullScreen.IsChecked = _settings.LucentFullScreen;
+            FillLayoutsMenu(layouts);
         };
         bar.Add(new NativeMenuItem("Window") { Menu = window });
 
@@ -228,6 +232,41 @@ public partial class MainWindow
         }
 
         await MessageWindow.ShowAsync(this, $"Lucent {AppInfo.Version}", "About Lucent");
+    }
+
+    /// <summary>
+    /// Window › Layouts: the saved layouts (MainWindow.Layouts.cs), then Save, Rename and Delete, as in the
+    /// right-click menus. No keys shown: menu keys of 1 to 9 would take those digits typed in the search boxes.
+    /// </summary>
+    private void FillLayoutsMenu(NativeMenu menu)
+    {
+        menu.Items.Clear();
+        foreach (var layout in _settings.Layouts)
+        {
+            menu.Add(Item(layout.Name, () => OpenLayout(layout)));
+        }
+
+        if (_settings.Layouts.Count > 0)
+        {
+            menu.Add(new NativeMenuItemSeparator());
+        }
+
+        menu.Add(Item("Save Current Layout…", () => SaveLayout(this)));
+        if (_settings.Layouts.Count == 0)
+        {
+            return;
+        }
+
+        var rename = new NativeMenu();
+        var delete = new NativeMenu();
+        foreach (var layout in _settings.Layouts)
+        {
+            rename.Add(Item(layout.Name + "…", () => RenameLayout(this, layout)));
+            delete.Add(Item(layout.Name, () => DeleteLayout(layout)));
+        }
+
+        menu.Add(new NativeMenuItem("Rename Layout") { Menu = rename });
+        menu.Add(new NativeMenuItem("Delete Layout") { Menu = delete });
     }
 
     private static NativeMenuItem Item(string header, Action action, KeyGesture? gesture = null)

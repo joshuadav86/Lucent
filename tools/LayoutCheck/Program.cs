@@ -20,6 +20,10 @@ using Lucent.Layout;
 //     together; the player left where it is unless the block had to move to stay on the screen; no window
 //     blown up (wider than two players, or the widest window's smallest, with room to grow); and
 //     pressing it round every layout twice gives the same layouts both times.
+//   - layouts saved by name (SavedLayouts, right-click › Layouts): saving under a name that's taken replaces
+//     that layout and keeps its key, renaming can't take another layout's name, names are tidied, the keys
+//     1 to 9 go to the first nine, and a layout saved on a screen that's gone moves onto the player's screen
+//     whole, keeping its shape.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
@@ -116,6 +120,8 @@ foreach (var (setName, windows) in Sets(1.0))
         }
     }
 }
+
+CheckSavedLayouts();
 
 Console.WriteLine();
 if (problems.Count > 0)
@@ -516,4 +522,82 @@ static List<(string Name, List<TileWindow> Windows)> Sets(double playerScale)
         ("player, equalizer, library, visuals, video and analyzer, no queue", new() { player, equalizer, library, visuals, video, analyzer }),
         ("everything but the queue", new() { player, equalizer, library, artwork, visuals, analyzer, radio, editor }),
     };
+}
+
+// Layouts saved by name: the list kept in the settings, and moving a layout onto a screen.
+void CheckSavedLayouts()
+{
+    checkedCount++;
+    static Lucent.Settings.WindowBounds At(double left, double top, double width, double height) =>
+        new() { Left = left, Top = top, Width = width, Height = height };
+    var layouts = new List<SavedLayout>();
+    SavedLayouts.Save(layouts, new SavedLayout { Name = "  Studio   desk " });
+    SavedLayouts.Save(layouts, new SavedLayout { Name = "Party" });
+    SavedLayouts.Save(layouts, new SavedLayout { Name = "STUDIO DESK", Linked = true });
+    if (layouts.Count != 2 || layouts[0].Name != "STUDIO DESK" || !layouts[0].Linked || layouts[1].Name != "Party")
+    {
+        problems.Add($"Saved layouts: saving under a taken name should replace that layout where it is, got {string.Join(", ", layouts.Select(layout => layout.Name))}.");
+    }
+
+    if (SavedLayouts.KeyOf(layouts, layouts[1]) != "2" || SavedLayouts.ForKey(layouts, 2) != layouts[1] || SavedLayouts.ForKey(layouts, 3) is not null)
+    {
+        problems.Add("Saved layouts: the keys should be 1 for the first layout, 2 for the second, and nothing past the last.");
+    }
+
+    for (var i = 3; i <= 10; i++)
+    {
+        SavedLayouts.Save(layouts, new SavedLayout { Name = $"Layout {i}" });
+    }
+
+    if (SavedLayouts.KeyOf(layouts, layouts[8]) != "9" || SavedLayouts.KeyOf(layouts, layouts[9]) is not null || SavedLayouts.ForKey(layouts, 10) is not null)
+    {
+        problems.Add("Saved layouts: only the first nine should have keys.");
+    }
+
+    if (SavedLayouts.Rename(layouts, "Party", "studio desk") || !SavedLayouts.Rename(layouts, "Party", "party") || layouts[1].Name != "party"
+        || !SavedLayouts.Rename(layouts, "party", "Night") || SavedLayouts.Rename(layouts, "Night", "   "))
+    {
+        problems.Add("Saved layouts: renaming should refuse another layout's name or a blank one, and allow a change of capitals.");
+    }
+
+    if (!SavedLayouts.Delete(layouts, "night") || SavedLayouts.Find(layouts, "Night") is not null || layouts.Count != 9 || SavedLayouts.Delete(layouts, "Night"))
+    {
+        problems.Add("Saved layouts: deleting should take that layout out, whatever its capitals, once.");
+    }
+
+    if (SavedLayouts.CleanName(new string('x', 60)).Length != SavedLayouts.MaxNameLength)
+    {
+        problems.Add($"Saved layouts: names should be cut to {SavedLayouts.MaxNameLength} characters.");
+    }
+
+    // Saved on a screen to the right that's since been unplugged, onto a laptop's screen, and a group bigger than the screen.
+    var places = new Dictionary<string, Lucent.Settings.WindowBounds>
+    {
+        ["Player"] = At(2200, 100, 400, 150), ["Equalizer"] = At(2200, 250, 400, 120), ["Visuals"] = At(2600, 100, 700, 600),
+    };
+    foreach (var area in new[] { new TileRect(0, 25, 1440, 805), new TileRect(0, 25, 1000, 500) })
+    {
+        var moved = SavedLayouts.MovedOnto(places, area);
+        var shift = (X: moved["Player"].Left - places["Player"].Left, Y: moved["Player"].Top - places["Player"].Top);
+        if (places.Any(entry => Math.Abs(moved[entry.Key].Left - entry.Value.Left - shift.X) > 0.01 || Math.Abs(moved[entry.Key].Top - entry.Value.Top - shift.Y) > 0.01
+                || moved[entry.Key].Width != entry.Value.Width || moved[entry.Key].Height != entry.Value.Height))
+        {
+            problems.Add("Saved layouts: a layout moved onto another screen should keep its shape.");
+        }
+
+        var left = moved.Values.Min(place => place.Left);
+        var top = moved.Values.Min(place => place.Top);
+        var right = moved.Values.Max(place => place.Left + place.Width);
+        var bottom = moved.Values.Max(place => place.Top + place.Height);
+        var fits = right - left <= area.Width && bottom - top <= area.Height;
+        if (left < area.Left || top < area.Top || fits && (right > area.Right || bottom > area.Bottom))
+        {
+            problems.Add($"Saved layouts: a layout moved onto {area} should be on it, at least its top left, but it's at {left:0},{top:0} to {right:0},{bottom:0}.");
+        }
+    }
+
+    if (places["Player"].Left != 2200)
+    {
+        problems.Add("Saved layouts: moving a layout onto a screen changed the saved layout itself.");
+    }
 }
