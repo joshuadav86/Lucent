@@ -99,9 +99,9 @@
             <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="14,8,14,12">
                 <TextBlock x:Name="StationCount" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
-                <Button DockPanel.Dock="Left" Theme="{StaticResource PillButton}" Content="PLAY AN ADDRESS…" Margin="0,0,10,0"
-                        ToolTip.Tip="Play a station that isn't listed, from its stream's address (or its .pls, .m3u or .m3u8 link), audio or video"
-                        Click="OnPlayAddress" />
+                <Button DockPanel.Dock="Left" Theme="{StaticResource PillButton}" Content="ADD A STATION…" Margin="0,0,10,0"
+                        ToolTip.Tip="Add a station that isn't listed, from its stream's address or its .pls or .m3u file, to play it and keep it in your favorites"
+                        Click="OnAddStation" />
                 <TextBlock FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource MutedTextBrush}"
                            Text="Stations from radio-browser.info, a free directory kept up by its listeners."
