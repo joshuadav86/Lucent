@@ -157,8 +157,8 @@ public static partial class Screenshots
         player.ShowPreview(new[]
         {
             SampleTrack("Bicep", "Atlas", TimeSpan.FromSeconds(352), 1411, 44100, 2),
-            SampleTrack("Tomora", "Ring the Alarm", TimeSpan.FromSeconds(331), 1411, 44100, 2),
-            SampleTrack("Boards of Canada", "Roygbiv", TimeSpan.FromSeconds(151), 320, 44100, 2),
+            SampleTrack("Massive Attack", "Teardrop", TimeSpan.FromSeconds(329), 1411, 44100, 2),
+            SampleTrack("Boards of Canada", "Introit", TimeSpan.FromSeconds(102), 320, 44100, 2),
         }, TimeSpan.FromSeconds(83));
         return player;
     }
@@ -327,25 +327,25 @@ public static partial class Screenshots
         ("Music / Bicep / Isles", "Atlas", "Bicep", "Isles", 352, 2),
         ("Music / Bicep / Isles", "Apricots", "Bicep", "Isles", 246, 2),
         ("Music / Bicep / Isles", "Saku", "Bicep", "Isles", 297, 2),
-        ("Music / Tomora / Come Closer", "Ring the Alarm", "Tomora", "Come Closer", 331, 4),
-        ("Music / Tomora / Come Closer", "Come Closer", "Tomora", "Come Closer", 268, 4),
-        ("Music / Boards of Canada / Music Has the Right to Children", "Roygbiv", "Boards of Canada", "Music Has the Right to Children", 151, 5),
-        ("Music / Boards of Canada / Music Has the Right to Children", "Aquarius", "Boards of Canada", "Music Has the Right to Children", 352, 5),
-        ("Music / Boards of Canada / Music Has the Right to Children", "Turquoise Hexagon Sun", "Boards of Canada", "Music Has the Right to Children", 307, 5),
+        ("Music / Boards of Canada / Inferno", "Introit", "Boards of Canada", "Inferno", 102, 4),
+        ("Music / Boards of Canada / Inferno", "Prophecy at 1420 MHz", "Boards of Canada", "Inferno", 296, 4),
+        ("Music / Massive Attack / Mezzanine", "Angel", "Massive Attack", "Mezzanine", 378, 5),
+        ("Music / Massive Attack / Mezzanine", "Teardrop", "Massive Attack", "Mezzanine", 329, 5),
+        ("Music / Zero 7 / When It Falls", "Home", "Zero 7", "When It Falls", 277, 6),
+        ("Music / Zero 7 / When It Falls", "Somersault", "Zero 7", "When It Falls", 417, 6),
         ("Music / Mixes", "Late night set (live)", "", "", 3725, 9),
         ("Music / Mixes", "Sunday morning", "Four Tet", "", 2411, 12),
-        ("Downloads", "Windowlicker", "Aphex Twin", "Windowlicker", 367, 20),
-        ("Downloads", "Kid A", "Radiohead", "Kid A", 284, 21),
+        ("Downloads", "Warm Sound", "Zero 7", "When It Falls", 330, 20),
+        ("Downloads", "Risingson", "Massive Attack", "Mezzanine", 327, 21),
     };
 
     /// <summary>Made-up genre, year, BPM and key for the sample songs, by album (or title, for those with none).</summary>
     private static TrackTagValues SampleTags(string album, string title) => (album.Length > 0 ? album : title) switch
     {
         "Isles" => new TrackTagValues { Genre = "Electronic", Year = 2021, Bpm = 124, Key = "8A" },
-        "Come Closer" => new TrackTagValues { Genre = "House", Year = 2025, Bpm = 122, Key = "5A" },
-        "Music Has the Right to Children" => new TrackTagValues { Genre = "IDM", Year = 1998, Bpm = 92, Key = "11B" },
-        "Windowlicker" => new TrackTagValues { Genre = "IDM", Year = 1999, Bpm = 130, Key = "2A" },
-        "Kid A" => new TrackTagValues { Genre = "Alternative", Year = 2000, Bpm = 100, Key = "7B" },
+        "Inferno" => new TrackTagValues { Genre = "IDM", Year = 2026, Bpm = 92, Key = "11B" },
+        "Mezzanine" => new TrackTagValues { Genre = "Trip hop", Year = 1998, Bpm = 77, Key = "4A" },
+        "When It Falls" => new TrackTagValues { Genre = "Downtempo", Year = 2004, Bpm = 96, Key = "7B" },
         "Sunday morning" => new TrackTagValues { Genre = "Electronic", Year = 2024 },
         _ => TrackTagValues.None,
     };
@@ -356,11 +356,14 @@ public static partial class Screenshots
         "Atlas" => 1,
         "Apricots" => 3,
         "Saku" => 4,
-        "Ring the Alarm" => 2,
-        "Come Closer" => 1,
-        "Roygbiv" => 10,
-        "Aquarius" => 4,
-        "Turquoise Hexagon Sun" => 7,
+        "Introit" => 1,
+        "Prophecy at 1420 MHz" => 2,
+        "Angel" => 1,
+        "Risingson" => 2,
+        "Teardrop" => 3,
+        "Warm Sound" => 1,
+        "Home" => 2,
+        "Somersault" => 3,
         _ => 1,
     };
 
@@ -412,11 +415,11 @@ public static partial class Screenshots
         {
             ("Bicep/Isles", "Atlas", ".flac", 352, 1011, 30),
             ("Downloads", "Atlas", ".mp3", 353, 320, 2),
-            ("Boards of Canada/Music Has the Right to Children", "Roygbiv", ".mp3", 151, 256, 90),
-            ("Old iTunes/Boards of Canada", "Roygbiv", ".m4a", 150, 256, 400),
-            ("Old iTunes/Boards of Canada", "Roygbiv (1)", ".m4a", 150, 128, 400),
-            ("Tomora/Come Closer", "Ring the Alarm", ".flac", 331, 948, 10),
-            ("Downloads", "Ring the Alarm", ".wav", 331, 1411, 1),
+            ("Massive Attack/Mezzanine", "Teardrop", ".mp3", 329, 256, 90),
+            ("Old iTunes/Massive Attack", "Teardrop", ".m4a", 328, 256, 400),
+            ("Old iTunes/Massive Attack", "Teardrop (1)", ".m4a", 328, 128, 400),
+            ("Zero 7/When It Falls", "Home", ".flac", 277, 948, 10),
+            ("Downloads", "Home", ".wav", 277, 1411, 1),
         };
         var items = copies.Select(copy =>
         {
@@ -480,8 +483,11 @@ public static partial class Screenshots
 
     private static Window PreviewQueue()
     {
-        var tracks = SampleSongs.Take(6).Select(song => SampleTrack(song.Title + ".flac", song.Title, song.Artist, song.Album, song.Seconds)).ToList();
-        PreviewCovers(SampleSongs.Zip(tracks, (song, track) => (track.Path, song)));
+        // One from each album before the second from any, so the queue shows every cover.
+        var songs = new[] { "Atlas", "Teardrop", "Introit", "Home", "Apricots", "Angel" }
+            .Select(title => SampleSongs.First(song => song.Title == title)).ToList();
+        var tracks = songs.Select(song => SampleTrack(song.Title + ".flac", song.Title, song.Artist, song.Album, song.Seconds)).ToList();
+        PreviewCovers(songs.Zip(tracks, (song, track) => (track.Path, song)));
         var entries = new ObservableCollection<PlaylistEntry>(tracks.Select(track => new PlaylistEntry(track)));
         entries[0].IsCurrent = true;
         var queue = new QueueWindow();

@@ -941,10 +941,10 @@ footer .credits a { text-decoration: underline; }
   /* ---------- the window tour at the top: Lucent full screen, a window at a time ---------- */
   // [name, file, place on a 2560 × 1440 screen (x, y, width, height, from FullScreenLayout), what it is, alt text, floats over the rest]
   const WINDOWS = [
-    ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with genre, year, and any other tag in columns.", "The library, with album covers, genres, and years beside each song in folders for Bicep's Isles, Tomora's Come Closer, and Boards of Canada"],
+    ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with genre, year, and any other tag in columns.", "The library, with album covers, genres, and years beside each song in folders for Bicep's Isles, Boards of Canada's Inferno, Massive Attack's Mezzanine, and Zero 7's When It Falls"],
     ["Player", "tour/full/player.png", [380, 0, 520, 207], "Bicep's Atlas in lossless, with a live level meter and one-click links to every other window.", "The player, playing Atlas by Bicep"],
     ["Equalizer", "tour/full/equalizer.png", [380, 207, 520, 391], "4 to 32 bands, with the music's live spectrum behind the faders.", "The 16-band equalizer on the Rock preset"],
-    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with album covers beside Bicep, Tomora, and Boards of Canada songs"],
+    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with album covers beside Bicep, Massive Attack, Boards of Canada, and Zero 7 songs"],
     ["Artwork", "tour/full/artwork.jpg", [0, 1027.4, 380, 412.6], "The cover of whatever's on: your files, a streaming app, or a radio station.", "The artwork window with Bicep's Isles cover"],
     ["Visuals", "tour/full/visuals.jpg", [900, 0, 1660, 840], "448 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.", "The visuals window showing Cosmic Jellyfish"],
     ["Analyzer", "tour/full/analyzer.png", [900, 840, 729, 600], "A studio spectrogram, spectrum, waveform, and stereo scope, scrolling together, with LUFS loudness along the bottom.", "The analyzer, with momentary, short-term, and integrated LUFS, loudness range, and true peak along the bottom"],
@@ -1446,7 +1446,7 @@ footer .credits a { text-decoration: underline; }
       <div class="lw-row"><span class="lw-b">${I.prev}</span><span class="lw-play">${I.play}</span><span class="lw-b">${I.stop}</span><span class="lw-b">${I.next}</span><span class="lw-b">${I.eject}</span><span class="lw-b">${I.shuffle}</span><span class="lw-b">${I.repeat}</span>
         <span class="lw-links"><span>Visuals</span><span>Queue</span><span>EQ</span><span>Library</span></span></div>
     </div></div>`;
-  const SONGS = [["Atlas", "Bicep", "5:52"], ["Ring the Alarm", "Tomora", "5:31"], ["Roygbiv", "Boards of Canada", "2:31"], ["Aquarius", "Boards of Canada", "5:52"], ["Apricots", "Bicep", "4:06"]];
+  const SONGS = [["Atlas", "Bicep", "5:52"], ["Teardrop", "Massive Attack", "5:29"], ["Introit", "Boards of Canada", "1:42"], ["Home", "Zero 7", "4:37"], ["Apricots", "Bicep", "4:06"]];
   const queueWin = n => `<div class="lw">${title("Queue", `${n} tracks`)}<div class="lw-list">${SONGS.slice(0, n).map((x, i) =>
       `<div class="lw-item${i === 0 ? " on" : ""}"><b>${x[0]}</b><span>${x[1]}</span><em>${x[2]}</em></div>`).join("")}</div></div>`;
   const EQ = [.3, .26, .36, .5, .58, .55, .45, .34, .28, .24];
