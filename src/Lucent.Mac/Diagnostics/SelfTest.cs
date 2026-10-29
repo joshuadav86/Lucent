@@ -114,6 +114,7 @@ public static partial class SelfTest
         failures += Lucent.Lastfm.ScrobbleSelfTest.Run(Console.WriteLine);
         failures += Lucent.Library.TempoKeySelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.CoverSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Library.PlaylistColumnsSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }
@@ -159,6 +160,16 @@ public static partial class SelfTest
         {
             problems++;
             Console.WriteLine("::error::The Music app's playlist, as AppleScript gives it, didn't read back as its songs.");
+        }
+
+        // With the details for the library's columns: album artist, genre, year, track, disc, and minutes since it was added.
+        var detailed = Streaming.AppleMusicRemote.ParseList("A1",
+            "Road trip\u001fB2\u001fOne\u001fArtist\u001fAlbum\u001f245.5\u001fVarious\u001fAmbient\u001f1998\u001f7\u001f2\u001f1440");
+        if (detailed?.Tracks is not [{ AlbumArtist: "Various", Genre: "Ambient", Year: 1998, TrackNumber: 7, Disc: 2, AddedAt: { } added }]
+            || Math.Abs((DateTime.UtcNow - added - TimeSpan.FromDays(1)).TotalMinutes) > 1)
+        {
+            problems++;
+            Console.WriteLine("::error::The Music app's playlist details, as AppleScript gives them, didn't read back as its songs' columns.");
         }
 
         if (!SystemAudio.IsSupported)

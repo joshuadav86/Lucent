@@ -56,6 +56,7 @@ public static partial class Screenshots
         ("Duplicates", () => PreviewDuplicates()),
         ("Queue", () => PreviewQueue()),
         ("Queue-Spotify", () => PreviewSpotifyQueue()),
+        ("LibrarySpotifyPlaylist", () => PreviewSpotifyPlaylist()),
         ("Queue-ClassicSkin", () => PreviewClassicQueue()),
         ("TrackInfo", TrackInfoPreviews.TrackInfo),
         ("TrackInfoLyrics", TrackInfoPreviews.TrackInfoLyrics),
@@ -484,6 +485,32 @@ public static partial class Screenshots
         queue.ShowRemoteList("Spotify", new Lucent.Streaming.RemoteList("spotify:playlist:preview", "Late night", tracks),
             tracks[1]);
         return queue;
+    }
+
+    /// <summary>A Spotify playlist opened in the library, with its #, album, year and date added columns, newest first.</summary>
+    private static Window PreviewSpotifyPlaylist()
+    {
+        var songs = SampleSongs.Where(song => song.Album.Length > 0).ToList();
+        var tracks = songs.Select((song, i) => new Lucent.Streaming.RemoteTrack($"preview{i}", song.Title, song.Artist,
+            song.Album, TimeSpan.FromSeconds(song.Seconds), ThumbnailUrl: $"https://i.scdn.co/image/preview-{song.Album}",
+            AddedAt: DateTime.Today.AddDays(-song.DaysAgo * 9 - i).ToUniversalTime())
+        {
+            Year = SampleTags(song.Album, song.Title).Year,
+        }).ToList();
+        PreviewCovers(songs.Zip(tracks, (song, track) => (track.ThumbnailUrl!, song)));
+        var settings = new AppSettings
+        {
+            PlaylistColumnsShown = new List<PlaylistColumn> { PlaylistColumn.Order, PlaylistColumn.Album, PlaylistColumn.Year, PlaylistColumn.Added },
+            PlaylistSortColumn = PlaylistColumn.Added,
+            PlaylistSortDescending = true,
+        };
+        var window = new LibraryWindow();
+        window.Attach(new MusicLibrary(), settings);
+        window.ShowPlaylistPreview(Lucent.Streaming.RemoteApp.Spotify,
+            new Lucent.Streaming.RemotePlaylist("spotify:playlist:preview", "Currently Jamming", tracks.Count),
+            new Lucent.Streaming.RemoteList("spotify:playlist:preview", "Currently Jamming", tracks));
+        window.Width = 760;
+        return window;
     }
 
     /// <summary>The queue in Lucent Classic's playlist frame, two songs selected, part way through the second.</summary>

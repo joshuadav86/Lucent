@@ -229,7 +229,7 @@ public partial class LibraryWindow
     private void OnHeadingMouseDown(object sender, MouseButtonEventArgs e)
     {
         _pressedHeading = (Border)sender;
-        _headingPressPoint = e.GetPosition(ColumnHeadings);
+        _headingPressPoint = e.GetPosition(HeadingsOf(_pressedHeading));
         _draggingHeading = false;
         _pressedHeading.CaptureMouse();
         e.Handled = true;
@@ -242,7 +242,7 @@ public partial class LibraryWindow
             return;
         }
 
-        var offset = e.GetPosition(ColumnHeadings).X - _headingPressPoint.X;
+        var offset = e.GetPosition(HeadingsOf(_pressedHeading)).X - _headingPressPoint.X;
         if (!_draggingHeading && Math.Abs(offset) < SystemParameters.MinimumHorizontalDragDistance)
         {
             return;
@@ -256,15 +256,36 @@ public partial class LibraryWindow
 
     private void OnHeadingMouseUp(object sender, MouseButtonEventArgs e)
     {
-        if (_pressedHeading is not { Tag: LibraryColumn column } heading || !ReferenceEquals(sender, heading))
+        if (_pressedHeading is not { } heading || !ReferenceEquals(sender, heading))
         {
             return;
         }
 
         var dragged = _draggingHeading;
-        var x = e.GetPosition(ColumnHeadings).X;
+        var x = e.GetPosition(HeadingsOf(heading)).X;
         EndHeadingDrag();
         e.Handled = true;
+
+        // An opened streaming playlist's heading (LibraryWindow.PlaylistColumns.cs).
+        if (heading.Tag is PlaylistColumn playlistColumn)
+        {
+            if (dragged)
+            {
+                DropPlaylistHeading(playlistColumn, x);
+            }
+            else
+            {
+                SortPlaylistBy(playlistColumn);
+            }
+
+            return;
+        }
+
+        if (heading.Tag is not LibraryColumn column)
+        {
+            return;
+        }
+
         if (!dragged)
         {
             SortByColumn(column);
@@ -288,6 +309,9 @@ public partial class LibraryWindow
 
         MoveColumn(column, index);
     }
+
+    // The row of headings a heading is in: the library's, or an opened streaming playlist's.
+    private static UIElement HeadingsOf(Border heading) => (UIElement)heading.Parent;
 
     private void EndHeadingDrag()
     {

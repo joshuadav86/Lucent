@@ -52,6 +52,20 @@ public sealed record RemoteTrack(string Id, string Title, string Artist, string 
     public string? ListArtUrl => ThumbnailUrl ?? ArtworkUrl;
 
     public string DurationText => Duration > TimeSpan.Zero ? Playlist.TimeFormat.Format(Duration) : string.Empty;
+
+    // What a playlist's columns can show beside the song, when the app says (empty or 0 when it doesn't).
+
+    /// <summary>The album's own artist, which can differ from the song's on a compilation or a feature.</summary>
+    public string AlbumArtist { get; init; } = string.Empty;
+
+    public string Genre { get; init; } = string.Empty;
+
+    /// <summary>The year the song (or its album) came out.</summary>
+    public uint Year { get; init; }
+
+    public uint TrackNumber { get; init; }
+
+    public uint Disc { get; init; }
 }
 
 /// <summary>What another app is playing and where it's up to, as read at <paramref name="ReadAt"/>.</summary>
