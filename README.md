@@ -131,7 +131,7 @@ Lucent is free, and always will be. If it's earned a spot in your setup, you can
 
 ## License
 
-[MIT](LICENSE). The Lucent name and logo aren't covered by the license, so forks need their own name and icon. See [TRADEMARK.md](TRADEMARK.md).
+[MIT](LICENSE). The Lucent name and logo aren't covered by the license, so forks need their own name and icon ([TRADEMARK.md](TRADEMARK.md)).
 
 <details>
 <summary>Third-party credits</summary>

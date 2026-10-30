@@ -1,5 +1,5 @@
 // Name: Classic Oscilloscope
-// A classic desktop player's little oscilloscope blown up to fill the screen: the waveform traced in big blocky pixels, green
+// The tiny pixel oscilloscope of 90s desktop players, blown up to fill the screen: the waveform traced in big blocky pixels, green
 // near the middle and turning yellow, orange and red as it swings out, over the faint dotted grid.
 // Family: Music-shaped
 // Tags: Retro, Colourful
