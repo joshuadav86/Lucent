@@ -21,6 +21,7 @@ public sealed class ApeReader : BlockAudioReader
     private const int Flag24Bit = 1 << 3;
     private const int FlagHasPeakLevel = 1 << 2;
     private const int FlagHasSeekElements = 1 << 4;
+    private const int MaxBlocksPerFrame = 1 << 21;
 
     private readonly long[] _seek;
     private readonly int _version;
@@ -144,8 +145,11 @@ public sealed class ApeReader : BlockAudioReader
             seekTableAt = at;
         }
 
-        if (totalFrames <= 0 || channels is < 1 or > 32 || sampleRate <= 0 || bits is not (8 or 16 or 24 or 32)
-            || blocksPerFrame <= 0 || blocksPerFrame > 10_000_000 || finalFrameBlocks > blocksPerFrame
+        // Real files hold at most about a million blocks a frame; a header asking for far more is damaged, or made to ask
+        // for gigabytes of memory.
+        if (totalFrames <= 0 || totalFrames > int.MaxValue / 4 || channels is < 1 or > 32 || sampleRate <= 0
+            || bits is not (8 or 16 or 24 or 32) || blocksPerFrame <= 0 || blocksPerFrame > MaxBlocksPerFrame
+            || finalFrameBlocks < 0 || finalFrameBlocks > blocksPerFrame
             || level is not (1000 or 2000 or 3000 or 4000 or 5000) || seekElements < totalFrames
             || (long)seekElements * 4 > stream.Length)
         {
@@ -238,7 +242,8 @@ public sealed class ApeReader : BlockAudioReader
         var from = _seek[block] - remainder;
         // The range decoder reads a few bytes past its frame, into the next one (or zeros at the end).
         var end = block + 1 < _seek.Length ? Math.Min(_seek[block + 1] + 64, _audioEnd) : _audioEnd;
-        var length = (int)Math.Max(0, end - from);
+        // A frame is never much bigger than its sound uncompressed; a seek table saying otherwise is damaged.
+        var length = (int)Math.Clamp(end - from, 0, (long)blocks * _channels * 8 + 4096);
         var bytes = new byte[(length + 3) / 4 * 4 + 64];
         Array.Copy(read(from, length), bytes, length);
 

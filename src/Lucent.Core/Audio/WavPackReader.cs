@@ -17,6 +17,12 @@ public sealed class WavPackReader : BlockAudioReader
 {
     private const int HeaderSize = 32;
 
+    // WavPack's encoders keep a block to 131,072 samples or fewer, so a file whose blocks claim far more is damaged, or
+    // made to ask for gigabytes of memory. A block's samples times its channels is what each decode allocates.
+    private const int MaxBlockSamples = 1 << 20;
+    private const int MaxChannels = 64;
+    private const long MaxBlockValues = 1 << 24;
+
     private const uint BytesStored = 3;
     private const uint MonoFlag = 4;
     private const uint HybridFlag = 8;
@@ -126,6 +132,11 @@ public sealed class WavPackReader : BlockAudioReader
             }
 
             var length = (int)size + 8;
+            if (blockSamples > MaxBlockSamples)
+            {
+                throw new InvalidDataException("The WavPack file's blocks are bigger than WavPack makes them.");
+            }
+
             if (blockSamples > 0)
             {
                 if ((flags & DsdFlag) != 0)
@@ -183,6 +194,11 @@ public sealed class WavPackReader : BlockAudioReader
             throw new InvalidDataException("The WavPack file holds no complete blocks.");
         }
 
+        if (channels > MaxChannels || sampleRate <= 0 || groups.Any(group => (long)group.Samples * channels > MaxBlockValues))
+        {
+            throw new InvalidDataException("The WavPack file's header doesn't make sense.");
+        }
+
         var last = groups[^1];
         return new WavPackReader(stream, sampleRate, channels, last.Start + last.Samples, groups, bits, isFloat);
     }
@@ -229,7 +245,7 @@ public sealed class WavPackReader : BlockAudioReader
             var length = (int)BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(at + 4)) + 8;
             var flags = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(at + 24));
             var blockSamples = (int)BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(at + 20));
-            if (blockSamples == 0 || at + length > group.Length)
+            if (blockSamples <= 0 || length < HeaderSize || at + length > group.Length)
             {
                 at += Math.Max(length, HeaderSize);
                 continue;

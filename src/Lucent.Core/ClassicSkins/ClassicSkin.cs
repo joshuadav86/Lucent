@@ -143,8 +143,12 @@ public sealed partial class ClassicSkin
                 break;
             }
 
+            // A number too big for an int is still just "more than 255".
             var numbers = Number().Matches(line).Take(3)
-                .Select(match => int.Parse(match.Value, CultureInfo.InvariantCulture)).ToArray();
+                .Select(match => int.TryParse(match.Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)
+                    ? number
+                    : match.Value.StartsWith('-') ? 0 : 255)
+                .ToArray();
             if (numbers.Length < 3)
             {
                 continue;
