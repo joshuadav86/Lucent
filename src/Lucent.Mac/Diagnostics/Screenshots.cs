@@ -155,6 +155,19 @@ public static partial class Screenshots
     {
         var player = new MainWindow();
         player.PreviewSkin(skin);
+        if (PreviewClip is { } clip)
+        {
+            var song = ClipSong;
+            player.ShowPreview(new[]
+            {
+                SampleTrack(song.Artist, song.Title, TimeSpan.FromSeconds(song.Seconds), 320, clip.SampleRate, 2),
+                SampleTrack("Bicep", "Atlas", TimeSpan.FromSeconds(352), 1411, 44100, 2),
+                SampleTrack("Massive Attack", "Teardrop", TimeSpan.FromSeconds(329), 1411, 44100, 2),
+            }, TimeSpan.FromSeconds(clip.Start));
+            FeedClip(player.PreviewCapture, (seconds, time) => player.PreviewStep(TimeSpan.FromSeconds(time), (float)seconds));
+            return player;
+        }
+
         player.ShowPreview(new[]
         {
             SampleTrack("Bicep", "Atlas", TimeSpan.FromSeconds(352), 1411, 44100, 2),
@@ -487,6 +500,13 @@ public static partial class Screenshots
         // One from each album before the second from any, so the queue shows every cover.
         var songs = new[] { "Atlas", "Teardrop", "Introit", "Home", "Apricots", "Angel" }
             .Select(title => SampleSongs.First(song => song.Title == title)).ToList();
+        if (PreviewClip is not null)
+        {
+            var song = ClipSong;
+            songs.Insert(0, ("Music / Kepler North / Pseudo Profound", song.Title, song.Artist, song.Album, song.Seconds, 1));
+            songs.RemoveAt(songs.Count - 1);
+        }
+
         var tracks = songs.Select(song => SampleTrack(song.Title + ".flac", song.Title, song.Artist, song.Album, song.Seconds)).ToList();
         PreviewCovers(songs.Zip(tracks, (song, track) => (track.Path, song)));
         var entries = new ObservableCollection<PlaylistEntry>(tracks.Select(track => new PlaylistEntry(track)));
@@ -588,6 +608,12 @@ public static partial class Screenshots
         settings.Equalizer.PreampDb = -2;
         player.Equalizer.Apply(settings.Equalizer);
         var window = EqualizerWindow.Create(player, settings, fitWidth);
+        if (PreviewClip is not null)
+        {
+            FeedClip(player.Capture, (seconds, _) => window.Spectrum.Advance((float)seconds));
+            return window;
+        }
+
         window.Opened += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             window.UpdateLayout();
@@ -600,6 +626,12 @@ public static partial class Screenshots
     {
         var player = new Lucent.Mac.Audio.AudioPlayer();
         var window = AnalyzerWindow.Create(player, new AppSettings());
+        if (PreviewClip is not null)
+        {
+            FeedClip(player.Capture, (seconds, _) => window.Picture.Advance(seconds));
+            return window;
+        }
+
         window.Opened += (_, _) => Dispatcher.UIThread.Post(() =>
         {
             window.UpdateLayout();

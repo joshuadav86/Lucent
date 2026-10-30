@@ -14,7 +14,8 @@ lucentaudio.net, served by GitHub Pages from `site/` (`pages.yml`).
 
 - App screenshots are drawn headless by the Mac app on Linux: `Lucent --screenshots <dir> <Names>` (`Screenshots*.cs`). Env vars `LUCENT_PREVIEW_COVERS`, `LUCENT_PREVIEW_VISUAL`, `LUCENT_PREVIEW_VIDEO`, `LUCENT_PREVIEW_SCALE`, and `LUCENT_PREVIEW_LAYERS` fill in sample art.
 - When the player's look changes, re-render the tour layers and screenshots.
-- The README's images come from `site/img`, so they update with the site. The README hero `site/img/lucent-live.webp` is `full-screen.jpg` with the visuals pane replaced by the real Cosmic Jellyfish shader rendered offline; re-make it when `full-screen.jpg` changes.
+- Motion: the tour's player, equalizer, analyzer, and visual play from one 60 fps atlas video (`img/tour/live.mp4`, drawn into canvases), and gallery tiles and the player section use muted loops in `img/clips` that play only on screen. All move to Kepler North's Self Actualize (the starter song). `LUCENT_PREVIEW_CLIP` (`start:seconds`) with `LUCENT_PREVIEW_AUDIO` (a WAV) makes FullScreen save every frame of the moving windows (`Screenshots.Clip.cs`); visuals come from their real shaders, rendered offline. The README's `site/img/lucent-live.webp` is the same clip at 30 fps.
+- The README's images come from `site/img`, so they update with the site.
 
 ## Counts to keep in step
 
