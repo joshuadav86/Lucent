@@ -235,8 +235,10 @@ public sealed class RadioStream : WaveStream, ILiveStream
             },
         };
 
-        // No overall timeout: the stream is read for as long as the station plays. Connecting has its own.
-        return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        // No overall timeout: the stream is read for as long as the station plays. Connecting has its own. Anything read
+        // whole (an HLS stream's pieces) is a few hundred kilobytes; a station sending far more is turned away rather
+        // than filling memory. The live stream itself is read as it comes, so the limit doesn't touch it.
+        return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan, MaxResponseContentBufferSize = 32 * 1024 * 1024 };
     }
 
     private async Task WaitForAudioAsync(CancellationToken cancel)

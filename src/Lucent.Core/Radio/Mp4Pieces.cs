@@ -125,7 +125,7 @@ internal sealed class Mp4Pieces
                     break;
                 case "moof":
                     frames.Clear();
-                    Fragment(body, at, frames);
+                    Fragment(body, at, piece.Length, frames);
                     break;
                 case "mdat":
                     foreach (var (place, size, inMdat) in frames)
@@ -149,7 +149,7 @@ internal sealed class Mp4Pieces
     }
 
     // Where each of the sound track's frames is in a piece, from a moof's tables. moofStart is where the moof begins.
-    private void Fragment(ReadOnlySpan<byte> moof, int moofStart, List<(long Offset, int Size, bool InMdat)> frames)
+    private void Fragment(ReadOnlySpan<byte> moof, int moofStart, int pieceLength, List<(long Offset, int Size, bool InMdat)> frames)
     {
         foreach (var trafRange in All(moof, "traf"))
         {
@@ -202,7 +202,9 @@ internal sealed class Mp4Pieces
                 for (var n = 0; n < count && i + each <= trun.Length; n++, i += each)
                 {
                     var size = (runFlags & 0x200) != 0 ? BinaryPrimitives.ReadUInt32BigEndian(trun[(i + sizeAt)..]) : defaultSize;
-                    if (size is 0 or > 1 << 20)
+                    // A frame past the end of the piece can't be in it. This also stops a run that claims billions of
+                    // frames, all of the default size, from filling memory.
+                    if (size is 0 or > 1 << 20 || offset + size > pieceLength)
                     {
                         break;
                     }

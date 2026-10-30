@@ -159,8 +159,10 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
                 {
                     problem ??= AllowJavaScript(browser);
                 }
-                else if (fields.Length >= 10)
+                else if (fields.Length >= 10 && IsNumber(fields[0]) && IsNumber(fields[1]))
                 {
+                    // The window and tab go back into AppleScript to reach the tab, so only numbers are taken: a page
+                    // that tampers with the read script to add a line of its own can't get AppleScript to run anything.
                     found.Add((new Tab(browser, fields[0], fields[1]), fields[2..]));
                 }
             }
@@ -317,6 +319,8 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
         : $"{browser} needs to let Lucent reach {Name}: in its menu bar, choose View, Developer, Allow JavaScript from Apple Events.";
 
     private static bool IsSafari(string browser) => browser == "Safari";
+
+    private static bool IsNumber(string text) => text.Length is > 0 and < 20 && text.All(char.IsAsciiDigit);
 
     // A function, so the scripts can stop early with return.
     private static string Wrap(string js) => $"(function(){{{js.ReplaceLineEndings(string.Empty)}}})()";
