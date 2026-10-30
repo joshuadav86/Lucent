@@ -141,7 +141,8 @@ public abstract class BlockAudioReader : WaveStream
             {
                 _cachedFrames = DecodeBlock(block, ReadBytes, ref _cached);
             }
-            catch (Exception ex) when (ex is InvalidDataException or IndexOutOfRangeException or EndOfStreamException or ArgumentException)
+            catch (Exception ex) when (ex is InvalidDataException or IndexOutOfRangeException or EndOfStreamException or ArgumentException
+                                           or OverflowException)
             {
                 // A damaged block plays as silence, like the reference decoders do, rather than stopping the song.
                 _cachedFrames = 0;

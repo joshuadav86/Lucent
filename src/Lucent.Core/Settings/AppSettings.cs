@@ -151,10 +151,10 @@ public sealed class AppSettings
     /// <summary>List MilkDrop presets in the visual picker and play them in Auto.</summary>
     public bool MilkDropVisuals { get; set; } = true;
 
-    /// <summary>List Winamp AVS presets in the visual picker and play them in Auto.</summary>
+    /// <summary>List AVS presets in the visual picker and play them in Auto.</summary>
     public bool AvsVisuals { get; set; } = true;
 
-    /// <summary>Draw Winamp AVS presets sharper and smoother, in Lucent's light; off shows them as Winamp drew them.</summary>
+    /// <summary>Draw AVS presets sharper and smoother, in Lucent's light; off shows them as they were first drawn.</summary>
     public bool ModernAvs { get; set; } = true;
 
     /// <summary>Show MilkDrop presets in Lucent's light, with its glow and tone-mapping; off shows them as MilkDrop did.</summary>
