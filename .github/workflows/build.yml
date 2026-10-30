@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   # Each app is only built, tested, and published when something it's made from changed: the website
@@ -88,9 +89,14 @@ jobs:
       # and those only to the other platform. It reads which they were from these files on the release
       # (main's own commits: one per change, squashed, or a merge commit for older ones), which every build
       # that publishes uploads.
+      # Changes whose pull request is labelled "not in what's new" (a rename, a policy, wording) are left
+      # out of both apps' lists too; they go in website-changes.txt, which every app version already reads.
+      # A stable release copies these files from "Latest build", so its what's new leaves them out as well.
       - name: List the changes that aren't to both apps
         if: steps.check.outputs.app == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           : > website-changes.txt; : > windows-changes.txt; : > mac-changes.txt
           git log --first-parent --format='%H %P' -n 500 "$GITHUB_SHA" | while read -r merge parent _; do
@@ -101,6 +107,8 @@ jobs:
               mac) echo "$merge" >> mac-changes.txt ;;
             esac
           done
+          gh pr list --state merged --label "not in what's new" --limit 1000 --json mergeCommit --jq '.[].mergeCommit.oid' \
+            >> website-changes.txt || echo "::warning::Couldn't read which changes are labelled \"not in what's new\"."
           wc -l website-changes.txt windows-changes.txt mac-changes.txt
 
       - uses: actions/upload-artifact@v4

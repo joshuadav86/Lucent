@@ -21,7 +21,7 @@ while IFS= read -r file; do
   any=1
   if [ "$shipped" -eq 1 ]; then
     case "$file" in
-      README.md | docs/* | tools/ci/* | tools/test-media/* | tools/LayoutCheck/* | tools/AvsCheck/* | tools/MilkDropCheck/* \
+      README.md | CONTRIBUTING.md | TRADEMARK.md | LICENSE | docs/* | tools/ci/* | tools/test-media/* | tools/LayoutCheck/* | tools/AvsCheck/* | tools/MilkDropCheck/* \
         | tools/ParityCheck/* | tools/mac/launch-check.sh | tools/mac/make-test-music.sh \
         | .github/workflows/drag-diagnose.yml | tools/windows/drag-diagnose.ps1 | src/Lucent.Mac/Diagnostics/Screenshots*.cs \
         | tools/drag-diagnose.ps1 | src/Lucent.Mac/Screenshots*.cs) continue ;;
