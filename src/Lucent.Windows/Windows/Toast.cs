@@ -14,6 +14,9 @@ public static class Toast
 {
     private static Popup? s_shown;
 
+    /// <summary>The clock that closes the toast showing now.</summary>
+    private static Timer? s_closing;
+
     /// <summary>Shows <paramref name="text"/> in the middle of <paramref name="over"/>, in place of any toast already showing.</summary>
     public static void Show(FrameworkElement over, string text)
     {
@@ -61,16 +64,14 @@ public static class Toast
             };
             s_shown = popup;
             popup.IsOpen = true;
-            // Closed by its own timer at normal priority. Awaiting a delay instead came back at the priority of
-            // whatever called this, so a toast shown from a background callback (as after Reset to default layout)
-            // waited behind the visuals' drawing and could stay up for good.
-            var timer = new DispatcherTimer(DispatcherPriority.Normal, popup.Dispatcher) { Interval = TimeSpan.FromSeconds(2.5) };
-            timer.Tick += (_, _) =>
-            {
-                timer.Stop();
-                Close(popup);
-            };
-            timer.Start();
+            // Closed from a clock off the UI thread, sent back at the top priority. A DispatcherTimer (or an awaited
+            // delay) needs the dispatcher to get round to it: its tick waits for a WM_TIMER, which Windows only sends
+            // once nothing else is waiting, and while the visuals and the player's meter draw every frame something
+            // nearly always is, so a toast (as after Reset to default layout) could stay up for good.
+            var dispatcher = popup.Dispatcher;
+            s_closing?.Dispose();
+            s_closing = new Timer(_ => dispatcher.BeginInvoke(DispatcherPriority.Send, () => Close(popup)),
+                null, TimeSpan.FromSeconds(2.5), Timeout.InfiniteTimeSpan);
         }
         catch (Exception)
         {

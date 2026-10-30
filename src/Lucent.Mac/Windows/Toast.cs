@@ -15,6 +15,9 @@ public static class Toast
 {
     private static Popup? s_shown;
 
+    /// <summary>The clock that closes the toast showing now.</summary>
+    private static Timer? s_closing;
+
     /// <summary>Shows <paramref name="text"/> in the middle of <paramref name="over"/>, in place of any toast already showing.</summary>
     public static void Show(Control over, string text)
     {
@@ -59,10 +62,12 @@ public static class Toast
             ((ISetLogicalParent)popup).SetParent(over);
             s_shown = popup;
             popup.IsOpen = true;
-            // Closed by its own timer at normal priority. Awaiting a delay instead came back at the priority of
-            // whatever called this, so a toast shown from a background callback (as after Reset to default layout)
-            // waited behind the visuals' drawing and could stay up for good.
-            DispatcherTimer.RunOnce(() => Close(popup), TimeSpan.FromSeconds(2.5), DispatcherPriority.Normal);
+            // Closed from a clock off the UI thread, sent back at the top priority, as on Windows: a timer on the
+            // dispatcher (or an awaited delay) waits for it to get round to it, and with the visuals drawing every
+            // frame a toast (as after Reset to default layout) could stay up for good.
+            s_closing?.Dispose();
+            s_closing = new Timer(_ => Dispatcher.UIThread.Post(() => Close(popup), DispatcherPriority.Send),
+                null, TimeSpan.FromSeconds(2.5), Timeout.InfiniteTimeSpan);
         }
         catch (Exception)
         {
