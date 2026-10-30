@@ -46,6 +46,19 @@ public partial class MainWindow
         _meter.ShowSample();
     }
 
+    /// <summary>The player's capture, for the screenshots to play a song into.</summary>
+    internal Lucent.Audio.AudioCapture PreviewCapture => _player.Capture;
+
+    /// <summary>Moves a preview on <paramref name="deltaTime"/> seconds, to <paramref name="position"/>, with the meter following the capture.</summary>
+    internal void PreviewStep(TimeSpan position, float deltaTime)
+    {
+        TimeText.Text = TimeFormat.Format(position);
+        _updatingSeekBar = true;
+        SeekBar.Value = Math.Min(position.TotalSeconds, SeekBar.Maximum);
+        _updatingSeekBar = false;
+        _meter.Tick(deltaTime);
+    }
+
     /// <summary>Shows <paramref name="station"/> as on, playing <paramref name="song"/>, for <paramref name="heard"/> so far.</summary>
     internal void PreviewStation(Lucent.Radio.RadioStation station, string song, string details, TimeSpan heard)
     {
