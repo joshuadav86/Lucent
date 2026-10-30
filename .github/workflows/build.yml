@@ -86,14 +86,16 @@ jobs:
 
       # The app's "what's new" list leaves out changes that aren't to that app: those only to the website,
       # and those only to the other platform. It reads which they were from these files on the release
-      # (merge commits on main), which every build that publishes uploads.
+      # (main's own commits: one per change, squashed, or a merge commit for older ones), which every build
+      # that publishes uploads.
       - name: List the changes that aren't to both apps
         if: steps.check.outputs.app == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           : > website-changes.txt; : > windows-changes.txt; : > mac-changes.txt
-          git log --first-parent --merges --format=%H -n 500 "$GITHUB_SHA" | while read -r merge; do
-            case "$(git diff --name-only "$merge^1" "$merge" | tools/ci/apps-changed.sh --shipped)" in
+          git log --first-parent --format='%H %P' -n 500 "$GITHUB_SHA" | while read -r merge parent _; do
+            [ -n "$parent" ] || continue
+            case "$(git diff --name-only "$parent" "$merge" | tools/ci/apps-changed.sh --shipped)" in
               "") echo "$merge" >> website-changes.txt ;;
               windows) echo "$merge" >> windows-changes.txt ;;
               mac) echo "$merge" >> mac-changes.txt ;;
