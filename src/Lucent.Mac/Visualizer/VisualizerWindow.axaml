@@ -279,10 +279,10 @@
                                                             <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="20" Padding="8,0"
                                                                     Margin="8,0,0,0" Content="IMPORT" IsVisible="{Binding IsMilkDrop}"
                                                                     ToolTip.Tip="Add MilkDrop presets of your own" Click="OnImportIntoMilkDropFolder" />
-                                                            <!-- Only the Winamp AVS folder has it. -->
+                                                            <!-- Only the AVS folder has it. -->
                                                             <Button DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="20" Padding="8,0"
                                                                     Margin="8,0,0,0" Content="IMPORT" IsVisible="{Binding IsAvs}"
-                                                                    ToolTip.Tip="Add Winamp AVS presets of your own" Click="OnImportIntoAvsFolder" />
+                                                                    ToolTip.Tip="Add AVS presets of your own" Click="OnImportIntoAvsFolder" />
                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
                                                                        Margin="8,0,2,0" VerticalAlignment="Center"
                                                                        Foreground="{DynamicResource FaintTextBrush}" />
@@ -310,7 +310,7 @@
                                                     </Border>
                                                     <Border DockPanel.Dock="Right" IsVisible="{Binding IsAvs}" Margin="8,0,0,0" Padding="5,1"
                                                             CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
-                                                            VerticalAlignment="Center" ToolTip.Tip="A Winamp AVS preset">
+                                                            VerticalAlignment="Center" ToolTip.Tip="An AVS preset">
                                                         <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </Border>
                                                     <!-- MilkDrop and AVS presets credit their artist after the name: "Reaction Diffusion  by Geiss". -->

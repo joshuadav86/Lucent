@@ -99,7 +99,7 @@ public sealed partial class ClassicSkin
 
         if (!images.ContainsKey("main"))
         {
-            throw new InvalidDataException("This isn't a Winamp skin: it has no main.bmp.");
+            throw new InvalidDataException("This isn't a classic .wsz skin: it has no main.bmp.");
         }
 
         if (!images.ContainsKey("balance") && images.TryGetValue("volume", out var volume))

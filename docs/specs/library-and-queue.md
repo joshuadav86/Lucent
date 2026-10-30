@@ -22,7 +22,7 @@
 
 **Stores:** Bandcamp and Beatport downloads are picked up as they arrive. Bandcamp sign-in can sync the whole collection (experimental).
 
-**Drag and drop (like Winamp):**
+**Drag and drop:**
 - On the player or visuals: replaces the queue and plays now.
 - On the queue: appends.
 - On the library: adds (folders become library folders).
