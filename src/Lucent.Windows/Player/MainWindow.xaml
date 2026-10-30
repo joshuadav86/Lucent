@@ -402,14 +402,14 @@
                                Text="List the MilkDrop presets in the visual picker and play them in Auto." />
 
                     <CheckBox x:Name="AvsSwitch" Style="{StaticResource SwitchToggle}"
-                              Content="Winamp AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
+                              Content="AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Style="{StaticResource OptionHint}"
-                               Text="List the Winamp AVS presets in the visual picker and play them in Auto." />
+                               Text="List the classic AVS presets in the visual picker and play them in Auto." />
 
                     <CheckBox x:Name="ModernAvsSwitch" Style="{StaticResource SwitchToggle}"
                               Content="Modern look for AVS presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Style="{StaticResource OptionHint}"
-                               Text="Draw AVS presets sharper, with Lucent's glow. Off shows them as Winamp drew them." />
+                               Text="Draw AVS presets sharper, with Lucent's glow. Off shows them as they were first drawn." />
 
                     <CheckBox x:Name="ModernMilkDropSwitch" Style="{StaticResource SwitchToggle}"
                               Content="Modern look for MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
@@ -454,18 +454,18 @@
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Theme: colours for everything around the visuals" />
                     <UniformGrid x:Name="ThemeSwatches" Columns="2" Margin="-2,0,-8,-6" />
 
-                    <TextBlock Style="{StaticResource OptionLabel}" Text="Classic skins: the player as a Winamp 2 skin" />
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Classic skins (.wsz)" />
                     <UniformGrid x:Name="ClassicSkinSwatches" Columns="2" Margin="-2,0,-8,-6" />
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Style="{StaticResource PillButton}" Content="Import a skin…" Margin="0,0,8,0"
-                                ToolTip="Adds a Winamp skin (.wsz). Dropping one on any Lucent window does the same."
+                                ToolTip="Adds a classic skin (.wsz). Dropping one on any Lucent window does the same."
                                 Click="OnImportClassicSkin" />
                         <Button Style="{StaticResource PillButton}" Content="Find skins"
                                 ToolTip="Opens the Winamp Skin Museum, where thousands of classic skins can be downloaded"
                                 Click="OnFindClassicSkins" />
                     </StackPanel>
                     <TextBlock Style="{StaticResource OptionHint}"
-                               Text="Load any classic Winamp skin and the player wears it, with the other windows in the skin and theme above. Pick a skin above to go back to Lucent's own player. Right-click the classic player for more." />
+                               Text="Load any classic .wsz skin and the player wears it, with the other windows in the skin and theme above. Pick a skin above to go back to Lucent's own player. Right-click the classic player for more." />
                 </StackPanel>
 
                 <StackPanel x:Name="UpdatesTab" Visibility="Collapsed">

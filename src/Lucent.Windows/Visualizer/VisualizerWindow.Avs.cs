@@ -13,12 +13,12 @@ namespace Lucent;
 public partial class VisualizerWindow
 {
     /// <summary>
-    /// A "Winamp AVS presets" submenu: switch them on or off, choose between the modern look and Winamp's own,
+    /// An "AVS presets" submenu: switch them on or off, choose between the modern look and Winamp's own,
     /// import files or a whole pack's folder, or open the folder they're kept in.
     /// </summary>
     private MenuItem AvsMenu()
     {
-        var parent = new MenuItem { Header = "Winamp AVS presets" };
+        var parent = new MenuItem { Header = "AVS presets" };
         var shown = Item("Show AVS presets", string.Empty, () =>
         {
             ShowAvs(!_settings.AvsVisuals);
@@ -104,7 +104,7 @@ public partial class VisualizerWindow
         var dialog = new OpenFileDialog
         {
             Title = "Import AVS presets",
-            Filter = "Winamp AVS presets (*.avs)|*.avs",
+            Filter = "AVS presets (*.avs)|*.avs",
             Multiselect = true,
         };
         if (dialog.ShowDialog(this) == true)

@@ -314,13 +314,13 @@
                                                                                     </Button.Style>
                                                                                 </Button>
                                                                                 <Button DockPanel.Dock="Right" Height="20" Padding="8,0" Margin="8,0,0,0" Content="IMPORT"
-                                                                                        ToolTip="Add Winamp AVS presets of your own" Click="OnImportIntoAvsFolder">
-                                                                                    <!-- Only the Winamp AVS folder has it. -->
+                                                                                        ToolTip="Add AVS presets of your own" Click="OnImportIntoAvsFolder">
+                                                                                    <!-- Only the AVS folder has it. -->
                                                                                     <Button.Style>
                                                                                         <Style TargetType="Button" BasedOn="{StaticResource PillButton}">
                                                                                             <Setter Property="Visibility" Value="Collapsed" />
                                                                                             <Style.Triggers>
-                                                                                                <DataTrigger Binding="{Binding Name}" Value="Winamp AVS">
+                                                                                                <DataTrigger Binding="{Binding Name}" Value="AVS">
                                                                                                     <Setter Property="Visibility" Value="Visible" />
                                                                                                 </DataTrigger>
                                                                                             </Style.Triggers>
@@ -362,7 +362,7 @@
                                                     </local:RoundedBorder>
                                                     <local:RoundedBorder x:Name="AvsTag" DockPanel.Dock="Right" Visibility="Collapsed" Margin="8,0,0,0" Padding="5,1"
                                                                          CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
-                                                                         VerticalAlignment="Center" ToolTip="A Winamp AVS preset">
+                                                                         VerticalAlignment="Center" ToolTip="An AVS preset">
                                                         <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </local:RoundedBorder>
                                                     <!-- MilkDrop and AVS presets credit their artist after the name: "Reaction Diffusion  by Geiss". -->

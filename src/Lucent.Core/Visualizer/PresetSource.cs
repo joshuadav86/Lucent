@@ -46,7 +46,7 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
 
     /// <summary>
     /// The folder the visual picker lists it in, from a "// Family: Fractal" line ("Other" without one; "MilkDrop"
-    /// for MilkDrop presets, "Winamp AVS" for AVS presets).
+    /// for MilkDrop presets, "AVS" for AVS presets).
     /// </summary>
     public string Family { get; } = IsMilkDropFile(FilePath) ? VisualStyles.MilkDropFamily
         : IsAvsFile(FilePath) ? VisualStyles.AvsFamily

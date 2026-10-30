@@ -12,12 +12,12 @@ namespace Lucent.Mac;
 public partial class VisualizerWindow
 {
     /// <summary>
-    /// A "Winamp AVS presets" submenu: switch them on or off, choose between the modern look and Winamp's own,
+    /// An "AVS presets" submenu: switch them on or off, choose between the modern look and Winamp's own,
     /// import files or a whole pack's folder, or open the folder they're kept in.
     /// </summary>
     private MenuItem AvsMenu()
     {
-        var parent = new MenuItem { Header = "Winamp AVS presets" };
+        var parent = new MenuItem { Header = "AVS presets" };
         var shown = new MenuItem { Header = "Show AVS presets", ToggleType = MenuItemToggleType.CheckBox, IsChecked = _settings.AvsVisuals };
         shown.Click += (_, _) =>
         {
@@ -109,7 +109,7 @@ public partial class VisualizerWindow
         {
             Title = "Import AVS presets",
             AllowMultiple = true,
-            FileTypeFilter = new[] { new FilePickerFileType("Winamp AVS presets") { Patterns = new[] { "*.avs" } } },
+            FileTypeFilter = new[] { new FilePickerFileType("AVS presets") { Patterns = new[] { "*.avs" } } },
         });
         var paths = chosen.Select(file => file.TryGetLocalPath()).OfType<string>().ToList();
         if (paths.Count > 0)

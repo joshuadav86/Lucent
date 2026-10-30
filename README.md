@@ -2,26 +2,28 @@
 
 <h1 align="center">Lucent</h1>
 
-<p align="center"><b>A spiritual successor to Winamp, built for audio nerds.</b><br>
-A free music player for Windows and Mac, with 448 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
+<p align="center"><b>See what you're hearing.</b><br>
+A free, open-source music player for Windows and Mac, with 448 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
 
 <p align="center">
-  <a href="../../releases/download/latest/Lucent-Setup.exe"><img src="https://img.shields.io/badge/download-Windows-8B5CF6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
-  <a href="../../releases/download/latest/Lucent-Setup-mac-arm64.pkg"><img src="https://img.shields.io/badge/download-Mac-8B5CF6?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac"></a>
-  <a href="https://lucentaudio.net"><img src="https://img.shields.io/badge/lucentaudio.net-22D3EE?style=for-the-badge&logoColor=black" alt="lucentaudio.net"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8B5CF6" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2B%20%7C%20macOS%2012%2B-22D3EE" alt="Platforms: Windows 10 and later, macOS 12 and later">
+  <img src="https://img.shields.io/badge/status-beta-F59E0B" alt="Status: beta">
 </p>
 
-![Lucent in full screen: library, player, equalizer, queue, visuals, analyzer, artwork, and online radio](site/img/full-screen.jpg)
+<p align="center"><b>Not a developer? Download the free beta at <a href="https://lucentaudio.net">lucentaudio.net</a>.</b></p>
+
+![Lucent in full screen, with Cosmic Jellyfish moving to the music beside the library, player, equalizer, queue, analyzer, artwork, and online radio](site/img/lucent-live.webp)
 
 ## What's inside
 
-- **448 visuals**, drawn live on your graphics card: 200 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 Winamp AVS presets. They know the song's build-ups and drops, even on radio.
-- **Windows like Winamp's.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
+- **448 visuals**, drawn live on your graphics card: 200 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio.
+- **Windows that work together.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
 - **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
 - **A real library.** Show any tag as a column, sort by it, find duplicates, and scrobble to Last.fm. Your queue is still there next time.
 - **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
-- **Skins and themes.** Five skins, eight themes, Lucent Classic for the full Winamp 2 look, and any .wsz skin.
+- **Skins and themes.** Five skins, eight themes, and Lucent Classic, a pixel skin in the spirit of classic desktop players. Any .wsz skin works too.
 - **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.
 - **Your streaming apps, too.** Spotify, Apple Music, TIDAL, Pandora, SoundCloud, and YouTube play with Lucent's visuals and controls.
 - **Sounds right.** Gapless, crossfades, bit-perfect exclusive mode, and 15 formats from MP3 and FLAC to WavPack and APE.
@@ -59,6 +61,13 @@ See everything at **[lucentaudio.net](https://lucentaudio.net)**.
 Windows installs for your account, with no admin rights. If SmartScreen warns, click **More info**, then **Run anyway**. The Mac app needs macOS 12 or later and is signed and notarized by Apple. Any Direct3D 11 or Metal GPU works; a recent one gets you Ultra detail and 4K.
 
 Lucent updates itself when you close it. Choose **Every build** or switch off automatic installs under **Options → Updates**. All files are on the [Latest build](../../releases/tag/latest) release.
+
+## How it's built
+
+- **Native on both platforms.** WPF and Direct3D 11 on Windows, Avalonia and Metal on Mac, sharing one .NET 10 core. No Electron, no web wrapper.
+- **Visuals on the GPU, off the UI thread.** Each visual is an HLSL shader, translated to Metal for the Mac at build time, and drawn on its own render thread up to 4K.
+- **Audio first.** Sound plays through WASAPI (shared, or exclusive for bit-perfect output) or Core Audio. The audio thread hands its samples to the visuals and analyzer through a buffer, so drawing and playback run separately.
+- **Measured properly.** Loudness follows ITU-R BS.1770-4 and EBU R 128 (momentary, short-term, integrated, range, and true peak), and the editor's limiter is a look-ahead true-peak limiter.
 
 ## Keyboard shortcuts
 
@@ -110,7 +119,7 @@ dotnet run --project src/Lucent.Mac       # Mac
 
 The Mac app needs the visuals translated to Metal first, which takes Microsoft's [`dxc`](https://github.com/microsoft/DirectXShaderCompiler/releases) on Linux or Windows: `dotnet run --project tools/MetalShaders -- content artifacts/metal-shaders`.
 
-Where the code lives is in [`docs/LAYOUT.md`](docs/LAYOUT.md), and what each feature does on Windows and Mac in [`docs/specs`](docs/specs). Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
+Want to help? Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first. Where the code lives is in [`docs/LAYOUT.md`](docs/LAYOUT.md), and what each feature does on Windows and Mac in [`docs/specs`](docs/specs). Windows and Mac stay at feature parity. A change to one goes into the other in the same pull request, and the few exceptions are listed in [`docs/PARITY.md`](docs/PARITY.md). Every push to main builds both and replaces the [Latest build](../../releases/tag/latest).
 
 ## Bugs and crash reports
 
@@ -122,7 +131,7 @@ Lucent is free, and always will be. If it's earned a spot in your setup, you can
 
 ## License
 
-[MIT](LICENSE). Not affiliated with or endorsed by Winamp.
+[MIT](LICENSE).
 
 <details>
 <summary>Third-party credits</summary>
@@ -132,6 +141,7 @@ Lucent is free, and always will be. If it's earned a spot in your setup, you can
 - Videos play with [libVLC](https://www.videolan.org/vlc/libvlc.html) (LGPL 2.1 or later) through [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) (LGPL 2.1 or later). libVLC ships unchanged in the `libvlc` folder and can be swapped for your own build; its licence and source are in `Licenses/LICENSE-libVLC.txt`. VLC is a trademark of VideoLAN, which doesn't make or endorse Lucent.
 - WavPack and Monkey's Audio decoding are C# ports of the [WavPack](https://github.com/dbry/WavPack) decoder by David Bryant ([BSD](assets/licenses/LICENSE-WavPack.txt)) and the [Monkey's Audio](https://www.monkeysaudio.com) decoder by Matthew T. Ashland ([BSD 3-Clause](assets/licenses/LICENSE-MonkeysAudio.txt)).
 - The plugin helper is built with the [VST 3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT). VST is a registered trademark of Steinberg Media Technologies GmbH.
+- The 34 AVS presets are the stock set from Nullsoft's open-source release of Winamp's Advanced Visualization Studio (BSD), credited in [`content/Presets/AVS/CREDITS.md`](content/Presets/AVS/CREDITS.md). Winamp is a trademark of its owner, who doesn't make or endorse Lucent.
 - The starter song, "Self Actualize," is © Kepler North and isn't covered by the MIT license.
 
 </details>

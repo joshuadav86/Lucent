@@ -2,7 +2,7 @@
 
 ## What it does
 
-Lucent is a set of small windows, like Winamp: player, visuals (W), queue (Q), library (L), equalizer (E), analyzer (Y), artwork (C), video (P), plus the editor, radio, record, and stems windows.
+Lucent is a set of small windows: player, visuals (W), queue (Q), library (L), equalizer (E), analyzer (Y), artwork (C), video (P), plus the editor, radio, record, and stems windows.
 
 - **Snapping and docking:** windows snap to each other and to the screen. Docked windows move with the player, and the player and its group snap as one. No title bar can be dragged above the top of the screen. A window dropped within 32 units of another closes the gap and docks. Dock all (D), fill (G), shrink (K).
 - **Link (J):** undocked windows move with the player too.

@@ -19,8 +19,8 @@ public static class VisualStyles
     /// <summary>The folder every MilkDrop preset (.milk file) is listed in.</summary>
     public const string MilkDropFamily = "MilkDrop";
 
-    /// <summary>The folder every Winamp AVS preset (.avs file) is listed in.</summary>
-    public const string AvsFamily = "Winamp AVS";
+    /// <summary>The folder every AVS preset (.avs file) is listed in. It was "Winamp AVS" until 2026-10-30.</summary>
+    public const string AvsFamily = "AVS";
 
     /// <summary>The tag every particle visual gets, whether or not its header lists it.</summary>
     public const string ParticlesTag = "Particles";
@@ -37,6 +37,7 @@ public static class VisualStyles
     {
         ["colorful"] = "Colourful",
         ["raymarched"] = "Ray traced",
+        ["winampavs"] = AvsFamily,
     };
 
     /// <summary>The family as the picker shows it: the usual spelling of a known one, or "Other" when blank.</summary>

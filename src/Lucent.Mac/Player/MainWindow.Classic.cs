@@ -299,7 +299,7 @@ public partial class MainWindow
 
         skins.Items.Add(new Separator());
         skins.Items.Add(MenuItemFor("Import a skin…", ImportClassicSkin));
-        skins.Items.Add(MenuItemFor("Find skins at the Winamp Skin Museum", OpenSkinMuseum));
+        skins.Items.Add(MenuItemFor("Find more skins online", OpenSkinMuseum));
         if (_settings.ClassicSkin is { } current && !string.Equals(current, ClassicSkinLibrary.DefaultName, StringComparison.OrdinalIgnoreCase))
         {
             skins.Items.Add(MenuItemFor($"Remove {current}", () => RemoveClassicSkin(current)));
@@ -342,10 +342,10 @@ public partial class MainWindow
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Import a Winamp skin",
+            Title = "Import a classic skin",
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("Winamp skins") { Patterns = new[] { "*.wsz", "*.zip" } },
+                new FilePickerFileType("Classic skins") { Patterns = new[] { "*.wsz", "*.zip" } },
                 FilePickerFileTypes.All,
             },
         });

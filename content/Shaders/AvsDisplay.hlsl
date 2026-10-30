@@ -43,7 +43,7 @@ float3 smoothPicture(float2 uv, float2 size)
 }
 
 // The engine tone-maps every visual on its way to the screen; this is the colour that comes out as the
-// given one, so AVS's mid-tones keep their brightness (see Presets/WinampClassicSpectrum.hlsl).
+// given one, so AVS's mid-tones keep their brightness (see Presets/ClassicSpectrum.hlsl).
 float3 beforeToneMap(float3 shown)
 {
     float3 colour = min(shown, 0.98);

@@ -498,7 +498,7 @@ public sealed class AppSettings
     }
 
     /// <summary>
-    /// Visuals that were taken out and replaced: old name to the name of the visual that took its place.
+    /// Visuals that were taken out and replaced, or renamed: old name to the name of the visual that took its place.
     /// </summary>
     private static readonly Dictionary<string, string> ReplacedVisuals = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -506,6 +506,8 @@ public sealed class AppSettings
         ["Hourglass"] = "Calabi-Yau",
         ["Newton's Cradle"] = "Hyperbolic Tiling",
         ["Sunset Highway"] = "Cardioid Loom",
+        ["Winamp Classic Spectrum"] = "Classic Spectrum",
+        ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
 
     /// <summary>Visuals that were taken out with nothing in their place.</summary>
@@ -534,6 +536,13 @@ public sealed class AppSettings
         {
             VisualLists[list] = ReplaceAll(VisualLists[list]);
         }
+
+        // The AVS folder and tag were called "Winamp AVS" until 2026-10-30.
+        static List<string> RenameAvs(List<string>? names) =>
+            (names ?? new()).Select(name => string.Equals(name, "Winamp AVS", StringComparison.OrdinalIgnoreCase) ? VisualStyles.AvsFamily : name)
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        CollapsedVisualFamilies = RenameAvs(CollapsedVisualFamilies);
+        VisualTagFilter = RenameAvs(VisualTagFilter);
     }
 
     private void OfferAutoResolution()
