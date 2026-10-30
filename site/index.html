@@ -354,7 +354,7 @@ html[data-light] .desk { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
 }
 .lw-title b { color: var(--fg); font-weight: inherit; }
 .lw-title .x { margin-left: auto; display: flex; gap: 10px; opacity: .7; }
-.lw-logo { width: 13px; height: 13px; border-radius: 4px; background: linear-gradient(135deg, var(--a1), var(--a2)); flex: none; }
+.lw-logo { width: 16px; height: 12px; background: url(img/mark.svg) center / contain no-repeat; flex: none; }
 .lw svg { width: 12px; height: 12px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .lw-body { padding: 0 10px 10px; display: grid; gap: 9px; }
 .lw-display {
@@ -490,13 +490,35 @@ html[data-light] .desk { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
 .desk.wsz img { width: 100%; height: auto; image-rendering: pixelated; box-shadow: 0 30px 60px -30px rgba(0,0,0,.8); }
 .desk.wsz::before { opacity: .35; }
 
-/* The player section: player and queue on the left, visuals on the right, snapped into one rectangle. */
-.desk.lay { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); grid-template-rows: auto 1fr; }
-.desk.lay .lw-vis-win { grid-column: 2; grid-row: 1 / span 2; }
+/* The player section: a live layout demo. Each window takes a grid area (p, q, v) and the JS sets the template. */
+.lay-demo { display: grid; gap: 12px; min-width: 0; }
+.lay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.lay-label { font: 500 11px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.lay-bar .seg button kbd { margin-right: 6px; }
+.lay-tidy { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; background: transparent; padding: 5px 11px 5px 6px; font: 500 13px/1 var(--font-mono); color: var(--fg); cursor: pointer; }
+.lay-tidy:hover, .lay-bar .seg button:hover { color: var(--fg); background: color-mix(in srgb, var(--a1) 14%, transparent); }
+.desk.lay { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); grid-template-areas: "p v" "q v"; grid-template-rows: auto 1fr; }
+.desk.lay > .lw { grid-area: var(--area); }
+.desk.lay .lw-vis { min-height: 150px; }
+.desk.lay[data-wide] .lw-vis { min-height: 230px; }
+.desk.lay .lw-title { cursor: grab; touch-action: none; }
+.desk.lay .lw.dragging { z-index: 2; opacity: .92; cursor: grabbing; box-shadow: 0 30px 60px -20px rgba(0,0,0,.8); }
+.desk.lay .lw.dragging .lw-title { cursor: grabbing; }
+.desk.lay .lw.swap::before, .desk.lay .lw.held::before {
+  content: attr(data-say); position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; pointer-events: none;
+  border: 2px solid var(--a2); border-radius: inherit; background: color-mix(in srgb, var(--a2) 14%, transparent);
+  font: 600 12px var(--font-mono); color: var(--fg); letter-spacing: .04em;
+}
+.desk.lay .lw.held::before { border-color: #f59e0b; background: color-mix(in srgb, #f59e0b 12%, transparent); }
+.lw-tb { display: grid; place-items: center; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; opacity: .45; }
+.lw-tb:hover, .lw-tb[aria-pressed="true"] { opacity: 1; }
+.lw-tb[aria-pressed="true"] { color: var(--a2); }
 @media (max-width: 560px) {
-  .desk.lay { grid-template-columns: 1fr; }
-  .desk.lay .lw-vis-win { grid-column: auto; grid-row: auto; }
   .lw-links { display: none; }
+  .lay-label, .lay-bar .seg button kbd { display: none; }
+  .lay-bar .seg { flex: 1 1 100%; }
+  .lay-bar .seg button { flex: 1; white-space: nowrap; padding: 7px 4px; }
+  .lay-tidy { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .lw-meter i { animation: none; } .lw, .lw-display { transition: none; } }
 
@@ -642,7 +664,7 @@ footer .credits a { text-decoration: underline; }
       <div class="stack">
         <p class="eyebrow">The player</p>
         <h2 id="player-title">Your music, laid out your way.</h2>
-        <p class="lede">The player, library, queue, equalizer, analyzer, artwork, and visuals each get their own resizable window. They snap together, move as one, and swap places when you drag one onto another. Lucent remembers where you left each one, saves whole layouts by name, a lock keeps any window in place, and the link button takes them all along with the player.</p>
+        <p class="lede">The player, library, queue, equalizer, analyzer, artwork, and visuals each get their own resizable window. They snap together and move as one. Drag one onto another to swap them, lock any window in place, and save whole layouts by name.</p>
         <div class="keys">
           <div><kbd>D</kbd> Tidy every window into one neat rectangle</div>
           <div><kbd>G</kbd> Fill the screen</div>
@@ -650,9 +672,18 @@ footer .credits a { text-decoration: underline; }
           <div><kbd>Shift+D</kbd> Balance the layout, a new way each press</div>
           <div><kbd>J</kbd> Link every window, so they all follow the player</div>
           <div><kbd>1</kbd>–<kbd>9</kbd> Switch to a layout you saved</div>
+          <div><kbd>Shift+F11</kbd> Full screen, every window edge to edge</div>
         </div>
       </div>
-      <div class="desk lay" id="deskPlayer" role="img" aria-label="The Lucent player, queue, and visuals windows snapped together, in the skin and theme picked under Skins and themes"></div>
+      <div class="lay-demo">
+        <div class="lay-bar" role="toolbar" aria-label="Try the layout features">
+          <span class="lay-label">Layouts</span>
+          <div class="seg" id="layList"></div>
+          <button type="button" class="lay-tidy" id="layTidy"><kbd>Shift+D</kbd> Balance</button>
+        </div>
+        <div class="desk lay" id="deskPlayer" role="group" aria-label="The Lucent player, queue, and visuals windows snapped together, in the skin and theme picked under Skins and themes"></div>
+        <p class="try-hint" id="layNote" aria-live="polite">Drag the queue onto the visuals to swap them.</p>
+      </div>
     </div>
   </section>
 
@@ -1432,13 +1463,16 @@ footer .credits a { text-decoration: underline; }
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>',
     min: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
-    close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+    close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+    unlock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>',
+    link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'
   };
   const meter = Array.from({ length: 18 }, (_, i) =>
     `<i style="animation-duration:${(.38 + hash(i + 3) * .5).toFixed(2)}s;animation-delay:-${hash(i + 9).toFixed(2)}s;height:${Math.round(35 + 60 * hash(i + 1))}%"></i>`).join("");
-  const title = (name, note, extra = "") =>
-    `<div class="lw-title"><i class="lw-logo"></i><b>${name}</b>${note ? `<span>${note}</span>` : ""}<span class="x">${extra}${I.min}${I.close}</span></div>`;
-  const playerWin = () => `<div class="lw">${title("Lucent", "", I.plus + I.gear)}<div class="lw-body">
+  const title = (name, note, extra = "", tools = "") =>
+    `<div class="lw-title"><i class="lw-logo"></i><b>${name}</b>${note ? `<span>${note}</span>` : ""}<span class="x">${extra}${tools}${I.min}${I.close}</span></div>`;
+  const playerWin = (tools = "") => `<div class="lw">${title("Lucent", "", I.plus + I.gear, tools)}<div class="lw-body">
       <div class="lw-display"><div class="lw-time">1:23</div>
         <div class="lw-track"><b>Atlas</b><span>Bicep · 1411 kbps</span></div>
         <div class="lw-meter">${meter}</div><div class="lw-vol">VOL<i></i></div></div>
@@ -1447,13 +1481,13 @@ footer .credits a { text-decoration: underline; }
         <span class="lw-links"><span>Visuals</span><span>Queue</span><span>EQ</span><span>Library</span></span></div>
     </div></div>`;
   const SONGS = [["Atlas", "Bicep", "5:52"], ["Teardrop", "Massive Attack", "5:29"], ["Introit", "Boards of Canada", "1:42"], ["Home", "Zero 7", "4:37"], ["Apricots", "Bicep", "4:06"]];
-  const queueWin = n => `<div class="lw">${title("Queue", `${n} tracks`)}<div class="lw-list">${SONGS.slice(0, n).map((x, i) =>
+  const queueWin = (n, tools = "") => `<div class="lw">${title("Queue", `${n} tracks`, "", tools)}<div class="lw-list">${SONGS.slice(0, n).map((x, i) =>
       `<div class="lw-item${i === 0 ? " on" : ""}"><b>${x[0]}</b><span>${x[1]}</span><em>${x[2]}</em></div>`).join("")}</div></div>`;
   const EQ = [.3, .26, .36, .5, .58, .55, .45, .34, .28, .24];
   const eqWin = () => `<div class="lw">${title("Equalizer", "10 bands")}<div class="lw-eq">${EQ.map((v, i) =>
       `<div class="lw-f" style="--v:${v}"><i></i><span>${["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"][i]}</span></div>`).join("")}</div></div>`;
-  const visWin = () => `<div class="lw lw-vis-win">${title("Visuals", "60 fps")}<div class="lw-vis"><img src="img/cosmic-jellyfish.jpg" alt="" loading="lazy"><span>Cosmic Jellyfish</span></div></div>`;
-  deskPlayer.innerHTML = playerWin() + queueWin(4) + visWin();
+  const visWin = (tools = "") => `<div class="lw lw-vis-win">${title("Visuals", "60 fps", "", tools)}<div class="lw-vis"><img src="img/cosmic-jellyfish.jpg" alt="" loading="lazy"><span>Cosmic Jellyfish</span></div></div>`;
+  layoutDemo();
   function drawSkinsDesk() {
     deskSkins.classList.toggle("wsz", isWsz());
     deskSkins.innerHTML = isWsz()
@@ -1462,6 +1496,136 @@ footer .credits a { text-decoration: underline; }
     deskSkins.setAttribute("aria-label", isWsz()
       ? "The Lucent player, equalizer, and queue wearing Lucent Classic, a Winamp 2 style pixel skin"
       : `The Lucent player, equalizer, and queue in the ${cur.skin} skin and ${cur.theme} theme`);
+  }
+  /* The player section's desk: saved layouts, Balance (Shift+D), drag to swap, lock, and link,
+     loosely following WindowSwap and SavedLayouts in the apps. Areas: p player, q queue, v visuals. */
+  function layoutDemo() {
+    const lockBtn = n => `<button type="button" class="lw-tb" data-lock="${n}" aria-pressed="false" aria-label="Lock ${n}" title="Lock ${n}">${I.unlock}</button>`;
+    const linkBtn = `<button type="button" class="lw-tb" data-link aria-pressed="true" aria-label="Link every window to the player" title="Link (J)">${I.link}</button>`;
+    deskPlayer.innerHTML = playerWin(linkBtn + lockBtn("Player")) + queueWin(4, lockBtn("Queue")) + visWin(lockBtn("Visuals"));
+    const wins = [...deskPlayer.children], NAMES = { p: "Player", q: "Queue", v: "Visuals" };
+    "pqv".split("").forEach((a, i) => { wins[i].dataset.a = a; wins[i].style.setProperty("--area", a); });
+    const winOf = a => wins.find(w => w.dataset.a === a);
+    const SAVED = [
+      ["Listening", ["p v", "q v"], "1.15fr .85fr"],
+      ["Big visuals", ["v v", "p q"], "1fr 1fr"],
+      ["Mirrored", ["v p", "v q"], ".85fr 1.15fr"]
+    ];
+    let rows = SAVED[0][1].slice(), cols = SAVED[0][2], linked = true;
+    const locked = new Set(), note = document.getElementById("layNote"), list = document.getElementById("layList");
+    const narrow = matchMedia("(max-width: 560px)"), still = matchMedia("(prefers-reduced-motion: reduce)");
+    const say = t => { note.textContent = t; };
+    SAVED.forEach(([name], i) => {
+      const b = document.createElement("button"); b.type = "button"; b.innerHTML = `<kbd>${i + 1}</kbd>${name}`;
+      b.onclick = () => openSaved(i); list.append(b);
+    });
+    // FLIP: measure, change the grid, then animate each window from where it was.
+    function apply(animate = true, before = wins.map(w => w.getBoundingClientRect())) {
+      // One column on phones: read the grid down each column, so the player keeps its neighbour.
+      const grid = rows.map(r => r.split(" ")), order = [...new Set(grid[0].flatMap((_, i) => grid.map(r => r[i])))];
+      deskPlayer.style.gridTemplateAreas = narrow.matches ? order.map(a => `"${a}"`).join(" ") : rows.map(r => `"${r}"`).join(" ");
+      deskPlayer.style.gridTemplateColumns = narrow.matches ? "1fr" : cols.split(" ").map(c => `minmax(0, ${c})`).join(" ");
+      deskPlayer.style.gridTemplateRows = narrow.matches ? "" : rows[0].split(" ")[0] === rows[0].split(" ")[1] ? "auto auto" : "auto 1fr";
+      deskPlayer.toggleAttribute("data-wide", !narrow.matches && /(\w) \1/.test(rows[0]));
+      list.querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", SAVED[i][1].join() === rows.join() && SAVED[i][2] === cols));
+      if (!animate || still.matches) return;
+      wins.forEach((w, i) => {
+        const a = before[i], b = w.getBoundingClientRect();
+        if (Math.abs(a.left - b.left) + Math.abs(a.top - b.top) + Math.abs(a.width - b.width) < 1) return;
+        w.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)`, width: a.width + "px", height: a.height + "px" },
+                   { transform: "none", width: b.width + "px", height: b.height + "px" }], { duration: 420, easing: "cubic-bezier(.2,.8,.2,1)" });
+      });
+    }
+    // Opening a saved layout unlocks every window, as in the app.
+    function openSaved(i) {
+      locked.clear(); syncLocks();
+      rows = SAVED[i][1].slice(); cols = SAVED[i][2]; apply();
+      say(`Layout ${i + 1}, ${SAVED[i][0]}`);
+    }
+    // Balance steps to the next arrangement that leaves locked windows where they are.
+    const cells = (r, a) => r.map((x, y) => x.split(" ").map((c, i) => c === a ? `${y}${i}` : "").join("")).join("|");
+    function balance() {
+      const at = SAVED.findIndex(x => x[1].join() === rows.join());
+      for (let k = 1; k <= SAVED.length; k++) {
+        const next = SAVED[(Math.max(at, 0) + k) % SAVED.length];
+        if (next[1].join() === rows.join()) continue;
+        if ([...locked].every(a => cells(next[1], a) === cells(rows, a))) {
+          rows = next[1].slice(); cols = next[2]; apply();
+          return say(locked.size ? `Balanced around the locked ${[...locked].map(a => NAMES[a].toLowerCase()).join(" and ")}` : "Balanced");
+        }
+      }
+      say(`${[...locked].map(a => NAMES[a]).join(" and ")} ${locked.size > 1 ? "are" : "is"} locked, so the layout stays put`);
+    }
+    function syncLocks() {
+      deskPlayer.querySelectorAll("[data-lock]").forEach(b => {
+        const on = locked.has(b.closest(".lw").dataset.a);
+        b.setAttribute("aria-pressed", on); b.innerHTML = on ? I.lock : I.unlock;
+      });
+    }
+    function toggleLink() {
+      linked = !linked;
+      deskPlayer.querySelector("[data-link]").setAttribute("aria-pressed", linked);
+      say(linked ? "Linked: every window follows the player" : "Unlinked: the player moves on its own");
+    }
+    deskPlayer.addEventListener("click", e => {
+      const b = e.target.closest(".lw-tb"); if (!b) return;
+      if (b.hasAttribute("data-link")) return toggleLink();
+      const a = b.closest(".lw").dataset.a, on = !locked.has(a);
+      on ? locked.add(a) : locked.delete(a); syncLocks();
+      say(`${NAMES[a]} ${on ? "locked in place" : "unlocked"}`);
+    });
+    document.getElementById("layTidy").onclick = balance;
+    // Drag a window's title bar onto another to swap places and sizes. The player can't swap, as in the app.
+    let drag = null;
+    deskPlayer.addEventListener("pointerdown", e => {
+      const bar = e.target.closest(".lw-title"); if (!bar || e.target.closest("button") || e.button) return;
+      const w = bar.closest(".lw");
+      drag = { w, x: e.clientX, y: e.clientY, target: null }; bar.setPointerCapture(e.pointerId);
+    });
+    deskPlayer.addEventListener("pointermove", e => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      drag.w.classList.add("dragging"); drag.w.style.transform = `translate(${dx}px, ${dy}px)`;
+      const over = wins.find(w => w !== drag.w && (r => e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom)(w.getBoundingClientRect()));
+      wins.forEach(w => w.classList.remove("swap", "held"));
+      drag.target = null;
+      if (!over) return;
+      const a = drag.w.dataset.a, b = over.dataset.a, stuck = [a, b].find(x => x === "p" || locked.has(x));
+      if (stuck) { over.classList.add("held"); over.dataset.say = stuck === "p" ? "The player stays put" : `${NAMES[stuck]} is locked`; }
+      else { over.classList.add("swap"); over.dataset.say = `Swap with ${NAMES[b]}`; drag.target = over; }
+    });
+    const drop = () => {
+      if (!drag) return;
+      const { w, target } = drag; drag = null;
+      wins.forEach(x => x.classList.remove("swap", "held"));
+      const r = w.getBoundingClientRect(); w.classList.remove("dragging"); w.style.transform = "";
+      const home = w.getBoundingClientRect();
+      if (target) {
+        const a = w.dataset.a, b = target.dataset.a;
+        // Animate the dragged window from where it was dropped, not from its old place.
+        const before = wins.map(x => x === w ? r : x.getBoundingClientRect());
+        rows = rows.map(x => x.split(" ").map(c => c === a ? b : c === b ? a : c).join(" "));
+        apply(true, before);
+        say(`Swapped ${NAMES[a].toLowerCase()} and ${NAMES[b].toLowerCase()}`);
+      } else if (!still.matches) {
+        w.animate([{ transform: `translate(${r.left - home.left}px, ${r.top - home.top}px)` }, { transform: "none" }], { duration: 250, easing: "ease-out" });
+      }
+    };
+    deskPlayer.addEventListener("pointerup", drop);
+    deskPlayer.addEventListener("pointercancel", drop);
+    narrow.addEventListener("change", () => apply(false));
+    // 1-3, Shift+D, and J work while the section is on screen, the same keys as the app.
+    let seen = false;
+    new IntersectionObserver(([en]) => { seen = en.isIntersecting; }, { threshold: .4 }).observe(deskPlayer);
+    addEventListener("keydown", e => {
+      if (!seen || e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input, select, textarea, [contenteditable]")) return;
+      if (/^[1-3]$/.test(e.key) && !e.shiftKey) openSaved(+e.key - 1);
+      else if (e.key.toLowerCase() === "d" && e.shiftKey) balance();
+      else if (e.key.toLowerCase() === "j" && !e.shiftKey) toggleLink();
+      else return;
+      e.preventDefault();
+    });
+    apply(false);
   }
   function applyTheme(name) {
     const t = THEMES[name]; cur.theme = name;
