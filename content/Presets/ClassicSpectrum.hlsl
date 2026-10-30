@@ -1,5 +1,5 @@
 // Name: Classic Spectrum
-// A classic desktop player's little spectrum analyser blown up to fill the screen: chunky bars built from big pixels in the
+// The tiny pixel spectrum analyser of 90s desktop players, blown up to fill the screen: chunky bars built from big pixels in the
 // classic green-to-red colours, grey peak dots that hang at the top and then drop back down, and the faint
 // dotted grid behind it all.
 // Family: Music-shaped

@@ -14,7 +14,7 @@ lucentaudio.net, served by GitHub Pages from `site/` (`pages.yml`).
 
 - App screenshots are drawn headless by the Mac app on Linux: `Lucent --screenshots <dir> <Names>` (`Screenshots*.cs`). Env vars `LUCENT_PREVIEW_COVERS`, `LUCENT_PREVIEW_VISUAL`, `LUCENT_PREVIEW_VIDEO`, `LUCENT_PREVIEW_SCALE`, and `LUCENT_PREVIEW_LAYERS` fill in sample art.
 - When the player's look changes, re-render the tour layers and screenshots.
-- The README's images come from `site/img`, so they update with the site.
+- The README's images come from `site/img`, so they update with the site. The README hero `site/img/lucent-live.webp` is `full-screen.jpg` with the visuals pane replaced by the real Cosmic Jellyfish shader rendered offline; re-make it when `full-screen.jpg` changes.
 
 ## Counts to keep in step
 
