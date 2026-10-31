@@ -54,7 +54,7 @@ public sealed class VisualizerHost : Border, IDisposable
     /// <summary>The song that's playing and its bars, which Auto uses to change visual on a downbeat.</summary>
     public SongClock SongClock { get; } = new();
 
-    /// <summary>The mouse over the visuals, which pushes a Particles visual's dots aside.</summary>
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside.</summary>
     public PointerStir Pointer { get; } = new();
 
     /// <summary>Raised on the UI thread with the names of the visuals that loaded.</summary>

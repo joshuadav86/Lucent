@@ -7,7 +7,7 @@ StructuredBuffer<Particle> ParticlesToDraw : register(t4);
 // The mouse moving over the visuals pushes the dots near it aside, with a little swirl and a tug the way
 // it's going, like a hand through sparks. The push is kept on screen, apart from where the visual puts
 // the particle, so it works the same for flat and 3D visuals, and it eases back to nothing over a couple
-// of seconds. PointerStrength is 0 for visuals outside the Particles family.
+// of seconds. It reaches every particle visual (anything with Simulate), whatever its family.
 static const float PushReach = 0.22;     // p units: about a tenth of the picture's height
 static const float PushApart = 4.0;      // straight out from the mouse
 static const float PushSwirl = 1.5;      // around it

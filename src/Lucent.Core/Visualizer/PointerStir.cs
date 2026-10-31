@@ -3,7 +3,7 @@ using System.Diagnostics;
 namespace Lucent.Visualizer;
 
 /// <summary>
-/// The mouse over the visuals, for the little hidden trick where moving it over a Particles visual pushes
+/// The mouse over the visuals, for the little hidden trick where moving it over a particle visual pushes
 /// the dots aside. The window tells it where the mouse is (<see cref="MovedTo"/>, <see cref="Left"/>) on
 /// the UI thread; the renderer calls <see cref="Update"/> once a frame and passes the results to the
 /// shaders. Only a moving mouse pushes: once it rests, or leaves, the push fades and the dots drift back.

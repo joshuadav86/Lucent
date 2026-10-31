@@ -263,7 +263,7 @@ public sealed partial class VisualEngine : IDisposable
     /// <summary>The song that's playing and its bars, so Auto can change visual on a downbeat.</summary>
     public SongClock? SongClock { get; set; }
 
-    /// <summary>The mouse over the visuals, which pushes a Particles visual's dots aside; null when there's no mouse (recording, say).</summary>
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside; null when there's no mouse (recording, say).</summary>
     public PointerStir? Pointer { get; set; }
 
     public bool IsReady(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Ready;
@@ -775,8 +775,8 @@ public sealed partial class VisualEngine : IDisposable
         _constants[20] = count;
         _constants[21] = slot.ParticlesFresh ? 1f : 0f;
         _constants[22] = (float)slot.Source.NormalParticleCount / count;
-        // Only the Particles family can be pushed around by the mouse.
-        _constants[36] = Pointer is { } pointer && slot.Source.Family == VisualStyles.ParticlesFamily ? pointer.Strength : 0f;
+        // Every particle visual (Particles family or not) can be pushed around by the mouse; MilkDrop and AVS never run here.
+        _constants[36] = Pointer?.Strength ?? 0f;
         slot.ParticlesFresh = false;
 
         var compute = commands.ComputeCommandEncoder();
