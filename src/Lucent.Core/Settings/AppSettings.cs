@@ -244,10 +244,12 @@ public sealed class AppSettings
     public bool ShowFrameRate { get; set; }
 
     /// <summary>
-    /// Keep the visuals at full frame rate while another app has focus (on a second screen, say),
-    /// instead of letting the system slow Lucent down. They still stop drawing when minimized or hidden.
+    /// How hard the visuals work: Auto (Lucent picks from the computer's power and heat), Smoothest (the
+    /// screen's refresh rate), Balanced (about 60 fps), or Power saver (about 30 fps at half the pixels).
+    /// Smoothest and Balanced keep full frame rate while another app has focus; Power saver lets the
+    /// system slow Lucent down then.
     /// </summary>
-    public bool FullFrameRateInBackground { get; set; } = true;
+    public PowerMode Power { get; set; } = PowerMode.Auto;
 
     // ---- Visual changes ----
 

@@ -3,8 +3,8 @@ using System.Runtime.InteropServices;
 namespace Lucent.Visualizer;
 
 /// <summary>
-/// Keeps the visuals at full frame rate while another app has focus (Options › Graphics, "Full frame
-/// rate in the background"). Windows 11 runs a visible window that isn't in front at a lower quality
+/// Keeps the visuals at full frame rate while another app has focus (on in the Smoothest and Balanced
+/// Power modes, off in Power saver; see Lucent.Visualizer.VisualsPower). Windows 11 runs a visible window that isn't in front at a lower quality
 /// of service than the one in front: on a laptop or a CPU with efficiency cores its threads can be
 /// moved to the slower cores and run at lower clock speeds, and the visuals drop frames on a second
 /// screen as soon as you click away. Turning off power throttling for Lucent asks for full speed, and

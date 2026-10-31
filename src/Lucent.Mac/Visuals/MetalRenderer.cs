@@ -8,7 +8,8 @@ namespace Lucent.Mac.Visuals;
 
 /// <summary>
 /// Draws the visuals into a window's Core Animation Metal layer on its own thread, one frame per
-/// screen refresh (the layer hands out a new picture to draw into each time the screen is ready).
+/// screen refresh (the layer hands out a new picture to draw into each time the screen is ready), or
+/// fewer as <see cref="VisualsPower"/> sets (about 60 fps in Balanced).
 /// With HDR wanted and a screen that can show it, the layer switches to half-float pictures in
 /// extended linear sRGB (EDR), the Mac's match for the scRGB swap chain the Windows renderer uses.
 /// </summary>
@@ -21,6 +22,7 @@ public sealed class MetalRenderer : IDisposable
     private volatile int _pixelWidth;
     private volatile int _pixelHeight;
     private volatile bool _visible = true;
+    private volatile bool _covered;
     private volatile bool _hdrWanted;
     private int _drawableWidth;
     private int _drawableHeight;
@@ -51,6 +53,16 @@ public sealed class MetalRenderer : IDisposable
     {
         get => _visible;
         set => _visible = value;
+    }
+
+    /// <summary>
+    /// True while macOS says none of the window can be seen (fully covered by other windows, or on
+    /// another Space): nothing is drawn then either, as there's nobody to see it.
+    /// </summary>
+    public bool Covered
+    {
+        get => _covered;
+        set => _covered = value;
     }
 
     /// <summary>Draw in HDR: set when HDR is switched on in Lucent and the screen can show it.</summary>
@@ -94,9 +106,9 @@ public sealed class MetalRenderer : IDisposable
 
                 var width = _pixelWidth;
                 var height = _pixelHeight;
-                if (!_visible || width <= 1 || height <= 1)
+                if (!_visible || _covered || width <= 1 || height <= 1)
                 {
-                    // Hidden or minimized (the visuals window can be closed while music plays): nothing to draw.
+                    // Hidden, minimized or covered (the visuals window can be closed while music plays): nothing to draw.
                     Thread.Sleep(50);
                     continue;
                 }
@@ -123,7 +135,18 @@ public sealed class MetalRenderer : IDisposable
                 }
 
                 var commands = _engine.EncodeFrame(new CAMetalDrawable(drawable).Texture, now, deltaTime);
-                commands.PresentDrawable(new MTLDrawable(drawable));
+                // Balanced and Power saver hold each frame up for whole refreshes on a faster screen (two
+                // at 120 Hz in Balanced), and nextDrawable waits for one to come free, so the loop runs less often.
+                var minimum = VisualsPower.MinimumFrameSeconds(_engine.Display.RefreshRate);
+                if (minimum > 0)
+                {
+                    ObjC.SendVoid(commands.NativePtr, "presentDrawable:afterMinimumDuration:", drawable, minimum);
+                }
+                else
+                {
+                    commands.PresentDrawable(new MTLDrawable(drawable));
+                }
+
                 commands.Commit();
                 _engine.FramePresented(now);
 

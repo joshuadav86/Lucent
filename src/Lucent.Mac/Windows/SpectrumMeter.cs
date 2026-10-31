@@ -15,6 +15,7 @@ public sealed class SpectrumMeter : Control
 {
     private const int BarCount = 20;
     private const double Gap = 2;
+    private const float StillLevel = 0.002f;
 
     private readonly AudioAnalyzer _analyzer;
     private readonly float[] _bars = new float[BarCount];
@@ -22,6 +23,7 @@ public sealed class SpectrumMeter : Control
     private readonly float[] _peakHold = new float[BarCount];
     private DateTime _lastFrame = DateTime.UtcNow;
     private MeterMode _mode = MeterMode.Bars;
+    private bool _drawnStill;
 
     public SpectrumMeter(AudioCapture capture)
     {
@@ -36,6 +38,7 @@ public sealed class SpectrumMeter : Control
         set
         {
             _mode = value;
+            _drawnStill = false;
             InvalidateVisual();
         }
     }
@@ -82,7 +85,39 @@ public sealed class SpectrumMeter : Control
             }
         }
 
+        // Nothing playing and the meter already drawn flat: no need to draw it again every frame,
+        // which kept the player window (and the system's compositor) busy while idle.
+        var still = IsStill();
+        if (still && _drawnStill)
+        {
+            return;
+        }
+
+        _drawnStill = still;
         InvalidateVisual();
+    }
+
+    /// <summary>Whether the bars, their peaks and the waveform are all flat (less than a pixel).</summary>
+    private bool IsStill()
+    {
+        for (var bar = 0; bar < BarCount; bar++)
+        {
+            if (_bars[bar] > StillLevel || _peaks[bar] > StillLevel)
+            {
+                return false;
+            }
+        }
+
+        var wave = _analyzer.TextureData.AsSpan(AudioAnalyzer.TextureWidth, AudioAnalyzer.TextureWidth);
+        foreach (var sample in wave)
+        {
+            if (Math.Abs(sample) > StillLevel)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Fills the bars with a made-up spectrum, for the screenshots (which have no music playing).</summary>

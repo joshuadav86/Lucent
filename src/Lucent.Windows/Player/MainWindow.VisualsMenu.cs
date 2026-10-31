@@ -33,6 +33,13 @@ public partial class MainWindow
             (GlowLevel.Normal, "Normal"),
             (GlowLevel.Strong, "Strong"),
         }, _settings.Glow, value => _settings.Glow = value, MenuTips.Glow));
+        menu.Items.Add(Choices("Power", new[]
+        {
+            (PowerMode.Auto, AutoPowerLabel()),
+            (PowerMode.Smoothest, "Smoothest"),
+            (PowerMode.Balanced, "Balanced"),
+            (PowerMode.PowerSaver, "Power saver"),
+        }, _settings.Power, value => _settings.Power = value, MenuTips.Power));
 
         var buildUps = new MenuItem { Header = "Build-ups and drops", IsChecked = _settings.BuildUpsAndDrops, ToolTip = MenuTips.BuildUpsAndDrops };
         buildUps.Click += (_, _) => ChangeGraphics(() => _settings.BuildUpsAndDrops = !_settings.BuildUpsAndDrops);
@@ -56,9 +63,6 @@ public partial class MainWindow
         frameRate.Click += (_, _) => ChangeGraphics(() => _settings.ShowFrameRate = !_settings.ShowFrameRate);
         menu.Items.Add(frameRate);
 
-        var background = new MenuItem { Header = "Full frame rate in the background", IsChecked = _settings.FullFrameRateInBackground, ToolTip = MenuTips.FullFrameRateInBackground };
-        background.Click += (_, _) => ChangeGraphics(() => _settings.FullFrameRateInBackground = !_settings.FullFrameRateInBackground);
-        menu.Items.Add(background);
 
         menu.Items.Add(new Separator());
         var options = new MenuItem { Header = "All options…", InputGestureText = "O" };
@@ -83,6 +87,12 @@ public partial class MainWindow
         ShowOptionValues();
         UpdateHdrHint();
     }
+
+    /// <summary>"Auto", with what Auto is using now, e.g. "Auto (Balanced now)".</summary>
+    private static string AutoPowerLabel() =>
+        VisualsPower.Mode == PowerMode.Auto
+            ? $"Auto ({(VisualsPower.Effective == PowerMode.PowerSaver ? "Power saver" : VisualsPower.Effective.ToString())} now)"
+            : "Auto";
 
     private MenuItem Choices<T>(string header, (T Value, string Label)[] choices, T current, Action<T> choose, string tip)
         where T : struct, Enum

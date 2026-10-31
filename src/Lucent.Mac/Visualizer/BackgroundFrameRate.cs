@@ -4,8 +4,8 @@ using Lucent.Mac.Interop;
 namespace Lucent.Mac.Visualizer;
 
 /// <summary>
-/// Keeps the visuals at full frame rate while another app has focus (Options › Graphics, "Full frame
-/// rate in the background"). macOS gives the app in front the fast cores and the quickest timers;
+/// Keeps the visuals at full frame rate while another app has focus (on in the Smoothest and Balanced
+/// Power modes, off in Power saver; see Lucent.Visualizer.VisualsPower). macOS gives the app in front the fast cores and the quickest timers;
 /// an app behind it gets less, and its threads at the default quality of service can be moved to
 /// the efficiency cores, so the visuals drop frames on a second screen as soon as you click away.
 /// With this on, the render thread asks for the quality of service the screen's own refresh uses
