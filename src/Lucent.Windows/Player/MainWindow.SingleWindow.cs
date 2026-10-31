@@ -231,7 +231,8 @@ public partial class MainWindow
         // Each window where it was left, or docked to the player if it's never been placed, then back in sight.
         foreach (var window in giveBack.Where(window => window.IsVisible))
         {
-            if (!OpenWhereLeft(window))
+            // Docked ones too: the player's back where it was, so the group fits together as it did.
+            if (!OpenWhereLeft(window, evenDocked: true))
             {
                 if (window is ToolWindow tool && tool != _visuals)
                 {
