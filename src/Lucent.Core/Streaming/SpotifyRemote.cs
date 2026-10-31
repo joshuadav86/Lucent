@@ -181,14 +181,26 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     private static RemoteState Combine(RemoteState app, RemoteState? web)
     {
         app = app with { Shuffle = app.Shuffle ?? web?.Shuffle, Repeat = CombineRepeat(app.Repeat, web?.Repeat) };
+        var volume = CombineVolume(app.Volume, web);
         if (web?.Track is not { } webTrack || !SameSong(webTrack, app.Track))
         {
-            // A new song, until the Web API is next read, is most likely from the same playlist.
-            return app with { Volume = null, ListId = web?.ListId };
+            // A new song, until the Web API is next read, is most likely from the same playlist, and on the same device
+            // at the same volume.
+            return app with { Volume = volume, ListId = web?.ListId };
         }
 
         var track = webTrack with { Duration = app.Track!.Duration > TimeSpan.Zero ? app.Track.Duration : webTrack.Duration };
-        return app with { Track = track, ListId = web.ListId, Device = web.Device, Volume = web.Volume, IsElsewhere = web.IsElsewhere };
+        return app with { Track = track, ListId = web.ListId, Device = web.Device, Volume = volume, IsElsewhere = web.IsElsewhere };
+    }
+
+    // The volume of the device playing, which is the app here: Spotify's own slider as the Web API last read it, unless
+    // Spotify has asked Lucent to wait (when a change could only be made through the app here), or it hasn't been read
+    // yet; then the app's (on a Mac, the same slider; on Windows, Spotify's level in the volume mixer). So the volume
+    // bar stays through a wait, and a new song before the next Web API read.
+    private static double? CombineVolume(double? app, RemoteState? web)
+    {
+        var webVolume = web is { IsElsewhere: false } ? web.Volume : null;
+        return SpotifyWait.IsWaiting ? app ?? webVolume : webVolume ?? app;
     }
 
     // The Mac app only says whether it repeats at all, so repeating one song comes from the Web API.
@@ -271,9 +283,34 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         : _app is { } app ? await app.ArtworkAsync(track, cancel)
         : null;
 
-    // Like the other buttons, this needs Premium.
-    public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
-        CommandAsync(HttpMethod.Put, $"/volume?volume_percent={(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
+    /// <summary>
+    /// The volume of the device Spotify plays on, through the Web API (which needs Premium). When that can't be asked
+    /// (Spotify has asked Lucent to wait, or the account isn't Premium) and Spotify plays here, the app here sets it.
+    /// </summary>
+    public async Task SetVolumeAsync(double volume, CancellationToken cancel)
+    {
+        if (SpotifyWait.IsWaiting && AppHereSetsVolume is { } here)
+        {
+            await here.SetVolumeAsync(volume, cancel);
+            return;
+        }
+
+        try
+        {
+            await CommandAsync(HttpMethod.Put, $"/volume?volume_percent={(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
+        }
+        catch (RemoteProblem) when (AppHereSetsVolume is { } here)
+        {
+            await here.SetVolumeAsync(volume, cancel);
+            return;
+        }
+
+        Remember(state => state with { Volume = volume });
+    }
+
+    // The app here, when it plays for the account and can say and set its volume.
+    private IRemoteVolume? AppHereSetsVolume =>
+        _app is IRemoteVolume here && _appRead is { Track: not null, Volume: not null } && (_web ?? _last) is not { IsElsewhere: true } ? here : null;
 
     /// <summary>
     /// Shuffle on or off: through the app here when it can (no Premium needed), otherwise through the Web API.
