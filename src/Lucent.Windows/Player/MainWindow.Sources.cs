@@ -137,6 +137,7 @@ public partial class MainWindow
         }
 
         SpotifyAccount.Clear();
+        RemoteListStore.ForgetAll();
         SpotifyAccountChanged();
         UpdateSourcesPanel();
     }

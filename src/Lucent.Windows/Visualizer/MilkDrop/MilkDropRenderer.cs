@@ -39,6 +39,8 @@ internal sealed class MilkDropRenderer : IDisposable
     private readonly ID3D11Buffer _constants;
     private readonly ID3D11Buffer _blurConstants;
     private readonly float[] _blurValues = new float[8];
+    private readonly ID3D11Buffer _drawConstants;
+    private readonly uint[] _drawFirst = new uint[4];
     private readonly List<IDisposable> _noise = new();
     private readonly ID3D11ShaderResourceView[] _noiseViews;
     private DynamicBuffer? _mesh;
@@ -49,7 +51,8 @@ internal sealed class MilkDropRenderer : IDisposable
     {
         _device = device;
         _context = context;
-        var source = prelude + "\n" + engine;
+        // MD_DRAW_FIRST: each batch of waves and shapes is told where it starts (see VSDraw).
+        var source = "#define MD_DRAW_FIRST\n" + prelude + "\n" + engine;
         ID3D11VertexShader Vertex(string entry) => device.CreateVertexShader(cache.GetOrCompile(source, entry, "MilkDrop.hlsl", "vs_5_0"), null);
         ID3D11PixelShader Pixel(string entry) => device.CreatePixelShader(cache.GetOrCompile(source, entry, "MilkDrop.hlsl", "ps_5_0"), null);
         _warpVertices = Vertex("VSWarp");
@@ -78,6 +81,9 @@ internal sealed class MilkDropRenderer : IDisposable
             CpuAccessFlags.None, ResourceOptionFlags.None, 0);
         _blurConstants = device.CreateBuffer(
             (uint)(_blurValues.Length * sizeof(float)), BindFlags.ConstantBuffer, ResourceUsage.Default,
+            CpuAccessFlags.None, ResourceOptionFlags.None, 0);
+        _drawConstants = device.CreateBuffer(
+            (uint)(_drawFirst.Length * sizeof(uint)), BindFlags.ConstantBuffer, ResourceUsage.Default,
             CpuAccessFlags.None, ResourceOptionFlags.None, 0);
 
         // The same noise every time, so presets look the same from one run to the next.
@@ -172,6 +178,7 @@ internal sealed class MilkDropRenderer : IDisposable
             {
                 context.VSSetShader(_drawVertices);
                 context.VSSetShaderResource(13, _shapes!.View);
+                context.VSSetConstantBuffer(2, _drawConstants);
 
                 // Textured shapes read through the first sampler; clamp it when MilkDrop would have.
                 var shapesWrap = runner.ShapesWrap(visual.Warp is not null, visual.BlurLevels);
@@ -180,7 +187,11 @@ internal sealed class MilkDropRenderer : IDisposable
                 {
                     context.OMSetBlendState(batch.Additive ? _additiveBlend : _alphaBlend);
                     context.PSSetShader(batch.Textured ? _drawTextured : _draw);
-                    context.Draw((uint)batch.VertexCount, (uint)batch.FirstVertex);
+
+                    // SV_VertexID starts at 0 whatever the draw's first vertex, so the batch's start goes in a constant.
+                    _drawFirst[0] = (uint)batch.FirstVertex;
+                    context.UpdateSubresource(_drawFirst, _drawConstants, 0, 0, 0, null);
+                    context.Draw((uint)batch.VertexCount, 0);
                 }
 
                 context.OMSetBlendState(null);
@@ -395,6 +406,7 @@ internal sealed class MilkDropRenderer : IDisposable
         _noCulling.Dispose();
         _constants.Dispose();
         _blurConstants.Dispose();
+        _drawConstants.Dispose();
         _warpVertices.Dispose();
         _screenVertices.Dispose();
         _drawVertices.Dispose();

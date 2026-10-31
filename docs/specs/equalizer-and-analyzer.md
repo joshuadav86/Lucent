@@ -6,6 +6,7 @@
 - 4, 8, 16, 24, or 32 faders drawn over the live spectrum, with 15 presets and a balance control.
 - The spectrum shows energy per slice of an octave (bins averaged, 3 dB per octave lift), so pink noise draws flat and music falls away at the top as much as it really does.
 - Shapes only the player's sound. Its spectrum pauses while the editor plays, because the EQ doesn't shape the editor.
+- Can't shape a streaming app Lucent controls (Spotify, Apple Music, YouTube Music, and the rest): the app plays its own sound. While one is in control the status line says so in the accent colour; the spectrum keeps moving because it hears the app.
 - Switches to the classic skin format's 10 octave bands while a .wsz skin is on.
 - Off in bit-perfect mode.
 
@@ -39,7 +40,7 @@ None.
 
 ## Checks
 
-`LoudnessSelfTest` (EBU Tech 3341/3342 tones) and `EditorFeedSelfTest` run in both apps' `--self-test`.
+`LoudnessSelfTest` (EBU Tech 3341/3342 tones), `EqualizerSelfTest` (each band's slider moves a tone at its centre by that much, mid-song changes take effect, and off is untouched), and `EditorFeedSelfTest` run in both apps' `--self-test`.
 
 ## Adding an audio source
 

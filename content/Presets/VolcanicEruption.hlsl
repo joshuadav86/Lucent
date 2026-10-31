@@ -3,7 +3,7 @@
 // Family: Particles
 // Tags: Fire, Intense, Dark
 // Added: 2026-10-17 17:02
-// Particles: 262144
+// Particles: 108544
 
 // The world has y pointing up. The volcano is a cone round the y axis with its crater on top.
 static const float ConeApex = 1.42;    // where the cone's sides would meet if it had no crater
@@ -11,9 +11,11 @@ static const float ConeSlope = 0.7; // height lost per unit outwards
 static const float RimHeight = 1.0;    // the crater rim
 static const float Gravity = 4.2;
 
-// How the particles are shared out: lava bombs, then ash, then lightning.
-static const float BombShare = 0.32;
-static const float AshShare = 0.64;
+// How the particles are shared out: lava bombs, then ash, then lightning (83,968, 14,336 and 10,240
+// on Normal detail). Ash puffs are big and soft, so each one costs a lot to draw; a few bright ones
+// make the same cloud as many faint ones.
+static const float BombShare = 83968.0 / 108544.0;
+static const float AshShare = 14336.0 / 108544.0;
 
 float shareOf(uint id)
 {
@@ -257,7 +259,7 @@ Sprite Show(Particle particle, uint id)
         float3 toBolt = position - boltMiddle();
         float3 flashlit = float3(0.6, 0.7, 1.0) * boltFlash() * exp(-dot(toBolt, toBolt) * 0.6) * 2.5;
         float fade = saturate(particle.age * 0.8) * saturate(particle.life * 0.4);
-        colour = (underlit + smoke + flashlit) * fade * 0.009;
+        colour = (underlit + smoke + flashlit) * fade * 0.105;
         size = 5.0 + saturate(height * 0.3) * 16.0 * (0.6 + fixedRandom(id, 31.0) * 0.8);
         trail = particle.velocity * 0.03;
     }
