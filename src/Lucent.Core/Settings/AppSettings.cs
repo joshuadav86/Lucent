@@ -506,6 +506,7 @@ public sealed class AppSettings
         ["Hourglass"] = "Calabi-Yau",
         ["Newton's Cradle"] = "Hyperbolic Tiling",
         ["Sunset Highway"] = "Cardioid Loom",
+        ["Champagne Toast"] = "Polytope Bloom",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
