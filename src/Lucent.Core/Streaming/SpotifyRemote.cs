@@ -299,9 +299,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         {
             await CommandAsync(HttpMethod.Put, $"/volume?volume_percent={(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
         }
-        catch (RemoteProblem) when (AppHereSetsVolume is { } here)
+        catch (RemoteProblem) when (AppHereSetsVolume is { } local)
         {
-            await here.SetVolumeAsync(volume, cancel);
+            await local.SetVolumeAsync(volume, cancel);
             return;
         }
 
