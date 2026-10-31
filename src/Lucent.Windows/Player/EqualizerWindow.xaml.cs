@@ -21,6 +21,9 @@ public partial class EqualizerWindow : Window
 
     private static EqualizerWindow? _open;
 
+    // The streaming app Lucent is controlling, if any. It plays its sound itself, out of the equalizer's reach.
+    private static string? _playingIn;
+
     private readonly AudioPlayer _player;
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _saveTimer;
@@ -136,6 +139,21 @@ public partial class EqualizerWindow : Window
 
     /// <summary>The equalizer window, while it's open.</summary>
     public static EqualizerWindow? Current => _open;
+
+    /// <summary>
+    /// Says which streaming app Lucent is controlling (null when it's back to its own music). That app plays its
+    /// sound itself, straight to the speakers, so the window says the EQ can't change it.
+    /// </summary>
+    public static void ShowPlayingIn(string? app)
+    {
+        if (_playingIn == app)
+        {
+            return;
+        }
+
+        _playingIn = app;
+        _open?.ShowHint();
+    }
 
     /// <summary>
     /// Opens the equalizer beside <paramref name="owner"/>, or closes it if it's already open.
@@ -378,6 +396,7 @@ public partial class EqualizerWindow : Window
 
     private void ShowHint()
     {
+        StatusText.ToolTip = null;
         var editorPlaying = Lucent.Editor.AudioTools.IsEditorPlaying;
         _spectrum.Paused = editorPlaying;
         if (editorPlaying)
@@ -386,6 +405,15 @@ public partial class EqualizerWindow : Window
             // player's music, so it goes quiet instead.
             StatusText.Text = "The editor is playing: this EQ only shapes the player's music";
             StatusText.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+            return;
+        }
+
+        if (_playingIn is { } app)
+        {
+            // Easy to miss otherwise: the spectrum still moves (it hears the app), but the sliders change nothing.
+            StatusText.Text = $"{app} plays its own sound, so this EQ can't change it. It works on your files, radio, and videos.";
+            StatusText.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+            StatusText.ToolTip = StatusText.Text;
             return;
         }
 
