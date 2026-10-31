@@ -20,7 +20,7 @@ public partial class VisualizerWindow
 
         var menu = new ContextMenu();
         menu.Items.Add(Item(_isFullscreen ? "Leave fullscreen" : "Fullscreen",
-            _isFullscreen ? new KeyGesture(Key.Escape) : FullscreenGesture, ToggleFullscreen));
+            _isFullscreen ? new KeyGesture(Key.Escape) : FullscreenGesture, ToggleFullscreen, MenuTips.Fullscreen));
         menu.Items.Add(new Separator());
         if (_isFullscreen && Player is { } playback)
         {
@@ -33,8 +33,8 @@ public partial class VisualizerWindow
         menu.Items.Add(Item("Previous visual", new KeyGesture(Key.B), PreviousPreset));
         // Whichever way B doesn't go (Options > Visuals picks), so both are a click away.
         menu.Items.Add(_settings.PreviousVisual == PreviousVisualMode.LastShown
-            ? Item("Visual above in the list", null, () => PreviousPreset(PreviousVisualMode.UpInList))
-            : Item("Last visual shown", null, () => PreviousPreset(PreviousVisualMode.LastShown)));
+            ? Item("Visual above in the list", null, () => PreviousPreset(PreviousVisualMode.UpInList), MenuTips.UpInList)
+            : Item("Last visual shown", null, () => PreviousPreset(PreviousVisualMode.LastShown), MenuTips.LastShown));
         if (!_isFullscreen)
         {
             // The picker opens from the bar under the visuals, which fullscreen hides.
@@ -53,7 +53,7 @@ public partial class VisualizerWindow
         {
             ShowLucentOriginals(!_settings.LucentVisuals);
             Player?.ShowOptionsState();
-        });
+        }, MenuTips.LucentOriginals);
         originals.ToggleType = MenuItemToggleType.CheckBox;
         originals.IsChecked = _settings.LucentVisuals;
         menu.Items.Add(originals);
@@ -65,11 +65,12 @@ public partial class VisualizerWindow
         {
             ToggleAutoCycle();
             Player?.ShowOptionsState();
-        });
+        }, MenuTips.Auto);
         auto.ToggleType = MenuItemToggleType.CheckBox;
         auto.IsChecked = _settings.AutoCycle;
         menu.Items.Add(auto);
         var often = new MenuItem { Header = "Change visual about every" };
+        ToolTip.SetTip(often, MenuTips.ChangeEvery);
         foreach (var seconds in AutoCycleChoices)
         {
             var choice = new MenuItem
@@ -129,9 +130,11 @@ public partial class VisualizerWindow
         ToggleFullscreen();
     }
 
-    private static MenuItem Item(string header, KeyGesture? keys, Action action)
+    /// <summary>A menu item that does <paramref name="action"/>, with what it does shown when the mouse rests on it if <paramref name="tip"/> is given.</summary>
+    private static MenuItem Item(string header, KeyGesture? keys, Action action, string? tip = null)
     {
         var item = new MenuItem { Header = header, InputGesture = keys };
+        ToolTip.SetTip(item, tip);
         item.Click += (_, _) => action();
         return item;
     }

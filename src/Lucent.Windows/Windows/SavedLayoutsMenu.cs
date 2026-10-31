@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using Lucent.Layout;
+using Lucent.Visualizer;
 
 namespace Lucent.Windows;
 
@@ -30,7 +31,7 @@ public static class SavedLayoutsMenu
     /// <summary>"Layouts", with its items for now. A menu that's kept fills it again as it opens (<see cref="Fill"/>).</summary>
     public static MenuItem Item(Window window)
     {
-        var item = new MenuItem { Header = "Layouts" };
+        var item = new MenuItem { Header = "Layouts", ToolTip = MenuTips.Layouts };
         Fill(item, window);
         return item;
     }
