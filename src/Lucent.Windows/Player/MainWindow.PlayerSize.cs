@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Lucent.Windows;
 
 namespace Lucent;
 
@@ -47,14 +48,14 @@ public partial class MainWindow
     {
         if (IsClassic)
         {
-            ResizeMode = ResizeMode.CanMinimize;
+            CaptionRepaint.SetResizeMode(this, ResizeMode.CanMinimize);
             MinWidth = 0;
             MaxWidth = double.PositiveInfinity;
             LucentPlayer.LayoutTransform = Transform.Identity;
             return;
         }
 
-        ResizeMode = ResizeMode.CanResize;
+        CaptionRepaint.SetResizeMode(this, ResizeMode.CanResize);
         MinWidth = PlayerWidth;
         MaxWidth = PlayerWidth * LargestPlayerScale;
         SizeToContent = SizeToContent.Height;

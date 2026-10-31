@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shell;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using Lucent.ClassicSkins;
 using Lucent.Settings;
@@ -126,7 +127,8 @@ public partial class MainWindow
         }
     }
 
-    private void SetCaptionHeight(double height) => WindowChrome.SetWindowChrome(this, new WindowChrome
+    // A new chrome changes the window's frame, so it goes through CaptionRepaint like any frame change.
+    private void SetCaptionHeight(double height) => CaptionRepaint.Change(this, () => WindowChrome.SetWindowChrome(this, new WindowChrome
     {
         CaptionHeight = height,
         // Lucent's own player grows from its edges; the classic player keeps its skin's size.
@@ -134,7 +136,7 @@ public partial class MainWindow
         GlassFrameThickness = new Thickness(0),
         CornerRadius = new CornerRadius(0),
         UseAeroCaptionButtons = false,
-    });
+    }));
 
     /// <summary>Moves the classic player on a frame, with the player's state as it is now. Called every screen frame.</summary>
     private void TickClassicPlayer()
@@ -278,7 +280,7 @@ public partial class MainWindow
         _settings.Save();
         if (_classicView is not null)
         {
-            SetClassicZoom();
+            KeepWindowsDocked(SetClassicZoom);
         }
     }
 
@@ -287,8 +289,49 @@ public partial class MainWindow
     {
         _settings.ClassicSkin = name;
         _settings.Save();
-        ApplyClassicSkin();
+        KeepWindowsDocked(ApplyClassicSkin);
         BuildClassicSkinSwatches();
+    }
+
+    /// <summary>
+    /// Makes a change that resizes the player and the equalizer (a skin on or off, double size), then stacks the
+    /// windows that were under the player against its new bottom again, so none ends up over Lucent's button strip
+    /// or leaves a gap. In Lucent's full screen every window is laid out again instead.
+    /// </summary>
+    private void KeepWindowsDocked(Action change)
+    {
+        if (_settings.LucentFullScreen || WindowState != WindowState.Normal)
+        {
+            change();
+            TileSoon();
+            return;
+        }
+
+        var column = ColumnUnderPlayer(Top + ActualHeight);
+        var bottom = column.Count > 0 ? column[^1].Top + SizeOf(column[^1]).Height : 0;
+        change();
+        // Once the player and the equalizer have their new sizes.
+        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
+        {
+            if (IsShuttingDown || WindowState != WindowState.Normal)
+            {
+                return;
+            }
+
+            var edge = Top + ActualHeight;
+            for (var i = 0; i < column.Count; i++)
+            {
+                var window = column[i];
+                window.Top = edge;
+                if (i == column.Count - 1 && window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip)
+                {
+                    // The last one keeps its bottom edge, in line with the windows beside it.
+                    window.Height = Math.Max(window.MinHeight, bottom - edge);
+                }
+
+                edge += SizeOf(window).Height;
+            }
+        });
     }
 
     /// <summary>The classic player's right-click menu (and its O button's).</summary>
