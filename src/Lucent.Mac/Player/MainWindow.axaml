@@ -309,6 +309,18 @@
                         </UniformGrid>
                     </Border>
 
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Power" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Power" Tag="Auto" Content="Auto" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Power" Tag="Smoothest" Content="Smoothest" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Power" Tag="Balanced" Content="Balanced" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Power" Tag="PowerSaver" Content="Power saver" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Auto picks for your computer: Smoothest on a desktop, Balanced on a laptop, Power saver on battery, in low power mode, or when it runs hot. Smoothest matches your screen's refresh rate, Balanced draws up to 60 frames a second, and Power saver up to 30 at fewer pixels." />
+
                     <CheckBox x:Name="BuildUpsSwitch" Theme="{StaticResource SwitchToggle}" Content="Build-ups and drops"
                               Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Theme="{StaticResource OptionHint}" Text="Visuals close in and change colour through a build-up, then burst on the drop." />
@@ -322,9 +334,6 @@
                     <TextBlock x:Name="HdrHint" Theme="{StaticResource OptionHint}" />
                     <CheckBox x:Name="FrameRateSwitch" Theme="{StaticResource SwitchToggle}" Content="Show frame rate"
                               Margin="0,14,0,0" Click="OnOptionSwitched" />
-                    <CheckBox x:Name="BackgroundFrameRateSwitch" Theme="{StaticResource SwitchToggle}" Content="Full frame rate in the background"
-                              Margin="0,14,0,0" Click="OnOptionSwitched" />
-                    <TextBlock Theme="{StaticResource OptionHint}" Text="Visuals stay smooth while another app has focus, such as with Lucent on a second screen. They still stop drawing when minimized or hidden." />
                 </StackPanel>
 
                 <StackPanel x:Name="VisualsTab" IsVisible="False">

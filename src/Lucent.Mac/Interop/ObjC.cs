@@ -68,6 +68,9 @@ internal static partial class ObjC
     public static void SendVoid(IntPtr receiver, string selector, double argument) =>
         void_objc_msgSend_Double(receiver, Selector(selector), argument);
 
+    public static void SendVoid(IntPtr receiver, string selector, IntPtr first, double second) =>
+        void_objc_msgSend_IntPtr_Double(receiver, Selector(selector), first, second);
+
     public static void SendVoid(IntPtr receiver, string selector, CGSize argument) =>
         void_objc_msgSend_CGSize(receiver, Selector(selector), argument);
 
@@ -191,6 +194,9 @@ internal static partial class ObjC
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial void void_objc_msgSend_Double(IntPtr receiver, IntPtr selector, double argument);
+
+    [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
+    private static partial void void_objc_msgSend_IntPtr_Double(IntPtr receiver, IntPtr selector, IntPtr first, double second);
 
     [LibraryImport(Runtime, EntryPoint = "objc_msgSend")]
     private static partial void void_objc_msgSend_CGSize(IntPtr receiver, IntPtr selector, CGSize argument);
