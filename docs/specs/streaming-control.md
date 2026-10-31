@@ -12,7 +12,7 @@ Lucent controls another music app from its own player: song, cover, position, pl
 | YouTube, YouTube Music, SoundCloud | One "Control your web browser" item, through media controls | A tab in Safari, Chrome, Edge, or Brave, through AppleScript and JavaScript |
 | Pandora | Pandora's window through UI Automation, thumbs included | pandora.com in a browser tab, thumbs included |
 
-**Spotify extras (both):** queue centred on the playing song with Sort (playlist order, recently added, title, artist); playlists and Liked Songs in the library up to 10,000 songs; click a playlist to open its songs, with sortable columns (album, date added, year and more, see [Library and queue](library-and-queue.md)); Add to playlist with a duplicate check; Share song link; "Play on this Mac/PC" when Spotify plays on a TV or speaker.
+**Spotify extras (both):** queue centred on the playing song with Sort (playlist order, recently added, title, artist); playlists and Liked Songs in the library up to 10,000 songs, kept on disk once read whole so a long one opens whole on the next run unless it's changed (`RemoteListStore`, cleared on sign-out); click a playlist to open its songs, with sortable columns (album, date added, year and more, see [Library and queue](library-and-queue.md)); Add to playlist with a duplicate check; Share song link; "Play on this Mac/PC" when Spotify plays on a TV or speaker.
 
 **Every app (both):** Share works for all (Apple Music link or song.link page when the app gives no link). When the app isn't open, an Open button replaces the volume bar. Queue and PLAYLISTS say why they're empty when an app can't share them.
 

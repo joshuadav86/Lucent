@@ -790,7 +790,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     private async Task<RemoteList> LongListAsync(string context, string name, string? version, string url, string? refusedNote,
         Func<JsonElement, RemoteTrack?> parse, CancellationToken cancel)
     {
-        if (version is not null && WholeList(context, version) is { } known)
+        if (version is not null && await WholeListAsync(context, version) is { } known)
         {
             return known with { Name = name };
         }
@@ -799,7 +799,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
 
         // Liked Songs has no snapshot, but lists the newest first: the same count and newest song, and it's the same.
         var key = version ?? $"{total}|{tracks.FirstOrDefault()?.Id}|{tracks.FirstOrDefault()?.AddedAt:O}";
-        if (WholeList(context, key) is { } same)
+        if (version is null && await WholeListAsync(context, key) is { } same)
         {
             return same with { Name = name };
         }
@@ -824,15 +824,37 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         });
     }
 
-    private RemoteList? WholeList(string context, string version)
+    // Kept here since it was read, or on disk from an earlier run (see RemoteListStore).
+    private async Task<RemoteList?> WholeListAsync(string context, string version)
     {
         lock (_wholeLists)
         {
-            return _wholeLists.TryGetValue(context, out var kept) && kept.Version == version ? kept.List : null;
+            if (_wholeLists.TryGetValue(context, out var kept) && kept.Version == version)
+            {
+                return kept.List;
+            }
         }
+
+        if (await RemoteListStore.LoadAsync(context, version) is not { } stored)
+        {
+            return null;
+        }
+
+        return Remember(context, version, stored);
     }
 
     private RemoteList KeepWhole(string context, string version, RemoteList list)
+    {
+        // Only a long one is worth keeping on disk; a short one reads again in a moment.
+        if (list.Tracks.Count > MostSongs)
+        {
+            RemoteListStore.Save(context, version, list);
+        }
+
+        return Remember(context, version, list);
+    }
+
+    private RemoteList Remember(string context, string version, RemoteList list)
     {
         lock (_wholeLists)
         {

@@ -26,6 +26,8 @@ public sealed class TrackThumb : Border
 
     private readonly Viewbox _note;
     private CancellationTokenSource? _loading;
+    // Its cover is to load once the list stops gliding (see Thumbnails.Hold).
+    private bool _waiting;
     private bool _attached;
 
     static TrackThumb()
@@ -68,6 +70,7 @@ public sealed class TrackThumb : Border
         base.OnAttachedToVisualTree(e);
         _attached = true;
         Thumbnails.Forgotten += OnForgotten;
+        Thumbnails.Released += OnReleased;
         Show();
     }
 
@@ -76,12 +79,14 @@ public sealed class TrackThumb : Border
         base.OnDetachedFromVisualTree(e);
         _attached = false;
         Thumbnails.Forgotten -= OnForgotten;
+        Thumbnails.Released -= OnReleased;
         StopLoading();
     }
 
     private void Show()
     {
         StopLoading();
+        _waiting = false;
         var key = Thumbnails.KeyFor(Path, Url);
         if (key is null)
         {
@@ -98,6 +103,13 @@ public sealed class TrackThumb : Border
         ShowCover(null);
         if (!_attached)
         {
+            return;
+        }
+
+        // Not for a row flying past as the list glides a long way.
+        if (Thumbnails.Held)
+        {
+            _waiting = true;
             return;
         }
 
@@ -118,6 +130,14 @@ public sealed class TrackThumb : Border
         catch (OperationCanceledException)
         {
             // Scrolled away, or the row shows another song now.
+        }
+    }
+
+    private void OnReleased()
+    {
+        if (_waiting)
+        {
+            Show();
         }
     }
 
@@ -160,6 +180,7 @@ public static class Thumbnails
     private static readonly SemaphoreSlim Loading = new(4);
     private static readonly Dictionary<string, LinkedListNode<(string Key, Bitmap? Cover)>> Cache = new(StringComparer.Ordinal);
     private static readonly LinkedList<(string Key, Bitmap? Cover)> Order = new();
+    private static int _holds;
 
     /// <summary>What a cover is remembered by: its web address, or the music file's path. Null when there's nothing to show.</summary>
     public static string? KeyFor(string? path, string? url) =>
@@ -180,6 +201,27 @@ public static class Thumbnails
 
         cover = null;
         return false;
+    }
+
+    /// <summary>
+    /// True while a list glides a long way to the song playing: rows flying past show only covers already remembered,
+    /// rather than starting (and straight away dropping) downloads, and those still waiting load theirs on landing.
+    /// </summary>
+    public static bool Held => _holds > 0;
+
+    /// <summary>Raised when the last hold is let go, so rows that waited load their covers.</summary>
+    public static event Action? Released;
+
+    /// <summary>Holds back new covers until <see cref="Release"/>.</summary>
+    public static void Hold() => _holds++;
+
+    /// <summary>Lets go of a <see cref="Hold"/>.</summary>
+    public static void Release()
+    {
+        if (_holds > 0 && --_holds == 0)
+        {
+            Released?.Invoke();
+        }
     }
 
     /// <summary>Raised by <see cref="Forget"/>, so rows showing those files load their covers again.</summary>

@@ -341,6 +341,7 @@
                 <ListBox x:Name="RemotePlaylistView" Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
                          VirtualizingPanel.ScrollUnit="Pixel"
                          SelectionMode="Single"
                          MouseDoubleClick="OnRemotePlaylistDoubleClick"
