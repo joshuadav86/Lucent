@@ -18,26 +18,26 @@ public partial class VisualizerWindow
     /// </summary>
     private MenuItem AvsMenu()
     {
-        var parent = new MenuItem { Header = "AVS presets" };
+        var parent = new MenuItem { Header = "AVS presets", ToolTip = MenuTips.Avs };
         var shown = Item("Show AVS presets", string.Empty, () =>
         {
             ShowAvs(!_settings.AvsVisuals);
             Player?.ShowOptionsState();
-        });
+        }, MenuTips.ShowAvs);
         shown.IsChecked = _settings.AvsVisuals;
         parent.Items.Add(shown);
         var modern = Item("Modern look", string.Empty, () =>
         {
             UseModernAvs(!_settings.ModernAvs);
             Player?.ShowOptionsState();
-        });
+        }, MenuTips.ModernAvs);
         modern.IsChecked = _settings.ModernAvs;
         parent.Items.Add(modern);
         parent.Items.Add(new Separator());
-        parent.Items.Add(Item("Import AVS presets…", string.Empty, ImportAvsFiles));
-        parent.Items.Add(Item("Import a folder of presets…", string.Empty, ImportAvsFolder));
+        parent.Items.Add(Item("Import AVS presets…", string.Empty, ImportAvsFiles, MenuTips.ImportAvs));
+        parent.Items.Add(Item("Import a folder of presets…", string.Empty, ImportAvsFolder, MenuTips.ImportFolder));
         parent.Items.Add(new Separator());
-        parent.Items.Add(Item("Open the AVS folder", string.Empty, OpenAvsFolder));
+        parent.Items.Add(Item("Open the AVS folder", string.Empty, OpenAvsFolder, MenuTips.PresetFolder));
         return parent;
     }
 

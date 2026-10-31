@@ -18,26 +18,26 @@ public partial class VisualizerWindow
     /// </summary>
     private MenuItem MilkDropMenu()
     {
-        var parent = new MenuItem { Header = "MilkDrop presets" };
+        var parent = new MenuItem { Header = "MilkDrop presets", ToolTip = MenuTips.MilkDrop };
         var shown = Item("Show MilkDrop presets", string.Empty, () =>
         {
             ShowMilkDrop(!_settings.MilkDropVisuals);
             Player?.ShowOptionsState();
-        });
+        }, MenuTips.ShowMilkDrop);
         shown.IsChecked = _settings.MilkDropVisuals;
         parent.Items.Add(shown);
         var modern = Item("Modern look", string.Empty, () =>
         {
             UseModernMilkDrop(!_settings.ModernMilkDrop);
             Player?.ShowOptionsState();
-        });
+        }, MenuTips.ModernMilkDrop);
         modern.IsChecked = _settings.ModernMilkDrop;
         parent.Items.Add(modern);
         parent.Items.Add(new Separator());
-        parent.Items.Add(Item("Import MilkDrop presets…", string.Empty, ImportMilkDropFiles));
-        parent.Items.Add(Item("Import a folder of presets…", string.Empty, ImportMilkDropFolder));
+        parent.Items.Add(Item("Import MilkDrop presets…", string.Empty, ImportMilkDropFiles, MenuTips.ImportMilkDrop));
+        parent.Items.Add(Item("Import a folder of presets…", string.Empty, ImportMilkDropFolder, MenuTips.ImportFolder));
         parent.Items.Add(new Separator());
-        parent.Items.Add(Item("Open the MilkDrop folder", string.Empty, OpenMilkDropFolder));
+        parent.Items.Add(Item("Open the MilkDrop folder", string.Empty, OpenMilkDropFolder, MenuTips.PresetFolder));
         return parent;
     }
 

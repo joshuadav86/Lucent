@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using Lucent.Visualizer;
 
 namespace Lucent.Windows;
 
@@ -55,17 +56,17 @@ public static class LucentFullScreen
             menu.Items.Add(new Separator());
         }
 
-        var item = new MenuItem { Header = "Full screen Lucent", InputGestureText = Gesture, IsCheckable = true, Tag = Marker };
+        var item = new MenuItem { Header = "Full screen Lucent", InputGestureText = Gesture, IsCheckable = true, Tag = Marker, ToolTip = MenuTips.FullScreenLucent };
         item.IsChecked = IsOn?.Invoke() == true;
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
-        var tidy = new MenuItem { Header = "Tidy layout", InputGestureText = TidyGesture };
+        var tidy = new MenuItem { Header = "Tidy layout", InputGestureText = TidyGesture, ToolTip = MenuTips.Tidy };
         tidy.Click += (_, _) => Tidy?.Invoke();
         menu.Items.Add(tidy);
         var layouts = SavedLayoutsMenu.Item(window);
         layouts.Tag = LayoutsMarker;
         menu.Items.Add(layouts);
-        var reset = new MenuItem { Header = "Reset to default layout" };
+        var reset = new MenuItem { Header = "Reset to default layout", ToolTip = MenuTips.ResetLayout };
         reset.Click += (_, _) => Reset?.Invoke();
         menu.Items.Add(reset);
         menu.Items.Add(CloseItem.For(window));
