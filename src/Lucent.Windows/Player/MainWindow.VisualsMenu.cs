@@ -56,6 +56,10 @@ public partial class MainWindow
         frameRate.Click += (_, _) => ChangeGraphics(() => _settings.ShowFrameRate = !_settings.ShowFrameRate);
         menu.Items.Add(frameRate);
 
+        var background = new MenuItem { Header = "Full frame rate in the background", IsChecked = _settings.FullFrameRateInBackground, ToolTip = MenuTips.FullFrameRateInBackground };
+        background.Click += (_, _) => ChangeGraphics(() => _settings.FullFrameRateInBackground = !_settings.FullFrameRateInBackground);
+        menu.Items.Add(background);
+
         menu.Items.Add(new Separator());
         var options = new MenuItem { Header = "All options…", InputGestureText = "O" };
         options.Click += (_, _) =>

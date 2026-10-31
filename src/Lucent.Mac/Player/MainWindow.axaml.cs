@@ -1417,6 +1417,7 @@ public partial class MainWindow : Window
         _visualizer.TransitionSeconds = GraphicsOptions.Seconds(_settings.TransitionSpeed);
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
         _visuals.ShowFrameRate(_settings.ShowFrameRate);
+        BackgroundFrameRate.On = _settings.FullFrameRateInBackground;
         _visuals.UpdateAutoCycleButton();
         _visuals.UpdatePreviousButton();
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
@@ -1565,6 +1566,10 @@ public partial class MainWindow : Window
         {
             _settings.ShowFrameRate = on;
         }
+        else if (sender == BackgroundFrameRateSwitch)
+        {
+            _settings.FullFrameRateInBackground = on;
+        }
         else if (sender == BuildUpsSwitch)
         {
             _settings.BuildUpsAndDrops = on;
@@ -1656,6 +1661,7 @@ public partial class MainWindow : Window
 
         HdrSwitch.IsChecked = _settings.Hdr;
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
+        BackgroundFrameRateSwitch.IsChecked = _settings.FullFrameRateInBackground;
         BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
         MouseParticlesSwitch.IsChecked = _settings.MouseMovesParticles;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;

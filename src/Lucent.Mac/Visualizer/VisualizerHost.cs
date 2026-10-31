@@ -44,7 +44,11 @@ public sealed class VisualizerHost : Border, IDisposable
         _analyzer = new AudioAnalyzer(capture);
         Background = Brushes.Black;
         Focusable = false;
-        _displayTimer.Tick += (_, _) => CheckDisplay();
+        _displayTimer.Tick += (_, _) =>
+        {
+            CheckDisplay();
+            UpdateShowing();
+        };
         AddHandler(PointerPressedEvent, OnPointerPressed, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, OnPointerReleased, handledEventsToo: true);
         AddHandler(PointerMovedEvent, OnPointerMoved, handledEventsToo: true);
@@ -273,6 +277,7 @@ public sealed class VisualizerHost : Border, IDisposable
         }
 
         _displayTimer.Stop();
+        BackgroundFrameRate.Showing(this, false);
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -423,6 +428,37 @@ public sealed class VisualizerHost : Border, IDisposable
             // Hidden in its window too while a video shows there instead.
             _renderer.Visible = IsVisible && TopLevel.GetTopLevel(this) is Window { IsVisible: true } window && window.WindowState != WindowState.Minimized;
         }
+
+        UpdateShowing();
+    }
+
+    /// <summary>
+    /// Tells <see cref="BackgroundFrameRate"/> whether these visuals are on screen: drawing, and with
+    /// some of the window uncovered (macOS keeps track of that). Checked again once a second.
+    /// </summary>
+    private void UpdateShowing()
+    {
+        var showing = !_disposed && _renderer is { Visible: true } && WindowUncovered();
+        BackgroundFrameRate.Showing(this, showing);
+    }
+
+    private bool WindowUncovered()
+    {
+        if (_view is null || _view.NativeView == IntPtr.Zero || !OperatingSystem.IsMacOS())
+        {
+            return false;
+        }
+
+        try
+        {
+            const long occlusionStateVisible = 1 << 1;
+            var window = Interop.ObjC.Send(_view.NativeView, "window");
+            return window != IntPtr.Zero && ((long)Interop.ObjC.Send(window, "occlusionState") & occlusionStateVisible) != 0;
+        }
+        catch (Exception)
+        {
+            return true;
+        }
     }
 
     /// <summary>
@@ -525,6 +561,7 @@ public sealed class VisualizerHost : Border, IDisposable
 
         _disposed = true;
         _displayTimer.Stop();
+        BackgroundFrameRate.Showing(this, false);
         _view?.Renderer?.Dispose();
         _renderer = null;
         Child = null;
