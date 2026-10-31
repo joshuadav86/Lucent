@@ -531,6 +531,7 @@ public sealed class AppSettings
         ["Marble Run"] = "Boy's Surface",
         ["Mercury Lake"] = "Enneper Bloom",
         ["Spark Forge"] = "Epicycle Rosette",
+        ["Tide Line"] = "Hyperboloid",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
