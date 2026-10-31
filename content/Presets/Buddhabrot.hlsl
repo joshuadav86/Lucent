@@ -81,6 +81,9 @@ void newJourney(inout Particle particle, uint id)
     particle.data.w = hops > 0.0 ? 1.0 : particle.data.w;
 }
 
+// Each speck jumps somewhere new every frame, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     particle.velocity = 0.0;

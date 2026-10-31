@@ -43,6 +43,9 @@ float3 knotPoint(float t, float strand)
     return sin(rates * t + phase) * float3(1.0, 0.85, 0.9);
 }
 
+// The specks race along their curves, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     float strand = floor(fixedRandom(id, 1.0) * Strands);
