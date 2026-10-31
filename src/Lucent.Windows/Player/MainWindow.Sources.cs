@@ -147,6 +147,8 @@ public partial class MainWindow
         _settings.ListenToOtherApps = !_settings.ListenToOtherApps;
         _settings.Save();
         UpdateListening();
+        ApplyOwnVolume();
+        ShowVolume();
         UpdateSourcesPanel();
     }
 }
