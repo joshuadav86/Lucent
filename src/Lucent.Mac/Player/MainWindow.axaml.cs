@@ -439,6 +439,12 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnPlayerSizeChanged(object? sender, SizeChangedEventArgs e)
     {
+        // Single window just ended, and the windows round the player are going back to their own places.
+        if (_sizeFromSingleWindow)
+        {
+            return;
+        }
+
         if (!e.HeightChanged || e.PreviousSize.Height <= 0 || WindowState != WindowState.Normal || InSingleWindow)
         {
             return;

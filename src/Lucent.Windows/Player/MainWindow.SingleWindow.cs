@@ -72,6 +72,12 @@ public partial class MainWindow
     /// <summary>Where the single window was before it filled the screen (Shift+F11 or a double-click on its title bar), to go back to.</summary>
     private Rect? _singleBeforeFill;
 
+    /// <summary>
+    /// Single window has just ended: the player shrinking back from the single window's size isn't a resize
+    /// for the windows round it to follow, as they go back to their own places (see OnPlayerSizeChanged).
+    /// </summary>
+    private bool _sizeFromSingleWindow;
+
     private bool InSingleWindow => _singleFrame is not null;
 
     /// <summary>The player's width, for the equalizer under it: in the single window the window's much wider than the player.</summary>
@@ -194,6 +200,8 @@ public partial class MainWindow
 
         SaveSingleWindowPlace();
         _singleBeforeFill = null;
+        _sizeFromSingleWindow = true;
+        _ = ForgetSizeFromSingleWindowSoon();
         _settings.SingleWindow = false;
         var giveBack = _panes.Keys.ToList();
         foreach (var window in giveBack)
@@ -256,6 +264,13 @@ public partial class MainWindow
             }
         }, DispatcherPriority.Background);
         _settings.Save();
+    }
+
+    private async Task ForgetSizeFromSingleWindowSoon()
+    {
+        // Long enough for the player to settle at its own size, however the system takes its time over it.
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        _sizeFromSingleWindow = false;
     }
 
     /// <summary>Lucent opens as a single window if it was closed as one.</summary>
