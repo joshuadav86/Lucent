@@ -18,9 +18,11 @@ public sealed class VisualizerHost : HwndHost
     private const int CS_DBLCLKS = 0x0008;
     private const int WM_ERASEBKGND = 0x0014;
     private const int WM_MOUSEMOVE = 0x0200;
+    private const int WM_LBUTTONDOWN = 0x0201;
     private const int WM_LBUTTONUP = 0x0202;
     private const int WM_LBUTTONDBLCLK = 0x0203;
     private const int WM_RBUTTONUP = 0x0205;
+    private const int WM_CAPTURECHANGED = 0x0215;
     private const int WM_MOUSELEAVE = 0x02A3;
     private const uint TME_LEAVE = 0x00000002;
     private const int IDC_ARROW = 32512;
@@ -50,7 +52,7 @@ public sealed class VisualizerHost : HwndHost
     /// <summary>The song that's playing and its bars, which Auto uses to change visual on a downbeat.</summary>
     public SongClock SongClock { get; } = new();
 
-    /// <summary>The mouse over the visuals, which pushes a Particles visual's dots aside.</summary>
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them.</summary>
     public PointerStir Pointer { get; } = new();
 
     /// <summary>Raised on the UI thread with the names of the visuals that loaded.</summary>
@@ -351,6 +353,19 @@ public sealed class VisualizerHost : HwndHost
             case WM_MOUSEMOVE:
                 OnMouseMoved(hwnd, lParam);
                 return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+            case WM_LBUTTONDOWN:
+                // Held down, the button grabs particles; the window keeps the mouse until it comes up, so a
+                // throw can end past the edge. A click on its own still does nothing else.
+                SetCapture(hwnd);
+                OnMouseMoved(hwnd, lParam, pressed: true);
+                return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+            case WM_LBUTTONUP:
+                ReleaseCapture();
+                Pointer.Released();
+                return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+            case WM_CAPTURECHANGED:
+                Pointer.Released();
+                return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
             case WM_MOUSELEAVE:
                 _trackingMouse = false;
                 Pointer.Left();
@@ -368,7 +383,7 @@ public sealed class VisualizerHost : HwndHost
         }
     }
 
-    private void OnMouseMoved(IntPtr hwnd, IntPtr lParam)
+    private void OnMouseMoved(IntPtr hwnd, IntPtr lParam, bool pressed = false)
     {
         if (!_trackingMouse)
         {
@@ -387,7 +402,14 @@ public sealed class VisualizerHost : HwndHost
 
         var x = (short)((long)lParam & 0xFFFF);
         var y = (short)(((long)lParam >> 16) & 0xFFFF);
-        Pointer.MovedTo((double)x / width, (double)y / height);
+        if (pressed)
+        {
+            Pointer.Pressed((double)x / width, (double)y / height);
+        }
+        else
+        {
+            Pointer.MovedTo((double)x / width, (double)y / height);
+        }
     }
 
     private static void RegisterWindowClass()
@@ -451,6 +473,13 @@ public sealed class VisualizerHost : HwndHost
         public int Right;
         public int Bottom;
     }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCapture(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ReleaseCapture();
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

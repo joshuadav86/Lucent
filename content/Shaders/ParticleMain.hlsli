@@ -5,42 +5,66 @@ RWStructuredBuffer<Particle> ParticleState : register(u0);
 StructuredBuffer<Particle> ParticlesToDraw : register(t4);
 
 // The mouse moving over the visuals pushes the dots near it aside, with a little swirl and a tug the way
-// it's going, like a hand through sparks. The push is kept on screen, apart from where the visual puts
-// the particle, so it works the same for flat and 3D visuals, and it eases back to nothing over a couple
-// of seconds. PointerStrength is 0 for visuals outside the Particles family.
+// it's going, like a hand through sparks. Holding the button down grabs a handful instead: they gather
+// into a swirling ball under the mouse and ride along with it, and letting go throws them on with the
+// mouse's speed. The push is kept on screen, apart from where the visual puts the particle, so it works
+// the same for flat and 3D visuals, the visual keeps moving its particles to the music underneath, and
+// it eases back to nothing over a couple of seconds. It reaches every particle visual (anything with
+// Simulate), whatever its family.
 static const float PushReach = 0.22;     // p units: about a tenth of the picture's height
-static const float PushApart = 4.0;      // straight out from the mouse
-static const float PushSwirl = 1.5;      // around it
-static const float PushTug = 2.0;        // along with it, times its speed
-static const float PushSpring = 3.5;     // back to where the visual has it
-static const float PushDamping = 4.0;
-static const float PushMost = 0.6;
+static const float PushApart = 3.0;      // straight out from the mouse
+static const float PushSwirl = 1.2;      // around it
+static const float PushTug = 1.6;        // along with it, times its speed
+static const float PushSpring = 2.0;     // back to where the visual has it
+static const float PushDamping = 2.5;    // low enough that a throw carries
+static const float PushMost = 1.6;
+static const float GrabReach = 0.3;      // how far the hand reaches for dots
+static const float GrabShare = 0.4;      // the share of dots it can pick up, so it holds a handful, not a blinding lump
+static const float GrabBall = 0.12;      // the radius of the ball they're held in
+static const float GrabPull = 60.0;      // how firmly they're held
+static const float GrabFollow = 9.0;     // how closely they match the mouse's speed, which is what they're thrown with
+static const float GrabSwirl = 1.5;      // how fast they circle in the hand
 
 void Push(inout Particle particle, uint id)
 {
     float4 push = particle.push;
-    if (PointerStrength <= 0.0 && !any(push != 0.0))
+    if (PointerStrength <= 0.0 && PointerGrab <= 0.0 && !any(push != 0.0))
     {
         return;
     }
 
     float2 velocity = push.zw;
-    if (PointerStrength > 0.0)
+    if (PointerStrength > 0.0 || PointerGrab > 0.0)
     {
         Sprite sprite = Show(particle, id);
         float2 away = sprite.position + push.xy - PointerPosition;
         float distanceSquared = dot(away, away);
-        float near = exp(-distanceSquared / (PushReach * PushReach)) * PointerStrength;
-        if (sprite.size > 0.0 && near > 1e-3 && all(isfinite(sprite.position)))
+        float2 outward = away * rsqrt(distanceSquared + 1e-4);
+        bool shown = sprite.size > 0.0 && all(isfinite(sprite.position));
+        bool grabbable = fixedRandom(id, 57.0) < GrabShare;
+
+        float near = exp(-distanceSquared / (PushReach * PushReach)) * PointerStrength * (1.0 - PointerGrab);
+        if (shown && near > 1e-3)
         {
             // Each dot gets a slightly different shove, so the crowd parts raggedly rather than as one sheet.
             float own = 0.75 + 0.5 * fixedRandom(id, 91.0);
-            float2 outward = away * rsqrt(distanceSquared + 1e-4);
             velocity += (outward * PushApart + float2(-outward.y, outward.x) * PushSwirl + PointerVelocity * PushTug) * near * own * DeltaTime;
+        }
+
+        float held = exp(-distanceSquared / (GrabReach * GrabReach)) * PointerGrab;
+        if (shown && grabbable && held > 1e-3)
+        {
+            // Pulled to its own distance from the mouse, so the handful is a ball rather than a point,
+            // circling it, and moving with it.
+            float radius = GrabBall * sqrt(fixedRandom(id, 23.0));
+            float distance = sqrt(distanceSquared);
+            float2 pull = -outward * (distance - radius) * GrabPull;
+            float2 circle = float2(-outward.y, outward.x) * GrabSwirl * (fixedRandom(id, 41.0) < 0.5 ? -1.0 : 1.0);
+            velocity += (pull + (PointerVelocity + circle - velocity) * GrabFollow) * held * DeltaTime;
         }
     }
 
-    velocity -= push.xy * PushSpring * DeltaTime;
+    velocity -= push.xy * PushSpring * (1.0 - PointerGrab) * DeltaTime;
     velocity *= exp(-PushDamping * DeltaTime);
     push.xy += velocity * DeltaTime;
     float pushed = length(push.xy);
@@ -78,7 +102,11 @@ void CSMain(uint3 thread : SV_DispatchThreadID)
     {
         Particle fresh = (Particle)0;
         Spawn(fresh, id);
+        // A dot the mouse has moved keeps its push through being born again (the visual's own dots
+        // often live under a second), so it carries on smoothly instead of jumping back into place.
+        fresh.push = ParticleReset > 0.5 ? 0.0 : particle.push;
         particle = fresh;
+        Push(particle, id);
     }
     else
     {
@@ -93,7 +121,9 @@ SpriteVertex VSParticle(uint vertex : SV_VertexID, uint instance : SV_InstanceID
 {
     Particle particle = ParticlesToDraw[instance];
     Sprite sprite = Show(particle, instance);
+    // Moved by the mouse: drawn where it's been pushed, blurred along the way it's going so the motion reads.
     sprite.position += particle.push.xy;
+    sprite.streak += particle.push.zw * 0.03;
 
     // Sizes are in pixels of a 1080-line screen and scale with the window, so the picture looks the
     // same at every resolution, just sharper. Dots smaller than about a real pixel would flicker as

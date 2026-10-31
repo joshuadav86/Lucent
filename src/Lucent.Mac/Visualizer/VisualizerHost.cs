@@ -49,12 +49,13 @@ public sealed class VisualizerHost : Border, IDisposable
         AddHandler(PointerReleasedEvent, OnPointerReleased, handledEventsToo: true);
         AddHandler(PointerMovedEvent, OnPointerMoved, handledEventsToo: true);
         AddHandler(PointerExitedEvent, (_, _) => Pointer.Left(), handledEventsToo: true);
+        AddHandler(PointerCaptureLostEvent, (_, _) => Pointer.Released(), handledEventsToo: true);
     }
 
     /// <summary>The song that's playing and its bars, which Auto uses to change visual on a downbeat.</summary>
     public SongClock SongClock { get; } = new();
 
-    /// <summary>The mouse over the visuals, which pushes a Particles visual's dots aside.</summary>
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them.</summary>
     public PointerStir Pointer { get; } = new();
 
     /// <summary>Raised on the UI thread with the names of the visuals that loaded.</summary>
@@ -471,6 +472,13 @@ public sealed class VisualizerHost : Border, IDisposable
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var point = e.GetCurrentPoint(this);
+        // Held down, the button grabs particles (Avalonia keeps the mouse for this control until it comes
+        // up, so a throw can end past the edge). A click on its own still does nothing else.
+        if (point.Properties.IsLeftButtonPressed && !e.KeyModifiers.HasFlag(KeyModifiers.Control) && Bounds.Width > 0 && Bounds.Height > 0)
+        {
+            Pointer.Pressed(point.Position.X / Bounds.Width, point.Position.Y / Bounds.Height);
+        }
+
         if (point.Properties.IsLeftButtonPressed && e.ClickCount == 2 && !e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             DoubleClicked?.Invoke(this, EventArgs.Empty);
@@ -492,6 +500,11 @@ public sealed class VisualizerHost : Border, IDisposable
 
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (e.InitialPressMouseButton == MouseButton.Left)
+        {
+            Pointer.Released();
+        }
+
         switch (e.InitialPressMouseButton)
         {
             // On a Mac, Control-click is a right-click.

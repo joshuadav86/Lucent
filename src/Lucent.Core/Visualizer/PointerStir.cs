@@ -3,10 +3,12 @@ using System.Diagnostics;
 namespace Lucent.Visualizer;
 
 /// <summary>
-/// The mouse over the visuals, for the little hidden trick where moving it over a Particles visual pushes
-/// the dots aside. The window tells it where the mouse is (<see cref="MovedTo"/>, <see cref="Left"/>) on
-/// the UI thread; the renderer calls <see cref="Update"/> once a frame and passes the results to the
-/// shaders. Only a moving mouse pushes: once it rests, or leaves, the push fades and the dots drift back.
+/// The mouse over the visuals, for the little hidden trick where moving it over a particle visual pushes
+/// the dots aside, and holding the button down grabs a handful to drag around and throw. The window tells
+/// it where the mouse is and what its button is doing (<see cref="MovedTo"/>, <see cref="Left"/>,
+/// <see cref="Pressed"/>, <see cref="Released"/>) on the UI thread; the renderer calls <see cref="Update"/>
+/// once a frame and passes the results to the shaders. Only a moving mouse pushes: once it rests, or
+/// leaves, the push fades and the dots drift back.
 /// </summary>
 public sealed class PointerStir
 {
@@ -17,6 +19,7 @@ public sealed class PointerStir
     private double _x;
     private double _y;
     private bool _inside;
+    private bool _held;
     private long _movedAt;
 
     private long _lastUpdate;
@@ -36,6 +39,9 @@ public sealed class PointerStir
 
     /// <summary>1 while the mouse moves over the visuals, fading to 0 once it rests or leaves.</summary>
     public float Strength { get; private set; }
+
+    /// <summary>1 while the button is held down on the visuals, grabbing dots; 0 otherwise.</summary>
+    public float Grab { get; private set; }
 
     /// <summary>The mouse is at (<paramref name="x"/>, <paramref name="y"/>), each 0..1 across and down the visuals.</summary>
     public void MovedTo(double x, double y)
@@ -64,16 +70,40 @@ public sealed class PointerStir
         }
     }
 
+    /// <summary>The left button went down at (<paramref name="x"/>, <paramref name="y"/>) on the visuals.</summary>
+    public void Pressed(double x, double y)
+    {
+        MovedTo(x, y);
+        lock (_gate)
+        {
+            _held = true;
+        }
+    }
+
+    /// <summary>The left button came up (or the window lost the mouse): whatever was grabbed is let go, at the mouse's speed.</summary>
+    public void Released()
+    {
+        lock (_gate)
+        {
+            _held = false;
+        }
+    }
+
     /// <summary>Works out this frame's position, speed and strength. <paramref name="aspect"/> is the picture's width / height.</summary>
     public void Update(float aspect)
     {
         double x, y;
         bool inside;
+        bool held;
         long movedAt;
         lock (_gate)
         {
-            (x, y, inside, movedAt) = (_x, _y, _inside, _movedAt);
+            (x, y, inside, held, movedAt) = (_x, _y, _inside, _held, _movedAt);
         }
+
+        // While the button is held the window keeps the mouse, so dragging past the edge still counts.
+        inside |= held;
+        Grab = held ? 1f : 0f;
 
         var now = Stopwatch.GetTimestamp();
         var deltaTime = _lastUpdate == 0 ? 0f : (float)Math.Min((now - _lastUpdate) / (double)Stopwatch.Frequency, 0.1);
@@ -107,7 +137,7 @@ public sealed class PointerStir
         }
 
         // Speed is smoothed over a few frames; the push comes in quickly and goes gently.
-        var follow = deltaTime > 0f ? 1f - MathF.Exp(-deltaTime / 0.05f) : 0f;
+        var follow = deltaTime > 0f ? 1f - MathF.Exp(-deltaTime / 0.08f) : 0f;
         VelocityX += (rawX - VelocityX) * follow;
         VelocityY += (rawY - VelocityY) * follow;
         var target = moving ? 1f : 0f;

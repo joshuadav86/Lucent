@@ -230,7 +230,7 @@ public sealed partial class Renderer : IDisposable
     /// </summary>
     public SongClock? SongClock { get; set; }
 
-    /// <summary>The mouse over the visuals, which pushes a Particles visual's dots aside; null when there's no mouse (recording, say).</summary>
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them; null when there's no mouse (recording, say).</summary>
     public PointerStir? Pointer { get; set; }
 
     /// <summary>When on, only the morphing transitions are used.</summary>
@@ -703,6 +703,7 @@ public sealed partial class Renderer : IDisposable
             _constants[33] = pointer.Y;
             _constants[34] = pointer.VelocityX;
             _constants[35] = pointer.VelocityY;
+            _constants[37] = pointer.Grab;
         }
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
@@ -906,8 +907,8 @@ public sealed partial class Renderer : IDisposable
         _constants[20] = count;
         _constants[21] = particles.Fresh ? 1f : 0f;
         _constants[22] = (float)slot.Source.NormalParticleCount / count;
-        // Only the Particles family can be pushed around by the mouse.
-        _constants[36] = Pointer is { } pointer && slot.Source.Family == VisualStyles.ParticlesFamily ? pointer.Strength : 0f;
+        // Every particle visual (Particles family or not) can be pushed around by the mouse; MilkDrop and AVS never run here.
+        _constants[36] = Pointer?.Strength ?? 0f;
         particles.Fresh = false;
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
 
