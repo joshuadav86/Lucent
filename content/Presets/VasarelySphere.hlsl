@@ -101,10 +101,10 @@ float3 Render(float2 uv, float2 p)
     {
         float2 q = d / radius;
         float3 normal = float3(q, sqrt(saturate(1.0 - dot(q, q))));
-        // Turn the globe: a tilted axis, spinning faster with the music.
+        // Turn the globe: a tilted axis, nudged on by every beat.
         float3 n = normal;
         n.yz = rotate(n.yz, 0.45 + 0.15 * sin(Time * 0.13));
-        n.xz = rotate(n.xz, Time * (0.18 + Level * 0.1));
+        n.xz = rotate(n.xz, Time * 0.18 + (BeatCount - Beat) * 0.05);
         n.xy = rotate(n.xy, 0.25 * sin(Time * 0.07));
         float around = 20.0;
         float up = 10.0;

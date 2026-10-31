@@ -148,7 +148,7 @@ float3 Render(float2 uv, float2 p)
     float slant = max(dot(q / max(radius, 0.001), wallNormal), 0.3);
     float reach = radius + wall / slant;
     float direction = seed > 0.5 ? 1.0 : -1.0;
-    float streaming = Time * (0.2 + 0.12 * seed2 + Mid * 0.15) * direction;
+    float streaming = (Time * (0.2 + 0.12 * seed2) + (BeatCount - Beat) * 0.07) * direction;
     [unroll]
     for (int lane = 0; lane < 2; lane++)
     {

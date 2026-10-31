@@ -112,7 +112,7 @@ float3 Render(float2 uv, float2 p)
     }
 
     // The pulsar's lighthouse beams sweep round, lighting whatever they cross.
-    float spin = Time * (1.1 + Treble * 0.6);
+    float spin = Time * 1.1 + (BeatCount - Beat) * 0.3;
     float beamAngle = wrap(angle - spin, PI) - PI * 0.5;
     float beam = exp(-beamAngle * beamAngle * 40.0);
 

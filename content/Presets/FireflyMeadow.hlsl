@@ -340,7 +340,7 @@ float3 meadow(float3 at, float distance, float2 uv)
 {
     float grass = fbm(at.xz * float2(1.6, 0.8));
     // Breezes passing over the grass, catching the moonlight as they go.
-    float breeze = smoothstep(0.4, 1.0, sin(at.x * 0.6 + at.z * 0.9 - Time * (0.8 + Mid * 0.8)) * 0.5 + 0.5) * fbm(at.xz * 0.3 + Time * 0.05);
+    float breeze = smoothstep(0.4, 1.0, sin(at.x * 0.6 + at.z * 0.9 - Time * 0.8 - (BeatCount - Beat) * 0.3) * 0.5 + 0.5) * fbm(at.xz * 0.3 + Time * 0.05);
     float tips = noise(at.xz * float2(9.0, 3.0));
     float3 colour = float3(0.016, 0.03, 0.028) * (0.4 + grass) * (0.7 + tips * 0.6) + float3(0.03, 0.042, 0.065) * breeze * 0.7;
     // Moonlight on the grass, brighter towards the moon.
