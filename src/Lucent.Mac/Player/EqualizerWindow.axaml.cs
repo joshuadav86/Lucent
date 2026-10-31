@@ -27,8 +27,8 @@ public partial class EqualizerWindow : Window
 
     private static EqualizerWindow? _open;
 
-    // The streaming app Lucent is controlling, if any. It plays its sound itself, out of the equalizer's reach.
-    private static string? _playingIn;
+    // The streaming app Lucent is controlling, if any, and whether its sound goes through the equalizer.
+    private static StreamingEqualizerStatus? _streaming;
     private static Bitmap? _icon;
     private static bool _iconLoaded;
 
@@ -163,19 +163,22 @@ public partial class EqualizerWindow : Window
     public static EqualizerWindow? Current => _open;
 
     /// <summary>
-    /// Says which streaming app Lucent is controlling (null when it's back to its own music). That app plays its
-    /// sound itself, straight to the speakers, so the window says the EQ can't change it.
+    /// Says which streaming app Lucent is controlling and what the equalizer can do to it (null when Lucent is back to
+    /// its own music). The app plays its sound itself, so the status line says whether the EQ reaches it.
     /// </summary>
-    public static void ShowPlayingIn(string? app)
+    public static void ShowStreaming(StreamingEqualizerStatus? status)
     {
-        if (_playingIn == app)
+        if (_streaming == status)
         {
             return;
         }
 
-        _playingIn = app;
+        _streaming = status;
         _open?.ShowHint();
     }
+
+    /// <summary>Raised when the status line's button is pressed ("Turn on", "Set up"), for the main window to act on.</summary>
+    public static event EventHandler? StreamingActionClicked;
 
     /// <summary>
     /// Opens the equalizer beside <paramref name="owner"/>, or closes it if it's already open.
@@ -462,6 +465,7 @@ public partial class EqualizerWindow : Window
     private void ShowHint()
     {
         ToolTip.SetTip(StatusText, null);
+        StreamingAction.IsVisible = false;
         var editorPlaying = Lucent.Mac.Editor.AudioTools.IsEditorPlaying;
         _spectrum.Paused = editorPlaying;
         if (editorPlaying)
@@ -473,12 +477,18 @@ public partial class EqualizerWindow : Window
             return;
         }
 
-        if (_playingIn is { } app)
+        if (_streaming is { } streaming)
         {
-            // Easy to miss otherwise: the spectrum still moves (it hears the app), but the sliders change nothing.
-            StatusText.Text = $"{app} plays its own sound, so this EQ can't change it. It works on your files, radio, and videos.";
-            StatusText.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+            // Easy to miss otherwise: the spectrum moves (it hears the app) whether or not the sliders reach it.
+            StatusText.Text = streaming.Text;
+            StatusText.SetResourceReference(TextBlock.ForegroundProperty, streaming.Shaping is null ? "AccentBrush" : "MutedTextBrush");
             ToolTip.SetTip(StatusText, StatusText.Text);
+            if (streaming.Action is { } action)
+            {
+                StreamingActionLabel.Text = action;
+                StreamingAction.IsVisible = true;
+            }
+
             return;
         }
 
@@ -497,7 +507,8 @@ public partial class EqualizerWindow : Window
 
     private void ShowHeadroom()
     {
-        var headroom = _player.Equalizer.HeadroomDb;
+        // While a streaming app plays through a copy of the equalizer, that copy is the one turning it down.
+        var headroom = (_streaming?.Shaping ?? _player.Equalizer).HeadroomDb;
         HeadroomText.Text = Eq.Enabled && headroom >= 0.5
             ? $"Turned down {headroom:0} dB so boosts don't distort"
             : "";
@@ -1033,6 +1044,8 @@ public partial class EqualizerWindow : Window
     }
 
     private void OnCloseClicked(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnStreamingActionClicked(object? sender, RoutedEventArgs e) => StreamingActionClicked?.Invoke(this, EventArgs.Empty);
 
     private void OnClosed(object? sender, EventArgs e)
     {

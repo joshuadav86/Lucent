@@ -240,6 +240,11 @@
             <DockPanel Margin="16,10,16,14">
                 <TextBlock x:Name="HeadroomText" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource FaintTextBrush}"
                            VerticalAlignment="Center" Margin="12,0,0,0" />
+                <!-- While a streaming app isn't being shaped: the way to have it shaped. -->
+                <Button x:Name="StreamingAction" DockPanel.Dock="Right" Theme="{StaticResource PillButton}" Height="22" Padding="10,0"
+                        Margin="10,-4,0,-4" IsVisible="False" Click="OnStreamingActionClicked">
+                    <TextBlock x:Name="StreamingActionLabel" FontSize="11" VerticalAlignment="Center" />
+                </Button>
                 <TextBlock x:Name="StatusText" FontSize="11" Foreground="{DynamicResource MutedTextBrush}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </DockPanel>

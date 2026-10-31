@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Lucent.Audio;
 using Lucent.Mac.Audio;
 using Lucent.Mac.Streaming;
 using Lucent.Settings;
@@ -497,7 +498,45 @@ public partial class MainWindow
         // Only while nothing is heard: a computer the app names differently from this one may still be this one.
         var note = _remote is { } remote && _player.Capture.HeardNothingFor(TimeSpan.FromSeconds(2)) ? remote.ElsewhereNote : null;
         _visuals.ShowElsewhere(note, _remote?.CanPlayHere == true);
-        EqualizerWindow.ShowPlayingIn(_remote?.Player.Name);
+        EqualizerWindow.ShowStreaming(StreamingEqualizer());
+    }
+
+    /// <summary>What the equalizer is doing to the controlled app, for its status line (null while there's no app).</summary>
+    private StreamingEqualizerStatus? StreamingEqualizer()
+    {
+        if (_remote is not { } remote)
+        {
+            return null;
+        }
+
+        var app = remote.Player.Name;
+        if (!_settings.EqualizeStreamingApps)
+        {
+            return new StreamingEqualizerStatus(app, null, null, "Turn on");
+        }
+
+        if (!SystemAudio.IsSupported)
+        {
+            return new StreamingEqualizerStatus(app, null, $"Shaping {app}'s sound needs macOS 14.2 or later", null);
+        }
+
+        if (_inputFeedsVisuals)
+        {
+            return new StreamingEqualizerStatus(app, null, $"The visuals are listening to an input, so the EQ can't reach {app}", null);
+        }
+
+        return new StreamingEqualizerStatus(app, _systemAudio?.Shaping, _equalizeFailed ? $"macOS wouldn't let Lucent shape {app}'s sound" : null, null);
+    }
+
+    // The equalizer window's button: have the EQ shape the controlled app too.
+    private void OnStreamingEqualizerAction(object? sender, EventArgs e)
+    {
+        _settings.EqualizeStreamingApps = true;
+        _settings.Save();
+        _equalizeFailed = false;
+        ShowSoundValues();
+        UpdateListening();
+        ShowWhereItPlays();
     }
 
     // Set while the volume bar is being moved to show a volume, so that isn't taken as the user changing it.
@@ -554,6 +593,12 @@ public partial class MainWindow
     // Set when macOS couldn't listen to just one app, so every app's sound is listened to instead.
     private bool _oneAppFailed;
 
+    // Set when macOS couldn't play the controlled app through the equalizer, so it's only listened to.
+    private bool _equalizeFailed;
+
+    // Set while an input feeds the visuals instead of the Mac's sound.
+    private bool _inputFeedsVisuals;
+
     /// <summary>
     /// Has the visuals listen to every app's sound when asked to, and otherwise, while another app is being
     /// controlled, to just that app, so a video or a call playing alongside doesn't move them. Called again
@@ -562,7 +607,8 @@ public partial class MainWindow
     private void UpdateListening()
     {
         // An input chosen for the visuals (Ableton through TotalMix's loopback, say) comes first.
-        if (UpdateInputListening())
+        _inputFeedsVisuals = UpdateInputListening();
+        if (_inputFeedsVisuals)
         {
             return;
         }
@@ -574,7 +620,9 @@ public partial class MainWindow
             return;
         }
 
-        if (_settings.ListenToOtherApps || (_remote is not null && _oneAppFailed))
+        // Shaping the controlled app's sound needs a tap of just that app, so it comes before every app's sound.
+        var equalize = _remote is not null && _settings.EqualizeStreamingApps && !_oneAppFailed && !_equalizeFailed;
+        if (!equalize && (_settings.ListenToOtherApps || (_remote is not null && _oneAppFailed)))
         {
             wanted = EveryApp;
         }
@@ -586,7 +634,7 @@ public partial class MainWindow
         {
             // Only processes that use sound have an object, so the app is looked for again until it plays.
             processes = SystemAudio.FindApp(RemoteBundles());
-            wanted = processes.Count == 0 ? null : string.Join(",", processes);
+            wanted = processes.Count == 0 ? null : (equalize ? "eq:" : "") + string.Join(",", processes);
         }
 
         if (wanted == (_systemAudio is null ? null : _listeningTo))
@@ -604,7 +652,9 @@ public partial class MainWindow
 
         try
         {
-            var listening = processes is null ? SystemAudio.Start(_player.Capture) : SystemAudio.StartForApp(_player.Capture, processes);
+            var listening = processes is null ? SystemAudio.Start(_player.Capture)
+                : equalize ? SystemAudio.StartForApp(_player.Capture, processes, _player.Equalizer)
+                : SystemAudio.StartForApp(_player.Capture, processes);
             listening.Stopped += (_, _) => Dispatcher.UIThread.Post(() =>
             {
                 // The output went away (unplugged headphones, say): listen to whichever one the Mac uses now.
@@ -622,7 +672,13 @@ public partial class MainWindow
         catch (Exception ex)
         {
             Trace.WriteLine($"Couldn't listen to other apps: {ex}");
-            if (processes is not null)
+            if (processes is not null && equalize)
+            {
+                // macOS wouldn't play the app through the equalizer: listen to it as before.
+                _equalizeFailed = true;
+                UpdateListening();
+            }
+            else if (processes is not null)
             {
                 // macOS wouldn't tap just the one app, so the visuals hear every app's sound.
                 _oneAppFailed = true;

@@ -103,6 +103,7 @@ public static class SelfTest
         failures += Lucent.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.LoudnessSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.EqualizerSelfTest.Run(Console.WriteLine);
+        failures += TestEqualizerApo();
         failures += Lucent.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
         failures += TestLiveInputs();
         failures += Editor.Stems.StemSelfTest.Run(Console.WriteLine);
@@ -136,6 +137,51 @@ public static class SelfTest
 
     // Listening to other apps: the capture takes their sound and leaves the player's out until it's done,
     // then listening starts and stops for real (a warning, not a failure, where the machine has no sound to hear).
+    // The curve handed to Equalizer APO for a streaming app: the sliders traced as they sound, the boost paid for in the
+    // preamp (Equalizer APO has no limiter), the balance per side, and nothing at all when the equalizer is off.
+    private static int TestEqualizerApo()
+    {
+        var problems = 0;
+        void Check(bool good, string problem)
+        {
+            if (!good)
+            {
+                problems++;
+                Console.WriteLine("::error::" + problem);
+            }
+        }
+
+        var bands = EqualizerBands.ForCount(8);
+        var gains = new double[8];
+        gains[4] = 6;
+        var equalizer = new Equalizer();
+        equalizer.Configure(true, bands, gains, 0);
+        var text = EqualizerApo.Describe(equalizer.Design, 0);
+        var graphic = text.Split('\n').FirstOrDefault(line => line.StartsWith("GraphicEQ: ", StringComparison.Ordinal));
+        var points = graphic?["GraphicEQ: ".Length..].Split(';', StringSplitOptions.TrimEntries)
+            .Select(point => point.Split(' ').Select(value => double.Parse(value, System.Globalization.CultureInfo.InvariantCulture)).ToArray())
+            .ToArray() ?? [];
+        var nearest = points.OrderBy(point => Math.Abs(Math.Log2(point[0] / bands.Centres[4]))).FirstOrDefault();
+        Check(nearest is not null && Math.Abs(nearest[1] - 6) < 1.5,
+            $"Equalizer APO was handed {nearest?[1].ToString() ?? "nothing"} dB at {bands.Labels[4]} for a slider at +6 dB.");
+        Check(text.Contains("Preamp: -", StringComparison.Ordinal), "Equalizer APO's preamp didn't make room for a +6 dB boost.");
+        Check(!text.Contains("Channel:", StringComparison.Ordinal), "Equalizer APO was handed a balance though it's centred.");
+
+        Check(EqualizerApo.Describe(equalizer.Design, -0.5).Contains("Channel: R\r\nPreamp: -6.02 dB", StringComparison.Ordinal),
+            "Leaning the balance left didn't turn Equalizer APO's right side down 6 dB.");
+
+        equalizer.Configure(false, bands, gains, 0);
+        Check(!EqualizerApo.Describe(equalizer.Design, 0).Contains("GraphicEQ", StringComparison.Ordinal),
+            "Equalizer APO was handed a curve while the equalizer was off.");
+
+        if (problems == 0)
+        {
+            Console.WriteLine("Equalizer APO is handed the equalizer's curve as it sounds.");
+        }
+
+        return problems;
+    }
+
     private static int TestOtherApps()
     {
         var problems = 0;

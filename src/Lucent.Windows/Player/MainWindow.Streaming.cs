@@ -467,7 +467,107 @@ public partial class MainWindow
         // Only while nothing is heard: a computer the app names differently from this one may still be this one.
         var note = _remote is { } remote && _player.Capture.HeardNothingFor(TimeSpan.FromSeconds(2)) ? remote.ElsewhereNote : null;
         _visuals.ShowElsewhere(note, _remote?.CanPlayHere == true);
-        EqualizerWindow.ShowPlayingIn(_remote?.Player.Name);
+        UpdateEqualizerApo();
+        EqualizerWindow.ShowStreaming(StreamingEqualizer());
+    }
+
+    // Hands the equalizer's curve to Equalizer APO while it shapes the controlled app (see Audio/EqualizerApo.cs).
+    private EqualizerApo? _equalizerApo;
+
+    // Set when Equalizer APO is installed but its settings couldn't be written.
+    private string? _equalizerApoProblem;
+
+    private void UpdateEqualizerApo()
+    {
+        var wanted = _remote is not null && _settings.EqualizeStreamingApps && _equalizerApoProblem is null;
+        if (wanted == (_equalizerApo is not null))
+        {
+            return;
+        }
+
+        _equalizerApo?.Dispose();
+        _equalizerApo = null;
+        if (!wanted)
+        {
+            return;
+        }
+
+        try
+        {
+            _equalizerApo = EqualizerApo.Start(_player.Equalizer);
+        }
+        catch (InvalidOperationException)
+        {
+            // Not installed (yet): the equalizer window offers to set it up, and each read of the app looks again.
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Equalizer APO", ex);
+            _equalizerApoProblem = "Lucent couldn't write Equalizer APO's settings";
+        }
+    }
+
+    /// <summary>What the equalizer is doing to the controlled app, for its status line (null while there's no app).</summary>
+    private StreamingEqualizerStatus? StreamingEqualizer()
+    {
+        if (_remote is not { } remote)
+        {
+            return null;
+        }
+
+        var app = remote.Player.Name;
+        if (!_settings.EqualizeStreamingApps)
+        {
+            return new StreamingEqualizerStatus(app, null, null, "Turn on");
+        }
+
+        if (_equalizerApo is not null)
+        {
+            return new StreamingEqualizerStatus(app, _player.Equalizer, null, null);
+        }
+
+        return _equalizerApoProblem is { } problem
+            ? new StreamingEqualizerStatus(app, null, problem, null)
+            : new StreamingEqualizerStatus(app, null, $"Shaping {app}'s sound needs Equalizer APO, a free add-on", "Set up");
+    }
+
+    // The equalizer window's button: have the EQ shape the controlled app too, setting up Equalizer APO if it's missing.
+    private void OnStreamingEqualizerAction(object? sender, EventArgs e) => TurnOnStreamingEqualizer();
+
+    private void TurnOnStreamingEqualizer()
+    {
+        _settings.EqualizeStreamingApps = true;
+        _settings.Save();
+        _equalizerApoProblem = null;
+        ShowSoundValues();
+        if (EqualizerApo.ConfigFolder() is null)
+        {
+            OfferEqualizerApo();
+        }
+
+        ShowWhereItPlays();
+    }
+
+    private void OfferEqualizerApo()
+    {
+        var answer = MessageBox.Show(this,
+            "Windows doesn't let Lucent take another app's sound, so Lucent shapes it through Equalizer APO, a free equalizer for all of Windows.\n\n"
+            + "Download and install it, tick your speakers or headphones when its setup asks, and restart. Lucent finds it after that.\n\n"
+            + "Open Equalizer APO's download page?",
+            "Lucent", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+        if (answer != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(EqualizerApo.DownloadPage) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("Equalizer APO download page", ex);
+        }
     }
 
     // Set while the volume bar is being moved to show a volume, so that isn't taken as the user changing it.

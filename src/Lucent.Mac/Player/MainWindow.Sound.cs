@@ -153,6 +153,7 @@ public partial class MainWindow
         ExclusiveSwitch.IsChecked = _settings.ExclusiveOutput;
         GaplessSwitch.IsChecked = _settings.Gapless;
         CrossfadeSwitch.IsChecked = _settings.Crossfade;
+        EqualizeStreamingSwitch.IsChecked = _settings.EqualizeStreamingApps;
         CrossfadeLengthName.Text = $"{Math.Clamp(_settings.CrossfadeSeconds, 1, 12)} seconds  ▾";
         OutputDeviceName.Text = _settings.OutputDevice is null
             ? "Mac default output  ▾"
@@ -232,6 +233,14 @@ public partial class MainWindow
         {
             _settings.Crossfade = on;
             ChangeCrossfade();
+        }
+        else if (sender == EqualizeStreamingSwitch)
+        {
+            _settings.EqualizeStreamingApps = on;
+            _settings.Save();
+            _equalizeFailed = false;
+            UpdateListening();
+            ShowWhereItPlays();
         }
     }
 

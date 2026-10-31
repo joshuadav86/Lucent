@@ -6,7 +6,7 @@
 - 4, 8, 16, 24, or 32 faders drawn over the live spectrum, with 15 presets and a balance control.
 - The spectrum shows energy per slice of an octave (bins averaged, 3 dB per octave lift), so pink noise draws flat and music falls away at the top as much as it really does.
 - Shapes only the player's sound. Its spectrum pauses while the editor plays, because the EQ doesn't shape the editor.
-- Can't shape a streaming app Lucent controls (Spotify, Apple Music, YouTube Music, and the rest): the app plays its own sound. While one is in control the status line says so in the accent colour; the spectrum keeps moving because it hears the app.
+- Shapes the streaming app Lucent controls (Spotify, Apple Music, YouTube Music, and the rest) only when "EQ streaming apps too" is on in Options › Sound (off by default). While an app is in control the status line says whether the EQ reaches it, with a Turn on or Set up button when it doesn't; the spectrum moves either way because it hears the app.
 - Switches to the classic skin format's 10 octave bands while a .wsz skin is on.
 - Off in bit-perfect mode.
 
@@ -21,11 +21,11 @@
 
 ## Windows
 
-WPF drawing (`Windows/Spectrogram*.cs`, `Windows/EqualizerSpectrum.cs`). Other apps' sound comes from WASAPI loopback; music Lucent plays in exclusive mode skips Windows' mixer, so loopback can't hear it.
+WPF drawing (`Windows/Spectrogram*.cs`, `Windows/EqualizerSpectrum.cs`). Other apps' sound comes from WASAPI loopback; music Lucent plays in exclusive mode skips Windows' mixer, so loopback can't hear it. Windows can't quieten another app for Lucent to play, so a streaming app is shaped through Equalizer APO (`Audio/EqualizerApo.cs`, installed separately): Lucent writes the curve to lucent.txt in its settings folder (included from config.txt, the boost paid for in the preamp), flattens it when the app stops being controlled, and on start in case it was left on. Equalizer APO shapes every app on that output meanwhile.
 
 ## Mac
 
-Avalonia drawing. Other apps' sound comes from a Core Audio process tap (macOS 14.2 or later, needs the user's OK).
+Avalonia drawing. Other apps' sound comes from a Core Audio process tap (macOS 14.2 or later, needs the user's OK). To shape a streaming app, the tap of just that app plays through a copy of the player's equalizer (`Equalizer.CopyFrom`, following `Equalizer.Changed`) on the tap's own aggregate device, so it shares the output's clock. macOS quietens the app (muted when tapped) only once the tap has heard it, so a tap without permission never leaves the app silent, and the app is heard again when Lucent stops.
 
 ## Parity gaps
 
@@ -35,12 +35,13 @@ None.
 
 - `Lucent.Core/Audio/Equalizer.cs`, `EqualizerBands.cs`, `EqualizerDesign.cs`, `EqualizerPresets.cs`
 - `Lucent.Core/Audio/LoudnessMeter.cs`, `AudioCapture.cs`, `EditorFeed.cs`, `InputFeed.cs`
+- `Lucent.Core/Audio/StreamingEqualizerStatus.cs`, Windows' `Audio/EqualizerApo.cs`
 - `EqualizerWindow.*`, `AnalyzerWindow.*`, `Audio/SystemAudio.cs`, `MainWindow.ListenInput.cs` in each app
-- Settings: `AnalyzerModules`, `AnalyzerSensitivity`, `ListenInput`, `ListenInputChannel`, `EqualizerSettings`
+- Settings: `AnalyzerModules`, `AnalyzerSensitivity`, `ListenInput`, `ListenInputChannel`, `EqualizerSettings`, `EqualizeStreamingApps`
 
 ## Checks
 
-`LoudnessSelfTest` (EBU Tech 3341/3342 tones), `EqualizerSelfTest` (each band's slider moves a tone at its centre by that much, mid-song changes take effect, and off is untouched), and `EditorFeedSelfTest` run in both apps' `--self-test`.
+`LoudnessSelfTest` (EBU Tech 3341/3342 tones), `EqualizerSelfTest` (each band's slider moves a tone at its centre by that much, mid-song changes take effect, and off is untouched), and `EditorFeedSelfTest` run in both apps' `--self-test`. Windows also checks the curve it hands Equalizer APO (`TestEqualizerApo`).
 
 ## Adding an audio source
 

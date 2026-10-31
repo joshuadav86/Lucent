@@ -98,6 +98,8 @@ public partial class MainWindow : Window
         _player.Volume = (float)VolumeSlider.Value;
         _player.Equalizer.Apply(_settings.Equalizer);
         _player.Equalizer.Balance = _settings.Balance;
+        EqualizerWindow.StreamingActionClicked += OnStreamingEqualizerAction;
+        EqualizerApo.FlattenLeftover();
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
         _player.VideoChanged += (_, _) => OnVideoChanged();
