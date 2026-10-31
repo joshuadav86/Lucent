@@ -15,6 +15,7 @@ internal static unsafe partial class AudioTap
 
     public const uint TapFormatProperty = 0x74666D74; // 'tfmt': the tap's AudioStreamBasicDescription
     public const uint NonInterleavedFlag = 1 << 5;    // kAudioFormatFlagIsNonInterleaved
+    public const uint TapDescriptionProperty = 0x74647363; // 'tdsc': kAudioTapPropertyDescription
 
     static AudioTap()
     {
@@ -74,6 +75,22 @@ internal static unsafe partial class AudioTap
 
         var description = ObjC.Send(ObjC.Send(ObjC.Class("CATapDescription"), "alloc"), "initStereoMixdownOfProcesses:", list);
         return Finish(description, name);
+    }
+
+    /// <summary>
+    /// Has macOS quieten the tapped apps' own sound for as long as the tap is being read (CATapMutedWhenTapped), so
+    /// Lucent can play it instead. If Lucent stops reading (it quits, or crashes), the apps are heard again.
+    /// </summary>
+    public static void MuteWhileTapped(uint tap, IntPtr description)
+    {
+        ObjC.SendVoid(description, "setMuteBehavior:", (ulong)2);
+        var address = new CoreAudio.AudioObjectPropertyAddress(TapDescriptionProperty);
+        var value = description;
+        var result = CoreAudio.AudioObjectSetPropertyData(tap, &address, 0, null, (uint)sizeof(IntPtr), &value);
+        if (result != 0)
+        {
+            throw new IOException($"macOS wouldn't quieten the app to play it through the equalizer (error {result}).");
+        }
     }
 
     /// <summary>

@@ -100,7 +100,33 @@ public sealed class Equalizer : ISampleProvider
     public double Balance
     {
         get => _balance;
-        set => _balance = (float)Math.Clamp(value, -1, 1);
+        set
+        {
+            _balance = (float)Math.Clamp(value, -1, 1);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Raised on the UI thread after any setting or the balance changes, so an equalizer shaping other sound (a
+    /// streaming app's) can follow this one with <see cref="CopyFrom"/>.
+    /// </summary>
+    public event EventHandler? Changed;
+
+    /// <summary>Takes on another equalizer's settings and balance: on or off, band layout, sliders and preamp.</summary>
+    public void CopyFrom(Equalizer other)
+    {
+        bool enabled;
+        EqualizerBands bands;
+        double[] gains;
+        double preamp;
+        lock (other._gate)
+        {
+            (enabled, bands, gains, preamp) = (other._enabled, other._bands, other._gains, other._preampDb);
+        }
+
+        Configure(enabled, bands, gains, preamp);
+        _balance = other._balance;
     }
 
     public int Read(float[] buffer, int offset, int count)
@@ -146,6 +172,8 @@ public sealed class Equalizer : ISampleProvider
             UpdateDesigns(stream?.WaveFormat.SampleRate ?? _design.SampleRate);
             stream?.Retarget(_design);
         }
+
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>The band layout saved settings are for: one of Lucent's, or the classic skin's ten.</summary>

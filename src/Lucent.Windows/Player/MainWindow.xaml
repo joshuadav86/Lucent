@@ -448,6 +448,11 @@
                             ToolTip="How long the songs overlap" Click="OnChooseCrossfadeLength">
                         <TextBlock x:Name="CrossfadeLengthName" />
                     </Button>
+
+                    <CheckBox x:Name="EqualizeStreamingSwitch" Style="{StaticResource SwitchToggle}" Content="EQ streaming apps too"
+                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="While Lucent controls Spotify, Apple Music, or a browser, the equalizer shapes their sound through Equalizer APO, a free add-on for Windows. It shapes everything playing on your speakers while an app is in control." />
                 </StackPanel>
 
                 <StackPanel x:Name="ThemeTab" Visibility="Collapsed">

@@ -136,6 +136,13 @@ public sealed class AppSettings
     /// <summary>Fade each track into the next, overlapping them by <see cref="CrossfadeSeconds"/>.</summary>
     public bool Crossfade { get; set; }
 
+    /// <summary>
+    /// Whether the equalizer also shapes the streaming app Lucent controls (Spotify, Apple Music, a browser tab).
+    /// On a Mac Lucent mutes the app and plays its sound through the equalizer; on Windows it hands the curve to
+    /// Equalizer APO, which has to be installed. Off by default: people turn it on.
+    /// </summary>
+    public bool EqualizeStreamingApps { get; set; }
+
     /// <summary>How long a crossfade lasts, in seconds.</summary>
     public int CrossfadeSeconds { get; set; } = 5;
 
@@ -512,8 +519,10 @@ public sealed class AppSettings
         ["Champagne Toast"] = "Polytope Bloom",
         ["Single Drop"] = "Superformula",
         ["Fireworks Night"] = "Spiral Shell",
+        ["Horizon Line"] = "Loxodrome",
         ["Marble Run"] = "Boy's Surface",
         ["Mercury Lake"] = "Enneper Bloom",
+        ["Spark Forge"] = "Epicycle Rosette",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
