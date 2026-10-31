@@ -116,6 +116,7 @@ public static partial class SelfTest
         failures += Lucent.Library.TempoKeySelfTest.Run(Console.WriteLine);
         failures += Lucent.Library.LibraryGroupsSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.CoverSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Streaming.SpotifyLimitSelfTest.Run(Console.WriteLine);
         failures += Lucent.Library.PlaylistColumnsSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;

@@ -12,7 +12,7 @@ Lucent controls another music app from its own player: song, cover, position, pl
 | YouTube, YouTube Music, SoundCloud | One "Control your web browser" item, through media controls | A tab in Safari, Chrome, Edge, or Brave, through AppleScript and JavaScript |
 | Pandora | Pandora's window through UI Automation, thumbs included | pandora.com in a browser tab, thumbs included |
 
-**Spotify extras (both):** queue centred on the playing song with Sort (playlist order, recently added, title, artist); playlists and Liked Songs in the library up to 10,000 songs, kept on disk once read whole so a long one opens whole on the next run unless it's changed (`RemoteListStore`, cleared on sign-out); click a playlist to open its songs, with sortable columns (album, date added, year and more, see [Library and queue](library-and-queue.md)); Add to playlist with a duplicate check; Share song link; "Play on this Mac/PC" when Spotify plays on a TV or speaker.
+**Spotify extras (both):** queue centred on the playing song with Sort (playlist order, recently added, title, artist); playlists and Liked Songs in the library up to 10,000 songs, kept (in memory for every connection, and on disk) once read whole so one opens again with a single version check unless it's changed (`RemoteListStore`, cleared on sign-out); the account's playlist list is kept too; click a playlist to open its songs, with sortable columns (album, date added, year and more, see [Library and queue](library-and-queue.md)); Add to playlist with a duplicate check; Share song link; "Play on this Mac/PC" when Spotify plays on a TV or speaker.
 
 **Every app (both):** Share works for all (Apple Music link or song.link page when the app gives no link). When the app isn't open, an Open button replaces the volume bar. Queue and PLAYLISTS say why they're empty when an app can't share them.
 
@@ -24,7 +24,7 @@ Lucent controls another music app from its own player: song, cover, position, pl
 
 ## Rules
 
-- Spotify rate limits: never poll the Web API faster than now (3 s playing, 5 s paused for the old path; 30 s with the local app). The dev-mode limit is shared by all users.
+- Spotify rate limits: never poll the Web API faster than now (5 s while another device plays; while nothing plays 5 s, then 15 s after a minute, then 60 s after ten minutes; 30 s with the local app playing). Long playlists page at 1 s after the first 1,000 songs. The dev-mode limit is shared by all users. A 429's Retry-After is shared by every `SpotifyRemote` and saved to disk (`SpotifyWait`, "Spotify wait.txt"), so no connection asks again until it ends, even after a restart; meanwhile opened playlists and the playlist list show their last kept copy with a note saying when it's from.
 - Never run two Spotify sessions at once (refresh tokens rotate).
 - Only call the local Spotify app while it's running, or macOS asks "Where is Spotify?".
 
