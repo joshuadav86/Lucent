@@ -30,7 +30,7 @@ float3 Render(float2 uv, float2 p)
     float3 stars = 0.0;
     for (int layer = 0; layer < 4; layer++)
     {
-        float depth = frac(layer * 0.25 + Time * (0.05 + Level * 0.1));
+        float depth = frac(layer * 0.25 + Time * 0.05 + (BeatCount - Beat) * 0.03);
         stars += starLayer(p, depth, layer);
     }
 

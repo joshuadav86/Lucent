@@ -52,16 +52,19 @@ float3 blobNormal(float3 p, float4 blobs[BlobCount], float merge)
 }
 
 // The light the chrome reflects: a quasicrystal, seven sets of waves crossing at even angles, so it
-// never quite repeats; it drifts and shimmers with the bass.
+// never quite repeats; it drifts on its own and surges a little on every beat. (The drift must never be
+// Time times a music level: Time keeps growing, so every small change in the level would jump the pattern
+// a long way between frames and make it flicker.)
 float blobWave(float3 direction)
 {
+    float drift = Time * 0.4 + (BeatCount - Beat) * 0.25;
     float2 u = direction.xz / (1.2 + abs(direction.y)) * 9.0;
     float total = 0.0;
     [unroll]
     for (int k = 0; k < 7; k++)
     {
         float angle = k * PI / 7.0 + Time * 0.01;
-        total += cos(dot(u, float2(cos(angle), sin(angle))) + Time * (0.4 + Bass * 0.6));
+        total += cos(dot(u, float2(cos(angle), sin(angle))) + drift);
     }
     return total / 7.0 * 2.2 + direction.y * 1.5 - Time * 0.1;
 }
