@@ -297,7 +297,7 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
 
         try
         {
-            await CommandAsync(HttpMethod.Put, $"/volume?volume_percent={(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
+            await CommandAsync(HttpMethod.Put, $"/volume?volume_percent={SpotifyVolume.ToSpotifyPercent(volume)}", cancel);
         }
         catch (RemoteProblem) when (AppHereSetsVolume is { } local)
         {
@@ -399,7 +399,8 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
             var canSet = !deviceJson.TryGetProperty("supports_volume", out var supports) || supports.ValueKind != JsonValueKind.False;
             if (canSet && deviceJson.TryGetProperty("volume_percent", out var percent) && percent.ValueKind == JsonValueKind.Number)
             {
-                volume = Math.Clamp(percent.GetDouble() / 100, 0, 1);
+                // Spotify's slider, which is much steeper than Lucent's bar (SpotifyVolume).
+                volume = SpotifyVolume.FromSpotify(percent.GetDouble() / 100);
             }
         }
 
