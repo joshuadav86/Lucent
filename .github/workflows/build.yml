@@ -254,7 +254,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::AvsCheck failed"; $failed = $true }
           # MilkDrop presets: the engine's own passes, then the sample presets' shaders as the app
           # translates them. MilkDropCheck also checks the expression language and runs each preset.
-          $milkDrop = (Get-Content "$root/Shaders/MilkDrop.hlsli" -Raw) + "`n" + (Get-Content "$root/Shaders/MilkDrop.hlsl" -Raw)
+          # As the Windows app compiles them: it says where each batch of waves and shapes starts (MD_DRAW_FIRST).
+          $milkDrop = "#define MD_DRAW_FIRST`n" + (Get-Content "$root/Shaders/MilkDrop.hlsli" -Raw) + "`n" + (Get-Content "$root/Shaders/MilkDrop.hlsl" -Raw)
           foreach ($entry in "VSWarp", "VSScreen", "VSDraw") {
             if (-not (Test-Shader "MilkDrop" $milkDrop $entry "vs_5_0")) { $failed = $true }
           }
