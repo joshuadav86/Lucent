@@ -43,7 +43,7 @@ public static class LucentFullScreen
     /// <summary>Whether a window is one that Lucent full screen lays out, whose title bar gets the menu.</summary>
     public static Func<Window, bool>? Covers { get; set; }
 
-    /// <summary>Adds "Full screen Lucent", ticked while it's on, "Tidy layout", "Layouts" (<see cref="SavedLayoutsMenu"/>), "Reset to default layout", and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
+    /// <summary>Adds "Full screen Lucent", ticked while it's on, "Single window" (<see cref="SingleWindow"/>), "Tidy layout", "Layouts" (<see cref="SavedLayoutsMenu"/>), "Reset to default layout", and "Close" for the window to the end of a right-click menu. A menu kept and opened again gets them once.</summary>
     public static void AddTo(ContextMenu menu, Window window)
     {
         if (menu.Items.OfType<MenuItem>().Any(item => item.Tag == Marker))
@@ -60,6 +60,7 @@ public static class LucentFullScreen
         item.IsChecked = IsOn?.Invoke() == true;
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
+        menu.Items.Add(SingleWindow.Item());
         var tidy = new MenuItem { Header = "Tidy layout", InputGestureText = TidyGesture, ToolTip = MenuTips.Tidy };
         tidy.Click += (_, _) => Tidy?.Invoke();
         menu.Items.Add(tidy);
@@ -79,6 +80,8 @@ public static class LucentFullScreen
                 {
                     shown.IsChecked = IsOn?.Invoke() == true;
                 }
+
+                SingleWindow.Tick(menu.Items);
 
                 // Layouts saved, renamed or deleted since it last opened.
                 foreach (var shown in menu.Items.OfType<MenuItem>().Where(entry => entry.Tag == LayoutsMarker))

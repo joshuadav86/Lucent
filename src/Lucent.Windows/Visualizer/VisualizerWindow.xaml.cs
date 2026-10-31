@@ -190,7 +190,7 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         // Typing goes to the window that's active, so make it this one (V may have been pressed in the player).
-        if (!IsActive)
+        if (!IsActive && !Windows.SingleWindow.Holds(this))
         {
             Activate();
         }
@@ -1011,6 +1011,12 @@ public partial class VisualizerWindow : ToolWindow
             Show();
         }
 
+        // A panel of the single window is a window of its own while it's full screen.
+        if (!_isFullscreen)
+        {
+            _takenOutForFullscreen = Windows.SingleWindow.TakeOut(this);
+        }
+
         _isFullscreen = !_isFullscreen;
         var chrome = _isFullscreen ? Visibility.Collapsed : Visibility.Visible;
         TitleBar.Visibility = chrome;
@@ -1052,8 +1058,16 @@ public partial class VisualizerWindow : ToolWindow
         else
         {
             StopExitButton();
+            if (_takenOutForFullscreen)
+            {
+                _takenOutForFullscreen = false;
+                Windows.SingleWindow.PutBack(this);
+            }
         }
     }
+
+    /// <summary>It was a panel of the single window before it went full screen, and goes back in after.</summary>
+    private bool _takenOutForFullscreen;
 
     private void OnMaximizeRestore(object sender, RoutedEventArgs e)
     {

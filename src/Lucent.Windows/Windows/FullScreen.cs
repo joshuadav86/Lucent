@@ -19,6 +19,7 @@ public sealed class FullScreen
     private WindowState _stateBefore;
     private Rect _boundsBefore;
     private bool _switching;
+    private bool _takenOut;
 
     /// <param name="button">The title bar button that toggles it, whose icon and tooltip follow it.</param>
     public FullScreen(Window window, Button button, Path icon)
@@ -45,6 +46,8 @@ public sealed class FullScreen
         IsOn = !IsOn;
         if (IsOn)
         {
+            // A panel of the single window is a window of its own while it's full screen.
+            _takenOut = SingleWindow.TakeOut(_window);
             _stateBefore = _window.WindowState == WindowState.Minimized ? WindowState.Normal : _window.WindowState;
             _boundsBefore = _window.RestoreBounds;
             // Leave Maximized first so Windows recalculates the size without the frame, and the
@@ -71,7 +74,18 @@ public sealed class FullScreen
 
         _switching = false;
         UpdateButton();
+        PutBackIfTakenOut();
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Back in the single window, once out of full screen, if it was a panel there before.</summary>
+    private void PutBackIfTakenOut()
+    {
+        if (!IsOn && _takenOut)
+        {
+            _takenOut = false;
+            SingleWindow.PutBack(_window);
+        }
     }
 
     private void OnStateChanged(object? sender, EventArgs e)
@@ -83,6 +97,7 @@ public sealed class FullScreen
             _window.WindowStyle = WindowStyle.SingleBorderWindow;
             _window.ResizeMode = ResizeMode.CanResize;
             UpdateButton();
+            PutBackIfTakenOut();
             Changed?.Invoke(this, EventArgs.Empty);
         }
     }

@@ -17,6 +17,7 @@ public class ToolWindow : Window
         ShowInTaskbar = false;
         AllowDrop = true;
         ShowActivated = false;
+        SingleWindow.Watch(this);
     }
 
     /// <summary>The player window this window belongs to.</summary>
@@ -86,6 +87,15 @@ public class ToolWindow : Window
     protected override void OnPreviewDrop(DragEventArgs e)
     {
         base.OnPreviewDrop(e);
+        if (Player is not null && DroppedMusic.Paths(e) is { Count: > 0 } paths)
+        {
+            OnMusicDropped(paths);
+        }
+    }
+
+    /// <summary>Music dropped on this window's panel in the single window, handed on by the player as if it were dropped here.</summary>
+    internal void TakeDrop(DragEventArgs e)
+    {
         if (Player is not null && DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
             OnMusicDropped(paths);
