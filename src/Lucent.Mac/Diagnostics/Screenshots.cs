@@ -610,6 +610,7 @@ public static partial class Screenshots
         var window = EqualizerWindow.Create(player, settings, fitWidth);
         if (PreviewClip is not null)
         {
+            window.Spectrum.AdvancedByHand = true;
             FeedClip(player.Capture, (seconds, _) => window.Spectrum.Advance((float)seconds));
             return window;
         }
@@ -628,6 +629,7 @@ public static partial class Screenshots
         var window = AnalyzerWindow.Create(player, new AppSettings());
         if (PreviewClip is not null)
         {
+            window.Picture.AdvancedByHand = true;
             FeedClip(player.Capture, (seconds, _) => window.Picture.Advance(seconds));
             return window;
         }

@@ -970,6 +970,26 @@ footer .credits a { text-decoration: underline; }
   const root = document.documentElement;
   const css = n => getComputedStyle(root).getPropertyValue(n).trim();
 
+  // The moving clips that should be playing now. Browsers sometimes pause a muted video by themselves (to save
+  // power, after a stall, or while the tab was in the background), so each one is checked every second and started
+  // again, and one stuck waiting for data for a few seconds is loaded afresh.
+  const playing = new Set();
+  const keepPlaying = (v, on) => {
+    if (on) { playing.add(v); v.play().catch(() => {}); } else { playing.delete(v); v.pause(); }
+  };
+  const nudgeClips = () => {
+    if (document.hidden) return;
+    playing.forEach(v => {
+      if (!v.isConnected && !v.offPage) { playing.delete(v); return; }
+      if (v.paused || v.ended) { v.play().catch(() => {}); v.stuck = 0; }
+      else if (v.currentTime === v.lastTime && ++v.stuck >= 4) { v.stuck = 0; const t = v.currentTime; v.load(); v.currentTime = t; v.play().catch(() => {}); }
+      else if (v.currentTime !== v.lastTime) v.stuck = 0;
+      v.lastTime = v.currentTime;
+    });
+  };
+  setInterval(nudgeClips, 1000);
+  document.addEventListener("visibilitychange", nudgeClips);
+
   /* ---------- the window tour at the top: Lucent full screen, a window at a time ---------- */
   // [name, file, place on a 2560 × 1440 screen (x, y, width, height, from FullScreenLayout), what it is, alt text, floats over the rest]
   const WINDOWS = [
@@ -1061,10 +1081,10 @@ footer .credits a { text-decoration: underline; }
 
     // The player, equalizer, analyzer, and visual in motion, all moving to the same stretch of a song: one looping
     // video holds all four (see LIVE), drawn into canvases over the still windows, so they never drift apart.
-    const live = { video: null, shown: false, inView: false };
+    const live = { video: null, shown: false, inView: false, drawing: false };
     const drawLive = () => {
       const v = live.video;
-      if (!v || v.paused) return;
+      if (!v || v.paused) { live.drawing = false; return; }
       document.querySelectorAll("canvas.live:not(.off)").forEach(c => {
         const [, , [sx, sy, sw, sh]] = LIVE.find(l => WINDOWS[c.dataset.w][0] === l[0]);
         c.getContext("2d").drawImage(v, sx, sy, sw, sh, 0, 0, sw, sh);
@@ -1073,14 +1093,14 @@ footer .credits a { text-decoration: underline; }
     };
     const runLive = () => {
       const want = live.inView || !box.hidden;
-      if (!want) { live.video?.pause(); return; }
+      if (!want) { if (live.video) keepPlaying(live.video, false); return; }
       if (!live.video) {
         const v = live.video = document.createElement("video");
-        v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto";
+        v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto"; v.offPage = true;
         v.innerHTML = '<source src="img/tour/live.mp4" type="video/mp4"><source src="img/tour/live.webm" type="video/webm">';
-        v.addEventListener("playing", () => { if (!live.shown) { live.shown = true; show(); } drawLive(); });
+        v.addEventListener("playing", () => { if (!live.shown) { live.shown = true; show(); } if (!live.drawing) { live.drawing = true; drawLive(); } });
       }
-      live.video.play().catch(() => {});
+      keepPlaying(live.video, true);
     };
     if (!reduce && "IntersectionObserver" in window) {
       new IntersectionObserver(([e]) => { live.inView = e.isIntersecting; runLive(); }).observe(stage);
@@ -1180,7 +1200,7 @@ footer .credits a { text-decoration: underline; }
   function watchClips(scope) {
     if (reduce || !("IntersectionObserver" in window)) return;
     clipWatch ??= new IntersectionObserver(entries => entries.forEach(e =>
-      e.isIntersecting ? e.target.play().catch(() => {}) : e.target.pause()), { threshold: .25 });
+      keepPlaying(e.target, e.isIntersecting)), { threshold: .25 });
     scope.querySelectorAll("video").forEach(v => clipWatch.observe(v));
   }
 
@@ -1198,8 +1218,6 @@ footer .credits a { text-decoration: underline; }
   };
   const ALL = [["rt",0],["pa",0],["ge",0],["co",0],["ms",0],["ge",1],["mi",0],["ka",0],["pa",4],["ms",1],["ka",1],["co",2],["rt",1],["pa",2],["fr",2],["co",1],["pa",13],["fr",0],["ge",2],["mi",1],["rt",3],["cy",0],["fr",3],["rt",2],["pa",16]];
   const SHORT = { rt: "Ray traced", pa: "Particles", ge: "Geometric", mi: "Minimal", ka: "Kaleido", fr: "Fractal", ms: "Music-shaped", cy: "Cyberpunk", co: "Cosmic" };
-  // Visuals with a moving clip (img/clips), each a few seconds of the visual playing to Kepler North's Self Actualize.
-  const CLIPS = new Set(["ferrofluid", "firefly-meadow", "bass-nebula", "polyhedra-waltz", "pulsar-ridges", "waveform-tunnel", "quasicrystal", "strange-attractors", "truchet-weave"]);
   const chips = document.getElementById("chips"), gallery = document.getElementById("gallery");
   const famBtn = (key, label, count) => {
     const b = document.createElement("button");
@@ -1216,7 +1234,7 @@ footer .credits a { text-decoration: underline; }
     clipWatch?.disconnect();
     gallery.innerHTML = items.map(([f, [file, name]], i) =>
       `<figure class="tile${i === 0 ? " big" : ""}" style="animation-delay:${Math.min(i, 12) * 30}ms">
-        ${CLIPS.has(file) ? clip(`clips/${file}`, `img/${file}.jpg`, `${name} visual`) : `<img src="img/${file}.jpg" alt="${name} visual" loading="lazy">`}
+        ${reduce ? `<img src="img/${file}.jpg" alt="${name} visual" loading="lazy">` : clip(`clips/${file}`, `img/clips/${file}.jpg`, `${name} visual`)}
         <figcaption>${name}<span>${SHORT[f]}</span></figcaption></figure>`).join("");
     if (clipWatch) watchClips(gallery);
   }
