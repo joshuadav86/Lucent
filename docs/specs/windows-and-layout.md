@@ -12,6 +12,7 @@ Lucent is a set of small windows: player, visuals (W), queue (Q), library (L), e
 - **Swap:** drag a window well inside another and they trade places and sizes (an outline shows "Swap with …"). Not for the player, the equalizer, or locked windows.
 - **Lucent full screen (Shift+F11,** right-click "Full screen Lucent", or double-click the player's title bar): every open window tiles one screen, at any scaling. Swaps are kept while in full screen.
 - **Tidy layout (Shift+D):** cycles symmetric layouts (centred, centred mirrored, classic, mirrored). Full screen it fills the screen. Otherwise it's a compact block around the player, which stays put: sizes come from the player's size only, so every press gives the same block, kept on screen and clear of locked windows (`FullScreenLayout.ArrangeAround`). The note names any locked windows it left alone.
+- **Single window (U,** or right-click "Single window" in any window; Mac also Window › Single Window): every open window becomes a panel inside the player's window, under one title bar. Panels are laid out like Lucent full screen, inside the window; resizing the window lays them out again, opening one grows the window to fit, and Tidy layout cycles the same styles. Shift+F11 or a double-click on the title bar makes the window fill its screen. Dragging a panel's title strip moves the window, and keys and dropped files go to the panel's own window. A panel's own full screen (visuals F11, analyzer, video) takes it out as a window until it's back. Editors, Record, and dialogs stay separate. Off with a classic skin; D, G, K, saved layouts, and Reset switch it off. Lucent reopens as a single window if it closed as one. The windows stay open but out of sight while their insides are lent to the panels, so everything that asks whether a window is open still works.
 - **Saved layouts:** right-click › Layouts in any window (Mac also Window › Layouts). "Save current layout…" asks for a name (a taken name replaces that layout after a warning) and keeps which windows are open, their places and sizes, locks, link, the player's size, and full screen with its tidy style and swaps (saved full screen, it keeps where the windows go back to, and opens full screen again). Picking one, or pressing 1 to 9 for the first nine, puts it back: the visuals, queue, library, equalizer, analyzer and artwork open or close to match, while video, radio and editors stay as they are and only move. A layout saved on a screen that's gone moves onto the player's screen whole. Rename layout and Delete layout are in the same submenu.
 - **Reset to default layout:** right-click menu and Mac Window menu. Puts back the first-start layout: player at its usual size, equalizer and visuals, queue/library/analyzer/artwork closed, all windows unlocked, out of full screen. Video, radio and editors stay open and dock back on.
 - **Right-click > Close** on every window; the player's reads "Close Lucent".
@@ -29,6 +30,7 @@ Lucent is a set of small windows: player, visuals (W), queue (Q), library (L), e
 | W Q L E Y C P | Visuals, queue, library, equalizer, analyzer, artwork, video |
 | D G K | Dock, fill, shrink |
 | J / Shift+D | Link windows, tidy layout |
+| U | Single window |
 | 1 to 9 | Saved layouts |
 | O / M | Options, Sources |
 | V / N / B / A / F | Picker, next visual, back, Auto, star the visual |
@@ -51,10 +53,10 @@ Mac-only menu bar (Windows has the same commands in right-click menus and keys).
 
 ## Code
 
-- `Lucent.Core/Layout/FullScreenLayout.cs`, `WindowSwap.cs`, `SavedLayouts.cs`
-- `Windows/` in each app (`WindowSnapper`, `WindowLocks`, `LockButton`, `LucentFullScreen`, `SavedLayoutsMenu`, `SwapHighlight`, `CloseItem`, `ToolWindow`, `Toast`)
-- `MainWindow.WindowPlaces.cs`, `MainWindow.FullScreen.cs`, `MainWindow.Layouts.cs`, `MainWindow.PlayerSize.cs` in each app
-- Settings: `Windows`, `LockedWindows`, `LinkWindows`, `LucentFullScreen`, `WindowsBeforeFullScreen`, `FullScreenSwaps`, `FullScreenStyle`, `Layouts`
+- `Lucent.Core/Layout/FullScreenLayout.cs`, `WindowSwap.cs`, `SavedLayouts.cs`, `SingleWindowLayout.cs`
+- `Windows/` in each app (`WindowSnapper`, `WindowLocks`, `LockButton`, `LucentFullScreen`, `SavedLayoutsMenu`, `SingleWindow`, `SwapHighlight`, `CloseItem`, `ToolWindow`, `Toast`)
+- `MainWindow.WindowPlaces.cs`, `MainWindow.FullScreen.cs`, `MainWindow.Layouts.cs`, `MainWindow.PlayerSize.cs`, `MainWindow.SingleWindow.cs` in each app
+- Settings: `Windows`, `LockedWindows`, `LinkWindows`, `LucentFullScreen`, `WindowsBeforeFullScreen`, `FullScreenSwaps`, `FullScreenStyle`, `SingleWindow`, `SingleWindowPlace`, `SingleWindowStyle`, `SingleWindowSwaps`, `Layouts`
 
 ## Adding a window
 
@@ -62,4 +64,4 @@ Add a `TileKind`, map it in `TileKindOf()`, add it to `TiledWindows()`, and call
 
 ## Checks
 
-`tools/LayoutCheck` (parity job) checks every full-screen layout at 100 to 200% scaling and on Mac screens: no overlaps, nothing off screen, minimum sizes, locks, swaps, and every tidy style. It also tidies out of full screen from scattered, far-off, huge and locked windows, and checks the block stays docked together, nothing is blown up, the player only moves to keep the block on screen, and two rounds of presses give the same layouts. Saved layouts: a taken name replaces that layout in place, renames can't clash, only the first nine have keys, and a layout from a missing screen moves onto another whole.
+`tools/LayoutCheck` (parity job) checks every full-screen layout at 100 to 200% scaling and on Mac screens: no overlaps, nothing off screen, minimum sizes, locks, swaps, and every tidy style. It also tidies out of full screen from scattered, far-off, huge and locked windows, and checks the block stays docked together, nothing is blown up, the player only moves to keep the block on screen, and two rounds of presses give the same layouts. Saved layouts: a taken name replaces that layout in place, renames can't clash, only the first nine have keys, and a layout from a missing screen moves onto another whole. Single window: smallest window sizes are truly the smallest, growing never shrinks, panels stay inside the window at their minimum sizes without overlaps, the player keeps its size, and locks are ignored. On the Mac CI run it also moves the visuals into the single window and back, checking the Metal view follows.

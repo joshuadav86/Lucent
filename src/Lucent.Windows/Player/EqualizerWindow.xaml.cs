@@ -72,6 +72,8 @@ public partial class EqualizerWindow : Window
     private EqualizerWindow(AudioPlayer player, AppSettings settings, double? fitWidth)
     {
         InitializeComponent();
+        // It can be a panel in the single window, kept out of sight while it is.
+        Windows.SingleWindow.Watch(this);
         _player = player;
         _settings = settings;
         _fitWidth = fitWidth;
@@ -179,13 +181,17 @@ public partial class EqualizerWindow : Window
     {
         if (_open is not null)
         {
-            _open.Activate();
+            if (!Windows.SingleWindow.Holds(_open))
+            {
+                _open.Activate();
+            }
+
             openChanged?.Invoke(true);
             return _open;
         }
 
         var main = owner as MainWindow;
-        var window = new EqualizerWindow(player, settings, main?.ActualWidth) { Owner = owner };
+        var window = new EqualizerWindow(player, settings, main?.PlayerColumnWidth) { Owner = owner };
         if (main is not null)
         {
             main.DockEqualizer(window);

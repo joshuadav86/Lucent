@@ -30,6 +30,8 @@ public static class Toast
 
             // Placed over what's in a window rather than the window itself, and only over something on the screen:
             // a popup that can't find where its target is opens in the corner of the screen.
+            // A window that's a panel in the single window is out of sight: the toast goes over its panel.
+            over = SingleWindow.Shown(over);
             if (over is Window { Content: FrameworkElement content })
             {
                 over = content;

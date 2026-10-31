@@ -155,6 +155,7 @@ public partial class MainWindow
     /// </summary>
     public void ResetLayout()
     {
+        LeaveSingleWindow();
         LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         if (_visuals.IsFullscreen)

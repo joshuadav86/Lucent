@@ -68,6 +68,9 @@ internal static partial class ObjC
     public static void SendVoid(IntPtr receiver, string selector, double argument) =>
         void_objc_msgSend_Double(receiver, Selector(selector), argument);
 
+    public static void SendVoid(IntPtr receiver, string selector, IntPtr first, ulong second) =>
+        void_objc_msgSend_IntPtr_ULong(receiver, Selector(selector), first, second);
+
     public static void SendVoid(IntPtr receiver, string selector, CGSize argument) =>
         void_objc_msgSend_CGSize(receiver, Selector(selector), argument);
 

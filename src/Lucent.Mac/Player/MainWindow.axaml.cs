@@ -209,6 +209,7 @@ public partial class MainWindow : Window
         SetUpWindowPlaces();
         SetUpSavedLayouts();
         SetUpLucentFullScreen();
+        SetUpSingleWindow();
         SubmenuTips.Install();
         if (Saved("Player") is { } placement)
         {
@@ -357,6 +358,8 @@ public partial class MainWindow : Window
         AlignBesidePlayerSoon();
         // Closed full screen: it opens full screen again, laid out on the screen it's on now.
         TileSoon();
+        // Closed as a single window: it opens as one again.
+        ReopenSingleWindow();
         ReopenEditor();
         Activate();
         RequestAnimationFrame(OnFrame);
@@ -436,7 +439,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnPlayerSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        if (!e.HeightChanged || e.PreviousSize.Height <= 0 || WindowState != WindowState.Normal)
+        if (!e.HeightChanged || e.PreviousSize.Height <= 0 || WindowState != WindowState.Normal || InSingleWindow)
         {
             return;
         }
@@ -896,6 +899,7 @@ public partial class MainWindow : Window
     /// <summary>Puts every window back together around the player, as on the first run, and remembers it.</summary>
     private void ArrangeWindows()
     {
+        LeaveSingleWindow();
         LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         ArrangeFirstTime();
@@ -928,6 +932,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void FillScreen()
     {
+        LeaveSingleWindow();
         LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         TileWindows();
@@ -938,6 +943,7 @@ public partial class MainWindow : Window
     /// <summary>Docks the shown windows around the player at their smallest sizes.</summary>
     private void ShrinkWindows()
     {
+        LeaveSingleWindow();
         LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         var playerWidth = ActualWidth;
@@ -1026,6 +1032,14 @@ public partial class MainWindow : Window
 
     private void SavePlacements()
     {
+        // As a single window, only its own place is kept: the windows go back to where they were as windows.
+        if (InSingleWindow)
+        {
+            SaveSingleWindowPlace();
+            _settings.Save();
+            return;
+        }
+
         var docked = DockedGroup();
         Remember("Player", this, docked);
         foreach (var window in ToolWindows)
@@ -1342,7 +1356,8 @@ public partial class MainWindow : Window
     {
         if (WindowState == WindowState.Minimized)
         {
-            foreach (var window in OwnedWindows.Where(window => window.IsVisible).ToList())
+            // Panels of the single window are out of sight already, and stay that way.
+            foreach (var window in OwnedWindows.Where(window => window.IsVisible && !SingleWindow.Holds(window)).ToList())
             {
                 if (NativeWindow(window) is var native && native != IntPtr.Zero)
                 {
@@ -1807,6 +1822,11 @@ public partial class MainWindow : Window
 
     private void OnDrop(object? sender, DragEventArgs e)
     {
+        if (DropForPane(e))
+        {
+            return;
+        }
+
         if (DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
             PlayDroppedPaths(paths);
@@ -2276,7 +2296,16 @@ public partial class MainWindow : Window
         UpdatePlayPauseButton();
     }
 
-    private void OnPreviewKeyDown(object? sender, KeyEventArgs e) => HandleShortcut(e);
+    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        // A key in a panel of the single window goes to that window first, as it would if it were on its own.
+        if (KeyForPane(e))
+        {
+            return;
+        }
+
+        HandleShortcut(e);
+    }
 
     /// <summary>The keyboard shortcuts, which work from any of Lucent's windows.</summary>
     public void HandleShortcut(KeyEventArgs e)
@@ -2369,6 +2398,9 @@ public partial class MainWindow : Window
                 break;
             case Key.J:
                 ToggleLink();
+                break;
+            case Key.U:
+                ToggleSingleWindow();
                 break;
             case Key.S:
                 ToggleShuffle();

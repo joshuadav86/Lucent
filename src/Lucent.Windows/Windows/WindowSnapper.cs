@@ -87,6 +87,9 @@ public sealed class WindowSnapper
 
     private readonly Window _main;
     private readonly List<Window> _windows = new();
+
+    /// <summary>The windows it snaps, less those that are panels in the single window (they're out of sight, their insides lent to it).</summary>
+    private IEnumerable<Window> Live => _windows.Where(window => !SingleWindow.Holds(window));
     private readonly List<Carried> _carried = new();
 
     /// <summary>
@@ -1023,7 +1026,7 @@ public sealed class WindowSnapper
 
         // The locked windows it leaves behind: shown ones docked to the group, or all shown ones when linked.
         var linked = MoveEveryWindow?.Invoke() == true;
-        foreach (var window in _windows)
+        foreach (var window in Live)
         {
             var handle = Handle(window);
             if (handle != IntPtr.Zero && handle != main && window.IsVisible && window.WindowState == WindowState.Normal && IsLocked(handle)
@@ -1155,7 +1158,7 @@ public sealed class WindowSnapper
     /// <summary>The visible Lucent windows other than this one (and the ones it's carrying), plus the screen it's on.</summary>
     private IEnumerable<(IntPtr Handle, Rect Rect)> OtherWindows(IntPtr self)
     {
-        foreach (var window in _windows)
+        foreach (var window in Live)
         {
             var handle = Handle(window);
             if (handle == IntPtr.Zero || handle == self || !window.IsVisible || window.WindowState != WindowState.Normal
@@ -1171,7 +1174,7 @@ public sealed class WindowSnapper
     /// <summary>Lucent's other windows that could be docked to the player, shown or hidden.</summary>
     private IEnumerable<(IntPtr Handle, Rect Rect)> DockableWindows(IntPtr main)
     {
-        foreach (var window in _windows)
+        foreach (var window in Live)
         {
             var handle = Handle(window);
             if (handle != IntPtr.Zero && handle != main && window.WindowState == WindowState.Normal)
