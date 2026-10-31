@@ -23,9 +23,9 @@ public sealed class PlayingRowScroll
     private bool _glide;
     private DateTime _touchedAt = DateTime.MinValue;
     private ScrollViewer? _scroller;
-    private double _from;
-    private double _to;
+    private ScrollGlide _glideNow;
     private bool _gliding;
+    private bool _holdingCovers;
 
     public PlayingRowScroll(ListBox list)
     {
@@ -110,28 +110,44 @@ public sealed class PlayingRowScroll
         var glide = _glide;
         _row = null;
         _list.ScrollIntoView(item);
-        _ = _list.Dispatcher.InvokeAsync(() =>
+        // Measured straight away where it can be, so the list doesn't show the song's place for a frame before setting
+        // off from where it was; otherwise once the list has laid itself out.
+        _list.UpdateLayout();
+        if (!GlideTo(scroller, item, from, glide))
         {
-            if (FindRow(scroller, item) is not { } row || !row.IsVisible)
-            {
-                return;
-            }
+            _ = _list.Dispatcher.InvokeAsync(() => GlideTo(scroller, item, from, glide), DispatcherPriority.Loaded);
+        }
+    }
 
-            var top = scroller.VerticalOffset + row.TransformToAncestor(scroller).Transform(new Point()).Y;
-            var to = ScrollGlide.CenteredOffset(top, row.ActualHeight, scroller.ViewportHeight, scroller.ExtentHeight);
-            if (!glide || !SystemParameters.ClientAreaAnimation)
-            {
-                scroller.ScrollToVerticalOffset(to);
-                return;
-            }
+    // Whether the row showing item was found, and the list set gliding (or moved) to put it in the middle.
+    private bool GlideTo(ScrollViewer scroller, object item, double from, bool glide)
+    {
+        if (FindRow(scroller, item) is not { } row || !row.IsVisible)
+        {
+            return false;
+        }
 
-            _from = ScrollGlide.Start(from, to, scroller.ViewportHeight);
-            _to = to;
-            scroller.ScrollToVerticalOffset(_from);
-            _clock.Restart();
-            _gliding = true;
-            CompositionTarget.Rendering += OnFrame;
-        }, DispatcherPriority.Loaded);
+        var top = scroller.VerticalOffset + row.TransformToAncestor(scroller).Transform(new Point()).Y;
+        var to = ScrollGlide.CenteredOffset(top, row.ActualHeight, scroller.ViewportHeight, scroller.ExtentHeight);
+        if (!glide || !SystemParameters.ClientAreaAnimation)
+        {
+            scroller.ScrollToVerticalOffset(to);
+            return true;
+        }
+
+        StopGlide();
+        _glideNow = ScrollGlide.Between(from, to, scroller.ViewportHeight);
+        scroller.ScrollToVerticalOffset(from);
+        if (_glideNow.IsLong)
+        {
+            Thumbnails.Hold();
+            _holdingCovers = true;
+        }
+
+        _clock.Restart();
+        _gliding = true;
+        CompositionTarget.Rendering += OnFrame;
+        return true;
     }
 
     private void OnFrame(object? sender, EventArgs e)
@@ -142,8 +158,8 @@ public sealed class PlayingRowScroll
             return;
         }
 
-        scroller.ScrollToVerticalOffset(ScrollGlide.At(_from, _to, _clock.Elapsed));
-        if (ScrollGlide.IsDone(_clock.Elapsed))
+        scroller.ScrollToVerticalOffset(_glideNow.At(_clock.Elapsed));
+        if (_glideNow.IsDone(_clock.Elapsed))
         {
             StopGlide();
         }
@@ -155,6 +171,12 @@ public sealed class PlayingRowScroll
         {
             _gliding = false;
             CompositionTarget.Rendering -= OnFrame;
+        }
+
+        if (_holdingCovers)
+        {
+            _holdingCovers = false;
+            Thumbnails.Release();
         }
     }
 

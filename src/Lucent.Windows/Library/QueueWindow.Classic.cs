@@ -262,8 +262,9 @@ public partial class QueueWindow
     {
         if (Scroller() is { } scroller)
         {
-            // A virtualizing list scrolls a row at a time; otherwise by the rows' height.
-            var row = scroller.CanContentScroll ? 1 : Resources["ClassicRowHeight"] is double height ? height : 26;
+            // A list that scrolls by rows moves a row at a time; one that scrolls by pixels (Spotify's) by the rows' height.
+            var row = scroller.CanContentScroll && VirtualizingPanel.GetScrollUnit(ShownList) == ScrollUnit.Item ? 1
+                : Resources["ClassicRowHeight"] is double height ? height : 26;
             scroller.ScrollToVerticalOffset(Math.Max(0, scroller.VerticalOffset + rows * row));
         }
     }

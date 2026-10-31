@@ -1,7 +1,7 @@
 // Name: Disco Ball
-// A mirrored disco ball turns slowly in a hazy room, scattering hundreds of coloured spots of light across the walls and floor, with beams cutting through the haze; the spots flash with the beat.
+// A mirrored disco ball turns slowly in a dark hazy room, its tiles outlined in glowing neon, scattering hundreds of crisp rings of neon light across the walls and floor along laser-thin beams through the haze. Each row of tiles plays its own band of the spectrum, the spotlights trade colours every four beats and everything flares on the beat.
 // Family: Ray traced
-// Tags: Retro, Colourful, 3D
+// Tags: Neon, Colourful, 3D
 // Added: 2026-10-17 17:06
 
 static const float3 BallCentre = float3(0.0, 3.3, 0.0);
@@ -22,12 +22,15 @@ float3 lightPosition(int i)
     return float3(cos(angle) * 5.5, 4.4, sin(angle) * 5.5);
 }
 
-// Each spotlight's colour moves on every four beats; on the beat the light flares.
+// Neon hues the lights take turns with: teal, violet, magenta and gold.
+static const float NeonHues[4] = { 0.48, 0.76, 0.88, 0.11 };
+
+// Each spotlight's colour moves on to the next neon hue every four beats; on the beat the light flares.
 float3 lightColour(int i)
 {
-    float hue = floor(BeatCount / 4.0) * 0.21 + i * 0.33 + Time * 0.005;
+    float hue = NeonHues[((uint)floor(BeatCount / 4.0) + (uint)i) % 4u];
     float flash = 0.55 + Beat * 0.9 + spectrum(0.1 + i * 0.3) * 0.5;
-    return hsv2rgb(hue, 0.75, 1.0) * flash;
+    return hsv2rgb(hue, 0.85, 1.0) * flash;
 }
 
 // Each band of tiles: the cos and sin of its middle latitude, and how many tiles go round it.
@@ -124,8 +127,9 @@ float3 fromBall(float3 v)
 }
 
 // How much of a spotlight's beam, bounced off the right tile of the ball, heads in direction d
-// (from the ball's centre). width sets how sharp the spots are.
-float3 reflectedSpots(float3 d, float width)
+// (from the ball's centre). width sets how sharp the spots are; rings draws each spot as a crisp
+// ring of light round a soft dim core instead of a soft disc.
+float3 reflectedSpots(float3 d, float width, bool rings)
 {
     float3 total = 0.0;
     [unroll]
@@ -141,7 +145,20 @@ float3 reflectedSpots(float3 d, float width)
         float lit = step(0.0, -dot(tile, incoming));
         // Some tiles are slightly tarnished or askew, so spots vary; a few twinkle with the treble.
         float twinkle = 0.6 + 0.4 * tileRandom + step(0.93, frac(tileRandom * 13.7 + Time * 0.5)) * Treble * 1.5;
-        total += SpotColour[i] * exp(-miss / width) * lit * twinkle;
+        // Each row of tiles plays its own band of the spectrum, bass at the equator and treble at the poles.
+        float level = spectrum(0.03 + abs(toBall(tile).y) * 0.6);
+        float shape;
+        if (rings)
+        {
+            float r = sqrt(miss / width);
+            float edge = (r - 1.6) * 4.0;
+            shape = exp(-edge * edge) * 1.6 + exp(-r * r * 1.5) * 0.25;
+        }
+        else
+        {
+            shape = exp(-miss / width);
+        }
+        total += SpotColour[i] * shape * lit * twinkle * (0.6 + level * 1.2);
     }
     return total;
 }
@@ -173,15 +190,13 @@ float sphereHit(float3 origin, float3 direction, float3 centre, float radius)
     return t > 1e-3 ? t : -1.0;
 }
 
-// The room's surfaces: dark painted walls, a dark glossy dance floor in squares, a black ceiling.
+// The room's surfaces: dark painted walls, a black glossy dance floor, a black ceiling.
 float3 surfaceColour(float3 position, float3 normal)
 {
-    float3 albedo = float3(0.16, 0.15, 0.17);
+    float3 albedo = float3(0.13, 0.12, 0.15);
     if (normal.y > 0.5)
     {
-        float2 square = floor(position.xz / 1.2);
-        float checker = frac((square.x + square.y) * 0.5) * 2.0;
-        albedo = lerp(float3(0.1, 0.09, 0.1), float3(0.2, 0.19, 0.21), checker);
+        albedo = float3(0.12, 0.11, 0.14);
     }
     else if (normal.y < -0.5)
     {
@@ -192,8 +207,8 @@ float3 surfaceColour(float3 position, float3 normal)
     float distance = length(toBallCentre);
     float3 d = -toBallCentre / distance;
     float facing = saturate(dot(normal, -d));
-    float3 spots = reflectedSpots(d, 0.00016) * facing * 130.0 / (6.0 + distance * distance);
-    float3 ambient = float3(0.04, 0.035, 0.05) * (0.6 + 0.4 * facing);
+    float3 spots = reflectedSpots(d, 0.00016, true) * facing * 130.0 / (6.0 + distance * distance);
+    float3 ambient = float3(0.02, 0.018, 0.03) * (0.6 + 0.4 * facing);
     return albedo * (spots + ambient);
 }
 
@@ -230,7 +245,7 @@ float3 Render(float2 uv, float2 p)
         float3 mirrored = reflect(direction, normal);
         float3 mirrorNormal;
         float mirrorDistance = roomHit(position, mirrored, mirrorNormal);
-        float fresnel = 0.04 + 0.5 * pow(1.0 - saturate(-direction.y), 5.0);
+        float fresnel = 0.08 + 0.6 * pow(1.0 - saturate(-direction.y), 5.0);
         float3 seen = surfaceColour(position + mirrored * mirrorDistance, mirrorNormal);
         float ballInMirror = sphereHit(position, mirrored, BallCentre, BallRadius);
         seen += ballInMirror > 0.0 ? float3(0.15, 0.15, 0.17) : 0.0;
@@ -267,6 +282,10 @@ float3 Render(float2 uv, float2 p)
         float columnEdge = abs(frac((atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5) * count) - 0.5);
         float grout = smoothstep(0.5, 0.42, max(rowEdge, columnEdge));
         colour = ball * (0.25 + 0.75 * grout) * (0.7 + 0.3 * tileRandom);
+        // The grout glows: a neon outline round every tile, in its row's colour and flaring with its band.
+        float row = abs(localNormal.y);
+        float3 outline = hsv2rgb(NeonHues[(uint)(row * 3.99)], 0.8, 1.0);
+        colour += outline * (1.0 - grout) * (0.12 + spectrum(0.03 + row * 0.6) * 0.6 + Beat * 0.2);
     }
 
     // Haze: march through the room adding the light scattered from every beam we pass through.
@@ -283,10 +302,10 @@ float3 Render(float2 uv, float2 p)
         float reach = length(fromCentre);
         if (reach > BallRadius)
         {
-            haze += reflectedSpots(fromCentre / reach, 0.0005) / (1.0 + reach * reach * 0.12);
+            haze += reflectedSpots(fromCentre / reach, 0.00022, false) / (1.0 + reach * reach * 0.12);
         }
     }
-    float density = 0.025 + Level * 0.015;
+    float density = 0.14 + Level * 0.06;
     colour += haze * stride * density;
 
     // The spotlights' own beams onto the ball, and their lamps glowing at the ceiling.

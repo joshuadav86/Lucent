@@ -1159,6 +1159,9 @@ public sealed class WindowSnapper
         var bestX = reach + 1;
         var bestY = reach + 1;
         var moving = rect;
+        var start = _startRect;
+        var startX = left ? start.Left : start.Right;
+        var startY = top ? start.Top : start.Bottom;
         foreach (var target in Targets(window, rect))
         {
             var overlapY = moving.Top < target.Bottom + reach && target.Top < moving.Bottom + reach;
@@ -1167,14 +1170,14 @@ public sealed class WindowSnapper
             var edgeY = top ? moving.Top : moving.Bottom;
             if ((left || right) && (overlapY || target.IsScreen))
             {
-                Consider(ref bestX, target.Left - edgeX);
-                Consider(ref bestX, target.Right - edgeX);
+                ConsiderAhead(ref bestX, target.Left, edgeX, startX);
+                ConsiderAhead(ref bestX, target.Right, edgeX, startX);
             }
 
             if ((top || bottom) && (overlapX || target.IsScreen))
             {
-                Consider(ref bestY, target.Top - edgeY);
-                Consider(ref bestY, target.Bottom - edgeY);
+                ConsiderAhead(ref bestY, target.Top, edgeY, startY);
+                ConsiderAhead(ref bestY, target.Bottom, edgeY, startY);
             }
         }
 
@@ -1202,30 +1205,44 @@ public sealed class WindowSnapper
             }
         }
 
-        // An edge pulled a little way into a window it started outside of stops at that window's edge.
+        // An edge pulled a little way into a window it started outside of stops at that window's edge. A locked
+        // window stops it however far it's pulled, and says it's locked if the edge was pushed on past.
         const double flush = 2;
         var resist = OverlapDistance;
-        var start = _startRect;
-        foreach (var (_, other) in OtherWindows(window))
+        var saidLocked = false;
+        foreach (var (other, box) in OtherWindows(window))
         {
-            var besideY = rect.Top < other.Bottom - flush && other.Top < rect.Bottom - flush;
-            var besideX = rect.Left < other.Right - flush && other.Left < rect.Right - flush;
-            if (right && besideY && start.Right <= other.Left + flush && rect.Right > other.Left && rect.Right - other.Left <= resist)
+            var locked = WindowLocks.IsLocked(other);
+            var limit = locked ? double.MaxValue : resist;
+            var besideY = rect.Top < box.Bottom - flush && box.Top < rect.Bottom - flush;
+            var besideX = rect.Left < box.Right - flush && box.Left < rect.Right - flush;
+            var pushed = 0.0;
+            if (right && besideY && start.Right <= box.Left + flush && rect.Right > box.Left && rect.Right - box.Left <= limit)
             {
-                rect.Right = other.Left;
+                pushed = rect.Right - box.Left;
+                rect.Right = box.Left;
             }
-            else if (left && besideY && start.Left >= other.Right - flush && rect.Left < other.Right && other.Right - rect.Left <= resist)
+            else if (left && besideY && start.Left >= box.Right - flush && rect.Left < box.Right && box.Right - rect.Left <= limit)
             {
-                rect.Left = other.Right;
+                pushed = box.Right - rect.Left;
+                rect.Left = box.Right;
             }
 
-            if (bottom && besideX && start.Bottom <= other.Top + flush && rect.Bottom > other.Top && rect.Bottom - other.Top <= resist)
+            if (bottom && besideX && start.Bottom <= box.Top + flush && rect.Bottom > box.Top && rect.Bottom - box.Top <= limit)
             {
-                rect.Bottom = other.Top;
+                pushed = Math.Max(pushed, rect.Bottom - box.Top);
+                rect.Bottom = box.Top;
             }
-            else if (top && besideX && start.Top >= other.Bottom - flush && rect.Top < other.Bottom && other.Bottom - rect.Top <= resist)
+            else if (top && besideX && start.Top >= box.Bottom - flush && rect.Top < box.Bottom && box.Bottom - rect.Top <= limit)
             {
-                rect.Top = other.Bottom;
+                pushed = Math.Max(pushed, box.Bottom - rect.Top);
+                rect.Top = box.Bottom;
+            }
+
+            if (locked && pushed > LockedNudge && !saidLocked)
+            {
+                saidLocked = true;
+                Toast.Show(other, $"{WindowLocks.NameOf(other) ?? "This window"} is locked. Click its padlock to unlock it.");
             }
         }
 
@@ -1252,6 +1269,20 @@ public sealed class WindowSnapper
             {
                 rect.Bottom = rect.Top + window.MinHeight;
             }
+        }
+    }
+
+    /// <summary>
+    /// Snaps a dragged edge to a line only when the line's on the side the edge has been dragged to from
+    /// where it started (or the edge started on it). An edge that started near a line on the other side
+    /// would otherwise jump back against the drag as it was let go: in Lucent full screen, the edge between
+    /// the visuals and the analyzer often starts just short of the line between windows in the next column.
+    /// </summary>
+    private static void ConsiderAhead(ref double best, double line, double edge, double start)
+    {
+        if (Math.Abs(line - start) < 0.5 || (Math.Abs(edge - start) >= 0.5 && (line - start > 0) == (edge - start > 0)))
+        {
+            Consider(ref best, line - edge);
         }
     }
 

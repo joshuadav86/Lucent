@@ -4,7 +4,7 @@ Thanks for wanting to help. Lucent is a small, carefully kept codebase, so a few
 
 ## Open an issue first
 
-Talk to us in an [issue](../../issues) before you start on a new feature, a redesign, or a refactor. Small bug fixes and typo fixes can go straight to a pull request.
+Before you start on a new feature, a redesign, or a refactor, open an [issue](../../issues) so we can talk it through. Small bug fixes and typo fixes can go straight to a pull request.
 
 Please don't send AI-generated refactors or feature overhauls nobody asked for. Pull requests like that may be closed without review. Using tools to help you write code is fine, as long as you understand and have tested every line you send.
 

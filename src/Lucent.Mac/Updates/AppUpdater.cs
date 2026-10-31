@@ -1,6 +1,7 @@
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Velopack;
 using Velopack.Sources;
 
@@ -17,7 +18,7 @@ namespace Lucent.Mac.Updates;
 /// their own Velopack channels (osx-arm64 and osx-x64, set when CI packs them), so each Mac gets the
 /// build for its own chip. Lucent.app from the plain zip isn't installed and never updates.
 /// </summary>
-public sealed class AppUpdater
+public sealed partial class AppUpdater
 {
     // The repository kept its old name when the app became Lucent. GitHub redirects the old name if the
     // repository is ever renamed, so this can stay as it is.
@@ -263,7 +264,7 @@ public sealed class AppUpdater
     }
 
     /// <summary>
-    /// The merge commits of changes that weren't to this app, from the release's lists. Empty if the
+    /// The commits of changes that weren't to this app, from the release's lists. Empty if the
     /// release has none (builds from before they were added) or they can't be read; those changes show then.
     /// </summary>
     private static async Task<IReadOnlySet<string>> OtherChangesAsync(string? release)
@@ -303,19 +304,29 @@ public sealed class AppUpdater
     }
 
     /// <summary>
-    /// The title of a change merged into main ("Merge pull request #12 from …", a blank line, then the
-    /// title), or null for any other commit: the commits inside a change say how, not what.
+    /// The title of a change merged into main, or null for any other commit: the commits inside a change
+    /// say how, not what. Changes are squashed into one commit titled "Title (#12)"; older ones were merge
+    /// commits ("Merge pull request #12 from …", a blank line, then the title).
     /// </summary>
     private static string? ChangeTitle(string message)
     {
-        if (!message.StartsWith("Merge pull request #", StringComparison.Ordinal))
+        var lines = message.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length == 0)
         {
             return null;
         }
 
-        var lines = message.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        return lines.Length > 1 ? lines[1] : null;
+        if (lines[0].StartsWith("Merge pull request #", StringComparison.Ordinal))
+        {
+            return lines.Length > 1 ? lines[1] : null;
+        }
+
+        var squashed = SquashedTitle().Match(lines[0]);
+        return squashed.Success ? squashed.Groups[1].Value : null;
     }
+
+    [GeneratedRegex(@"^(.+?) \(#\d+\)$")]
+    private static partial Regex SquashedTitle();
 
     /// <summary>
     /// The commit this app's build on the "Latest build" release was made from, or the newest stable

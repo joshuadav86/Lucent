@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Lucent.Mac.Visuals;
+using Lucent.Visualizer;
 using Lucent.Visualizer.MilkDrop;
 
 namespace Lucent.Mac;
@@ -17,7 +18,9 @@ public partial class VisualizerWindow
     private MenuItem MilkDropMenu()
     {
         var parent = new MenuItem { Header = "MilkDrop presets" };
+        ToolTip.SetTip(parent, MenuTips.MilkDrop);
         var shown = new MenuItem { Header = "Show MilkDrop presets", ToggleType = MenuItemToggleType.CheckBox, IsChecked = _settings.MilkDropVisuals };
+        ToolTip.SetTip(shown, MenuTips.ShowMilkDrop);
         shown.Click += (_, _) =>
         {
             ShowMilkDrop(!_settings.MilkDropVisuals);
@@ -25,6 +28,7 @@ public partial class VisualizerWindow
         };
         parent.Items.Add(shown);
         var modern = new MenuItem { Header = "Modern look", ToggleType = MenuItemToggleType.CheckBox, IsChecked = _settings.ModernMilkDrop };
+        ToolTip.SetTip(modern, MenuTips.ModernMilkDrop);
         modern.Click += (_, _) =>
         {
             UseModernMilkDrop(!_settings.ModernMilkDrop);
@@ -32,10 +36,10 @@ public partial class VisualizerWindow
         };
         parent.Items.Add(modern);
         parent.Items.Add(new Separator());
-        parent.Items.Add(MenuItemFor("Import MilkDrop presets…", ImportMilkDropFiles));
-        parent.Items.Add(MenuItemFor("Import a folder of presets…", ImportMilkDropFolder));
+        parent.Items.Add(MenuItemFor("Import MilkDrop presets…", ImportMilkDropFiles, MenuTips.ImportMilkDrop));
+        parent.Items.Add(MenuItemFor("Import a folder of presets…", ImportMilkDropFolder, MenuTips.ImportFolder));
         parent.Items.Add(new Separator());
-        parent.Items.Add(MenuItemFor("Show the MilkDrop folder in Finder", OpenMilkDropFolder));
+        parent.Items.Add(MenuItemFor("Show the MilkDrop folder in Finder", OpenMilkDropFolder, MenuTips.PresetFolder));
         return parent;
     }
 
@@ -171,9 +175,10 @@ public partial class VisualizerWindow
         }
     }
 
-    private static MenuItem MenuItemFor(string header, Action action)
+    private static MenuItem MenuItemFor(string header, Action action, string? tip = null)
     {
         var item = new MenuItem { Header = header };
+        ToolTip.SetTip(item, tip);
         item.Click += (_, _) => action();
         return item;
     }

@@ -3,7 +3,7 @@
 <h1 align="center">Lucent</h1>
 
 <p align="center"><b>See what you're hearing.</b><br>
-A free, open-source music player for Windows and Mac, with 448 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
+A free, open-source music and video player for Windows and Mac, with 448 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8B5CF6" alt="License: MIT"></a>
@@ -13,12 +13,13 @@ A free, open-source music player for Windows and Mac, with 448 live GPU visuals,
 
 <p align="center"><b>Not a developer? Download the free beta at <a href="https://lucentaudio.net">lucentaudio.net</a>.</b></p>
 
-![Lucent in full screen, with Cosmic Jellyfish moving to the music beside the library, player, equalizer, queue, analyzer, artwork, and online radio](site/img/lucent-live.webp)
+![Lucent in full screen playing Kepler North's Self Actualize: Cosmic Jellyfish, the player's meter, the equalizer's spectrum, and the analyzer all moving to the song, beside the library, queue, artwork, and online radio](site/img/lucent-live.webp)
 
 ## What's inside
 
 - **448 visuals**, drawn live on your graphics card: 200 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio.
 - **Windows that work together.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
+- **Video player.** MP4, MOV, MKV, WebM, and more play in a window of their own, with the sound through the EQ and visuals.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
 - **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
 - **A real library.** Show any tag as a column, sort by it, find duplicates, and scrobble to Last.fm. Your queue is still there next time.
@@ -131,7 +132,7 @@ Lucent is free, and always will be. If it's earned a spot in your setup, you can
 
 ## License
 
-[MIT](LICENSE). The Lucent name and logo aren't covered by the license, so forks need their own name and icon. See [TRADEMARK.md](TRADEMARK.md).
+[MIT](LICENSE). The Lucent name and logo aren't covered by the license, so forks need their own name and icon ([TRADEMARK.md](TRADEMARK.md)).
 
 <details>
 <summary>Third-party credits</summary>

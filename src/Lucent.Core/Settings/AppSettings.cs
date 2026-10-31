@@ -151,10 +151,10 @@ public sealed class AppSettings
     /// <summary>List MilkDrop presets in the visual picker and play them in Auto.</summary>
     public bool MilkDropVisuals { get; set; } = true;
 
-    /// <summary>List Winamp AVS presets in the visual picker and play them in Auto.</summary>
+    /// <summary>List AVS presets in the visual picker and play them in Auto.</summary>
     public bool AvsVisuals { get; set; } = true;
 
-    /// <summary>Draw Winamp AVS presets sharper and smoother, in Lucent's light; off shows them as Winamp drew them.</summary>
+    /// <summary>Draw AVS presets sharper and smoother, in Lucent's light; off shows them as they were first drawn.</summary>
     public bool ModernAvs { get; set; } = true;
 
     /// <summary>Show MilkDrop presets in Lucent's light, with its glow and tone-mapping; off shows them as MilkDrop did.</summary>
@@ -162,6 +162,9 @@ public sealed class AppSettings
 
     /// <summary>Visuals tense up through a song's build-ups and burst on its drops (see SongLook).</summary>
     public bool BuildUpsAndDrops { get; set; } = true;
+
+    /// <summary>The mouse pushes, grabs and throws a particle visual's dots (see PointerStir).</summary>
+    public bool MouseMovesParticles { get; set; } = true;
 
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
@@ -506,6 +509,9 @@ public sealed class AppSettings
         ["Hourglass"] = "Calabi-Yau",
         ["Newton's Cradle"] = "Hyperbolic Tiling",
         ["Sunset Highway"] = "Cardioid Loom",
+        ["Champagne Toast"] = "Polytope Bloom",
+        ["Single Drop"] = "Superformula",
+        ["Fireworks Night"] = "Spiral Shell",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };

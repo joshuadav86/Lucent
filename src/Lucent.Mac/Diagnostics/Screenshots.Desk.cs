@@ -25,7 +25,9 @@ public static partial class Screenshots
 {
     private const string VisualName = "Cosmic Jellyfish";
 
-    private static RemoteTrack NowPlaying => new("preview", "Atlas", "Bicep", "Isles", TimeSpan.FromSeconds(352));
+    private static RemoteTrack NowPlaying => PreviewClip is null
+        ? new("preview", "Atlas", "Bicep", "Isles", TimeSpan.FromSeconds(352))
+        : new("preview", ClipSong.Title, ClipSong.Artist, ClipSong.Album, TimeSpan.FromSeconds(ClipSong.Seconds));
 
     private static RadioStation GrooveSalad => FeaturedStations.Stations.First(station => station.Name == "Groove Salad");
 
@@ -165,22 +167,38 @@ public static partial class Screenshots
             Console.WriteLine($"FullScreen: left out {string.Join(", ", layout.LeftOut)}");
         }
 
+        // In a clip, the windows the song moves stay open to be drawn again each frame.
+        var moving = new[] { TileKind.Player, TileKind.Equalizer, TileKind.Analyzer };
         var shots = windows
             .Where(entry => layout.Places.ContainsKey(entry.Kind.ToString()))
             .Select(entry =>
             {
                 var place = layout.Places[entry.Kind.ToString()];
                 var fixedSize = entry.Kind is TileKind.Player or TileKind.Equalizer;
-                return (Kind: entry.Kind, Picture: Draw(entry.Window, fixedSize ? null : new Size(place.Width, place.Height)),
-                    At: new Point(place.Left, place.Top));
+                return (Kind: entry.Kind, Picture: Draw(entry.Window, fixedSize ? null : new Size(place.Width, place.Height),
+                    close: PreviewClip is null || !moving.Contains(entry.Kind)), At: new Point(place.Left, place.Top));
             }).ToList();
+
+        // Where the visual itself sits in the visuals window, for a moving visual to be put in its place.
+        var visuals = (VisualizerWindow)windows.First(entry => entry.Kind == TileKind.Visuals).Window;
+        var visualAt = visuals.VisualizerFrame.TranslatePoint(new Point(0, 0), visuals) ?? new Point(0, 0);
+        var visualPlace = layout.Places.TryGetValue(nameof(TileKind.Visuals), out var visualsPlace)
+            ? $",\"VisualsPicture\":[{visualsPlace.Left + visualAt.X},{visualsPlace.Top + visualAt.Y},{visuals.VisualizerFrame.Bounds.Width},{visuals.VisualizerFrame.Bounds.Height}]"
+            : "";
+        var layers = Environment.GetEnvironmentVariable("LUCENT_PREVIEW_LAYERS");
+        if (PreviewClip is { } clip && layers is { Length: > 0 })
+        {
+            SaveClipFrames(clip, Path.Combine(layers, "frames"), windows.Where(entry => moving.Contains(entry.Kind))
+                .Select(entry => (entry.Kind.ToString(), entry.Window)).ToList());
+        }
+
         foreach (var (window, _) in windows)
         {
             window.Close();
         }
 
         // For the website's tour, which adds and takes away windows one at a time: each window on its own, and where it goes.
-        if (Environment.GetEnvironmentVariable("LUCENT_PREVIEW_LAYERS") is { Length: > 0 } layers)
+        if (layers is { Length: > 0 })
         {
             Directory.CreateDirectory(layers);
             foreach (var shot in shots)
@@ -189,7 +207,7 @@ public static partial class Screenshots
             }
 
             File.WriteAllText(Path.Combine(layers, "places.json"), "{" + string.Join(",", shots.Select(shot =>
-                $"\"{shot.Kind}\":[{shot.At.X},{shot.At.Y},{shot.Picture.Size.Width},{shot.Picture.Size.Height}]")) + "}");
+                $"\"{shot.Kind}\":[{shot.At.X},{shot.At.Y},{shot.Picture.Size.Width},{shot.Picture.Size.Height}]")) + visualPlace + "}");
         }
 
         return Compose(new Size(screen.Width, screen.Height), shots.Select(shot => (shot.Picture, shot.At)));

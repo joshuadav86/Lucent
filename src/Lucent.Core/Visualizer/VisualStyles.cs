@@ -12,7 +12,7 @@ public static class VisualStyles
     /// <summary>The families, in the order their folders are listed.</summary>
     public static IReadOnlyList<string> Families { get; } = new[]
     {
-        "Fly-through", "Kaleidoscope", "Geometric", "Minimal", "Fractal", "Music-shaped", "Cosmic", "Organic", "Particles", "Ray traced", "Cyberpunk",
+        "Fly-through", "Kaleidoscope", "Geometric", "Minimal", "Fractal", "Music-shaped", "Cosmic", "Organic", ParticlesFamily, "Ray traced", "Cyberpunk",
         MilkDropFamily, AvsFamily,
     };
 
@@ -21,6 +21,9 @@ public static class VisualStyles
 
     /// <summary>The folder every AVS preset (.avs file) is listed in. It was "Winamp AVS" until 2026-10-30.</summary>
     public const string AvsFamily = "AVS";
+
+    /// <summary>The folder most particle visuals are listed in.</summary>
+    public const string ParticlesFamily = "Particles";
 
     /// <summary>The tag every particle visual gets, whether or not its header lists it.</summary>
     public const string ParticlesTag = "Particles";

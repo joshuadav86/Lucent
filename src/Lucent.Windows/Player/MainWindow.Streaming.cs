@@ -467,6 +467,7 @@ public partial class MainWindow
         // Only while nothing is heard: a computer the app names differently from this one may still be this one.
         var note = _remote is { } remote && _player.Capture.HeardNothingFor(TimeSpan.FromSeconds(2)) ? remote.ElsewhereNote : null;
         _visuals.ShowElsewhere(note, _remote?.CanPlayHere == true);
+        EqualizerWindow.ShowPlayingIn(_remote?.Player.Name);
     }
 
     // Set while the volume bar is being moved to show a volume, so that isn't taken as the user changing it.

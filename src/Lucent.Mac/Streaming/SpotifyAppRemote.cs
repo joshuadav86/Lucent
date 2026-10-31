@@ -15,15 +15,15 @@ namespace Lucent.Mac.Streaming;
 /// <remarks>
 /// Windows reads the Spotify app through Windows' media controls instead (see Windows' Streaming/SpotifyAppRemote.cs).
 /// </remarks>
-public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpener
+public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteVolume, IRemoteOpener, IRemoteNotifier
 {
     private const string Osascript = "/usr/bin/osascript";
 
     private const string NotOpen = "Open Spotify and play something, then Lucent can show and control it.";
 
     // Fields between tabs: state, then the song's spotify:track: URI, name, artist, album, length in milliseconds,
-    // the position in seconds, its cover's address, and whether it shuffles and repeats (true or false, empty when
-    // it won't say).
+    // the position in seconds, its cover's address, whether it shuffles and repeats (true or false, empty when
+    // it won't say), and its volume from 0 to 100.
     private const string ReadScript = """
         if application "Spotify" is not running then return "closed"
         tell application "Spotify"
@@ -35,7 +35,11 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpene
                 try
                     set modes to (shuffling as string) & tab & (repeating as string)
                 end try
-                return playerState & tab & (id of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & (artwork url of t) & tab & modes
+                set level to ""
+                try
+                    set level to (sound volume as string)
+                end try
+                return playerState & tab & (id of t) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & (duration of t) & tab & player position & tab & (artwork url of t) & tab & modes & tab & level
             on error
                 return playerState
             end try
@@ -43,6 +47,13 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpene
         """;
 
     public string Name => "Spotify";
+
+    /// <summary>Raised when Spotify tells the Mac its song changed, or that it played or paused.</summary>
+    public event EventHandler? Changed
+    {
+        add => AppAnnouncements.Listen(AppAnnouncements.Spotify, value);
+        remove => AppAnnouncements.StopListening(AppAnnouncements.Spotify, value);
+    }
 
     public bool IsOpen => IsRunning();
 
@@ -74,8 +85,15 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpene
         var track = new RemoteTrack(id, fields[2], fields[3], fields[4], Seconds(fields[5]) / 1000, art, uri);
         bool? shuffle = fields.Length > 8 ? Flag(fields[8]) : null;
         RepeatMode? repeat = fields.Length > 9 ? Flag(fields[9]) switch { true => RepeatMode.All, false => RepeatMode.Off, null => null } : null;
-        return new RemoteState(track, playing, Seconds(fields[6]), readAt, Shuffle: shuffle, Repeat: repeat);
+        double? volume = fields.Length > 10 && int.TryParse(fields[10], NumberStyles.None, CultureInfo.InvariantCulture, out var percent)
+            ? Math.Clamp(percent / 100.0, 0, 1)
+            : null;
+        return new RemoteState(track, playing, Seconds(fields[6]), readAt, Volume: volume, Shuffle: shuffle, Repeat: repeat);
     }
+
+    // Spotify's own volume slider, which is also its Spotify Connect volume for this Mac.
+    public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
+        TellAsync($"set sound volume to {(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
 
     private static bool? Flag(string text) => text switch { "true" => true, "false" => false, _ => null };
 

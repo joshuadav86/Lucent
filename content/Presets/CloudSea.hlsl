@@ -1,7 +1,7 @@
 // Name: Cloud Sea
-// Glide low over an endless sea of clouds at golden hour. The clouds gather into the six-sided cells of real cloud seas, each one rising and glowing with its own band of the music; beats send rings of light across the cloud tops, and the low sun wears a halo and a fan of rays that follow the spectrum.
+// Glide low over an endless sea of clouds at dusk. The clouds gather into the six-sided cells of real cloud seas, outlined in a glowing neon honeycomb across the cloud tops; each cell rises and glows with its own band of the music, beats send rings of light racing across the tops, and the low sun wears a neon halo and a fan of rays that follow the spectrum.
 // Family: Ray traced
-// Tags: Calm, 3D, Geometric
+// Tags: Neon, 3D, Geometric
 // Added: 2026-10-17 17:12
 
 // The clouds are a layer of fog whose top is a rolling landscape of billows. Each pixel's ray
@@ -78,7 +78,7 @@ float4 hexCell(float2 q)
 
 // The height of the cloud tops: big slow swells, a dome of billows over each cell that rises with the
 // cell's own band of the music, and fine billows on top. band says which band the cell listens to.
-float cloudTop(float2 q, out float band)
+float cloudTop(float2 q, out float band, out float edge)
 {
     float2 drift = float2(Time * 0.03, Time * 0.08);
     float swell = noise(q * 0.18 + drift * 0.3) * 0.75 + noise(q * 0.45 - drift) * 0.35;
@@ -87,6 +87,9 @@ float cloudTop(float2 q, out float band)
     float4 cell = hexCell(warped);
     band = hash(cell.zw * 0.37 + 1.3);
     float loud = spectrum(band * 0.75 + 0.02);
+    // How far inside its cell's six-sided edge q is, in cell units (0 on the edge).
+    float2 o = abs(cell.xy);
+    edge = 0.5 - max(o.x, dot(o, float2(0.5, 0.8660254)));
     float r = length(cell.xy) / 0.58;
     float dome = sqrt(saturate(1.0 - r * r));
     float fine = noise(q * 2.6 - drift * 1.5) * 0.08 + noise(q * 6.0 + drift) * 0.035;
@@ -95,15 +98,14 @@ float cloudTop(float2 q, out float band)
 
 float cloudTop(float2 q)
 {
-    float band;
-    return cloudTop(q, band);
+    float band, edge;
+    return cloudTop(q, band, edge);
 }
 
-// The colour each band glows inside its cells: rose and coral for the bass through violet to
-// cyan for the treble, the colours of the sky at dusk.
+// The neon each band glows in: teal for the bass through blue and violet to magenta for the treble.
 float3 bandColour(float band)
 {
-    return hsv2rgb(0.98 - band * 0.45, 0.65, 1.0);
+    return hsv2rgb(frac(0.47 + band * 0.45), 0.85, 1.0);
 }
 
 // Smooth 3D value noise, 0..1, for the wisps.
@@ -133,16 +135,16 @@ float density(float3 p, float top)
     return saturate((depth + wisps) * 3.0);
 }
 
-// The sky: warm gold and rose along the horizon, cooling to violet-blue overhead, with the sun.
+// The sky: magenta and coral along the horizon, deepening to violet and night blue overhead, with the sun.
 float3 sky(float3 direction)
 {
     float3 sun = sunDirection();
     float y = max(direction.y, 0.0);
     float toSun = saturate(dot(direction, sun));
-    float3 colour = lerp(float3(0.95, 0.45, 0.22), float3(0.16, 0.16, 0.38), pow(y, 0.4));
-    colour = lerp(colour, float3(0.1, 0.13, 0.32), smoothstep(0.08, 0.4, y));
-    colour = lerp(colour, float3(0.04, 0.05, 0.15), smoothstep(0.4, 0.9, y));
-    colour += float3(1.0, 0.6, 0.3) * pow(toSun, 8.0) * 0.6 + float3(1.0, 0.75, 0.45) * pow(toSun, 60.0) * 1.2;
+    float3 colour = lerp(float3(0.48, 0.12, 0.36), float3(0.1, 0.06, 0.28), pow(y, 0.35));
+    colour = lerp(colour, float3(0.06, 0.05, 0.2), smoothstep(0.08, 0.4, y));
+    colour = lerp(colour, float3(0.015, 0.02, 0.08), smoothstep(0.4, 0.9, y));
+    colour += float3(1.0, 0.45, 0.4) * pow(toSun, 8.0) * 0.4 + float3(1.0, 0.7, 0.5) * pow(toSun, 60.0) * 1.0;
     colour += float3(1.0, 0.9, 0.7) * smoothstep(0.9993, 0.9996, toSun) * 5.0;
 
     // Round the sun: a fan of rays, each one a band of the spectrum, mirrored left and right so the
@@ -154,10 +156,10 @@ float3 sky(float3 direction)
     float fromUp = abs(atan2(around.x, around.y + 1e-6)) / PI;
     float spokes = pow(abs(cos(fromUp * PI * 12.0 + Time * 0.02)), 60.0);
     float rays = spokes * spectrum(fromUp * 0.7 + 0.03) * exp(-apart * 3.5) * smoothstep(0.03, 0.08, apart);
-    colour += float3(1.0, 0.72, 0.45) * rays * (0.25 + Level * 0.35);
+    colour += hsv2rgb(frac(0.47 + fromUp * 0.45), 0.7, 1.0) * rays * (0.35 + Level * 0.45);
     const float halo = 0.384;
-    float ring = exp(-pow((apart - halo) / 0.012, 2.0));
-    float3 rainbow = hsv2rgb(saturate((apart - halo) / 0.03 + 0.5) * 0.25, 0.6, 1.0);
+    float ring = exp(-pow((apart - halo) / 0.006, 2.0)) * 3.0;
+    float3 rainbow = hsv2rgb(frac(0.5 + saturate((apart - halo) / 0.03 + 0.5) * 0.4), 0.8, 1.0);
     float dogs = exp(-pow(abs(around.y) / 0.03, 2.0)) * exp(-pow((apart - halo) / 0.02, 2.0)) * 2.0;
     colour += rainbow * (ring * 0.12 + dogs * 0.25) * (0.7 + Mid * 0.6);
     return colour * 0.6;
@@ -165,7 +167,7 @@ float3 sky(float3 direction)
 
 float sunStrength()
 {
-    return 3.0 * (1.0 + Bass * 0.25 + Beat * 0.05);
+    return 1.4 * (1.0 + Bass * 0.25 + Beat * 0.05);
 }
 
 // Henyey-Greenstein: how much light scatters from the sun's direction towards the eye. A mix of a
@@ -196,8 +198,8 @@ float3 render(float3 eye, float3 direction, float jitter)
     float transmittance = 1.0;
     float cosine = dot(direction, sun);
     float scatter = phase(cosine);
-    float3 sunColour = float3(1.0, 0.62, 0.33) * sunStrength();
-    float3 skyColour = float3(0.17, 0.16, 0.28);
+    float3 sunColour = float3(1.0, 0.55, 0.5) * sunStrength();
+    float3 skyColour = float3(0.1, 0.08, 0.22);
 
     int steps = qualitySteps(56);
     float t = start;
@@ -211,8 +213,8 @@ float3 render(float3 eye, float3 direction, float jitter)
             break;
         }
         float3 p = eye + direction * t;
-        float band;
-        float top = cloudTop(p.xz, band);
+        float band, edge;
+        float top = cloudTop(p.xz, band, edge);
         float d = density(p, top);
         if (d > 0.001)
         {
@@ -238,6 +240,11 @@ float3 render(float3 eye, float3 direction, float jitter)
             float loud = spectrum(band * 0.75 + 0.02);
             lit += bandColour(band) * smoothstep(0.1, 0.9, loud) * nearTop * 0.75;
             lit += float3(1.0, 0.7, 0.35) * beatGlow(p.xz) * nearTop * 0.8;
+            // The honeycomb: a fine neon line along every cell's edge on the cloud tops, in the
+            // cell's colour, flaring when its band is loud and when a beat ring passes.
+            float width = 0.02 + t * 0.002;
+            float comb = exp(-edge * edge / (width * width)) * exp(-max(top - p.y, 0.0) * 5.0);
+            lit += bandColour(band) * comb * (0.6 + loud * 2.5 + beatGlow(p.xz) * 2.0) * 5.0;
             float sigma = d * 9.0;
             float absorbed = 1.0 - exp(-sigma * stepSize);
             light += transmittance * absorbed * lit;

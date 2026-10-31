@@ -32,8 +32,8 @@ public sealed partial class VisualEngine : IDisposable
 {
     /// <summary>The visuals' own pictures: half-float, so glow and HDR have room above white.</summary>
     internal const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
-    private const int ConstantCount = 32;
-    private const int ParticleStride = 48;
+    private const int ConstantCount = 40;
+    private const int ParticleStride = 64;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const int ParticleGroupSize = 256;
     private const double MaxRenderScale = 4.0;
@@ -262,6 +262,9 @@ public sealed partial class VisualEngine : IDisposable
 
     /// <summary>The song that's playing and its bars, so Auto can change visual on a downbeat.</summary>
     public SongClock? SongClock { get; set; }
+
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them; null when there's no mouse (recording, say).</summary>
+    public PointerStir? Pointer { get; set; }
 
     public bool IsReady(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Ready;
 
@@ -570,6 +573,15 @@ public sealed partial class VisualEngine : IDisposable
         _constants[29] = drop;
         _constants[30] = moment.SectionPhase;
         _constants[31] = _songFollower.Mapped ? 1f : _songFollower.Live ? 0.5f : 0f;
+        if (Pointer is { } pointer)
+        {
+            pointer.Update((float)_renderWidth / _renderHeight);
+            _constants[32] = pointer.X;
+            _constants[33] = pointer.Y;
+            _constants[34] = pointer.VelocityX;
+            _constants[35] = pointer.VelocityY;
+            _constants[37] = pointer.Grab;
+        }
 
         var target = _feedback[_current]!;
         var previous = _feedback[1 - _current]!;
@@ -764,6 +776,8 @@ public sealed partial class VisualEngine : IDisposable
         _constants[20] = count;
         _constants[21] = slot.ParticlesFresh ? 1f : 0f;
         _constants[22] = (float)slot.Source.NormalParticleCount / count;
+        // Every particle visual (Particles family or not) can be pushed around by the mouse; MilkDrop and AVS never run here.
+        _constants[36] = Pointer?.Strength ?? 0f;
         slot.ParticlesFresh = false;
 
         var compute = commands.ComputeCommandEncoder();

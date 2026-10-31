@@ -1407,6 +1407,7 @@ public partial class MainWindow : Window
         AvsVisual.ModernLook = _settings.ModernAvs;
         MilkDropLook.Modern = _settings.ModernMilkDrop;
         Lucent.Visualizer.SongLook.On = _settings.BuildUpsAndDrops;
+        _visualizer.Pointer.On = _settings.MouseMovesParticles;
         _visualizer.Hdr = _settings.Hdr;
         _visualizer.AutoCycle = _settings.AutoCycle;
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
@@ -1565,6 +1566,10 @@ public partial class MainWindow : Window
         {
             _settings.BuildUpsAndDrops = on;
         }
+        else if (sender == MouseParticlesSwitch)
+        {
+            _settings.MouseMovesParticles = on;
+        }
         else if (sender == AutoCycleSwitch)
         {
             _settings.AutoCycle = on;
@@ -1649,6 +1654,7 @@ public partial class MainWindow : Window
         HdrSwitch.IsChecked = _settings.Hdr;
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
         BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
+        MouseParticlesSwitch.IsChecked = _settings.MouseMovesParticles;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
         MorphsOnlySwitch.IsChecked = _settings.MorphTransitionsOnly;
         LucentVisualsSwitch.IsChecked = _settings.LucentVisuals;

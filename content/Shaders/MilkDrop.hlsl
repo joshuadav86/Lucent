@@ -62,9 +62,22 @@ MdScreenVertex VSScreen(uint id : SV_VertexID)
     return output;
 }
 
+// Where this batch of waves and shapes starts in MdDraw. Metal's vertex_id counts from the draw's first
+// vertex, but Direct3D's SV_VertexID starts at 0 in every draw, so the Windows app (which defines
+// MD_DRAW_FIRST) says where each batch starts. Without it, every batch after the first drew the first
+// one's triangles again, so a wave drawn after motion vectors came out as the motion vectors.
+#ifdef MD_DRAW_FIRST
+cbuffer MdDrawParams : register(b2)
+{
+    uint md_draw_first;
+};
+#else
+static const uint md_draw_first = 0;
+#endif
+
 MdDrawVertex VSDraw(uint id : SV_VertexID)
 {
-    MdDrawPoint p = MdDraw[id];
+    MdDrawPoint p = MdDraw[id + md_draw_first];
     MdDrawVertex output;
     output.position = float4(p.position, 0.0, 1.0);
     output.uv = p.uv;

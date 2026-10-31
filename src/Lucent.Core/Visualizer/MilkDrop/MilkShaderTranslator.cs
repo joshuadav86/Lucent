@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -42,6 +43,16 @@ public static class MilkShaderTranslator
     private static readonly Regex Blur = new(@"(?:GetBlur|sampler_(?:[fp][wc]_)?blur)([123])", RegexOptions.Compiled);
     private static readonly Regex ShaderBody = new(@"\bshader_body\b", RegexOptions.Compiled);
 
+    // A variable declared outside shader_body ("float3 color, mus;"), which MilkDrop's presets go on to set.
+    private static readonly Regex GlobalVariable = new(
+        @"\G(?:float|half|int|uint|bool|min16float|min10float|min16int|min16uint)(?:[1-4](?:x[1-4])?)?\s+[A-Za-z_]\w*\s*[,;=\[]",
+        RegexOptions.Compiled);
+
+    // A q variable (q1..q32) the shader sets for itself: "q25 = 1;", "q3 *= 2;", "q7++;".
+    private static readonly Regex QWrite = new(
+        @"\bq([1-9]|[12][0-9]|3[0-2])\b(?=\s*(?:[-+*/%&|^]?=(?!=)|\+\+|--))|(?:\+\+|--)\s*q([1-9]|[12][0-9]|3[0-2])\b",
+        RegexOptions.Compiled);
+
     // Words Shader Model 5 keeps for itself that a DirectX 9 shader could use as names.
     private static readonly Regex Reserved = new(
         @"(?<![\.\w])(sample|point|line|triangle|lineadj|triangleadj|precise|unorm|snorm|groupshared|export|interface|class|namespace|globallycoherent|nointerpolation|noperspective)\b",
@@ -77,7 +88,7 @@ public static class MilkShaderTranslator
         var samplers = SamplerName.Matches(code).Select(match => match.Groups[1].Value).Distinct(StringComparer.Ordinal).ToList();
         var texsizes = TexsizeName.Matches(code).Select(match => match.Groups[1].Value).Distinct(StringComparer.Ordinal).ToList();
 
-        var globals = Clean(code[..body.Index]);
+        var globals = MakeGlobalsStatic(Clean(code[..body.Index]));
         var main = Clean(code[(body.Index + body.Length)..]).Trim();
         if (!main.StartsWith('{'))
         {
@@ -103,6 +114,19 @@ public static class MilkShaderTranslator
             source.Append("#define texsize_").Append(name).Append(' ').Append(TexsizeFor(name)).Append('\n');
         }
 
+        // MilkDrop's q values are constants here, but DirectX 9 let a shader change its own copy of
+        // them, and some presets do. Those get a variable of their own, filled in as the shader starts.
+        var writtenQs = QWrite.Matches(code)
+            .Select(match => int.Parse(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value, CultureInfo.InvariantCulture))
+            .Distinct()
+            .Order()
+            .ToList();
+        foreach (var q in writtenQs)
+        {
+            source.Append("static float _md_q").Append(q).Append(";\n#undef q").Append(q)
+                .Append("\n#define q").Append(q).Append(" _md_q").Append(q).Append('\n');
+        }
+
         source.Append("#line 1\n").Append(globals).Append('\n');
         var entryPoint = kind == MilkShaderKind.Warp ? WarpEntryPoint : CompositeEntryPoint;
         if (kind == MilkShaderKind.Warp)
@@ -120,6 +144,11 @@ public static class MilkShaderTranslator
                 .Append("    float2 uv_orig = _md_in.uv;\n")
                 .Append("    float rad = MdRad(uv);\n")
                 .Append("    float ang = MdAng(uv);\n");
+        }
+
+        foreach (var q in writtenQs)
+        {
+            source.Append("    _md_q").Append(q).Append(" = _q").Append((char)('a' + (q - 1) / 4)).Append('.').Append("xyzw"[(q - 1) % 4]).Append(";\n");
         }
 
         source.Append("    float3 hue_shader = MdHueShader(uv_orig);\n")
@@ -140,6 +169,81 @@ public static class MilkShaderTranslator
         }
 
         return Reserved.Replace(code, "md_$1");
+    }
+
+    /// <summary>
+    /// Marks the preset's own global variables static. DirectX 9 let a shader write to its globals, and
+    /// MilkDrop presets declare their working variables there and set them in shader_body. Shader Model 4
+    /// and up make an unmarked global a constant, so without this the shader doesn't compile at all.
+    /// Functions, structs, and anything already marked (static, const, uniform...) are left alone.
+    /// </summary>
+    private static string MakeGlobalsStatic(string code)
+    {
+        var result = new StringBuilder(code.Length + 64);
+        var depth = 0;
+        var statementStart = true;
+        for (var i = 0; i < code.Length; i++)
+        {
+            var c = code[i];
+            if (c == '/' && i + 1 < code.Length && code[i + 1] == '/')
+            {
+                var end = code.IndexOf('\n', i);
+                end = end < 0 ? code.Length : end;
+                result.Append(code, i, end - i);
+                i = end - 1;
+                continue;
+            }
+
+            if (c == '/' && i + 1 < code.Length && code[i + 1] == '*')
+            {
+                var end = code.IndexOf("*/", i + 2, StringComparison.Ordinal);
+                end = end < 0 ? code.Length : end + 2;
+                result.Append(code, i, end - i);
+                i = end - 1;
+                continue;
+            }
+
+            if (c == '#' && statementStart)
+            {
+                var end = code.IndexOf('\n', i);
+                end = end < 0 ? code.Length : end;
+                result.Append(code, i, end - i);
+                i = end - 1;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(c))
+            {
+                result.Append(c);
+                continue;
+            }
+
+            if (statementStart && depth == 0 && GlobalVariable.IsMatch(code, i))
+            {
+                result.Append("static ");
+            }
+
+            statementStart = false;
+            switch (c)
+            {
+                case '{':
+                case '(':
+                    depth++;
+                    break;
+                case '}':
+                case ')':
+                    depth = Math.Max(0, depth - 1);
+                    statementStart = depth == 0 && c == '}';
+                    break;
+                case ';':
+                    statementStart = depth == 0;
+                    break;
+            }
+
+            result.Append(c);
+        }
+
+        return result.ToString();
     }
 
     /// <summary>The prelude's texture and sampler state for a MilkDrop sampler name such as "fc_main" or "noise_lq".</summary>

@@ -1,7 +1,7 @@
 // Name: Ring Diver
-// Skim just above the rings of a giant striped planet as countless icy grains and boulders rush past, the nearest ones blurred and streaking by; the ring ripples with the bass, the rush quickens with the music and ice glints with the treble.
+// Skim just above the rings of a giant planet drawn in glowing neon contour lines as countless grains of light rush past, the nearest ones blurred and streaking by. Each ringlet plays its own band of the spectrum, lifting into a rolling 3D spectrum under you, a ring of light sweeps outward on every beat, the ring ripples with the bass and grains glint with the treble.
 // Family: Particles
-// Tags: Space, Calm, 3D
+// Tags: Space, Neon, 3D
 // Added: 2026-10-17 17:15
 // Particles: 262144
 
@@ -55,6 +55,40 @@ float ringRadiusAt(float3 position)
     return length(position.xz - PlanetCentre.xz);
 }
 
+// Broad bands across the ring, 0 to 1 and back every few dozen units, so several pass under us.
+float ringTone(float r)
+{
+    return 0.5 + 0.5 * sin(r * 0.2);
+}
+
+// Neon by band: teal through blue and violet to magenta and back.
+float3 ringNeon(float r)
+{
+    return hsv2rgb(frac(0.47 + ringTone(r) * 0.45 + sin(Time * 0.019) * 0.03), 0.85, 1.0);
+}
+
+// How loud the ringlet at r is: each band plays its own part of the spectrum, bass in the teal bands
+// and treble in the magenta ones.
+float ringLevel(float r)
+{
+    return spectrum(0.02 + ringTone(r) * 0.65);
+}
+
+// A ring of light that sweeps out across each band through each beat. With a beat to follow it rides
+// through the whole beat; without one it shows just as it lands.
+float ringSweep(float r)
+{
+    float at = (frac(r * 0.2 / (2.0 * PI)) - BeatPhase) * 9.0;
+    return exp(-at * at) * (SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat);
+}
+
+// Fine bright grooves between the ringlets.
+float ringGrooves(float r)
+{
+    float f = frac(r * 0.45);
+    return pow(1.0 - min(f, 1.0 - f) * 2.0, 14.0);
+}
+
 // The ring bends in slow waves that swell with the bass, and every beat sends a ripple out from ahead of us.
 float ringWave(float x, float z)
 {
@@ -64,7 +98,10 @@ float ringWave(float x, float z)
     float age = -log(max(Beat, 1e-4)) / 5.0;
     float spread = length(float2(x - 1.5, z - 14.0));
     float ripple = 0.14 * Beat * sin(spread * 1.3 - age * 9.0) * exp(-abs(spread - age * 9.0) * 0.35);
-    return swell + ripple;
+    // Each ringlet rises with its own band of the spectrum, so the sheet rolls like a 3D spectrum.
+    float r = length(float2(x, z + Time * 2.6) - PlanetCentre.xz);
+    float lift = ringLevel(r) * (0.1 + Intensity * 0.08) + DropPulse * 0.08 * sin(r * 0.6 - Time * 3.0);
+    return swell + ripple + lift;
 }
 
 // Where a y-up world point lands on screen (project() works with y growing downward).
@@ -129,17 +166,15 @@ Sprite Show(Particle particle, uint id)
     float radius = lerp(0.0025, 0.07, pow(bigness, 14.0));
     float pixels = radius * Zoom / seen.z / spritePixel();
 
-    // Lit by the sun: bright ice with tan and rusty tints, a touch brighter seen against the light.
-    float tone = fixedRandom(id, 8.0);
-    float3 albedo = lerp(float3(1.0, 0.94, 0.86), float3(0.86, 0.72, 0.56), tone * tone);
-    albedo = lerp(albedo, float3(0.8, 0.88, 1.0), step(0.85, tone) * 0.6);
+    // Neon by ringlet, flaring with that ringlet's band of the spectrum and the beat's sweep; a few
+    // grains run white-hot.
     float r = ringRadiusAt(particle.position + float3(0.0, 0.0, Time * 2.6));
-    float band = 0.35 + ringDensity(r) * 0.9;
-    float3 view = normalize(particle.position - eye);
-    float phase = 0.55 + 0.45 * pow(saturate(dot(view, sunDirection()) * 0.5 + 0.5), 3.0);
+    float band = 0.3 + ringDensity(r) * 0.8;
+    float3 colour = lerp(ringNeon(r), float3(1.0, 0.95, 0.9), step(0.9, fixedRandom(id, 8.0)) * 0.7);
+    float flare = 0.35 + ringLevel(r) * 1.6 + ringSweep(r) * 1.5 + DropPulse * 0.5;
     // Grains low in the sheet sit a little in the shade of those above them.
     float shade = lerp(0.55, 1.0, saturate((particle.data.x / RingThickness) * 0.5 + 0.7));
-    float3 colour = albedo * band * phase * shade * 0.32 * (1.0 + Level * 0.25);
+    colour *= band * flare * shade * 0.3 * (0.85 + Intensity * 0.3);
 
     // Tumbling chunks of ice flash as their faces catch the sun, more so with the treble.
     float flash = pow(saturate(sin(Time * (3.0 + fixedRandom(id, 9.0) * 6.0) + fixedRandom(id, 10.0) * 40.0)), 16.0);
@@ -183,19 +218,26 @@ float3 starfield(float3 direction)
     return tint * star * (0.3 + pick * 0.9) + float3(0.012, 0.012, 0.022) * milky;
 }
 
-// Bands of cream, gold and tan swirling round the planet, paler towards the poles.
-float3 planetColour(float3 normal)
+// The planet's cloud bands drawn as glowing contour lines swirling round a dark globe: violet and
+// magenta at the equator to teal at the poles, mirrored north and south. Each line flares with its
+// own band of the spectrum, bass at the equator and treble at the poles.
+float3 planetColour(float3 normal, out float3 body)
 {
     float latitude = normal.y;
     float longitude = atan2(normal.z, normal.x) + Time * 0.004;
     float2 swirl = float2(longitude * 3.0, latitude * 9.0);
     float turbulence = fbm(swirl + float2(Time * 0.01, 0.0)) - 0.5;
     float bandCoord = latitude * 14.0 + turbulence * 0.9;
-    float b = noise(float2(bandCoord, 0.5)) * 0.6 + noise(float2(bandCoord * 2.7, 3.3)) * 0.4;
-    float3 colour = lerp(float3(0.78, 0.6, 0.38), float3(0.98, 0.88, 0.68), b);
-    colour = lerp(colour, float3(0.62, 0.5, 0.36), smoothstep(0.55, 0.8, noise(float2(bandCoord * 5.0, 9.0))) * 0.4);
-    colour = lerp(colour, float3(0.55, 0.62, 0.7), smoothstep(0.65, 0.95, abs(latitude)));
-    return colour;
+    float f = frac(bandCoord);
+    float width = fwidth(bandCoord);
+    float contour = 1.0 - smoothstep(0.0, width * 1.5 + 0.03, min(f, 1.0 - f));
+    float fine = frac(bandCoord * 3.0);
+    contour += (1.0 - smoothstep(0.0, width * 4.0 + 0.04, min(fine, 1.0 - fine))) * 0.18;
+    float pole = abs(latitude);
+    float3 neon = hsv2rgb(frac(0.86 - pole * 0.4), 0.8, 1.0);
+    float level = spectrum(0.03 + pole * 0.6);
+    body = lerp(float3(0.025, 0.02, 0.05), float3(0.01, 0.025, 0.04), pole);
+    return neon * contour * (0.35 + level * 1.8);
 }
 
 float4 farRing(float3 origin, float3 direction, out float distance)
@@ -218,8 +260,8 @@ float4 farRing(float3 origin, float3 direction, out float distance)
     float3 sun = sunDirection();
     float shadowT = sphereHit(position, sun, PlanetCentre, PlanetRadius);
     float lit = shadowT > 0.0 ? 0.08 : 1.0;
-    float3 tint = lerp(float3(0.92, 0.84, 0.72), float3(0.78, 0.8, 0.84), noise(float2(r * 0.08, 2.0)));
-    float3 colour = tint * (0.07 + 0.55 * lit) * (0.5 + density);
+    float3 colour = ringNeon(r) * (0.12 + 0.4 * lit) * (0.35 + density) * (0.4 + ringLevel(r) * 1.4 + ringSweep(r) * 1.2);
+    colour += ringNeon(r) * ringGrooves(r) * density * (0.25 + ringLevel(r)) * lerp(0.3, 1.0, lit);
     // Near the camera the particles take over from the smooth sheet.
     // Close up only a dim haze of fine dust remains between them.
     float closeUp = lerp(0.6, 1.0, smoothstep(BoxSize.z * 0.55, BoxSize.z * 1.05, t));
@@ -256,11 +298,12 @@ float3 Render(float2 uv, float2 p)
             ringShade = 1.0 - ringDensity(r) * 0.85;
         }
         float facing = saturate(dot(normal, -direction));
-        float3 surface = planetColour(normal) * day * ringShade * 0.85 * pow(facing, 0.3);
-        // Light bounced up from the bright rings faintly lights the night side.
-        surface += planetColour(normal) * float3(0.05, 0.045, 0.04) * saturate(-normal.y * 0.5 + 0.5) * (1.0 - day);
-        // A thin hazy rim on the sunlit edge.
-        surface += float3(0.55, 0.65, 0.9) * pow(1.0 - facing, 4.0) * saturate(light + 0.2) * 0.6;
+        float3 body;
+        float3 lines = planetColour(normal, body);
+        // The lines glow on the night side too, just dimmer; the body itself is barely lit.
+        float3 surface = body * (0.3 + day) * ringShade + lines * (0.3 + 0.7 * day) * lerp(0.4, 1.0, ringShade) * pow(facing, 0.3);
+        // A thin neon rim all round the edge, brightest on the sunlit side and with the bass.
+        surface += float3(0.45, 0.4, 1.0) * pow(1.0 - facing, 4.0) * (saturate(light + 0.4) * 0.7 + 0.15) * (1.0 + Bass * 0.6);
         colour = surface;
     }
     else

@@ -46,6 +46,12 @@ public sealed class SpectrumMeter : Control
         var now = DateTime.UtcNow;
         var deltaTime = (float)Math.Clamp((now - _lastFrame).TotalSeconds, 0.0, 0.1);
         _lastFrame = now;
+        Tick(deltaTime);
+    }
+
+    /// <summary>Reads the newest audio and redraws, <paramref name="deltaTime"/> seconds on. (Screenshots call this directly.)</summary>
+    internal void Tick(float deltaTime)
+    {
         if (_mode == MeterMode.Off)
         {
             return;

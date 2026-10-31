@@ -102,6 +102,7 @@ public static class SelfTest
         failures += TestOtherApps();
         failures += Lucent.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.LoudnessSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.EqualizerSelfTest.Run(Console.WriteLine);
         failures += Lucent.Recording.RecordingSelfTest.Run(Console.WriteLine, TestDecoding);
         failures += TestLiveInputs();
         failures += Editor.Stems.StemSelfTest.Run(Console.WriteLine);
@@ -111,6 +112,7 @@ public static class SelfTest
         failures += Lucent.Library.TempoKeySelfTest.Run(Console.WriteLine);
         failures += Lucent.Library.LibraryGroupsSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.CoverSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Streaming.SpotifyLimitSelfTest.Run(Console.WriteLine);
         failures += Lucent.Library.PlaylistColumnsSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;

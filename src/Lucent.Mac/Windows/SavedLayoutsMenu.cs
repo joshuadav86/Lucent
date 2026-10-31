@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Lucent.Layout;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac.Windows;
 
@@ -31,6 +32,7 @@ public static class SavedLayoutsMenu
     public static MenuItem Item(Window window)
     {
         var item = new MenuItem { Header = "Layouts" };
+        ToolTip.SetTip(item, MenuTips.Layouts);
         Fill(item, window);
         return item;
     }

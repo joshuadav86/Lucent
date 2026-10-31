@@ -18,7 +18,9 @@ public partial class VisualizerWindow
     private MenuItem AvsMenu()
     {
         var parent = new MenuItem { Header = "AVS presets" };
+        ToolTip.SetTip(parent, MenuTips.Avs);
         var shown = new MenuItem { Header = "Show AVS presets", ToggleType = MenuItemToggleType.CheckBox, IsChecked = _settings.AvsVisuals };
+        ToolTip.SetTip(shown, MenuTips.ShowAvs);
         shown.Click += (_, _) =>
         {
             ShowAvs(!_settings.AvsVisuals);
@@ -26,6 +28,7 @@ public partial class VisualizerWindow
         };
         parent.Items.Add(shown);
         var modern = new MenuItem { Header = "Modern look", ToggleType = MenuItemToggleType.CheckBox, IsChecked = _settings.ModernAvs };
+        ToolTip.SetTip(modern, MenuTips.ModernAvs);
         modern.Click += (_, _) =>
         {
             UseModernAvs(!_settings.ModernAvs);
@@ -33,10 +36,10 @@ public partial class VisualizerWindow
         };
         parent.Items.Add(modern);
         parent.Items.Add(new Separator());
-        parent.Items.Add(MenuItemFor("Import AVS presets…", ImportAvsFiles));
-        parent.Items.Add(MenuItemFor("Import a folder of presets…", ImportAvsFolder));
+        parent.Items.Add(MenuItemFor("Import AVS presets…", ImportAvsFiles, MenuTips.ImportAvs));
+        parent.Items.Add(MenuItemFor("Import a folder of presets…", ImportAvsFolder, MenuTips.ImportFolder));
         parent.Items.Add(new Separator());
-        parent.Items.Add(MenuItemFor("Show the AVS folder in Finder", OpenAvsFolder));
+        parent.Items.Add(MenuItemFor("Show the AVS folder in Finder", OpenAvsFolder, MenuTips.PresetFolder));
         return parent;
     }
 

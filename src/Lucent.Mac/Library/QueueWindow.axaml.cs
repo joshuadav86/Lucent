@@ -17,6 +17,7 @@ public partial class QueueWindow : ToolWindow
         Chrome.UseLucentFrame(this);
         PlacementName = "Queue";
         LucentFullScreen.AddTo(QueueMenu, this);
+        _remoteScroll = new PlayingRowScroll(RemoteListView);
 
         // Runs before the list's menu opens, to fill in the items that depend on what's selected.
         PlaylistView.AddHandler(ContextRequestedEvent, OnQueueMenuOpening, RoutingStrategies.Tunnel);
@@ -148,6 +149,7 @@ public partial class QueueWindow : ToolWindow
 
     // ---- Another app's playlist ----
 
+    private readonly PlayingRowScroll _remoteScroll;
     private RemoteList? _remoteList;
     private List<RemoteListEntry> _remoteEntries = new();
     private RemoteTrack? _remotePlaying;
@@ -198,8 +200,8 @@ public partial class QueueWindow : ToolWindow
         if (listChanged || songChanged)
         {
             // Not when the rest of a long playlist arrives, as the list may have been scrolled meanwhile, unless the
-            // song playing is only in the rest.
-            MarkRemotePlaying(scroll: songChanged || !sameList || !wasMarked);
+            // song playing is only in the rest. Gliding to each new song in the same playlist; straight to it in a new one.
+            MarkRemotePlaying(scroll: songChanged || !sameList || !wasMarked, glide: songChanged && (!listChanged || sameList));
         }
     }
 
@@ -219,7 +221,7 @@ public partial class QueueWindow : ToolWindow
         RemoteListView.SelectedItem = _remoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
     }
 
-    private void MarkRemotePlaying(bool scroll)
+    private void MarkRemotePlaying(bool scroll, bool glide)
     {
         RemoteListEntry? current = null;
         foreach (var entry in _remoteEntries)
@@ -228,29 +230,15 @@ public partial class QueueWindow : ToolWindow
             current ??= entry.IsCurrent ? entry : null;
         }
 
-        if (scroll && current is not null)
+        if (current is null)
         {
-            ShowAround(current);
+            _remoteScroll.Forget();
         }
-    }
-
-    // Puts the song in the middle of the list, with the songs before and after it either side.
-    private void ShowAround(RemoteListEntry entry)
-    {
-        RemoteListView.ScrollIntoView(entry);
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        else if (scroll)
         {
-            var index = _remoteEntries.IndexOf(entry);
-            if (index < 0 || RemoteListView.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault() is not { } scroller)
-            {
-                return;
-            }
-
-            // The rows are all the same height.
-            var row = scroller.Extent.Height / _remoteEntries.Count;
-            var top = Math.Clamp(index * row - (scroller.Viewport.Height - row) / 2, 0, Math.Max(0, scroller.Extent.Height - scroller.Viewport.Height));
-            scroller.Offset = new Avalonia.Vector(scroller.Offset.X, top);
-        }, Avalonia.Threading.DispatcherPriority.Loaded);
+            // Puts the song in the middle of the list, with the songs before and after it either side.
+            _remoteScroll.Show(() => _remoteEntries.FirstOrDefault(entry => entry.IsCurrent), glide);
+        }
     }
 
     // The Sort button shows for a playlist, album or Liked Songs, not for what's up next, which is in the order it plays.
@@ -292,7 +280,7 @@ public partial class QueueWindow : ToolWindow
 
         FillRemoteEntries();
         ShowSortButton();
-        MarkRemotePlaying(scroll: true);
+        MarkRemotePlaying(scroll: true, glide: false);
     }
 
     private void PlayChosenRemoteSong()

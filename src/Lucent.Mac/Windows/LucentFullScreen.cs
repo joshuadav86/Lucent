@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Lucent.Visualizer;
 
 namespace Lucent.Mac.Windows;
 
@@ -59,6 +60,7 @@ public static class LucentFullScreen
             Header = "Full screen Lucent", InputGesture = Gesture, ToggleType = MenuItemToggleType.CheckBox, Tag = Marker,
             IsChecked = IsOn?.Invoke() == true,
         };
+        ToolTip.SetTip(item, MenuTips.FullScreenLucent);
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
         menu.Items.Add(TidyItem());
@@ -98,6 +100,7 @@ public static class LucentFullScreen
         {
             Header = "Full screen Lucent", InputGesture = Gesture, ToggleType = MenuItemToggleType.CheckBox, IsChecked = IsOn?.Invoke() == true,
         };
+        ToolTip.SetTip(item, MenuTips.FullScreenLucent);
         item.Click += (_, _) => Toggle?.Invoke();
         menu.Items.Add(item);
         menu.Items.Add(TidyItem());
@@ -110,6 +113,7 @@ public static class LucentFullScreen
     private static MenuItem TidyItem()
     {
         var tidy = new MenuItem { Header = "Tidy layout", InputGesture = TidyGesture };
+        ToolTip.SetTip(tidy, MenuTips.Tidy);
         tidy.Click += (_, _) => Tidy?.Invoke();
         return tidy;
     }
@@ -118,6 +122,7 @@ public static class LucentFullScreen
     private static MenuItem ResetItem()
     {
         var reset = new MenuItem { Header = "Reset to default layout" };
+        ToolTip.SetTip(reset, MenuTips.ResetLayout);
         reset.Click += (_, _) => Reset?.Invoke();
         return reset;
     }

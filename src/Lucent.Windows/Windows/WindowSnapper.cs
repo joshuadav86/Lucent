@@ -115,6 +115,9 @@ public sealed class WindowSnapper
     /// <summary>True while Windows is moving or resizing a locked window, which is held where it started.</summary>
     private bool _held;
 
+    /// <summary>True once this resize has said a locked window is stopping it, so it's said only once.</summary>
+    private bool _saidLocked;
+
     /// <summary>The windows resizing along with the one being resized, found when the resize starts.</summary>
     private readonly List<Linked> _linked = new();
 
@@ -207,6 +210,7 @@ public sealed class WindowSnapper
             case WM_ENTERSIZEMOVE:
                 _moving = hwnd;
                 _resized = false;
+                _saidLocked = false;
                 _carried.Clear();
                 _carriedOffsets.Clear();
                 _leftBehind.Clear();
@@ -1316,6 +1320,9 @@ public sealed class WindowSnapper
         var bestX = reach + 1;
         var bestY = reach + 1;
         var moving = rect;
+        var start = Visible(_startRect, _startMargins);
+        var startX = left ? start.Left : start.Right;
+        var startY = top ? start.Top : start.Bottom;
         foreach (var target in Targets(hwnd, rect))
         {
             var overlapY = moving.Top < target.Bottom + reach && target.Top < moving.Bottom + reach;
@@ -1324,14 +1331,14 @@ public sealed class WindowSnapper
             var edgeY = top ? moving.Top : moving.Bottom;
             if ((left || right) && (overlapY || target.IsScreen))
             {
-                Consider(ref bestX, target.Left - edgeX);
-                Consider(ref bestX, target.Right - edgeX);
+                ConsiderAhead(ref bestX, target.Left, edgeX, startX);
+                ConsiderAhead(ref bestX, target.Right, edgeX, startX);
             }
 
             if ((top || bottom) && (overlapX || target.IsScreen))
             {
-                Consider(ref bestY, target.Top - edgeY);
-                Consider(ref bestY, target.Bottom - edgeY);
+                ConsiderAhead(ref bestY, target.Top, edgeY, startY);
+                ConsiderAhead(ref bestY, target.Bottom, edgeY, startY);
             }
         }
 
@@ -1359,31 +1366,69 @@ public sealed class WindowSnapper
             }
         }
 
-        // An edge pulled a little way into a window it started outside of stops at that window's edge.
+        // An edge pulled a little way into a window it started outside of stops at that window's edge. A locked
+        // window stops it however far it's pulled, and says it's locked once the mouse pushes on past.
         const int flush = 2;
         var resist = (int)Math.Round(OverlapDistance * Scale(hwnd));
-        var start = Visible(_startRect, _startMargins);
-        foreach (var (_, other) in OtherWindows(hwnd))
+        var nudge = (int)Math.Round(LockedNudge * Scale(hwnd));
+        foreach (var (handle, other) in OtherWindows(hwnd))
         {
+            var locked = IsLocked(handle);
+            var limit = locked ? int.MaxValue : resist;
             var besideY = rect.Top < other.Bottom - flush && other.Top < rect.Bottom - flush;
             var besideX = rect.Left < other.Right - flush && other.Left < rect.Right - flush;
-            if (right && besideY && start.Right <= other.Left + flush && rect.Right > other.Left && rect.Right - other.Left <= resist)
+            var pushed = 0;
+            if (right && besideY && start.Right <= other.Left + flush && rect.Right > other.Left && rect.Right - other.Left <= limit)
             {
+                pushed = rect.Right - other.Left;
                 rect.Right = other.Left;
             }
-            else if (left && besideY && start.Left >= other.Right - flush && rect.Left < other.Right && other.Right - rect.Left <= resist)
+            else if (left && besideY && start.Left >= other.Right - flush && rect.Left < other.Right && other.Right - rect.Left <= limit)
             {
+                pushed = other.Right - rect.Left;
                 rect.Left = other.Right;
             }
 
-            if (bottom && besideX && start.Bottom <= other.Top + flush && rect.Bottom > other.Top && rect.Bottom - other.Top <= resist)
+            if (bottom && besideX && start.Bottom <= other.Top + flush && rect.Bottom > other.Top && rect.Bottom - other.Top <= limit)
             {
+                pushed = Math.Max(pushed, rect.Bottom - other.Top);
                 rect.Bottom = other.Top;
             }
-            else if (top && besideX && start.Top >= other.Bottom - flush && rect.Top < other.Bottom && other.Bottom - rect.Top <= resist)
+            else if (top && besideX && start.Top >= other.Bottom - flush && rect.Top < other.Bottom && other.Bottom - rect.Top <= limit)
             {
+                pushed = Math.Max(pushed, other.Bottom - rect.Top);
                 rect.Top = other.Bottom;
             }
+
+            if (locked && pushed > nudge && !_saidLocked)
+            {
+                _saidLocked = true;
+                SayLocked(handle);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Snaps a dragged edge to a line only when the line's on the side the mouse has taken the edge from
+    /// where it started (or the edge started on it). An edge that started near a line on the other side
+    /// would otherwise jump back against the drag the moment it moved, and hang there: in Lucent full
+    /// screen, the edge between the visuals and the analyzer often starts just short of the line between
+    /// windows in the next column.
+    /// </summary>
+    private static void ConsiderAhead(ref int best, int line, int edge, int start)
+    {
+        if (line == start || (edge != start && (line - start > 0) == (edge - start > 0)))
+        {
+            Consider(ref best, line - edge);
+        }
+    }
+
+    /// <summary>A resize ran into a locked window: says so, and how to unlock it.</summary>
+    private static void SayLocked(IntPtr handle)
+    {
+        if (HwndSource.FromHwnd(handle)?.RootVisual is Window window)
+        {
+            Toast.Show(window, $"{WindowLocks.NameOf(window) ?? "This window"} is locked. Click its padlock to unlock it.");
         }
     }
 

@@ -18,4 +18,4 @@ The source code is free to use under the [MIT license](LICENSE). That license co
 
 If you release your own version, give it a new name and icon, and make clear it isn't the official Lucent.
 
-To ask for permission, [open an issue](https://github.com/joshuadav86/Lucent/issues).
+For permission or questions, [open an issue](https://github.com/joshuadav86/Lucent/issues).

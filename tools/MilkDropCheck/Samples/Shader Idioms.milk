@@ -39,16 +39,23 @@ warp_16=`    for (int i = 0; i < 3; i++) { sample += (GetBlur1(uv + d * i) - sam
 warp_17=`    ret = soften(sample) * tint * 0.99 + (h - 0.5) * 0.004 + p * 0.0001;
 warp_18=`    ret -= 0.003 * q6;
 warp_19=`}
-comp_1=`float4 texsize_blur3;
-comp_2=`shader_body
-comp_3=`{
-comp_4=`    float2 uv2 = (uv - 0.5) * aspect.xy;
-comp_5=`    float3 crisp = tex2d(sampler_main, uv).xyz;
-comp_6=`    float3 glow = GetBlur3(uv) * 2.0 + GetBlur2(uv) * 0.5;
-comp_7=`    float3 edges = abs(crisp - GetBlur1(uv)) * 3.0;
-comp_8=`    float3 rnd = tex2D(sampler_noise_hq, uv * 2 + rand_frame.xy).xyz;
-comp_9=`    float3 img = tex2D(sampler_clouds2, uv).xyz;
-comp_10=`    ret = crisp + glow * q32 + edges * hue_shader + (rnd - 0.5) * 0.02 + img * 0.01;
-comp_11=`    ret *= 1.0 + 0.1 * sin(ang * 6.0 + time) * rad;
-comp_12=`    ret = pow(saturate(ret), 0.9) + slow_roam_cos.xyz * 0.01 + roam_sin.x * 0.0 + texsize_blur3.x * 0.0;
-comp_13=`}
+comp_1=`// Working variables declared up here and set in the body, and a q value the shader changes.
+comp_2=`float3 mixed, lifted;
+comp_3=`float k = 0.5;
+comp_4=`float4 texsize_blur3;
+comp_5=`shader_body
+comp_6=`{
+comp_7=`    float2 uv2 = (uv - 0.5) * aspect.xy;
+comp_8=`    float3 crisp = tex2d(sampler_main, uv).xyz;
+comp_9=`    float3 glow = GetBlur3(uv) * 2.0 + GetBlur2(uv) * 0.5;
+comp_10=`    float3 edges = abs(crisp - GetBlur1(uv)) * 3.0;
+comp_11=`    float3 rnd = tex2D(sampler_noise_hq, uv * 2 + rand_frame.xy).xyz;
+comp_12=`    float3 img = tex2D(sampler_clouds2, uv).xyz;
+comp_13=`    ret = crisp + glow * q32 + edges * hue_shader + (rnd - 0.5) * 0.02 + img * 0.01;
+comp_14=`    ret *= 1.0 + 0.1 * sin(ang * 6.0 + time) * rad;
+comp_15=`    ret = pow(saturate(ret), 0.9) + slow_roam_cos.xyz * 0.01 + roam_sin.x * 0.0 + texsize_blur3.x * 0.0;
+comp_16=`    q31 = q31 * k + 0.1;
+comp_17=`    mixed = ret * 0.98;
+comp_18=`    lifted = mixed + q31 * 0.0;
+comp_19=`    ret = lifted;
+comp_20=`}

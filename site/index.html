@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucent (Beta) for Windows and Mac</title>
-<meta name="description" content="Lucent is a free music player for Windows and Mac, built for audio nerds: a real video and audio editor, a studio analyzer, a 32-band equalizer, and 448 live GPU visuals, MilkDrop and AVS presets included.">
-<meta property="og:title" content="Lucent">
-<meta property="og:description" content="A music player built for audio nerds, with a video and audio editor, a studio analyzer, and 448 live GPU visuals, MilkDrop and AVS presets included.">
+<meta name="description" content="Lucent is a free music and video player for Windows and Mac, built for audio nerds: a real video and audio editor, a studio analyzer, a 32-band equalizer, and 448 live GPU visuals, MilkDrop and AVS presets included.">
+<meta property="og:title" content="Lucent: see what you’re hearing">
+<meta property="og:description" content="A music and video player built for audio nerds, with a video and audio editor, a studio analyzer, and 448 live GPU visuals, MilkDrop and AVS presets included.">
 <meta property="og:image" content="https://lucentaudio.net/img/full-screen.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#09090C">
@@ -217,8 +217,8 @@ section.band { padding-block: clamp(72px, 9vw, 120px); overflow-x: clip; }
   animation: tileIn .45s both;
 }
 .tile.big { grid-column: span 2; grid-row: span 2; }
-.tile img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
-.tile:hover img { transform: scale(1.05); }
+.tile img, .tile video { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+.tile:hover img, .tile:hover video { transform: scale(1.05); }
 .tile figcaption {
   position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 12px 10px;
   background: linear-gradient(0deg, rgba(0,0,0,.8), transparent);
@@ -226,7 +226,7 @@ section.band { padding-block: clamp(72px, 9vw, 120px); overflow-x: clip; }
 }
 .tile figcaption span { font: 400 11px/1.6 var(--font-mono); opacity: .7; text-transform: uppercase; letter-spacing: .08em; }
 @keyframes tileIn { from { opacity: .3; transform: translateY(8px); } }
-@media (prefers-reduced-motion: reduce) { .tile { animation: none; } .tile img { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tile { animation: none; } .tile img, .tile video { transition: none; } }
 @media (max-width: 900px) { .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .visual-notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-top: 56px; }
 .visual-notes > div { display: grid; gap: 8px; align-content: start; min-width: 0; }
@@ -410,7 +410,8 @@ html[data-light] .desk { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
 .desk-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 @media (max-width: 560px) { .desk-pair { grid-template-columns: 1fr; } }
 .lw-vis { position: relative; flex: 1; min-height: 140px; background: #000; margin: 0 6px 6px; border-radius: calc(var(--k-cr) * .8); overflow: hidden; }
-.lw-vis img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lw-vis img, .lw-vis video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lw-vis video { object-fit: contain; }
 .lw-vis span { position: absolute; left: 8px; bottom: 8px; font-size: 10.5px; color: #fff; background: rgba(0,0,0,.55); padding: 3px 8px; border-radius: var(--k-round); }
 
 /* Retro: raised bevels around a sunken black LCD with scan lines. */
@@ -601,7 +602,7 @@ footer .credits a { text-decoration: underline; }
         <p class="eyebrow">Now in beta · Built for audio nerds · Windows and Mac</p>
         <h1 id="hero-title">See what you’re <span class="grad">hearing.</span></h1>
         <div class="hero-side">
-          <p class="lede">Lucent is a free music player for Windows and Mac. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 448 visuals drawn live on your graphics card.</p>
+          <p class="lede">Lucent is a free music and video player for Windows and Mac. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 448 visuals drawn live on your graphics card.</p>
           <div class="hero-cta">
             <a class="btn" href="#download">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
@@ -959,7 +960,7 @@ footer .credits a { text-decoration: underline; }
       <a href="#player">Player</a><a href="#visuals">Visuals</a><a href="#editor">Editor</a><a href="#analyzer">Analyzer</a><a href="https://buymeacoffee.com/joshuadav86" target="_blank" rel="noopener">Buy me a coffee</a><a href="https://github.com/joshuadav86/Lucid/issues/new?template=bug_report.yml" target="_blank" rel="noopener">Report a bug</a><a href="#download">Download</a>
     </nav>
     <span>Free and open source under the <a href="https://github.com/joshuadav86/Lucid/blob/main/LICENSE">MIT license</a>. <a href="https://github.com/joshuadav86/Lucid">Source on GitHub</a>.</span>
-    <span class="credits">Isles cover art © Bicep. Groove Salad art © <a href="https://somafm.com/groovesalad/" target="_blank" rel="noopener">SomaFM</a>. Four Tet's set © <a href="https://www.thelotradio.com" target="_blank" rel="noopener">The Lot Radio</a>. Shown to illustrate Lucent playing them; all rights stay with their owners.</span>
+    <span class="credits">Self Actualize and Pseudo Profound cover art © Kepler North. Isles cover art © Bicep. Groove Salad art © <a href="https://somafm.com/groovesalad/" target="_blank" rel="noopener">SomaFM</a>. Four Tet's set © <a href="https://www.thelotradio.com" target="_blank" rel="noopener">The Lot Radio</a>. Shown to illustrate Lucent playing them; all rights stay with their owners.</span>
   </div>
 </footer>
 
@@ -969,14 +970,34 @@ footer .credits a { text-decoration: underline; }
   const root = document.documentElement;
   const css = n => getComputedStyle(root).getPropertyValue(n).trim();
 
+  // The moving clips that should be playing now. Browsers sometimes pause a muted video by themselves (to save
+  // power, after a stall, or while the tab was in the background), so each one is checked every second and started
+  // again, and one stuck waiting for data for a few seconds is loaded afresh.
+  const playing = new Set();
+  const keepPlaying = (v, on) => {
+    if (on) { playing.add(v); v.play().catch(() => {}); } else { playing.delete(v); v.pause(); }
+  };
+  const nudgeClips = () => {
+    if (document.hidden) return;
+    playing.forEach(v => {
+      if (!v.isConnected && !v.offPage) { playing.delete(v); return; }
+      if (v.paused || v.ended) { v.play().catch(() => {}); v.stuck = 0; }
+      else if (v.currentTime === v.lastTime && ++v.stuck >= 4) { v.stuck = 0; const t = v.currentTime; v.load(); v.currentTime = t; v.play().catch(() => {}); }
+      else if (v.currentTime !== v.lastTime) v.stuck = 0;
+      v.lastTime = v.currentTime;
+    });
+  };
+  setInterval(nudgeClips, 1000);
+  document.addEventListener("visibilitychange", nudgeClips);
+
   /* ---------- the window tour at the top: Lucent full screen, a window at a time ---------- */
   // [name, file, place on a 2560 × 1440 screen (x, y, width, height, from FullScreenLayout), what it is, alt text, floats over the rest]
   const WINDOWS = [
     ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with genre, year, and any other tag in columns.", "The library, with album covers, genres, and years beside each song in folders for Bicep's Isles, Boards of Canada's Inferno, Massive Attack's Mezzanine, and Zero 7's When It Falls"],
-    ["Player", "tour/full/player.png", [380, 0, 520, 207], "Bicep's Atlas in lossless, with a live level meter and one-click links to every other window.", "The player, playing Atlas by Bicep"],
+    ["Player", "tour/full/player.png", [380, 0, 520, 207], "Kepler North's Self Actualize, with a live level meter and one-click links to every other window.", "The player, playing Self Actualize by Kepler North"],
     ["Equalizer", "tour/full/equalizer.png", [380, 207, 520, 391], "4 to 32 bands, with the music's live spectrum behind the faders.", "The 16-band equalizer on the Rock preset"],
-    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with album covers beside Bicep, Massive Attack, Boards of Canada, and Zero 7 songs"],
-    ["Artwork", "tour/full/artwork.jpg", [0, 1027.4, 380, 412.6], "The cover of whatever's on: your files, a streaming app, or a radio station.", "The artwork window with Bicep's Isles cover"],
+    ["Queue", "tour/full/queue.png", [380, 598, 520, 842], "What's up next. Drag to reorder, and save or load playlists.", "The queue, with album covers beside Kepler North, Bicep, Massive Attack, Boards of Canada, and Zero 7 songs"],
+    ["Artwork", "tour/full/artwork.jpg", [0, 1027.4, 380, 412.6], "The cover of whatever's on: your files, a streaming app, or a radio station.", "The artwork window with Kepler North's Pseudo Profound cover"],
     ["Visuals", "tour/full/visuals.jpg", [900, 0, 1660, 840], "448 visuals drawn live on your graphics card. This one is Cosmic Jellyfish.", "The visuals window showing Cosmic Jellyfish"],
     ["Analyzer", "tour/full/analyzer.png", [900, 840, 729, 600], "A studio spectrogram, spectrum, waveform, and stereo scope, scrolling together, with LUFS loudness along the bottom.", "The analyzer, with momentary, short-term, and integrated LUFS, loudness range, and true peak along the bottom"],
     ["Radio", "tour/full/radio.png", [1628.6, 840, 931.4, 600], "Thousands of stations, with SomaFM, FRISKY, Radio Paradise, Nightride FM, and NTS up front.", "The online radio window with SomaFM's channels"],
@@ -984,6 +1005,14 @@ footer .credits a { text-decoration: underline; }
     ["Editor", "editor-video.png", [640, 560, 1240, 700], "Trim, fade, and crossfade audio or video, with VST3 effects, without leaving the player.", "The video and audio editor", true],
     ["Record", "tour/record.png", [1180, 300, 820, 833], "Record a DJ set or a record at up to 192 kHz, with each song marked and named.", "The record window", true],
     ["Stems", "tour/stems.png", [260, 860, 760, 420], "Split a song into drums, bass, vocals, and the rest on your graphics card.", "The stems window", true],
+  ];
+  // The moving parts: [window, place on the screen, piece of img/tour/live.mp4 it comes from]. The video is 8 seconds
+  // of Kepler North's Self Actualize playing, rendered by the app (player, equalizer, analyzer) and the visual's shader.
+  const LIVE = [
+    ["Visuals", [901, 35, 1658, 760], [0, 0, 1244, 570]],
+    ["Analyzer", [900, 840, 729, 600], [0, 570, 729, 600]],
+    ["Player", [380, 0, 520, 207], [1244, 0, 1040, 414]],
+    ["Equalizer", [380, 207, 520, 391], [1244, 414, 1040, 782]],
   ];
   {
     const bar = document.getElementById("tourBar"), stage = document.getElementById("tourStage");
@@ -996,7 +1025,7 @@ footer .credits a { text-decoration: underline; }
     const pct = (v, of) => `${(v / of * 100).toFixed(3)}%`;
     // Draws the windows that are on into a stage: the page's, or the larger one in the lightbox.
     const paint = target => {
-      let layers = target.querySelectorAll(".layer");
+      let layers = target.querySelectorAll("img.layer");
       if (!layers.length) {
         WINDOWS.forEach(([label, file, [x, y, w, h], , alt, float]) => {
           const img = document.createElement("img");
@@ -1005,12 +1034,19 @@ footer .credits a { text-decoration: underline; }
           Object.assign(img.style, { left: pct(x, 2560), top: pct(y, 1440), width: pct(w, 2560), height: pct(h, 1440) });
           target.append(img);
         });
+        LIVE.forEach(([label, [x, y, w, h], [, , sw, sh]]) => {
+          const c = document.createElement("canvas");
+          c.className = "layer live off"; c.width = sw; c.height = sh; c.dataset.w = WINDOWS.findIndex(w => w[0] === label);
+          Object.assign(c.style, { left: pct(x, 2560), top: pct(y, 1440), width: pct(w, 2560), height: pct(h, 1440) });
+          target.querySelector(`img.layer:nth-of-type(${+c.dataset.w + 1})`).after(c);
+        });
         const empty = document.createElement("div");
         empty.className = "empty"; empty.textContent = "Every window is off. Pick some above.";
         target.append(empty);
-        layers = target.querySelectorAll(".layer");
+        layers = target.querySelectorAll("img.layer");
       }
       layers.forEach((img, i) => img.classList.toggle("off", !on[i]));
+      target.querySelectorAll("canvas.live").forEach(c => c.classList.toggle("off", !on[c.dataset.w] || !live.shown));
       target.querySelector(".empty").hidden = !touched || on.some(Boolean);
     };
     const chips = WINDOWS.map(([label], i) => {
@@ -1042,6 +1078,33 @@ footer .credits a { text-decoration: underline; }
       note.textContent = "Shift+F11 lays every window edge to edge across your screen. Lock one in place and the rest fit around it.";
     };
     document.getElementById("tourReplay").onclick = build;
+
+    // The player, equalizer, analyzer, and visual in motion, all moving to the same stretch of a song: one looping
+    // video holds all four (see LIVE), drawn into canvases over the still windows, so they never drift apart.
+    const live = { video: null, shown: false, inView: false, drawing: false };
+    const drawLive = () => {
+      const v = live.video;
+      if (!v || v.paused) { live.drawing = false; return; }
+      document.querySelectorAll("canvas.live:not(.off)").forEach(c => {
+        const [, , [sx, sy, sw, sh]] = LIVE.find(l => WINDOWS[c.dataset.w][0] === l[0]);
+        c.getContext("2d").drawImage(v, sx, sy, sw, sh, 0, 0, sw, sh);
+      });
+      if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(drawLive); else requestAnimationFrame(drawLive);
+    };
+    const runLive = () => {
+      const want = live.inView || !box.hidden;
+      if (!want) { if (live.video) keepPlaying(live.video, false); return; }
+      if (!live.video) {
+        const v = live.video = document.createElement("video");
+        v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto"; v.offPage = true;
+        v.innerHTML = '<source src="img/tour/live.mp4" type="video/mp4"><source src="img/tour/live.webm" type="video/webm">';
+        v.addEventListener("playing", () => { if (!live.shown) { live.shown = true; show(); } if (!live.drawing) { live.drawing = true; drawLive(); } });
+      }
+      keepPlaying(live.video, true);
+    };
+    if (!reduce && "IntersectionObserver" in window) {
+      new IntersectionObserver(([e]) => { live.inView = e.isIntersecting; runLive(); }).observe(stage);
+    }
     show();
     if (reduce || !("IntersectionObserver" in window)) on.forEach((_, i) => on[i] = !WINDOWS[i][5]), show();
     else {
@@ -1057,9 +1120,9 @@ footer .credits a { text-decoration: underline; }
       if (!big) { big = document.createElement("div"); big.className = "desk-stage"; box.append(big); }
       box.classList.remove("detail"); boxTip.textContent = "Click for full detail";
       box.hidden = false; document.body.style.overflow = "hidden";
-      paint(big); boxClose.focus();
+      paint(big); boxClose.focus(); runLive();
     };
-    const close = () => { box.hidden = true; document.body.style.overflow = ""; returnTo?.focus(); };
+    const close = () => { box.hidden = true; document.body.style.overflow = ""; returnTo?.focus(); runLive(); };
     stage.addEventListener("click", open);
     stage.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
     boxClose.onclick = close;
@@ -1130,19 +1193,31 @@ footer .credits a { text-decoration: underline; }
     hctx.globalAlpha = 1;
   }
 
+  /* ---------- moving clips: muted loops that play only while on screen ---------- */
+  const clip = (file, poster, label) =>
+    `<video muted loop playsinline preload="none" poster="${poster}"${label ? ` aria-label="${label}"` : ""}><source src="img/${file}.mp4" type="video/mp4"><source src="img/${file}.webm" type="video/webm"></video>`;
+  let clipWatch = null;
+  function watchClips(scope) {
+    if (reduce || !("IntersectionObserver" in window)) return;
+    clipWatch ??= new IntersectionObserver(entries => entries.forEach(e =>
+      keepPlaying(e.target, e.isIntersecting)), { threshold: .25 });
+    scope.querySelectorAll("video").forEach(v => clipWatch.observe(v));
+  }
+
   /* ---------- visuals gallery ---------- */
   const V = {
-    rt: ["Ray traced", 27, [["diamond-fire","Diamond Fire"],["blue-marble","Blue Marble"],["cathedral-light","Cathedral Light"],["crystal-organ","Crystal Organ"],["cloud-sea","Cloud Sea"],["ringed-world","Ringed World"],["chrome-equalizer","Chrome Equalizer"],["forest-light","Forest Light"],["disco-ball","Disco Ball"]]],
-    pa: ["Particles", 59, [["phoenix-rising","Phoenix Rising"],["galaxy-collision","Galaxy Collision"],["volcanic-eruption","Volcanic Eruption"],["strange-attractors","Strange Attractors"],["solar-flare","Solar Flare"],["iron-filings","Iron Filings"],["magnetosphere","Magnetosphere"],["silk-currents","Silk Currents"],["ember-storm","Ember Storm"],["knot-stream","Knot Stream"],["dyson-swarm","Dyson Swarm"],["murmuration","Murmuration"],["buddhabrot","Buddhabrot"],["physarum","Physarum"],["barnsley-fern","Barnsley Fern"],["cardioid-loom","Cardioid Loom"]]],
-    ge: ["Geometric", 15, [["quasicrystal","Quasicrystal"],["girih-tiles","Girih Tiles"],["voronoi-glass","Voronoi Glass"],["hex-pulse","Hex Pulse"],["spirograph","Spirograph"]]],
+    rt: ["Ray traced", 26, [["ferrofluid","Ferrofluid"],["diamond-fire","Diamond Fire"],["blue-marble","Blue Marble"],["cathedral-light","Cathedral Light"],["crystal-organ","Crystal Organ"],["cloud-sea","Cloud Sea"],["ringed-world","Ringed World"],["chrome-equalizer","Chrome Equalizer"],["forest-light","Forest Light"],["disco-ball","Disco Ball"]]],
+    pa: ["Particles", 60, [["firefly-meadow","Firefly Meadow"],["phoenix-rising","Phoenix Rising"],["galaxy-collision","Galaxy Collision"],["volcanic-eruption","Volcanic Eruption"],["strange-attractors","Strange Attractors"],["solar-flare","Solar Flare"],["iron-filings","Iron Filings"],["magnetosphere","Magnetosphere"],["silk-currents","Silk Currents"],["ember-storm","Ember Storm"],["knot-stream","Knot Stream"],["dyson-swarm","Dyson Swarm"],["murmuration","Murmuration"],["buddhabrot","Buddhabrot"],["physarum","Physarum"],["barnsley-fern","Barnsley Fern"],["cardioid-loom","Cardioid Loom"]]],
+    ge: ["Geometric", 15, [["polyhedra-waltz","Polyhedra Waltz"],["quasicrystal","Quasicrystal"],["girih-tiles","Girih Tiles"],["voronoi-glass","Voronoi Glass"],["hex-pulse","Hex Pulse"],["spirograph","Spirograph"]]],
     mi: ["Minimal", 14, [["enso","Enso"],["eclipse","Eclipse"],["harmonograph","Harmonograph"]]],
-    ka: ["Kaleidoscope", 16, [["kaleido-cathedral","Kaleido Cathedral"],["rose-window","Rose Window"],["flower-of-life","Flower of Life"]]],
+    ka: ["Kaleidoscope", 16, [["truchet-weave","Truchet Weave"],["kaleido-cathedral","Kaleido Cathedral"],["rose-window","Rose Window"],["flower-of-life","Flower of Life"]]],
     fr: ["Fractal and fly-through", 38, [["mandelbulb-bloom","Mandelbulb Bloom"],["menger-voyage","Menger Voyage"],["pythagoras-tree","Pythagoras Tree"],["apollonian-spheres","Apollonian Spheres"],["orbit-traps","Orbit Traps"]]],
+    ms: ["Music-shaped", 14, [["pulsar-ridges","Pulsar Ridges"],["waveform-tunnel","Waveform Tunnel"]]],
     cy: ["Cyberpunk", 6, [["neon-downpour","Neon Downpour"]]],
-    co: ["Cosmic", 5, [["cosmic-jellyfish","Cosmic Jellyfish"],["black-hole","Black Hole"]]]
+    co: ["Cosmic", 5, [["bass-nebula","Bass Nebula"],["cosmic-jellyfish","Cosmic Jellyfish"],["black-hole","Black Hole"]]]
   };
-  const ALL = [["co",1],["ge",0],["rt",0],["mi",0],["ka",0],["pa",1],["fr",2],["rt",1],["co",0],["pa",12],["fr",0],["ge",1],["pa",2],["mi",1],["rt",2],["cy",0],["fr",3],["pa",3],["fr",1],["ge",2],["rt",3],["ka",1],["pa",4],["pa",15],["pa",0]];
-  const SHORT = { rt: "Ray traced", pa: "Particles", ge: "Geometric", mi: "Minimal", ka: "Kaleido", fr: "Fractal", cy: "Cyberpunk", co: "Cosmic" };
+  const ALL = [["rt",0],["pa",0],["ge",0],["co",0],["ms",0],["ge",1],["mi",0],["ka",0],["pa",4],["ms",1],["ka",1],["co",2],["rt",1],["pa",2],["fr",2],["co",1],["pa",13],["fr",0],["ge",2],["mi",1],["rt",3],["cy",0],["fr",3],["rt",2],["pa",16]];
+  const SHORT = { rt: "Ray traced", pa: "Particles", ge: "Geometric", mi: "Minimal", ka: "Kaleido", fr: "Fractal", ms: "Music-shaped", cy: "Cyberpunk", co: "Cosmic" };
   const chips = document.getElementById("chips"), gallery = document.getElementById("gallery");
   const famBtn = (key, label, count) => {
     const b = document.createElement("button");
@@ -1156,12 +1231,15 @@ footer .credits a { text-decoration: underline; }
   for (const k in V) famBtn(k, V[k][0], V[k][1]);
   function showFam(key) {
     const items = key === "all" ? ALL.map(([f, i]) => [f, V[f][2][i]]) : V[key][2].map(x => [key, x]);
+    clipWatch?.disconnect();
     gallery.innerHTML = items.map(([f, [file, name]], i) =>
       `<figure class="tile${i === 0 ? " big" : ""}" style="animation-delay:${Math.min(i, 12) * 30}ms">
-        <img src="img/${file}.jpg" alt="${name} visual" loading="lazy">
+        ${reduce ? `<img src="img/${file}.jpg" alt="${name} visual" loading="lazy">` : clip(`clips/${file}`, `img/clips/${file}.jpg`, `${name} visual`)}
         <figcaption>${name}<span>${SHORT[f]}</span></figcaption></figure>`).join("");
+    if (clipWatch) watchClips(gallery);
   }
   showFam("all");
+  watchClips(gallery);
 
   /* ---------- equalizer ---------- */
   const eqc = document.getElementById("eq"), ectx = eqc.getContext("2d");
@@ -1486,7 +1564,7 @@ footer .credits a { text-decoration: underline; }
   const EQ = [.3, .26, .36, .5, .58, .55, .45, .34, .28, .24];
   const eqWin = () => `<div class="lw">${title("Equalizer", "10 bands")}<div class="lw-eq">${EQ.map((v, i) =>
       `<div class="lw-f" style="--v:${v}"><i></i><span>${["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"][i]}</span></div>`).join("")}</div></div>`;
-  const visWin = (tools = "") => `<div class="lw lw-vis-win">${title("Visuals", "60 fps", "", tools)}<div class="lw-vis"><img src="img/cosmic-jellyfish.jpg" alt="" loading="lazy"><span>Cosmic Jellyfish</span></div></div>`;
+  const visWin = (tools = "") => `<div class="lw lw-vis-win">${title("Visuals", "60 fps", "", tools)}<div class="lw-vis">${clip("clips/polyhedra-waltz-square", "img/clips/polyhedra-waltz-square.jpg", "")}<span>Polyhedra Waltz</span></div></div>`;
   layoutDemo();
   function drawSkinsDesk() {
     deskSkins.classList.toggle("wsz", isWsz());
@@ -1503,6 +1581,7 @@ footer .credits a { text-decoration: underline; }
     const lockBtn = n => `<button type="button" class="lw-tb" data-lock="${n}" aria-pressed="false" aria-label="Lock ${n}" title="Lock ${n}">${I.unlock}</button>`;
     const linkBtn = `<button type="button" class="lw-tb" data-link aria-pressed="true" aria-label="Link every window to the player" title="Link (J)">${I.link}</button>`;
     deskPlayer.innerHTML = playerWin(linkBtn + lockBtn("Player")) + queueWin(4, lockBtn("Queue")) + visWin(lockBtn("Visuals"));
+    watchClips(deskPlayer);
     const wins = [...deskPlayer.children], NAMES = { p: "Player", q: "Queue", v: "Visuals" };
     "pqv".split("").forEach((a, i) => { wins[i].dataset.a = a; wins[i].style.setProperty("--area", a); });
     const winOf = a => wins.find(w => w.dataset.a === a);

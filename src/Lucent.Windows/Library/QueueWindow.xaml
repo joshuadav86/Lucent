@@ -164,6 +164,9 @@
             <!-- Another app's playlist (Spotify's), in place of the queue while Lucent controls that app. -->
             <ListBox x:Name="RemoteListView" Grid.Row="1" Background="Transparent" BorderThickness="0" Visibility="Collapsed"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     VirtualizingPanel.ScrollUnit="Pixel"
                      SelectionMode="Single"
                      MouseDoubleClick="OnRemoteListDoubleClick"
                      KeyDown="OnRemoteListKeyDown"
