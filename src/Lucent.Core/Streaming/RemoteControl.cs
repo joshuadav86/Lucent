@@ -21,6 +21,12 @@ public sealed class RemoteControl : IDisposable
     private string? _artworkFor;
     private RemoteTrack? _artworkTrack;
 
+    // The song whose cover is being fetched now, and until when a song still without one is asked again: an app can name
+    // a new song a moment before it has its cover (Spotify tells Windows the title first).
+    private string? _artworkLoading;
+    private DateTime _artworkAskedUntil;
+    private static readonly TimeSpan ArtworkAskTime = TimeSpan.FromSeconds(5);
+
     // What the list was last read for: the list's ID, and the song for a list that follows the song.
     private (string? List, string? Song)? _listFor;
     private int _listReads;
@@ -69,6 +75,11 @@ public sealed class RemoteControl : IDisposable
         Player = player;
         _sharperCover = sharperCover;
         _limitList = player is not IRemoteLists && player.ListLimit is { } why ? new RemoteList(null, "Up next", Array.Empty<RemoteTrack>(), why) : null;
+        if (player is IRemoteNotifier notifier)
+        {
+            notifier.Changed += OnPlayerChanged;
+        }
+
         _ = ReadLoopAsync();
     }
 
@@ -510,6 +521,23 @@ public sealed class RemoteControl : IDisposable
         }
     }
 
+    // The app says its song or play state just changed, so it's read now rather than at the next read.
+    private void OnPlayerChanged(object? sender, EventArgs e)
+    {
+        if (_disposed || _readNow.CurrentCount > 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _readNow.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
     private async Task ReadOnceAsync()
     {
         RemoteState? state;
@@ -579,26 +607,41 @@ public sealed class RemoteControl : IDisposable
         Changed?.Invoke(this, EventArgs.Empty);
         ReadListIfChanged(state);
 
-        var track = state?.Track;
-        if (track?.Id == _artworkFor)
+        ShowArtwork(state?.Track);
+    }
+
+    // The song's cover, fetched beside the reads, so a slow one never holds up the next song's title or a pause.
+    private async void ShowArtwork(RemoteTrack? track)
+    {
+        var again = track is not null && track.Id == _artworkFor;
+        if (again && (Artwork is not null || _artworkLoading == track!.Id || DateTime.UtcNow >= _artworkAskedUntil))
         {
             return;
         }
 
-        // The same song under another ID (Spotify's app here names it one way, its Web API another a few seconds
-        // later) keeps its cover, unless that's still small and the new read says where the app keeps a larger one.
-        var sameSong = track is not null && Artwork is not null && track.IsSameSong(_artworkTrack);
-        var before = _artworkTrack;
-        _artworkFor = track?.Id;
-        _artworkTrack = track;
-        if (sameSong && (track!.ArtworkUrl is null || track.ArtworkUrl == before!.ArtworkUrl || SharperCover.IsSharp(Artwork)))
+        if (!again)
         {
-            return;
-        }
+            if (track?.Id == _artworkFor)
+            {
+                return;
+            }
 
-        if (!sameSong)
-        {
-            Artwork = null;
+            // The same song under another ID (Spotify's app here names it one way, its Web API another a few seconds
+            // later) keeps its cover, unless that's still small and the new read says where the app keeps a larger one.
+            var sameSong = track is not null && Artwork is not null && track.IsSameSong(_artworkTrack);
+            var before = _artworkTrack;
+            _artworkFor = track?.Id;
+            _artworkTrack = track;
+            _artworkAskedUntil = DateTime.UtcNow + ArtworkAskTime;
+            if (sameSong && (track!.ArtworkUrl is null || track.ArtworkUrl == before!.ArtworkUrl || SharperCover.IsSharp(Artwork)))
+            {
+                return;
+            }
+
+            if (!sameSong)
+            {
+                Artwork = null;
+            }
         }
 
         if (track is null)
@@ -606,6 +649,8 @@ public sealed class RemoteControl : IDisposable
             return;
         }
 
+        var found = false;
+        _artworkLoading = track.Id;
         try
         {
             var artwork = await Player.ArtworkAsync(track, _stop.Token);
@@ -613,6 +658,7 @@ public sealed class RemoteControl : IDisposable
                 && (Artwork is null || ImageFormats.WidthOf(artwork) > ImageFormats.WidthOf(Artwork)))
             {
                 Artwork = artwork;
+                found = true;
                 Changed?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -620,8 +666,19 @@ public sealed class RemoteControl : IDisposable
         {
             // No cover, then (or Lucent stopped controlling the app). The song still shows.
         }
+        finally
+        {
+            if (_artworkLoading == track.Id)
+            {
+                _artworkLoading = null;
+            }
+        }
 
-        await ShowSharperCoverAsync(track);
+        // Looked for once a song, unless the app's own cover came only when asked again.
+        if (!again || found)
+        {
+            await ShowSharperCoverAsync(track);
+        }
     }
 
     // The app's cover shows straight away; a sharper one, when it's small and one can be found, replaces it.
@@ -765,6 +822,11 @@ public sealed class RemoteControl : IDisposable
         }
 
         _disposed = true;
+        if (Player is IRemoteNotifier notifier)
+        {
+            notifier.Changed -= OnPlayerChanged;
+        }
+
         _stop.Cancel();
         Player.Dispose();
     }

@@ -124,6 +124,16 @@ public sealed record RemotePlaylist(string Uri, string Name, int? Songs = null, 
     public bool IsLiked => Uri.EndsWith(":collection", StringComparison.Ordinal) || Uri == "music:favorites";
 }
 
+/// <summary>
+/// An app that says when its song or play state changes (Windows' media controls do, as do Spotify and Music on a Mac),
+/// so it's read straight away rather than at the next once-a-second read.
+/// </summary>
+public interface IRemoteNotifier
+{
+    /// <summary>Raised on any thread, maybe several times for one change.</summary>
+    event EventHandler? Changed;
+}
+
 /// <summary>An app whose volume Lucent can change, on the device it's playing on (<see cref="RemoteState.Volume"/>).</summary>
 public interface IRemoteVolume
 {

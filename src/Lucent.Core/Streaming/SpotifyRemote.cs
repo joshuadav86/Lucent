@@ -15,7 +15,7 @@ namespace Lucent.Streaming;
 /// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window, its shuffle and
 /// repeat, which the player's own buttons change, and lists the account's playlists for the library.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes, IRemoteOpener
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes, IRemoteOpener, IRemoteNotifier
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -78,6 +78,26 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
 
     public string Name => "Spotify";
 
+    /// <summary>Raised when the Spotify app on this computer says its song or play state changed.</summary>
+    public event EventHandler? Changed
+    {
+        add
+        {
+            if (_app is IRemoteNotifier app)
+            {
+                app.Changed += value;
+            }
+        }
+
+        remove
+        {
+            if (_app is IRemoteNotifier app)
+            {
+                app.Changed -= value;
+            }
+        }
+    }
+
     /// <summary>
     /// True when the Spotify app is running on this computer, or when there's no app here to read (a connection made
     /// just to list playlists), which then has nothing to open.
@@ -95,13 +115,16 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
         var app = await ReadAppAsync(cancel);
+        var newSong = !SameSong(_appRead?.Track, app?.Track);
         _appRead = app;
         if (app is { IsPlaying: true, Track: not null })
         {
             _usingApp = true;
             var now = DateTime.UtcNow;
             var due = _web is null || now - _webReadAt > WebEvery || (!SameSong(_web.Track, app.Track) && now - _webReadAt > WebAfterNewSong);
-            if (due && now >= _waitUntil)
+            // A new song shows the moment the app names it; the Web API is asked about it on the next read, which also
+            // gives Spotify's servers a moment to catch up with the app.
+            if (due && !newSong && now >= _waitUntil)
             {
                 _webReadAt = now;
                 try
