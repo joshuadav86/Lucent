@@ -54,6 +54,8 @@ public static class MenuTips
 
     public const string FullScreenLucent = "Spread every open Lucent window across the screen, side by side.";
 
+    public const string SingleWindow = "Show every open Lucent window as a panel inside one window, with one title bar.";
+
     public const string Tidy = "Line the windows up evenly. Choose it again for another arrangement.";
 
     public const string Layouts = "Save the way your windows are arranged, and switch back to it later.";

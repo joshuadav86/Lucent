@@ -103,6 +103,8 @@ public static partial class Screenshots
         ("RadioVideo", () => PreviewRadioVideo()),
         ("RadioDesk", () => PreviewRadioDesk()),
         ("FullScreen", () => PreviewFullScreen()),
+        ("SingleWindow", () => PreviewSingleWindow(Lucent.Layout.TileStyle.AsTheyAre)),
+        ("SingleWindow-Centred", () => PreviewSingleWindow(Lucent.Layout.TileStyle.Centred, artwork: true)),
     };
 
     public static int Run(string[] args)

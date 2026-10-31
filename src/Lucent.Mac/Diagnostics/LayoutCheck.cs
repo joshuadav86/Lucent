@@ -15,7 +15,8 @@ namespace Lucent.Mac;
 /// gave them. A mismatch shows as the visuals squashed into part of the window. Then it minimizes
 /// the player and checks the windows around it went to the Dock too, and came back with it, and quits
 /// the way people do. On the way it checks the app menu has Lucent's items, Quit among them. Run again on the same settings with LUCENT_LAYOUT_CHECK_REOPENED=1, it first
-/// checks the windows came back as they were left: the visuals open, the equalizer under the player.
+/// checks the windows came back as they were left: the visuals open, the equalizer under the player. Before minimizing it
+/// switches single window on and off (CheckSingleWindowAsync).
 /// </summary>
 internal static class LayoutCheck
 {
@@ -65,6 +66,8 @@ internal static class LayoutCheck
                 failed |= !matched;
                 lines.Add(line);
             }
+
+            lines.AddRange(await CheckSingleWindowAsync(main, visuals));
 
             // Off the player's top edge, so it isn't docked beside it: docked there, the visuals are
             // stretched to the bottom of the column under the player when Lucent reopens, which the
@@ -160,6 +163,39 @@ internal static class LayoutCheck
         var right = titles.Contains("Quit Lucent") && titles.Contains("About Lucent")
             && !titles.Any(title => title.Contains("Avalonia", StringComparison.OrdinalIgnoreCase));
         return new List<string> { right ? $"app menu: {shown}" : $"MISMATCH app menu should have About Lucent and Quit Lucent, has: {shown}" };
+    }
+
+    /// <summary>
+    /// Single window on: the visuals become a panel in the player's window, their own window out of sight but
+    /// still open, and the Metal view (moved from one window to the other) still fills its space as the
+    /// window's resized. Then off again: the visuals are a window of their own again, back where they were.
+    /// </summary>
+    private static async Task<List<string>> CheckSingleWindowAsync(Window main, Window visuals)
+    {
+        var lines = new List<string>();
+        var before = Describe(visuals);
+        SingleWindow.Toggle?.Invoke();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var inMain = main.GetVisualDescendants().OfType<MetalView>().Any();
+        lines.Add($"{(SingleWindow.IsOn() && SingleWindow.Holds(visuals) && inMain ? "ok" : "MISMATCH")} single window on: " +
+            $"the visuals {(inMain ? "are a panel in the player's window" : "aren't in the player's window")}");
+        lines.Add($"{(visuals.IsVisible && !IsOnScreen(visuals) ? "ok" : "MISMATCH")} single window on: the visuals' own window is " +
+            $"{(IsOnScreen(visuals) ? "still on the screen" : "out of sight")}, and {(visuals.IsVisible ? "still open" : "closed")}");
+        foreach (var (width, height) in new[] { (1400.0, 820.0), (1100.0, 700.0) })
+        {
+            main.Width = width;
+            main.Height = height;
+            // The Metal view's now in the player's window, so that's where it's looked for.
+            lines.Add((await SettleAsync(main, $"single window {width} x {height}")).Line);
+        }
+
+        SingleWindow.Toggle?.Invoke();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var back = !SingleWindow.IsOn() && visuals.GetVisualDescendants().OfType<MetalView>().Any() && IsOnScreen(visuals);
+        lines.Add($"{(back ? "ok" : "MISMATCH")} single window off: the visuals {(back ? "are a window again" : "didn't come back as a window")}");
+        lines.Add((await SettleAsync(visuals, "single window off")).Line);
+        lines.Add($"{(Near(Describe(visuals), before) ? "ok" : "MISMATCH")} single window off: the visuals are at {Describe(visuals)}, were at {before}");
+        return lines;
     }
 
     private static async Task<List<string>> CheckMinimizeAsync(Window main)

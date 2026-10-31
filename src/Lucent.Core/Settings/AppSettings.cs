@@ -221,6 +221,21 @@ public sealed class AppSettings
     /// </summary>
     public TileStyle FullScreenStyle { get; set; } = TileStyle.AsTheyAre;
 
+    /// <summary>
+    /// Single window (U): every open window shown as a panel inside the player's window, with one title bar.
+    /// Lucent opens that way again if it was closed that way.
+    /// </summary>
+    public bool SingleWindow { get; set; }
+
+    /// <summary>Where the single window was, and its size, so it opens there again.</summary>
+    public WindowBounds? SingleWindowPlace { get; set; }
+
+    /// <summary>The single window's tidy layout (Shift+D while it's on), kept apart from full screen's.</summary>
+    public TileStyle SingleWindowStyle { get; set; } = TileStyle.AsTheyAre;
+
+    /// <summary>The panels swapped in the single window (one dragged onto another), by name, in order, as <see cref="FullScreenSwaps"/>.</summary>
+    public List<List<string>> SingleWindowSwaps { get; set; } = new();
+
     /// <summary>The window layouts saved by name (right-click › Layouts), in the order of their keys, 1 to 9.</summary>
     public List<SavedLayout> Layouts { get; set; } = new();
 

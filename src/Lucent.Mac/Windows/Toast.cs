@@ -21,6 +21,8 @@ public static class Toast
     /// <summary>Shows <paramref name="text"/> in the middle of <paramref name="over"/>, in place of any toast already showing.</summary>
     public static void Show(Control over, string text)
     {
+        // A window that's a panel in the single window is out of sight: the toast goes over its panel.
+        over = SingleWindow.Shown(over);
         // Only a nicety: the note it repeats is shown anyway, so a toast that can't open is let go.
         try
         {

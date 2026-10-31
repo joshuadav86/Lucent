@@ -179,6 +179,9 @@ public partial class MainWindow
         var fullScreen = Check("Full Screen Lucent", ToggleLucentFullScreen);
         fullScreen.Gesture = LucentFullScreen.Gesture;
         window.Add(fullScreen);
+        // No key here either: U is typed in the search boxes too. U works in Lucent's windows.
+        var single = Check("Single Window", ToggleSingleWindow);
+        window.Add(single);
         // No key here: a menu key of ⇧D would take capital Ds typed in the search boxes. Shift+D works in Lucent's windows.
         window.Add(Item("Tidy Layout", TidyLayout));
         var layouts = new NativeMenu();
@@ -201,6 +204,8 @@ public partial class MainWindow
             showVideo.IsChecked = VideoWindow.IsOpen;
             link.IsChecked = _settings.LinkWindows;
             fullScreen.IsChecked = _settings.LucentFullScreen;
+            single.IsChecked = InSingleWindow;
+            single.IsEnabled = InSingleWindow || !IsClassic;
             FillLayoutsMenu(layouts);
         };
         bar.Add(new NativeMenuItem("Window") { Menu = window });
