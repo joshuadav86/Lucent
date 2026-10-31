@@ -46,6 +46,11 @@ cbuffer Params : register(b0)
     float DropPulse;           // 1 the moment a drop hits, fading over a few seconds
     float SectionPhase;        // 0..1 through the current section
     float SongMapped;          // 1 while the values above follow a mapped song, 0.5 while a beat is followed live, 0 otherwise
+
+    // The mouse over the visuals. Particle visuals' dots get pushed aside by it (see ParticleMain.hlsli).
+    float2 PointerPosition;    // where it is, in p units
+    float2 PointerVelocity;    // how fast it's moving, in p units per second
+    float PointerStrength;     // 1 while it moves over a Particles visual, fading to 0 once it rests or leaves
 };
 
 Texture2D PreviousFrame : register(t0);

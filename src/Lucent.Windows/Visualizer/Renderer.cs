@@ -28,8 +28,8 @@ public sealed partial class Renderer : IDisposable
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
     private const Format HdrBackBufferFormat = Format.R16G16B16A16_Float;
-    private const int ConstantCount = 32;
-    private const int ParticleStride = 48;
+    private const int ConstantCount = 40;
+    private const int ParticleStride = 64;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const double MaxRenderScale = 4.0;
     private const double MinRenderScale = 0.25;
@@ -229,6 +229,9 @@ public sealed partial class Renderer : IDisposable
     /// each change so the new visual arrives right on a downbeat.
     /// </summary>
     public SongClock? SongClock { get; set; }
+
+    /// <summary>The mouse over the visuals, which pushes a Particles visual's dots aside; null when there's no mouse (recording, say).</summary>
+    public PointerStir? Pointer { get; set; }
 
     /// <summary>When on, only the morphing transitions are used.</summary>
     public bool MorphTransitionsOnly
@@ -693,6 +696,14 @@ public sealed partial class Renderer : IDisposable
         _constants[29] = drop;
         _constants[30] = moment.SectionPhase;
         _constants[31] = _songFollower.Mapped ? 1f : _songFollower.Live ? 0.5f : 0f;
+        if (Pointer is { } pointer)
+        {
+            pointer.Update((float)_renderWidth / _renderHeight);
+            _constants[32] = pointer.X;
+            _constants[33] = pointer.Y;
+            _constants[34] = pointer.VelocityX;
+            _constants[35] = pointer.VelocityY;
+        }
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
         _frameTime = now;
@@ -895,6 +906,8 @@ public sealed partial class Renderer : IDisposable
         _constants[20] = count;
         _constants[21] = particles.Fresh ? 1f : 0f;
         _constants[22] = (float)slot.Source.NormalParticleCount / count;
+        // Only the Particles family can be pushed around by the mouse.
+        _constants[36] = Pointer is { } pointer && slot.Source.Family == VisualStyles.ParticlesFamily ? pointer.Strength : 0f;
         particles.Fresh = false;
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
 

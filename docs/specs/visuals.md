@@ -10,6 +10,7 @@
 - **Auto (A):** changes visual on downbeats and drops; next (N) and back (B).
 - **Build-ups and drops:** songs are mapped in the background (bars, sections, build-ups, drops). Through a build-up the picture zooms in with quickening hits; the drop brings a shock wave and a brighter picture. Radio and other apps are followed by ear at half strength. Switch: "Build-ups and drops".
 - **Fullscreen visuals (F11)** or double-click. A single click does nothing (no click-to-pause). Right-click is the menu.
+- **Mouse push (hidden):** moving the mouse over a Particles-family visual pushes the dots near it aside with a little swirl, and they ease back over a couple of seconds while still moving with the music. Only a moving mouse pushes; a resting one does nothing. Other families, MilkDrop, and AVS presets are never affected (classic presets stay as their authors made them). The push is a screen-space offset kept per particle by the engine (`Push` in `ParticleMain.hlsli`, `PointerStir` in Core), so visuals don't have to do anything.
 - **Record a visual to video** from the right-click menu (MP4 with the song).
 - **Detail levels** up to Ultra and 4K; resolution adapts to keep frame rate (`AutoResolution`).
 

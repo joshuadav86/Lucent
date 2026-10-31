@@ -24,6 +24,7 @@ struct Particle
     float3 velocity;  // free to use, usually units per second
     float age;        // seconds since it was spawned (the engine counts it up)
     float4 data;      // free to use: anything else a particle needs to remember
+    float4 push;      // the engine's: how far the mouse has pushed its dot on screen (xy) and how fast (zw)
 };
 
 // Start each one from (Sprite)0 so any field left alone is zero.
