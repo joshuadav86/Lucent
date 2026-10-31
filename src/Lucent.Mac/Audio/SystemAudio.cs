@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Lucent.Mac.Interop;
 using Lucent.Audio;
+using NAudio.Wave;
 using static Lucent.Mac.Interop.CoreAudio;
 
 namespace Lucent.Mac.Audio;
@@ -10,7 +11,8 @@ namespace Lucent.Mac.Audio;
 /// process tap, and feeds it to an <see cref="AudioCapture"/>, so the visuals, meter, equalizer's spectrum
 /// and analyzer react to any app. It only listens: the sound itself is untouched. Lucent's own music is
 /// part of what the Mac plays, so it still shows too. <see cref="StartForApp"/> listens to one app instead
-/// (the Spotify or browser Lucent controls), with a tap of just that app's processes.
+/// (the Spotify or browser Lucent controls), with a tap of just that app's processes. Given an equalizer, it also
+/// plays that app's sound through it: macOS quietens the app, and the equalized sound goes out in its place.
 /// </summary>
 /// <remarks>
 /// macOS asks once whether Lucent may record the Mac's sound ("System Audio Recording Only" in Privacy &amp;
@@ -32,7 +34,27 @@ public sealed unsafe class SystemAudio : IDisposable
     private float[] _left = Array.Empty<float>();
     private float[] _right = Array.Empty<float>();
 
+    // While the app plays through the equalizer: a copy of the player's equalizer kept in step with it (the player's
+    // own stays plugged into the paused track), the tapped sound going into it, and its output.
+    private Equalizer? _leader;
+    private Equalizer? _shaping;
+    private BlockSource? _block;
+    private ISampleProvider? _equalized;
+    private float[] _stereo = Array.Empty<float>();
+
+    // The app's own sound is only quietened once the tap has heard it, so a tap that hears nothing (macOS not yet
+    // allowed to record) can never leave the app silent. Until then, the app plays as usual and Lucent plays nothing.
+    private volatile bool _muted;
+    private int _muting;
+    private readonly object _tapGate = new();
+
     private SystemAudio(AudioCapture capture) => _capture = capture;
+
+    /// <summary>
+    /// The equalizer shaping the app's sound, once the app is playing through it (null until then, and when there's
+    /// no equalizer). For the equalizer window's headroom readout.
+    /// </summary>
+    public Equalizer? Shaping => _muted ? _shaping : null;
 
     /// <summary>
     /// Raised (on a background thread) when the Mac switches to another output (headphones plugged in, say),
@@ -44,13 +66,20 @@ public sealed unsafe class SystemAudio : IDisposable
     public static bool IsSupported => AudioTap.IsSupported;
 
     /// <summary>Starts listening. Throws when macOS won't. Dispose to go back to the player's own sound.</summary>
-    public static SystemAudio Start(AudioCapture capture) => Start(capture, null);
+    public static SystemAudio Start(AudioCapture capture) => Start(capture, null, null);
 
     /// <summary>
     /// Starts listening to just these processes (Core Audio's objects for them, from <see cref="FindApp"/>).
     /// Throws when macOS won't.
     /// </summary>
-    public static SystemAudio StartForApp(AudioCapture capture, IReadOnlyList<uint> processes) => Start(capture, processes);
+    public static SystemAudio StartForApp(AudioCapture capture, IReadOnlyList<uint> processes) => Start(capture, processes, null);
+
+    /// <summary>
+    /// Starts listening to just these processes and plays their sound through an equalizer that follows
+    /// <paramref name="equalizer"/>'s settings, quietening the app's own sound once the tap hears it. Throws when macOS won't.
+    /// </summary>
+    public static SystemAudio StartForApp(AudioCapture capture, IReadOnlyList<uint> processes, Equalizer equalizer) =>
+        Start(capture, processes, equalizer);
 
     /// <summary>
     /// Core Audio's objects for the app whose bundle IDs start with <paramref name="bundlePrefixes"/> (with its helper
@@ -59,7 +88,7 @@ public sealed unsafe class SystemAudio : IDisposable
     public static List<uint> FindApp(IReadOnlyList<string> bundlePrefixes) =>
         IsSupported ? AudioTap.ProcessObjects(bundlePrefixes) : new List<uint>();
 
-    private static SystemAudio Start(AudioCapture capture, IReadOnlyList<uint>? processes)
+    private static SystemAudio Start(AudioCapture capture, IReadOnlyList<uint>? processes, Equalizer? equalizer)
     {
         if (!IsSupported)
         {
@@ -69,7 +98,7 @@ public sealed unsafe class SystemAudio : IDisposable
         var listener = new SystemAudio(capture);
         try
         {
-            listener.Open(processes);
+            listener.Open(processes, equalizer);
         }
         catch
         {
@@ -83,7 +112,7 @@ public sealed unsafe class SystemAudio : IDisposable
     /// <summary>The name of the output being listened to, for the menu's tooltip.</summary>
     public static string? DefaultOutputName() => OutputDevices.Open(null)?.Name;
 
-    private void Open(IReadOnlyList<uint>? processes)
+    private void Open(IReadOnlyList<uint>? processes, Equalizer? equalizer)
     {
         using var pool = AutoreleasePool.Begin();
         var output = OutputDevices.Open(null) ?? throw new IOException("The Mac has no sound output to listen to.");
@@ -104,6 +133,15 @@ public sealed unsafe class SystemAudio : IDisposable
 
         _channels = (int)Math.Max(1, format.ChannelsPerFrame);
         _interleaved = (format.FormatFlags & AudioTap.NonInterleavedFlag) == 0;
+        if (equalizer is not null)
+        {
+            _leader = equalizer;
+            _shaping = new Equalizer();
+            _shaping.CopyFrom(equalizer);
+            equalizer.Changed += OnLeaderChanged;
+            _block = new BlockSource((int)Math.Round(format.SampleRate));
+            _equalized = _shaping.Attach(_block);
+        }
 
         var aggregate = AudioTap.DescribeAggregate($"net.lucentaudio.system-audio.{Guid.NewGuid():N}", name,
             output.Id, uuid);
@@ -145,7 +183,7 @@ public sealed unsafe class SystemAudio : IDisposable
         {
             if (input is not null && GCHandle.FromIntPtr(clientData).Target is SystemAudio listener)
             {
-                listener.Take(input);
+                listener.Take(input, output);
             }
         }
         catch (Exception)
@@ -156,7 +194,7 @@ public sealed unsafe class SystemAudio : IDisposable
         return 0;
     }
 
-    private void Take(AudioBufferList* input)
+    private void Take(AudioBufferList* input, AudioBufferList* output)
     {
         if (input->NumberBuffers == 0)
         {
@@ -207,7 +245,140 @@ public sealed unsafe class SystemAudio : IDisposable
             }
         }
 
+        if (_equalized is not null)
+        {
+            Equalize(frames, output);
+        }
+
         _capture.WriteExternal(_mono.AsSpan(0, frames), _left.AsSpan(0, frames), _right.AsSpan(0, frames));
+    }
+
+    // Core Audio's IO thread: plays the slice just heard through the equalizer, out of the device the tap is clocked
+    // by (so the two never drift apart), and leaves the equalized sound in place for the visuals.
+    private void Equalize(int frames, AudioBufferList* output)
+    {
+        if (!_muted)
+        {
+            Silence(output);
+            if (Volatile.Read(ref _muting) == 0 && HeardSound(frames))
+            {
+                Interlocked.Exchange(ref _muting, 1);
+                // Changing the tap blocks, which Core Audio's IO thread mustn't.
+                ThreadPool.QueueUserWorkItem(_ => Mute());
+            }
+
+            return;
+        }
+
+        if (_stereo.Length < frames * 2)
+        {
+            _stereo = new float[frames * 2];
+        }
+
+        for (var frame = 0; frame < frames; frame++)
+        {
+            _stereo[frame * 2] = _left[frame];
+            _stereo[frame * 2 + 1] = _right[frame];
+        }
+
+        _block!.Fill(_stereo, frames * 2);
+        _equalized!.Read(_stereo, 0, frames * 2);
+        for (var frame = 0; frame < frames; frame++)
+        {
+            _left[frame] = _stereo[frame * 2];
+            _right[frame] = _stereo[frame * 2 + 1];
+            _mono[frame] = (_left[frame] + _right[frame]) / 2;
+        }
+
+        Play(frames, output);
+    }
+
+    private bool HeardSound(int frames)
+    {
+        for (var frame = 0; frame < frames; frame++)
+        {
+            if (Math.Abs(_left[frame]) > 1e-4f || Math.Abs(_right[frame]) > 1e-4f)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void Mute()
+    {
+        try
+        {
+            lock (_tapGate)
+            {
+                if (_tap != 0)
+                {
+                    AudioTap.MuteWhileTapped(_tap, _description);
+                    _muted = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // The app keeps playing as usual, unequalized.
+            System.Diagnostics.Trace.WriteLine($"Couldn't play the app through the equalizer: {ex.Message}");
+        }
+    }
+
+    // Left and right into the output's first two channels (both mixed into a lone one), and silence in any others.
+    private void Play(int frames, AudioBufferList* output)
+    {
+        if (output is null)
+        {
+            return;
+        }
+
+        var buffers = &output->Buffer;
+        var mono = output->NumberBuffers == 1 && buffers[0].NumberChannels == 1;
+        var channel = 0;
+        for (var index = 0; index < output->NumberBuffers; index++)
+        {
+            var buffer = buffers[index];
+            var channels = (int)Math.Max(1, buffer.NumberChannels);
+            var samples = (float*)buffer.Data;
+            var room = (int)(buffer.DataByteSize / sizeof(float)) / channels;
+            for (var frame = 0; frame < room; frame++)
+            {
+                for (var within = 0; within < channels; within++)
+                {
+                    var which = channel + within;
+                    samples[frame * channels + within] = frame >= frames || which > 1 ? 0f
+                        : mono ? _mono[frame]
+                        : which == 0 ? _left[frame] : _right[frame];
+                }
+            }
+
+            channel += channels;
+        }
+    }
+
+    private static void Silence(AudioBufferList* output)
+    {
+        if (output is null)
+        {
+            return;
+        }
+
+        var buffers = &output->Buffer;
+        for (var index = 0; index < output->NumberBuffers; index++)
+        {
+            new Span<byte>(buffers[index].Data, (int)buffers[index].DataByteSize).Clear();
+        }
+    }
+
+    // The UI thread: the player's equalizer changed, so the app's sound follows it.
+    private void OnLeaderChanged(object? sender, EventArgs e)
+    {
+        if (_leader is { } leader)
+        {
+            _shaping?.CopyFrom(leader);
+        }
     }
 
     private void Grow(int frames)
@@ -242,10 +413,19 @@ public sealed unsafe class SystemAudio : IDisposable
             _device = 0;
         }
 
-        if (_tap != 0)
+        lock (_tapGate)
         {
-            AudioTap.AudioHardwareDestroyProcessTap(_tap);
-            _tap = 0;
+            if (_tap != 0)
+            {
+                AudioTap.AudioHardwareDestroyProcessTap(_tap);
+                _tap = 0;
+            }
+        }
+
+        if (_leader is not null)
+        {
+            _leader.Changed -= OnLeaderChanged;
+            _leader = null;
         }
 
         ObjC.Release(_description);
@@ -258,6 +438,35 @@ public sealed unsafe class SystemAudio : IDisposable
         if (_capture.IsExternal)
         {
             _capture.EndExternal();
+        }
+    }
+
+    /// <summary>Hands the equalizer the slice of sound Core Audio just gave, as if it were reading a track.</summary>
+    private sealed class BlockSource : ISampleProvider
+    {
+        private float[] _samples = Array.Empty<float>();
+        private int _count;
+
+        public BlockSource(int sampleRate) => WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
+
+        public WaveFormat WaveFormat { get; }
+
+        public void Fill(float[] samples, int count)
+        {
+            _samples = samples;
+            _count = count;
+        }
+
+        public int Read(float[] buffer, int offset, int count)
+        {
+            var read = Math.Min(count, _count);
+            if (!ReferenceEquals(buffer, _samples) || offset != 0)
+            {
+                Array.Copy(_samples, 0, buffer, offset, read);
+            }
+
+            _count -= read;
+            return read;
         }
     }
 }
