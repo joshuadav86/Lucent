@@ -32,7 +32,7 @@ public sealed partial class VisualEngine : IDisposable
 {
     /// <summary>The visuals' own pictures: half-float, so glow and HDR have room above white.</summary>
     internal const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
-    private const int ConstantCount = 40;
+    private const int ConstantCount = 44;
     private const int ParticleStride = 64;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const int ParticleGroupSize = 256;
@@ -581,6 +581,12 @@ public sealed partial class VisualEngine : IDisposable
             _constants[34] = pointer.VelocityX;
             _constants[35] = pointer.VelocityY;
             _constants[37] = pointer.Grab;
+            _constants[38] = pointer.BallX;
+            _constants[39] = pointer.BallY;
+            _constants[40] = pointer.BallFromX;
+            _constants[41] = pointer.BallFromY;
+            _constants[42] = pointer.BallHeld;
+            _constants[43] = pointer.BallTurn;
         }
 
         var target = _feedback[_current]!;

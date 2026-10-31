@@ -9,6 +9,11 @@ namespace Lucent.Visualizer;
 /// <see cref="Pressed"/>, <see cref="Released"/>) on the UI thread; the renderer calls <see cref="Update"/>
 /// once a frame and passes the results to the shaders. Only a moving mouse pushes: once it rests, or
 /// leaves, the push fades and the dots drift back.
+/// <para>
+/// The handful is the "ball" here: the patch of dots where the button went down, carried with the mouse and
+/// thrown on when it's let go, its dots easing back home as <see cref="BallHeld"/> fades. The shaders lift
+/// that patch afresh each frame from where the visual draws its dots, so it moves as one and stays crisp.
+/// </para>
 /// </summary>
 public sealed class PointerStir
 {
@@ -22,7 +27,16 @@ public sealed class PointerStir
     private bool _held;
     private long _movedAt;
 
+    /// <summary>How far the thrown handful carries: its speed falls by this much a second.</summary>
+    private const float BallDamping = 2.5f;
+
+    /// <summary>How fast the handful turns in the hand, in radians a second.</summary>
+    private const float BallSpin = 0.8f;
+
     private long _lastUpdate;
+    private bool _wasHeld;
+    private float _ballVelocityX;
+    private float _ballVelocityY;
     private bool _tracking;
     private float _lastX;
     private float _lastY;
@@ -45,6 +59,22 @@ public sealed class PointerStir
 
     /// <summary>1 while the button is held down on the visuals, grabbing dots; 0 otherwise.</summary>
     public float Grab { get; private set; }
+
+    /// <summary>Where the handful is held, or flies once thrown, in p units.</summary>
+    public float BallX { get; private set; }
+
+    public float BallY { get; private set; }
+
+    /// <summary>Where the handful was picked up from, in p units.</summary>
+    public float BallFromX { get; private set; }
+
+    public float BallFromY { get; private set; }
+
+    /// <summary>1 while the handful is held, easing to 0 after it's thrown as its dust drifts home.</summary>
+    public float BallHeld { get; private set; }
+
+    /// <summary>How far the handful has turned since it was picked up, in radians.</summary>
+    public float BallTurn { get; private set; }
 
     /// <summary>The mouse is at (<paramref name="x"/>, <paramref name="y"/>), each 0..1 across and down the visuals.</summary>
     public void MovedTo(double x, double y)
@@ -150,12 +180,52 @@ public sealed class PointerStir
         var follow = deltaTime > 0f ? 1f - MathF.Exp(-deltaTime / 0.08f) : 0f;
         VelocityX += (rawX - VelocityX) * follow;
         VelocityY += (rawY - VelocityY) * follow;
+        UpdateBall(held, deltaTime);
         var target = moving ? 1f : 0f;
         var ease = deltaTime > 0f ? 1f - MathF.Exp(-deltaTime / (moving ? 0.08f : 0.4f)) : 0f;
         Strength += (target - Strength) * ease;
         if (Strength < 1e-3f)
         {
             Strength = 0f;
+        }
+    }
+
+    /// <summary>The held or thrown handful (see the class notes).</summary>
+    private void UpdateBall(bool held, float deltaTime)
+    {
+        if (held)
+        {
+            if (!_wasHeld && BallHeld < 0.02f)
+            {
+                // Picked up fresh: from right here.
+                (BallFromX, BallFromY) = (X, Y);
+                (BallX, BallY) = (X, Y);
+                BallTurn = 0f;
+            }
+
+            // Held, it rides just behind the mouse (which also carries a still-flying handful back to the hand smoothly).
+            var hold = deltaTime > 0f ? 1f - MathF.Exp(-deltaTime / 0.05f) : 0f;
+            BallX += (X - BallX) * hold;
+            BallY += (Y - BallY) * hold;
+            (_ballVelocityX, _ballVelocityY) = (VelocityX, VelocityY);
+        }
+        else
+        {
+            // Thrown: it flies on with the mouse's speed, slowing, as the dust eases home.
+            BallX += _ballVelocityX * deltaTime;
+            BallY += _ballVelocityY * deltaTime;
+            var slow = MathF.Exp(-BallDamping * deltaTime);
+            _ballVelocityX *= slow;
+            _ballVelocityY *= slow;
+        }
+
+        _wasHeld = held;
+        BallTurn = (BallTurn + BallSpin * deltaTime) % (2f * MathF.PI);
+        var ease = deltaTime > 0f ? 1f - MathF.Exp(-deltaTime / (held ? 0.1f : 0.45f)) : 0f;
+        BallHeld += ((held ? 1f : 0f) - BallHeld) * ease;
+        if (BallHeld < 1e-3f)
+        {
+            BallHeld = 0f;
         }
     }
 }

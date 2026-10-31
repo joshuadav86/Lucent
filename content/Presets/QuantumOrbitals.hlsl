@@ -66,6 +66,9 @@ float density(int orbital, float3 position)
     return w * w;
 }
 
+// Each speck hops about its cloud every frame, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     particle.position = randomInSphere(id, 1.0) * 0.9;

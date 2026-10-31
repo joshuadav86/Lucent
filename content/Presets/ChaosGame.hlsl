@@ -60,6 +60,9 @@ float3 cornerColour(float i, float count)
     return hsv2rgb(hue, 0.72, 1.0);
 }
 
+// Each speck jumps somewhere new every frame, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     particle.position = float3((random(id, 1.0) - 0.5) * 2.0, (random(id, 2.0) - 0.5) * 2.0, 0.0);

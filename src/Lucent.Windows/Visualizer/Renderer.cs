@@ -28,7 +28,7 @@ public sealed partial class Renderer : IDisposable
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
     private const Format HdrBackBufferFormat = Format.R16G16B16A16_Float;
-    private const int ConstantCount = 40;
+    private const int ConstantCount = 44;
     private const int ParticleStride = 64;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const double MaxRenderScale = 4.0;
@@ -704,6 +704,12 @@ public sealed partial class Renderer : IDisposable
             _constants[34] = pointer.VelocityX;
             _constants[35] = pointer.VelocityY;
             _constants[37] = pointer.Grab;
+            _constants[38] = pointer.BallX;
+            _constants[39] = pointer.BallY;
+            _constants[40] = pointer.BallFromX;
+            _constants[41] = pointer.BallFromY;
+            _constants[42] = pointer.BallHeld;
+            _constants[43] = pointer.BallTurn;
         }
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);

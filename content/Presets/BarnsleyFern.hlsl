@@ -49,6 +49,9 @@ int fernOf(uint id)
     return min((int)(u * u * 0.9 * Ferns + u * 0.1 * Ferns), Ferns - 1);
 }
 
+// Each speck jumps somewhere new on the fern every frame, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     particle.position = float3(random(id, 2.0) * 2.0 - 1.0, random(id, 3.0) * 9.0, 0.0);

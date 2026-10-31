@@ -30,6 +30,9 @@ float2 complexSqrt(float2 z)
     return float2(re, z.y < 0.0 ? -im : im);
 }
 
+// Each speck jumps somewhere new every frame, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     float angle = random(id, 1.0) * 2.0 * PI;

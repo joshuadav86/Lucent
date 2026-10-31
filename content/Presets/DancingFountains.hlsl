@@ -81,6 +81,9 @@ float2 nozzleAim(float n)
 }
 
 
+// Its drops live only a moment, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     // Both twins compute everything from the pair's number, so they're born identical.

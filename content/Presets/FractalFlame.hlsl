@@ -101,6 +101,9 @@ float3 flameColour(float t)
     return lerp(rose, violet, (t - 0.75) / 0.25);
 }
 
+// Each speck jumps somewhere new on the flame every frame, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     particle.position = float3(random(id, 1.0) * 2.0 - 1.0, random(id, 2.0) * 2.0 - 1.0, 0.0);

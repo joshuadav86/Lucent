@@ -51,7 +51,12 @@ cbuffer Params : register(b0)
     float2 PointerPosition;    // where it is, in p units
     float2 PointerVelocity;    // how fast it's moving, in p units per second
     float PointerStrength;     // 1 while it moves over the visuals, fading to 0 once it rests or leaves
-    float PointerGrab;         // 1 while its button is held down on the visuals (grabbing particles), 0 otherwise
+    float PointerGrab;         // 1 while its button is held down on the visuals (holding a handful), 0 otherwise
+    // The handful the button lifts and throws (Lift in ParticleMain.hlsli).
+    float2 BallPosition;       // where it's held, or flies once thrown, in p units
+    float2 BallFrom;           // where it was picked up from, in p units
+    float BallHeld;            // 1 while held, easing to 0 after it's thrown
+    float BallTurn;            // how far it has turned since it was picked up, in radians
 };
 
 Texture2D PreviousFrame : register(t0);

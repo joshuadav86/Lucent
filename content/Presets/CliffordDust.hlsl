@@ -10,6 +10,9 @@
 // slowly along a path chosen so the shape always stays rich and never collapses to a few dots.
 static const float Period = 150.0;
 
+// Each speck jumps somewhere new every frame, so the mouse parts the veil where it's drawn rather than pushing each speck (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 float4 shapeNumbers()
 {
     float t = Time * 2.0 * PI / Period;

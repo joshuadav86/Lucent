@@ -61,6 +61,9 @@ void launchFlame(inout Particle particle, uint id)
     particle.data = float4(1.0, 2.0, particle.life, 0.0);
 }
 
+// Its sparks live only a moment, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     if (isFlame(id))

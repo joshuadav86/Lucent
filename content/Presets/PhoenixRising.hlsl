@@ -100,6 +100,9 @@ float partOf(uint id)
     return fixedRandom(id, 1.0);
 }
 
+// Its sparks live well under a second, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
+#define MOUSE_MOVES_PLACES
+
 void Spawn(inout Particle particle, uint id)
 {
     float part = partOf(id);
