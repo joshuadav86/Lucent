@@ -244,14 +244,12 @@ public sealed class AppSettings
     public bool ShowFrameRate { get; set; }
 
     /// <summary>
-    /// How hard the visuals work: Smoothest (the screen's refresh rate), Balanced (about 60 fps), or
-    /// Power saver (about 30 fps at half the pixels). Smoothest and Balanced keep full frame rate while
-    /// another app has focus; Power saver lets the system slow Lucent down then.
+    /// How hard the visuals work: Auto (Lucent picks from the computer's power and heat), Smoothest (the
+    /// screen's refresh rate), Balanced (about 60 fps), or Power saver (about 30 fps at half the pixels).
+    /// Smoothest and Balanced keep full frame rate while another app has focus; Power saver lets the
+    /// system slow Lucent down then.
     /// </summary>
-    public PowerMode Power { get; set; } = PowerMode.Balanced;
-
-    /// <summary>Switch to Power saver by itself while the computer runs on battery.</summary>
-    public bool PowerSaverOnBattery { get; set; }
+    public PowerMode Power { get; set; } = PowerMode.Auto;
 
     // ---- Visual changes ----
 

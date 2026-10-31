@@ -35,6 +35,7 @@ public partial class MainWindow
         }, _settings.Glow, value => _settings.Glow = value, MenuTips.Glow));
         menu.Items.Add(Choices("Power", new[]
         {
+            (PowerMode.Auto, AutoPowerLabel()),
             (PowerMode.Smoothest, "Smoothest"),
             (PowerMode.Balanced, "Balanced"),
             (PowerMode.PowerSaver, "Power saver"),
@@ -62,9 +63,6 @@ public partial class MainWindow
         frameRate.Click += (_, _) => ChangeGraphics(() => _settings.ShowFrameRate = !_settings.ShowFrameRate);
         menu.Items.Add(frameRate);
 
-        var battery = new MenuItem { Header = "Power saver on battery", IsChecked = _settings.PowerSaverOnBattery, ToolTip = MenuTips.PowerSaverOnBattery };
-        battery.Click += (_, _) => ChangeGraphics(() => _settings.PowerSaverOnBattery = !_settings.PowerSaverOnBattery);
-        menu.Items.Add(battery);
 
         menu.Items.Add(new Separator());
         var options = new MenuItem { Header = "All options…", InputGestureText = "O" };
@@ -89,6 +87,12 @@ public partial class MainWindow
         ShowOptionValues();
         UpdateHdrHint();
     }
+
+    /// <summary>"Auto", with what Auto is using now, e.g. "Auto (Balanced now)".</summary>
+    private static string AutoPowerLabel() =>
+        VisualsPower.Mode == PowerMode.Auto
+            ? $"Auto ({(VisualsPower.Effective == PowerMode.PowerSaver ? "Power saver" : VisualsPower.Effective.ToString())} now)"
+            : "Auto";
 
     private MenuItem Choices<T>(string header, (T Value, string Label)[] choices, T current, Action<T> choose, string tip)
         where T : struct, Enum

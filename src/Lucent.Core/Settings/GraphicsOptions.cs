@@ -39,6 +39,9 @@ public enum GlowLevel
 /// <summary>How hard the visuals work (Options › Graphics, "Power"), see <see cref="Lucent.Visualizer.VisualsPower"/>.</summary>
 public enum PowerMode
 {
+    /// <summary>Lucent picks: Smoothest on a desktop, Balanced on a laptop on power, Power saver on battery, in low power mode, or when the computer runs hot.</summary>
+    Auto,
+
     /// <summary>The screen's own refresh rate, kept up while another app has focus.</summary>
     Smoothest,
 

@@ -52,9 +52,7 @@ public static class MenuTips
 
     public const string FrameRate = "Show how many frames a second the visuals are drawn at.";
 
-    public const string Power = "Smoothest matches your screen's refresh rate. Balanced draws up to 60 frames a second. Power saver draws up to 30 at fewer pixels, and slows down behind other apps.";
-
-    public const string PowerSaverOnBattery = "Switch to Power saver by itself while your computer runs on battery.";
+    public const string Power = "Auto picks for your computer: Smoothest on a desktop, Balanced on a laptop, Power saver on battery, in low power mode, or when it runs hot. Smoothest matches your screen's refresh rate, Balanced draws up to 60 frames a second, and Power saver up to 30 at fewer pixels.";
 
     public const string FullScreenLucent = "Spread every open Lucent window across the screen, side by side.";
 

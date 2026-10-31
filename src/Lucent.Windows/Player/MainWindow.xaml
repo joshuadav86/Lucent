@@ -342,15 +342,14 @@
                     <TextBlock Style="{StaticResource OptionLabel}" Text="Power" />
                     <w:RoundedBorder Style="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Power" Tag="Auto" Content="Auto" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Power" Tag="Smoothest" Content="Smoothest" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Power" Tag="Balanced" Content="Balanced" Click="OnOptionChosen" />
                             <RadioButton Style="{StaticResource SegmentButton}" GroupName="Power" Tag="PowerSaver" Content="Power saver" Click="OnOptionChosen" />
                         </UniformGrid>
                     </w:RoundedBorder>
                     <TextBlock Style="{StaticResource OptionHint}"
-                               Text="Smoothest matches your screen's refresh rate. Balanced draws up to 60 frames a second. Power saver draws up to 30 at fewer pixels, and slows down behind other apps." />
-                    <CheckBox x:Name="PowerSaverOnBatterySwitch" Style="{StaticResource SwitchToggle}" Content="Power saver on battery"
-                              Margin="0,14,0,0" Click="OnOptionSwitched" />
+                               Text="Auto picks for your computer: Smoothest on a desktop, Balanced on a laptop, Power saver on battery, in low power mode, or when it runs hot. Smoothest matches your screen's refresh rate, Balanced draws up to 60 frames a second, and Power saver up to 30 at fewer pixels." />
 
                     <CheckBox x:Name="BuildUpsSwitch" Style="{StaticResource SwitchToggle}" Content="Build-ups and drops"
                               Margin="0,18,0,0" Click="OnOptionSwitched" />

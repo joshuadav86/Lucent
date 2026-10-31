@@ -2,50 +2,66 @@ using Lucent.Settings;
 
 namespace Lucent.Visualizer;
 
+/// <summary>What the computer says about its power and heat, read every few seconds by each app's PowerSource.</summary>
+/// <param name="HasBattery">A laptop (or anything with a built-in battery).</param>
+/// <param name="OnBattery">Running on that battery now.</param>
+/// <param name="LowPower">Low Power Mode (Mac) or Energy Saver / Battery saver (Windows) is on.</param>
+/// <param name="Hot">The computer says it's running hot (Mac: thermal state serious or critical).</param>
+public readonly record struct PowerState(bool HasBattery, bool OnBattery, bool LowPower, bool Hot);
+
 /// <summary>
 /// How hard the visuals work (Options › Graphics, "Power"). Set from the UI thread, read by the render
 /// threads each frame.
 /// <list type="bullet">
+/// <item>Auto (default): Lucent picks one of the others from <see cref="State"/>: Power saver on battery, in
+/// low power mode, or when the computer runs hot; Balanced on a laptop on power; Smoothest otherwise.</item>
 /// <item>Smoothest: one frame per screen refresh, kept up while another app has focus.</item>
 /// <item>Balanced: about 60 fps. On a faster screen each frame stays up for whole refreshes (two at
 /// 120 or 144 Hz), about half the CPU, GPU and compositor work there.</item>
 /// <item>Power saver: about 30 fps at half the pixels, and the system may slow Lucent down while
 /// another app has focus.</item>
 /// </list>
-/// With <see cref="SaverOnBattery"/> on, Power saver takes over while the computer runs on battery.
 /// </summary>
 public static class VisualsPower
 {
     // The most refreshes a frame can stay up for: DXGI's sync interval stops at 4.
     private const int MaxRefreshesPerFrame = 4;
 
-    private static volatile PowerMode _mode = PowerMode.Balanced;
-    private static volatile bool _saverOnBattery;
-    private static volatile bool _onBattery;
+    private static volatile PowerMode _mode = PowerMode.Auto;
+    private static volatile PowerMode _effective = PowerMode.Balanced;
+    private static PowerState _state;
 
     /// <summary>The mode chosen in Options.</summary>
     public static PowerMode Mode
     {
         get => _mode;
-        set => _mode = value;
+        set
+        {
+            _mode = value;
+            _effective = Pick(value, _state);
+        }
     }
 
-    /// <summary>Use Power saver while on battery, whatever <see cref="Mode"/> is.</summary>
-    public static bool SaverOnBattery
+    /// <summary>The computer's power and heat, for Auto. Set from the UI thread.</summary>
+    public static PowerState State
     {
-        get => _saverOnBattery;
-        set => _saverOnBattery = value;
+        get => _state;
+        set
+        {
+            _state = value;
+            _effective = Pick(_mode, value);
+        }
     }
 
-    /// <summary>Whether the computer runs on battery now (checked every few seconds by each app).</summary>
-    public static bool OnBattery
-    {
-        get => _onBattery;
-        set => _onBattery = value;
-    }
+    /// <summary>The mode in use now: <see cref="Mode"/>, or what Auto picked.</summary>
+    public static PowerMode Effective => _effective;
 
-    /// <summary>The mode in use now: <see cref="Mode"/>, or Power saver while on battery with <see cref="SaverOnBattery"/> on.</summary>
-    public static PowerMode Effective => _saverOnBattery && _onBattery ? PowerMode.PowerSaver : _mode;
+    /// <summary>What Auto picks for <paramref name="state"/>; any other mode is itself.</summary>
+    public static PowerMode Pick(PowerMode mode, PowerState state) =>
+        mode != PowerMode.Auto ? mode
+        : state.OnBattery || state.LowPower || state.Hot ? PowerMode.PowerSaver
+        : state.HasBattery ? PowerMode.Balanced
+        : PowerMode.Smoothest;
 
     /// <summary>Whether the visuals ask the system to keep them at full frame rate while another app has focus.</summary>
     public static bool FullRateInBackground => Effective != PowerMode.PowerSaver;

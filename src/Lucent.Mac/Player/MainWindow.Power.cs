@@ -5,44 +5,43 @@ using Lucent.Visualizer;
 
 namespace Lucent.Mac;
 
-/// <summary>The Power choice (Smoothest, Balanced, Power saver) and Power saver on battery. Kept in its own file.</summary>
+/// <summary>The Power choice (Auto, Smoothest, Balanced, Power saver). Kept in its own file.</summary>
 public partial class MainWindow
 {
-    private DispatcherTimer? _batteryCheck;
+    private DispatcherTimer? _powerCheck;
 
     /// <summary>
-    /// Hands the Power choice to the visuals, and while Power saver should take over on battery, looks
-    /// every few seconds whether the computer is on battery.
+    /// Hands the Power choice to the visuals. With Auto, also reads the computer's power and heat now and
+    /// every few seconds after, so Auto follows it being unplugged, put in low power mode, or running hot.
     /// </summary>
     private void ApplyPower()
     {
         VisualsPower.Mode = _settings.Power;
-        VisualsPower.SaverOnBattery = _settings.PowerSaverOnBattery;
-        if (_settings.PowerSaverOnBattery && _settings.Power != PowerMode.PowerSaver)
+        if (_settings.Power == PowerMode.Auto)
         {
-            VisualsPower.OnBattery = PowerSource.OnBattery();
-            if (_batteryCheck is null)
+            VisualsPower.State = PowerSource.Read();
+            if (_powerCheck is null)
             {
-                _batteryCheck = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-                _batteryCheck.Tick += (_, _) => CheckBattery();
+                _powerCheck = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+                _powerCheck.Tick += (_, _) => CheckPower();
             }
 
-            _batteryCheck.Start();
+            _powerCheck.Start();
         }
         else
         {
-            _batteryCheck?.Stop();
+            _powerCheck?.Stop();
         }
 
         BackgroundFrameRate.On = VisualsPower.FullRateInBackground;
     }
 
-    private void CheckBattery()
+    private void CheckPower()
     {
-        var onBattery = PowerSource.OnBattery();
-        if (onBattery != VisualsPower.OnBattery)
+        var state = PowerSource.Read();
+        if (state != VisualsPower.State)
         {
-            VisualsPower.OnBattery = onBattery;
+            VisualsPower.State = state;
             BackgroundFrameRate.On = VisualsPower.FullRateInBackground;
         }
     }

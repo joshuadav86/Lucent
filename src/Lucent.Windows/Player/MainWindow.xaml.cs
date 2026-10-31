@@ -1416,10 +1416,6 @@ public partial class MainWindow : Window
         {
             _settings.ShowFrameRate = on;
         }
-        else if (sender == PowerSaverOnBatterySwitch)
-        {
-            _settings.PowerSaverOnBattery = on;
-        }
         else if (sender == BuildUpsSwitch)
         {
             _settings.BuildUpsAndDrops = on;
@@ -1512,7 +1508,6 @@ public partial class MainWindow : Window
 
         HdrSwitch.IsChecked = _settings.Hdr;
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
-        PowerSaverOnBatterySwitch.IsChecked = _settings.PowerSaverOnBattery;
         BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
         MouseParticlesSwitch.IsChecked = _settings.MouseMovesParticles;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
