@@ -258,6 +258,12 @@ public sealed class AppSettings
 
     public bool ShowFrameRate { get; set; }
 
+    /// <summary>
+    /// Keep the visuals at full frame rate while another app has focus (on a second screen, say),
+    /// instead of letting the system slow Lucent down. They still stop drawing when minimized or hidden.
+    /// </summary>
+    public bool FullFrameRateInBackground { get; set; } = true;
+
     // ---- Visual changes ----
 
     public bool AutoCycle { get; set; } = true;
@@ -535,6 +541,9 @@ public sealed class AppSettings
         ["Single Drop"] = "Superformula",
         ["Fireworks Night"] = "Spiral Shell",
         ["Horizon Line"] = "Loxodrome",
+        ["Marble Run"] = "Boy's Surface",
+        ["Mercury Lake"] = "Enneper Bloom",
+        ["Spark Forge"] = "Epicycle Rosette",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };

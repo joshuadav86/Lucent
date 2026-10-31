@@ -67,7 +67,7 @@ public class ToolWindow : Window
     internal void TakeDrop(DragEventArgs e) => OnDropFiles(this, e);
 
     /// <summary>Files or folders dropped on this window. They play now, replacing the queue.</summary>
-    protected virtual void OnMusicDropped(IReadOnlyList<string> paths) => Player?.PlayDroppedPaths(paths);
+    protected virtual void OnMusicDropped(IReadOnlyList<string> paths) => Player?.PlayDroppedPaths(paths, this);
 
     /// <summary>For the close button in the window's title bar.</summary>
     protected void OnHideWindow(object? sender, RoutedEventArgs e) => Hide();

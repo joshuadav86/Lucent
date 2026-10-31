@@ -586,10 +586,12 @@ public sealed partial class Renderer : IDisposable
         var frames = 0;
         var frameRateStart = 0.0;
         var nextDisplayCheck = 1.0;
+        var keptUp = false;
         UseDisplay(ReadDisplay(_hwnd));
 
         while (_running)
         {
+            BackgroundFrameRate.KeepUp(ref keptUp);
             var now = clock.Elapsed.TotalSeconds;
             var deltaTime = (float)Math.Clamp(now - lastTime, 0.0, 0.1);
             lastTime = now;
