@@ -317,6 +317,10 @@
                               Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Theme="{StaticResource OptionHint}" Text="Move the mouse over a particle visual to push its dots aside, or hold the button to grab and throw them." />
 
+                    <CheckBox x:Name="FrameRateCapSwitch" Theme="{StaticResource SwitchToggle}" Content="Cap visuals at 60 fps"
+                              Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}" Text="Draws about half as often on 120 Hz and faster screens, so Lucent uses less power and stays cooler. Turn off to match the screen's refresh rate." />
+
                     <CheckBox x:Name="HdrSwitch" Theme="{StaticResource SwitchToggle}" Content="HDR" Margin="0,18,0,0"
                               Click="OnOptionSwitched" />
                     <TextBlock x:Name="HdrHint" Theme="{StaticResource OptionHint}" />

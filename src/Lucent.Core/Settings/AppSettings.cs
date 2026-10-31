@@ -243,6 +243,12 @@ public sealed class AppSettings
 
     public bool ShowFrameRate { get; set; }
 
+    /// <summary>
+    /// Draw the visuals at most about 60 times a second, even on a 120 Hz or faster screen: about half
+    /// the work there (CPU, GPU and the system's compositor), for a picture made for 60 fps anyway.
+    /// </summary>
+    public bool CapFrameRateAt60 { get; set; } = true;
+
     // ---- Visual changes ----
 
     public bool AutoCycle { get; set; } = true;

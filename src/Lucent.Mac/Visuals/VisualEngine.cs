@@ -1086,7 +1086,7 @@ public sealed partial class VisualEngine : IDisposable
     {
         if (_autoResolutionOn && _targetPixels <= 0 && _activePreset >= 0)
         {
-            _autoResolution.Frame(now, Display.RefreshRate, _activePreset);
+            _autoResolution.Frame(now, FrameRateCap.FrameRate(Display.RefreshRate), _activePreset);
         }
     }
 

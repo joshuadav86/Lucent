@@ -643,7 +643,7 @@ public sealed partial class Renderer : IDisposable
             Present();
             if (_autoResolutionOn && _targetPixels <= 0)
             {
-                _autoResolution.Frame(now, _display.RefreshRate, _activePreset);
+                _autoResolution.Frame(now, FrameRateCap.FrameRate(_display.RefreshRate), _activePreset);
             }
 
             frames++;
@@ -1022,14 +1022,25 @@ public sealed partial class Renderer : IDisposable
 
     private void Present()
     {
-        var result = _swapChain!.Present(1, PresentFlags.None);
+        // With the 60 fps cap on a faster screen, each frame stays up for whole refreshes (two at
+        // 120 or 144 Hz), so the loop runs about half as often.
+        var result = _swapChain!.Present((uint)FrameRateCap.RefreshesPerFrame(_display.RefreshRate), PresentFlags.None);
         if (IsDeviceLost(result))
         {
             throw new DeviceLostException();
         }
 
         result.CheckError();
+        if (result.Code == DxgiStatusOccluded)
+        {
+            // Windows says nobody can see the window (covered, or on another desktop): draw less
+            // often until it's back, rather than at the screen's full rate.
+            Thread.Sleep(50);
+        }
     }
+
+    /// <summary>DXGI_STATUS_OCCLUDED: the frame was shown nowhere, as the window can't be seen.</summary>
+    private const int DxgiStatusOccluded = 0x087A0001;
 
     private static bool IsDeviceLost(SharpGen.Runtime.Result result) =>
         result == Vortice.DXGI.ResultCode.DeviceRemoved || result == Vortice.DXGI.ResultCode.DeviceReset

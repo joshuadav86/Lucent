@@ -20,6 +20,7 @@ public sealed class MetalView : NativeControlHost
     private IntPtr _view;
     private IntPtr _layer;
     private IDisposable? _resync;
+    private DispatcherTimer? _coverCheck;
 
     public MetalView(VisualEngine engine) => _engine = engine;
 
@@ -56,8 +57,26 @@ public sealed class MetalView : NativeControlHost
         Renderer = new MetalRenderer(_layer, _engine);
         UpdateSize();
         Renderer.Start();
+        // A few times a second, whether any of the window can be seen: a visuals window left behind
+        // other windows, or on another Space, otherwise kept drawing at the screen's full rate.
+        _coverCheck = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _coverCheck.Tick += (_, _) => CheckCovered();
+        _coverCheck.Start();
         RendererStarted?.Invoke(this, Renderer);
         return new PlatformHandle(_view, "NSView");
+    }
+
+    private void CheckCovered()
+    {
+        if (Renderer is not { } renderer || _view == IntPtr.Zero)
+        {
+            return;
+        }
+
+        const long occlusionStateVisible = 1 << 1;
+        var window = ObjC.Send(_view, "window");
+        // No window yet (or no longer): left to the renderer's Visible, which covers hidden and minimized.
+        renderer.Covered = window != IntPtr.Zero && ((long)ObjC.Send(window, "occlusionState") & occlusionStateVisible) == 0;
     }
 
     /// <summary>An NSView that's never the target of a click: hitTest: answers nil, so AppKit hands the click to the window's own view.</summary>
@@ -81,6 +100,8 @@ public sealed class MetalView : NativeControlHost
             return;
         }
 
+        _coverCheck?.Stop();
+        _coverCheck = null;
         Renderer?.Dispose();
         Renderer = null;
         ObjC.Release(_layer);
