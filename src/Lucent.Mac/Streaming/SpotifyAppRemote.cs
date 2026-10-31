@@ -15,7 +15,7 @@ namespace Lucent.Mac.Streaming;
 /// <remarks>
 /// Windows reads the Spotify app through Windows' media controls instead (see Windows' Streaming/SpotifyAppRemote.cs).
 /// </remarks>
-public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpener
+public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpener, IRemoteNotifier
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -43,6 +43,13 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteOpene
         """;
 
     public string Name => "Spotify";
+
+    /// <summary>Raised when Spotify tells the Mac its song changed, or that it played or paused.</summary>
+    public event EventHandler? Changed
+    {
+        add => AppAnnouncements.Listen(AppAnnouncements.Spotify, value);
+        remove => AppAnnouncements.StopListening(AppAnnouncements.Spotify, value);
+    }
 
     public bool IsOpen => IsRunning();
 

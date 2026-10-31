@@ -14,12 +14,25 @@ namespace Lucent.Streaming;
 /// (and shuffle and repeat, for players that offer them there), and Windows lets other apps read and press those. <see cref="AppleMusicRemote"/> and
 /// <see cref="YouTubeRemote"/> say which of those players is theirs.
 /// </summary>
-public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemoteModes
+public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemoteModes, IRemoteNotifier
 {
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
+    private GlobalSystemMediaTransportControlsSession? _watched;
     private (string Id, IRandomAccessStreamReference Thumbnail)? _cover;
 
+    // The cover last handed over and its song, and the song last asked about and since when: an app can name a new song
+    // while Windows still holds the last one's cover (Spotify does), which isn't handed over as the new song's at first.
+    private (string Id, byte[] Bytes)? _coverGiven;
+    private (string Id, DateTime Since) _coverAsked;
+    private static readonly TimeSpan StaleCoverTime = TimeSpan.FromSeconds(2);
+
     public abstract string Name { get; }
+
+    /// <summary>
+    /// Raised when the app tells Windows of a new song, or that it played or paused, and when players come and go, so the
+    /// player shows the change at once rather than at the next read.
+    /// </summary>
+    public event EventHandler? Changed;
 
     /// <summary>True when Windows can let Lucent see other apps' media controls (Windows 10 1809 and later).</summary>
     public static bool IsSupported => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 17763);
@@ -182,11 +195,30 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
             return null;
         }
 
+        if (_coverAsked.Id != track.Id)
+        {
+            _coverAsked = (track.Id, DateTime.UtcNow);
+        }
+
         using var stream = await cover.Thumbnail.OpenReadAsync().AsTask(cancel);
         using var reader = stream.AsStreamForRead();
         using var bytes = new MemoryStream();
         await reader.CopyToAsync(bytes, cancel);
-        return bytes.Length > 0 ? bytes.ToArray() : null;
+        if (bytes.Length == 0)
+        {
+            return null;
+        }
+
+        var picture = bytes.ToArray();
+        // The last song's cover still, most likely; after a moment it's taken as this one's too (an album's next song).
+        if (_coverGiven is { } given && given.Id != track.Id && given.Bytes.AsSpan().SequenceEqual(picture)
+            && DateTime.UtcNow - _coverAsked.Since < StaleCoverTime)
+        {
+            return null;
+        }
+
+        _coverGiven = (track.Id, picture);
+        return picture;
     }
 
     private async Task PressAsync(Func<GlobalSystemMediaTransportControlsSession, Task<bool>> press)
@@ -201,19 +233,64 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
 
     private async Task<GlobalSystemMediaTransportControlsSession?> SessionAsync()
     {
-        _manager ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+        if (_manager is null)
+        {
+            _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            _manager.SessionsChanged += OnSessionsChanged;
+        }
+
         var session = Pick(_manager.GetSessions());
         if (session is not null)
         {
             SourceAppId = session.SourceAppUserModelId;
         }
 
+        Watch(session);
         return session;
     }
 
+    // Listens to the app's player (the one just picked), and no longer to one picked before.
+    private void Watch(GlobalSystemMediaTransportControlsSession? session)
+    {
+        if (ReferenceEquals(session, _watched))
+        {
+            return;
+        }
+
+        if (_watched is { } old)
+        {
+            old.MediaPropertiesChanged -= OnMediaPropertiesChanged;
+            old.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+        }
+
+        _watched = session;
+        if (session is not null)
+        {
+            session.MediaPropertiesChanged += OnMediaPropertiesChanged;
+            session.PlaybackInfoChanged += OnPlaybackInfoChanged;
+        }
+    }
+
+    // Windows raises these on its own threads.
+    private void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args) =>
+        Changed?.Invoke(this, EventArgs.Empty);
+
+    private void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args) =>
+        Changed?.Invoke(this, EventArgs.Empty);
+
+    private void OnSessionsChanged(GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args) =>
+        Changed?.Invoke(this, EventArgs.Empty);
+
     public void Dispose()
     {
+        Watch(null);
+        if (_manager is { } manager)
+        {
+            manager.SessionsChanged -= OnSessionsChanged;
+        }
+
         _manager = null;
         _cover = null;
+        _coverGiven = null;
     }
 }
