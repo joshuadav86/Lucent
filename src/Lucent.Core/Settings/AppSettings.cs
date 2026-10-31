@@ -507,6 +507,7 @@ public sealed class AppSettings
         ["Newton's Cradle"] = "Hyperbolic Tiling",
         ["Sunset Highway"] = "Cardioid Loom",
         ["Champagne Toast"] = "Polytope Bloom",
+        ["Single Drop"] = "Superformula",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
