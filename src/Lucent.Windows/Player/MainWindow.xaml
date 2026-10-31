@@ -356,6 +356,9 @@
                     <TextBlock x:Name="HdrHint" Style="{StaticResource OptionHint}" />
                     <CheckBox x:Name="FrameRateSwitch" Style="{StaticResource SwitchToggle}" Content="Show frame rate"
                               Margin="0,14,0,0" Click="OnOptionSwitched" />
+                    <CheckBox x:Name="BackgroundFrameRateSwitch" Style="{StaticResource SwitchToggle}" Content="Full frame rate in the background"
+                              Margin="0,14,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}" Text="Visuals stay smooth while another app has focus, such as with Lucent on a second screen. They still stop drawing when minimized or hidden." />
                 </StackPanel>
 
                 <StackPanel x:Name="VisualsTab" Visibility="Collapsed">

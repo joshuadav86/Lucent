@@ -52,6 +52,8 @@ public static class MenuTips
 
     public const string FrameRate = "Show how many frames a second the visuals are drawn at.";
 
+    public const string FullFrameRateInBackground = "Keep the visuals smooth while you use another app, such as with Lucent on a second screen. They still stop drawing when minimized or hidden.";
+
     public const string FullScreenLucent = "Spread every open Lucent window across the screen, side by side.";
 
     public const string Tidy = "Line the windows up evenly. Choose it again for another arrangement.";
