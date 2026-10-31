@@ -20,6 +20,12 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
     private GlobalSystemMediaTransportControlsSession? _watched;
     private (string Id, IRandomAccessStreamReference Thumbnail)? _cover;
 
+    // The cover last handed over and its song, and the song last asked about and since when: an app can name a new song
+    // while Windows still holds the last one's cover (Spotify does), which isn't handed over as the new song's at first.
+    private (string Id, byte[] Bytes)? _coverGiven;
+    private (string Id, DateTime Since) _coverAsked;
+    private static readonly TimeSpan StaleCoverTime = TimeSpan.FromSeconds(2);
+
     public abstract string Name { get; }
 
     /// <summary>
@@ -189,11 +195,30 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
             return null;
         }
 
+        if (_coverAsked.Id != track.Id)
+        {
+            _coverAsked = (track.Id, DateTime.UtcNow);
+        }
+
         using var stream = await cover.Thumbnail.OpenReadAsync().AsTask(cancel);
         using var reader = stream.AsStreamForRead();
         using var bytes = new MemoryStream();
         await reader.CopyToAsync(bytes, cancel);
-        return bytes.Length > 0 ? bytes.ToArray() : null;
+        if (bytes.Length == 0)
+        {
+            return null;
+        }
+
+        var picture = bytes.ToArray();
+        // The last song's cover still, most likely; after a moment it's taken as this one's too (an album's next song).
+        if (_coverGiven is { } given && given.Id != track.Id && given.Bytes.AsSpan().SequenceEqual(picture)
+            && DateTime.UtcNow - _coverAsked.Since < StaleCoverTime)
+        {
+            return null;
+        }
+
+        _coverGiven = (track.Id, picture);
+        return picture;
     }
 
     private async Task PressAsync(Func<GlobalSystemMediaTransportControlsSession, Task<bool>> press)
@@ -266,5 +291,6 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
 
         _manager = null;
         _cover = null;
+        _coverGiven = null;
     }
 }

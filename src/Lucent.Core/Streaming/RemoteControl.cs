@@ -653,7 +653,27 @@ public sealed class RemoteControl : IDisposable
         _artworkLoading = track.Id;
         try
         {
-            var artwork = await Player.ArtworkAsync(track, _stop.Token);
+            // The queue window's list usually has the song already, with its cover's address, which is fetched first:
+            // the app here can name a new song a moment before it hands over its cover.
+            byte[]? artwork = null;
+            if (!again && track.ArtworkUrl is null && ListedCover(track) is { } listed)
+            {
+                try
+                {
+                    artwork = await Player.ArtworkAsync(track with { ArtworkUrl = listed }, _stop.Token);
+                }
+                catch (Exception) when (!_stop.IsCancellationRequested)
+                {
+                    // The app's own, then.
+                }
+            }
+
+            if (_artworkFor != track.Id)
+            {
+                return;
+            }
+
+            artwork ??= await Player.ArtworkAsync(track, _stop.Token);
             if (artwork is not null && !_disposed && _artworkFor == track.Id
                 && (Artwork is null || ImageFormats.WidthOf(artwork) > ImageFormats.WidthOf(Artwork)))
             {
@@ -679,6 +699,25 @@ public sealed class RemoteControl : IDisposable
         {
             await ShowSharperCoverAsync(track);
         }
+    }
+
+    // The cover's address for the song in the list the app plays through, or null when it isn't there.
+    private string? ListedCover(RemoteTrack track)
+    {
+        if (List is not { Tracks: { Count: > 0 } tracks })
+        {
+            return null;
+        }
+
+        foreach (var listed in tracks)
+        {
+            if (listed.ArtworkUrl is { } url && listed.IsSameSong(track))
+            {
+                return url;
+            }
+        }
+
+        return null;
     }
 
     // The app's cover shows straight away; a sharper one, when it's small and one can be found, replaces it.
