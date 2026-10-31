@@ -95,7 +95,7 @@ public partial class MainWindow : Window
         };
 
         VolumeSlider.Value = Math.Clamp(_settings.Volume, 0, 1);
-        _player.Volume = (float)VolumeSlider.Value;
+        ApplyOwnVolume();
         _player.Equalizer.Apply(_settings.Equalizer);
         _player.Equalizer.Balance = _settings.Balance;
         EqualizerWindow.StreamingActionClicked += OnStreamingEqualizerAction;
@@ -114,6 +114,7 @@ public partial class MainWindow : Window
             LineUpNext();
             UpdateStationStatus();
             ObserveForScrobbling();
+            FollowComputerVolume();
         };
         _positionTimer.Start();
         StartScrobbling();
@@ -2285,6 +2286,14 @@ public partial class MainWindow : Window
                 ShowVolume();
             }
 
+            return;
+        }
+
+        // With the visuals listening to every app, the bar is Windows' volume (see MainWindow.ComputerVolume.cs).
+        if (BarIsComputerVolume)
+        {
+            ComputerVolume.Set(e.NewValue);
+            VolumeText.Text = $"{e.NewValue * 100:0}%";
             return;
         }
 

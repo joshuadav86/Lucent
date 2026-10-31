@@ -145,6 +145,7 @@ public partial class MainWindow
         _player.CrossfadeSeconds = CrossfadeSeconds;
         _player.OutputDeviceId = _settings.OutputDevice;
         _player.Exclusive = _settings.ExclusiveOutput;
+        ApplyOwnVolume();
     }
 
     /// <summary>Marks the current sound settings in the options panel.</summary>

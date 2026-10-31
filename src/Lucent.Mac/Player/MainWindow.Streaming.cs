@@ -49,6 +49,7 @@ public partial class MainWindow
         }
 
         UpdateListening();
+        ShowVolume();
     }
 
     private void ToggleRemote(RemoteApp app)
@@ -544,7 +545,8 @@ public partial class MainWindow
 
     /// <summary>
     /// Shows the controlled app's volume on the volume bar, on the device it's playing on, or hides the bar when Lucent
-    /// can't change the volume there. Lucent's own volume comes back when it stops controlling the app.
+    /// can't change the volume there. Lucent's own volume comes back when it stops controlling the app, or the Mac's volume
+    /// while the visuals listen to every app (see MainWindow.ComputerVolume.cs).
     /// </summary>
     private void ShowVolume()
     {
@@ -564,6 +566,10 @@ public partial class MainWindow
                     VolumeText.Text = $"{level * 100:0}%";
                     ToolTip.SetTip(VolumeSlider, $"{where}'s volume (scrolling over the player changes it too)");
                 }
+            }
+            else if (BarIsComputerVolume)
+            {
+                visible = ShowComputerVolume();
             }
             else
             {
