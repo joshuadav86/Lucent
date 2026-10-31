@@ -711,7 +711,7 @@ public sealed partial class Renderer : IDisposable
             _constants[40] = pointer.BallFromX;
             _constants[41] = pointer.BallFromY;
             _constants[42] = pointer.BallHeld;
-            _constants[43] = pointer.BallTurn;
+            _constants[43] = pointer.BallAge;
         }
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);

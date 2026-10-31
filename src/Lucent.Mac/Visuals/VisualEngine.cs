@@ -586,7 +586,7 @@ public sealed partial class VisualEngine : IDisposable
             _constants[40] = pointer.BallFromX;
             _constants[41] = pointer.BallFromY;
             _constants[42] = pointer.BallHeld;
-            _constants[43] = pointer.BallTurn;
+            _constants[43] = pointer.BallAge;
         }
 
         var target = _feedback[_current]!;

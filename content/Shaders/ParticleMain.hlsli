@@ -9,11 +9,13 @@ StructuredBuffer<Particle> ParticlesToDraw : register(t4);
 // particle, so it works the same for flat and 3D visuals, the visual keeps moving its particles to the music
 // underneath, and it eases back to nothing over a couple of seconds.
 //
-// Holding the button down lifts the patch of dots under it, all of it, into a ball that turns slowly and
-// rides with the mouse; letting go throws the ball on with the mouse's speed, and the dots settle back home
-// as it fades. The ball is worked out afresh each frame from where the visual draws its dots (Lift), so the
-// whole handful moves as one and stays as crisp as the visual is. (Grabbing dots one by one, each with its
-// own pull and swirl, scattered them into a haze when thrown.)
+// Holding the button down calls dots in from around the press: some of the dots near it (nearest first)
+// spiral in and gather into a swirling cloud around the mouse, which rides with it; letting go throws the
+// cloud on with the mouse's speed, and the dots stream back home as it fades. Only a share of the dots
+// near the press come, so the picture thins there rather than losing a chunk. The cloud is worked out
+// afresh each frame from where the visual draws its dots (Gather), so it stays as crisp as the visual is.
+// (Lifting the whole patch under the mouse into a ball cut a hole out of the picture and packed the ball
+// into a white blob; grabbing dots one by one, each with its own pull and swirl, scattered them into a haze.)
 //
 // Pushing dots one by one needs dots that keep their place from one frame to the next. A visual whose dots
 // don't (dust that jumps to a new spot on its shape every frame, like an attractor's or a fractal's, sparks
@@ -34,9 +36,14 @@ static const float PushJump = 0.25;      // a dot the visual moves further than 
 static const float PushStreak = 0.012;   // seconds of a pushed dot's motion drawn as a streak, so it reads as moving
 static const float PushStreakMost = 0.02; // and no longer than this (p units), so a quick flick stays a dot, not a smear
 static const float PartReach = 0.6;      // MOUSE_MOVES_PLACES: how far the dust parts, as a share of PushReach
-static const float GrabReach = 0.3;      // the radius of the patch the button lifts
-static const float BallSize = 0.15;      // the radius of the ball it's packed into
-static const float BallLight = 0.75;     // the packed patch is dimmed a little, so the ball glows rather than blinds
+static const float GatherReach = 0.5;    // how far from the press dots are called in from
+static const float GatherShare = 0.5;    // the share of the dots there that come, so the picture thins rather than empties
+static const float GatherStagger = 0.7;  // seconds over which they set off, nearest first
+static const float GatherTime = 0.5;     // seconds each takes to spiral in
+static const float GatherCurl = 2.2;     // how far round (radians) each one curls on its way in
+static const float CloudSize = 0.2;      // the radius of the cloud round the mouse
+static const float CloudSpin = 1.6;      // how fast its orbits turn (radians a second, the inner one; the outer ones slower)
+static const float CloudLight = 0.65;    // gathered dots are dimmed a little, so the cloud glows rather than blinds
 
 #ifdef MOUSE_MOVES_PLACES
 // Where a dot the visual draws at p shows once the moving mouse has parted the dust around it: a smooth,
@@ -56,27 +63,45 @@ float2 Part(float2 p)
 }
 #endif
 
-// Where dot id, drawn at p, shows while a handful is held or thrown (see above), and how much to scale its
-// light by. Each dot is either lifted whole or left where it is, so none is left stretched between the gap
-// and the ball; how far out from the middle a dot still gets lifted varies dot to dot, so the gap (and the
-// ball) thin out softly at the edge instead of being cut out with a hard rim.
-float2 Lift(float2 p, uint id, inout float light)
+// Where dot id, drawn at p, shows while dots are gathered round the mouse or thrown (see above), and how
+// much to scale its light by. Whether a dot comes, when it sets off and where in the cloud it settles are
+// its own (fixedRandom), so the cloud keeps its shape from frame to frame and builds up dot by dot.
+float2 Gather(float2 p, uint id, inout float light)
 {
-    if (BallHeld <= 0.0)
+    if (BallHeld <= 0.0 || fixedRandom(id, 62.0) >= GatherShare)
     {
         return p;
     }
 
     float2 from = p - BallFrom;
-    float reach = GrabReach * lerp(0.7, 1.0, fixedRandom(id, 61.0));
-    if (dot(from, from) >= reach * reach)
+    float reach = GatherReach * lerp(0.6, 1.0, fixedRandom(id, 61.0));
+    float distanceSquared = dot(from, from);
+    if (distanceSquared >= reach * reach)
     {
         return p;
     }
 
-    float2 held = BallPosition + rotate(from, BallTurn) * (BallSize / GrabReach);
-    light *= lerp(1.0, BallLight, BallHeld);
-    return lerp(p, held, BallHeld);
+    // Nearer dots set off sooner, with a little scatter, and each takes a moment to arrive.
+    float start = (sqrt(distanceSquared) / reach * 0.65 + fixedRandom(id, 63.0) * 0.35) * GatherStagger;
+    float come = smoothstep(0.0, 1.0, saturate((BallAge - start) / GatherTime)) * BallHeld;
+    if (come <= 0.0)
+    {
+        return p;
+    }
+
+    // Its place in the cloud: one of three tilted orbits round the mouse, like an atom's, each turning at its
+    // own pace and breathing a little with the bass. Orbits keep the gathered light on crisp lines, so the
+    // cloud reads as a shape the dots have made rather than a blur.
+    float orbit = floor(fixedRandom(id, 64.0) * 3.0);
+    float radius = CloudSize * (0.55 + orbit * 0.225 + (fixedRandom(id, 66.0) - 0.5) * 0.08) * (1.0 + Bass * 0.15);
+    float angle = fixedRandom(id, 65.0) * 2.0 * PI + BallAge * CloudSpin * (1.0 - orbit * 0.25) * (orbit == 1.0 ? -1.0 : 1.0);
+    float2 place = rotate(float2(cos(angle), sin(angle) * (0.35 + orbit * 0.2)), orbit * 2.1 + 0.4) * radius;
+
+    // On its way it curls round the mouse as it closes in, so the dots spiral in rather than slide.
+    float2 offset = p - BallPosition;
+    float2 shown = BallPosition + lerp(rotate(offset, come * GatherCurl), place, come);
+    light *= lerp(1.0, CloudLight, come);
+    return shown;
 }
 
 void Push(inout Particle particle, uint id)
@@ -99,7 +124,7 @@ void Push(inout Particle particle, uint id)
         float distanceSquared = dot(away, away);
         float2 outward = away * rsqrt(distanceSquared + 1e-4);
         bool shown = sprite.size > 0.0 && all(isfinite(sprite.position));
-        // Holding the button lifts a handful instead (Lift), so the push rests meanwhile.
+        // Holding the button gathers dots instead (Gather), so the push rests meanwhile.
         float near = exp(-distanceSquared / (PushReach * PushReach)) * PointerStrength * (1.0 - PointerGrab);
         if (shown && near > 1e-3)
         {
@@ -179,7 +204,8 @@ SpriteVertex VSParticle(uint vertex : SV_VertexID, uint instance : SV_InstanceID
     Particle particle = ParticlesToDraw[instance];
     Sprite sprite = Show(particle, instance);
     // Moved by the mouse: pushed dots are drawn where they've been pushed, drawn out a touch along the way
-    // they're going so the motion reads, but never so far it smears; then a held or thrown handful is lifted.
+    // they're going so the motion reads, but never so far it smears; then the dots called in by a held or
+    // thrown press are gathered.
 #ifdef MOUSE_MOVES_PLACES
     sprite.position = Part(sprite.position);
 #else
@@ -189,7 +215,7 @@ SpriteVertex VSParticle(uint vertex : SV_VertexID, uint instance : SV_InstanceID
     sprite.streak += pushStreakLength > PushStreakMost ? pushStreak * (PushStreakMost / pushStreakLength) : pushStreak;
 #endif
     float light = 1.0;
-    sprite.position = Lift(sprite.position, instance, light);
+    sprite.position = Gather(sprite.position, instance, light);
     sprite.colour *= light;
 
     // Sizes are in pixels of a 1080-line screen and scale with the window, so the picture looks the
