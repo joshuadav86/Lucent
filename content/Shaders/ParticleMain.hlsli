@@ -36,7 +36,7 @@ static const float PushStreakMost = 0.02; // and no longer than this (p units), 
 static const float PartReach = 0.6;      // MOUSE_MOVES_PLACES: how far the dust parts, as a share of PushReach
 static const float GrabReach = 0.3;      // the radius of the patch the button lifts
 static const float BallSize = 0.15;      // the radius of the ball it's packed into
-static const float BallLight = 0.5;      // the packed patch is dimmed, so the ball glows rather than blinds
+static const float BallLight = 0.75;     // the packed patch is dimmed a little, so the ball glows rather than blinds
 
 #ifdef MOUSE_MOVES_PLACES
 // Where a dot the visual draws at p shows once the moving mouse has parted the dust around it: a smooth,
@@ -68,7 +68,7 @@ float2 Lift(float2 p, uint id, inout float light)
     }
 
     float2 from = p - BallFrom;
-    float reach = GrabReach * lerp(0.5, 1.0, fixedRandom(id, 61.0));
+    float reach = GrabReach * lerp(0.7, 1.0, fixedRandom(id, 61.0));
     if (dot(from, from) >= reach * reach)
     {
         return p;
