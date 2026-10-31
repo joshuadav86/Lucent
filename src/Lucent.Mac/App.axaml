@@ -650,14 +650,16 @@
                                Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
                                Value="{TemplateBinding Value, Mode=TwoWay}">
                             <Track.DecreaseButton>
+                                <!-- Both halves run on under the playhead to its middle, so the filled part ends beneath it
+                                     rather than showing its rounded tip in front of it. -->
                                 <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SeekEdgeButton}"
-                                              Background="{DynamicResource AccentGradientBrush}" />
+                                              Background="{DynamicResource AccentGradientBrush}" Margin="0,0,-6,0" />
                             </Track.DecreaseButton>
                             <Track.IncreaseButton>
                                 <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SeekEdgeButton}"
-                                              Background="{DynamicResource HoverBrush}" />
+                                              Background="{DynamicResource HoverBrush}" Margin="-6,0,0,0" />
                             </Track.IncreaseButton>
-                            <Thumb Name="Knob">
+                            <Thumb Name="Knob" ZIndex="1">
                                 <Thumb.Template>
                                     <ControlTemplate>
                                         <Grid Background="Transparent">
