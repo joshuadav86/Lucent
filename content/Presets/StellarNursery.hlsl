@@ -1,7 +1,7 @@
 // Name: Stellar Nursery
-// Drift around a glowing cloud of gas where new stars are born: filaments of red, gold and teal billow in the stellar wind, and every beat sends a shockwave rippling out from the young stars at its heart.
+// Drift around a cloud of gas where new stars are born, mapped in glowing neon contour lines: nested shells round the young stars at its heart, each traced where it cuts the cloud's ridges and filaments, with light flowing along every line. Each shell flares with its own band of the spectrum, the shells breathe with the bass, and every beat sends a shockwave of light rippling out through them.
 // Family: Particles
-// Tags: Space, Colourful, Calm, 3D
+// Tags: Space, Neon, Geometric, 3D
 // Added: 2026-10-17 01:51
 // Particles: 262144
 
@@ -15,14 +15,38 @@ float shareOf(uint id)
 }
 
 // The gas lies in a ragged, hollow shell blown out by the young stars, in twisting filaments.
-float gasDensity(float3 p)
+float gasRidges(float3 p)
 {
-    float r = length(p);
-    float shell = smoothstep(0.3, 0.8, r) * (1.0 - smoothstep(1.1, 2.0, r));
     float3 q = p * 1.8 + float3(4.1, 1.7, 8.3);
     float turbulence = noise3(q) * 0.55 + noise3(q * 2.1 + 3.0) * 0.3 + noise3(q * 4.3 + 7.0) * 0.15;
     float ridges = 1.0 - abs(turbulence);
-    return shell * saturate(ridges * ridges * ridges * 2.8 - 1.3);
+    return saturate(ridges * ridges * ridges * 2.8 - 1.3);
+}
+
+// The contour map: Shells nested spheres round the cluster, and on each one the lines where the gas
+// reaches each of Levels densities, like the contour lines of hills drawn on a globe.
+static const float Shells = 7.0;
+static const float ShellInner = 0.55;
+static const float ShellStep = 0.16;
+static const float Levels[3] = { 0.08, 0.3, 0.6 };
+
+float shellRadius(float shell)
+{
+    return ShellInner + shell * ShellStep;
+}
+
+// The contour lines follow the gas's ridges and filaments themselves; each shell cuts through them.
+float gasDensity(float3 p)
+{
+    return gasRidges(p);
+}
+
+// The gas's slope at p, from the density a little way either side.
+float3 gasSlope(float3 p)
+{
+    float e = 0.02;
+    float d = gasDensity(p);
+    return float3(gasDensity(p + float3(e, 0.0, 0.0)) - d, gasDensity(p + float3(0.0, e, 0.0)) - d, gasDensity(p + float3(0.0, 0.0, e)) - d) / e;
 }
 
 // How long ago the last beat was (Beat fades from 1 as exp(-5 t)), for the shockwave.
@@ -46,23 +70,26 @@ void Spawn(inout Particle particle, uint id)
     particle.life = 1e6;
     if (share < GasShare)
     {
-        // Try a few random spots and keep the densest, so the gas gathers into filaments; Show
-        // also dims the gas by its density, so stragglers in empty space hardly show.
-        float3 position = randomInSphere(id, 1.0) * 2.1;
-        float best = gasDensity(position);
+        // Pick a shell and a contour level, then try spots on that shell and keep the one closest to
+        // the contour; Simulate pulls it the rest of the way on.
+        float shell = min(floor(fixedRandom(id, 1.0) * Shells), Shells - 1.0);
+        float level = Levels[min((uint)(fixedRandom(id, 2.0) * 3.0), 2u)];
+        float radius = shellRadius(shell);
+        float3 position = randomDirection(id, 10.0) * radius;
+        float best = abs(gasDensity(position) - level);
         [unroll]
-        for (int attempt = 0; attempt < 6; attempt++)
+        for (int attempt = 0; attempt < 10; attempt++)
         {
-            float3 candidate = randomInSphere(id, 10.0 + attempt * 3.0) * 2.1;
-            float density = gasDensity(candidate);
-            if (density > best)
+            float3 candidate = randomDirection(id, 13.0 + attempt * 3.0) * radius;
+            float off = abs(gasDensity(candidate) - level);
+            if (off < best)
             {
-                best = density;
+                best = off;
                 position = candidate;
             }
         }
         particle.position = position;
-        particle.data.x = gasDensity(position);
+        particle.data = float4(level, shell, fixedRandom(id, 3.0) < 0.5 ? -1.0 : 1.0, 0.6 + fixedRandom(id, 4.0) * 0.8);
         particle.life = lerp(18.0, 40.0, random(id, 2.0));
         if (ParticleReset > 0.5)
         {
@@ -85,29 +112,34 @@ void Simulate(inout Particle particle, uint id)
 {
     if (shareOf(id) < GasShare)
     {
-        // The gas billows slowly on a turbulent flow, pushed outward by the stellar wind.
+        // Light flows along the contour line: across the slope, round the shell, then settles back
+        // onto the line and the shell.
         float dt = min(DeltaTime, 0.05);
         float3 position = particle.position;
-        float3 flow = curlNoise(position * 0.9 + float3(0.0, Time * 0.02, 0.0)) * (0.02 + Mid * 0.025);
-        flow += normalize(position + 1e-4) * 0.006;
-        particle.velocity = flow;
-        particle.position += flow * dt;
+        float radius = shellRadius(particle.data.y);
+        float3 up = normalize(position + 1e-4);
+        float3 slope = gasSlope(position);
+        float3 across = slope - up * dot(slope, up);
+        float steep = dot(across, across);
+        float3 along = steep > 1e-6 ? normalize(cross(up, across)) : 0.0;
+        float speed = (0.04 + Bass * 0.14 + Beat * 0.05 + DropPulse * 0.1) * particle.data.z * particle.data.w;
+        position += along * speed * dt;
+        if (steep > 1e-6)
+        {
+            position -= across * (gasDensity(position) - particle.data.x) / steep * 0.5;
+        }
+        position = normalize(position + 1e-4) * radius;
+        particle.velocity = (position - particle.position) / max(dt, 1e-4);
+        particle.position = position;
     }
 }
 
-// The colours of the gas: teal close to the hot stars, red further out, gold in the densest knots.
-float3 gasColour(float3 position, float density, uint id)
+// Neon by shell, teal next to the hot stars through blue, violet and magenta to red-gold at the
+// edge; the denser contours on each shell run a little warmer.
+float3 shellColour(float shell, float level)
 {
-    float r = length(position);
-    float3 teal = float3(0.0, 0.7, 1.0);
-    float3 red = float3(1.0, 0.06, 0.2);
-    float3 gold = float3(1.0, 0.55, 0.12);
-    float drift = noise3(position * 0.8 + Time * 0.01);
-    float3 colour = lerp(teal, red, smoothstep(0.75, 1.25, r + drift * 0.35));
-    colour = lerp(colour, gold, smoothstep(0.5, 0.9, density) * 0.6);
-    // A few wisps of violet.
-    colour = lerp(colour, float3(0.6, 0.3, 1.0), step(0.93, fixedRandom(id, 7.0)) * 0.6);
-    return colour;
+    float hue = 0.47 + shell / (Shells - 1.0) * 0.6 + level * 0.12 + sin(Time * 0.02) * 0.03;
+    return hsv2rgb(frac(hue), 0.85, 1.0);
 }
 
 Sprite Show(Particle particle, uint id)
@@ -126,23 +158,27 @@ Sprite Show(Particle particle, uint id)
 
     if (share < GasShare)
     {
-        float density = particle.data.x;
+        float shell = particle.data.y;
         float r = length(particle.position);
-        // Dark lanes of dust run through the glowing gas, hiding what lies inside them.
-        float dust = 1.0 - 0.9 * smoothstep(0.05, 0.35, noise3(particle.position * 2.6 + float3(2.0, 9.0, 4.0)));
-        // Every beat sends a shockwave out through the gas, lighting it as it passes.
+        // The shells breathe with the bass, the outer ones most.
+        float breathe = 1.0 + Bass * 0.05 * (1.0 + shell * 0.3) + DropPulse * 0.08;
+        seen = project(particle.position * breathe, eye, 0.0, zoom, sin(Time * 0.03) * 0.2);
+        float3 seenBefore = project((particle.position - particle.velocity * 0.03) * breathe, eye, 0.0, zoom, sin(Time * 0.03) * 0.2);
+        // Each shell plays its own band of the spectrum, bass inside and treble at the edge.
+        float level = spectrum(0.03 + shell / (Shells - 1.0) * 0.6);
+        // Every beat sends a shockwave out through the shells, lighting each as it passes.
         float wave = 0.3 + sinceBeat() * 1.6;
-        float shock = exp(-pow((r - wave) / 0.12, 2.0)) * Beat * 2.5;
+        float shock = exp(-pow((r - wave) / 0.1, 2.0)) * Beat * 3.0;
+        // Lines that drift off their contour in the thinnest gas fade rather than wander.
+        float onLine = exp(-pow((gasDensity(particle.position) - particle.data.x) / 0.06, 2.0));
         float fade = saturate(particle.age * 0.4) * saturate(particle.life * 0.4);
-        float brightness = density * 0.019 * dust * (1.0 + Bass * 0.5 + shock) * fade;
-        sprite.size = 5.0;
-        sprite.colour = gasColour(particle.position, density, id) * brightness;
-        // Each frame every wisp lands somewhere slightly different, and Render keeps a few frames
-        // blended, so the gas looks smooth and soft rather than grainy.
-        float3 jitter = (float3(random(id, 13.0), random(id, 14.0), random(id, 15.0)) - 0.5) * 0.05;
-        float3 jittered = project(particle.position + jitter, eye, 0.0, zoom, sin(Time * 0.03) * 0.2);
-        sprite.position = jittered.xy;
-        focus(sprite, seen.z, focusDepth, 0.06);
+        float brightness = 0.22 * (0.35 + level * 1.5 + shock) * onLine * fade * (0.8 + Intensity * 0.4);
+        sprite.position = seen.xy;
+        float2 streak = seen.xy - seenBefore.xy;
+        sprite.streak = streak * min(1.0, 0.012 / max(length(streak), 1e-5));
+        sprite.size = 0.9;
+        sprite.colour = shellColour(shell, particle.data.x) * brightness * (1.0 + step(0.997, fixedRandom(id, 7.0)) * Treble * 4.0);
+        focus(sprite, seen.z, focusDepth, 0.05);
         return sprite;
     }
 
@@ -172,5 +208,7 @@ Sprite Show(Particle particle, uint id)
 
 float3 Render(float2 uv, float2 p)
 {
-    return particles(uv) + previous(uv) * 0.72;
+    // A faint glow round the cluster keeps the heart of the nursery warm between the lines.
+    float glow = exp(-dot(p, p) * 9.0) * (0.02 + Bass * 0.02);
+    return particles(uv) + previous(uv) * 0.5 + float3(0.4, 0.5, 1.0) * glow;
 }
