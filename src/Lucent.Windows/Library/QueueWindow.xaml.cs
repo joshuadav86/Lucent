@@ -16,6 +16,7 @@ public partial class QueueWindow : ToolWindow
         InitializeComponent();
         PlacementName = "Queue";
         LucentFullScreen.AddTo(QueueMenu, this);
+        _remoteScroll = new PlayingRowScroll(RemoteListView);
     }
 
     /// <summary>Music dropped on the queue goes on the end of it, as on Winamp's playlist.</summary>
@@ -140,6 +141,7 @@ public partial class QueueWindow : ToolWindow
 
     // ---- Another app's playlist ----
 
+    private readonly PlayingRowScroll _remoteScroll;
     private RemoteList? _remoteList;
     private List<RemoteListEntry> _remoteEntries = new();
     private RemoteTrack? _remotePlaying;
@@ -194,8 +196,8 @@ public partial class QueueWindow : ToolWindow
         if (listChanged || songChanged)
         {
             // Not when the rest of a long playlist arrives, as the list may have been scrolled meanwhile, unless the
-            // song playing is only in the rest.
-            MarkRemotePlaying(scroll: songChanged || !sameList || !wasMarked);
+            // song playing is only in the rest. Gliding to each new song in the same playlist; straight to it in a new one.
+            MarkRemotePlaying(scroll: songChanged || !sameList || !wasMarked, glide: songChanged && (!listChanged || sameList));
         }
     }
 
@@ -215,7 +217,7 @@ public partial class QueueWindow : ToolWindow
         RemoteListView.SelectedItem = _remoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
     }
 
-    private void MarkRemotePlaying(bool scroll)
+    private void MarkRemotePlaying(bool scroll, bool glide)
     {
         RemoteListEntry? current = null;
         foreach (var entry in _remoteEntries)
@@ -224,29 +226,15 @@ public partial class QueueWindow : ToolWindow
             current ??= entry.IsCurrent ? entry : null;
         }
 
-        if (scroll && current is not null)
+        if (current is null)
         {
-            ShowAround(current);
+            _remoteScroll.Forget();
         }
-    }
-
-    // Puts the song in the middle of the list, with the songs before and after it either side.
-    private void ShowAround(RemoteListEntry entry)
-    {
-        RemoteListView.ScrollIntoView(entry);
-        _ = Dispatcher.InvokeAsync(() =>
+        else if (scroll)
         {
-            var index = _remoteEntries.IndexOf(entry);
-            if (index < 0 || FindScroller(RemoteListView) is not { } scroller)
-            {
-                return;
-            }
-
-            // In rows or pixels, whichever the list scrolls by: either way, the rows are all the same height.
-            var row = scroller.ExtentHeight / _remoteEntries.Count;
-            scroller.ScrollToVerticalOffset(Math.Clamp(index * row - (scroller.ViewportHeight - row) / 2, 0,
-                Math.Max(0, scroller.ExtentHeight - scroller.ViewportHeight)));
-        }, System.Windows.Threading.DispatcherPriority.Loaded);
+            // Puts the song in the middle of the list, with the songs before and after it either side.
+            _remoteScroll.Show(() => _remoteEntries.FirstOrDefault(entry => entry.IsCurrent), glide);
+        }
     }
 
     // The Sort button shows for a playlist, album or Liked Songs, not for what's up next, which is in the order it plays.
@@ -283,7 +271,7 @@ public partial class QueueWindow : ToolWindow
 
         FillRemoteEntries();
         ShowSortButton();
-        MarkRemotePlaying(scroll: true);
+        MarkRemotePlaying(scroll: true, glide: false);
     }
 
     private void PlayChosenRemoteSong()

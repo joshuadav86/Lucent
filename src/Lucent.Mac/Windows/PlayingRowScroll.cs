@@ -24,9 +24,9 @@ public sealed class PlayingRowScroll
     private bool _glide;
     private DateTime _touchedAt = DateTime.MinValue;
     private ScrollViewer? _scroller;
-    private double _from;
-    private double _to;
+    private ScrollGlide _glideNow;
     private int _glideNumber;
+    private bool _holdingCovers;
 
     public PlayingRowScroll(ListBox list)
     {
@@ -111,29 +111,45 @@ public sealed class PlayingRowScroll
         var glide = _glide;
         _row = null;
         _list.ScrollIntoView(item);
-        Dispatcher.UIThread.Post(() =>
+        // Measured straight away where it can be, so the list doesn't show the song's place for a frame before setting
+        // off from where it was; otherwise once the list has laid itself out.
+        _list.UpdateLayout();
+        if (!GlideTo(scroller, item, from, glide))
         {
-            if (_list.ContainerFromItem(item) is not { IsEffectivelyVisible: true } row
-                || row.TranslatePoint(new Point(), scroller) is not { } at)
-            {
-                return;
-            }
+            Dispatcher.UIThread.Post(() => GlideTo(scroller, item, from, glide), DispatcherPriority.Loaded);
+        }
+    }
 
-            var top = scroller.Offset.Y + at.Y;
-            var to = ScrollGlide.CenteredOffset(top, row.Bounds.Height, scroller.Viewport.Height, scroller.Extent.Height);
-            if (!glide || TopLevel.GetTopLevel(_list) is not { } topLevel)
-            {
-                scroller.Offset = new Vector(scroller.Offset.X, to);
-                return;
-            }
+    // Whether the row showing item was found, and the list set gliding (or moved) to put it in the middle.
+    private bool GlideTo(ScrollViewer scroller, object item, double from, bool glide)
+    {
+        if (_list.ContainerFromItem(item) is not { IsEffectivelyVisible: true } row
+            || row.TranslatePoint(new Point(), scroller) is not { } at)
+        {
+            return false;
+        }
 
-            _from = ScrollGlide.Start(from, to, scroller.Viewport.Height);
-            _to = to;
-            scroller.Offset = new Vector(scroller.Offset.X, _from);
-            _clock.Restart();
-            var number = ++_glideNumber;
-            topLevel.RequestAnimationFrame(_ => OnFrame(topLevel, number));
-        }, DispatcherPriority.Loaded);
+        var top = scroller.Offset.Y + at.Y;
+        var to = ScrollGlide.CenteredOffset(top, row.Bounds.Height, scroller.Viewport.Height, scroller.Extent.Height);
+        if (!glide || TopLevel.GetTopLevel(_list) is not { } topLevel)
+        {
+            scroller.Offset = new Vector(scroller.Offset.X, to);
+            return true;
+        }
+
+        StopGlide();
+        _glideNow = ScrollGlide.Between(from, to, scroller.Viewport.Height);
+        scroller.Offset = new Vector(scroller.Offset.X, from);
+        if (_glideNow.IsLong)
+        {
+            Thumbnails.Hold();
+            _holdingCovers = true;
+        }
+
+        _clock.Restart();
+        var number = _glideNumber;
+        topLevel.RequestAnimationFrame(_ => OnFrame(topLevel, number));
+        return true;
     }
 
     private void OnFrame(TopLevel topLevel, int number)
@@ -144,12 +160,24 @@ public sealed class PlayingRowScroll
             return;
         }
 
-        scroller.Offset = new Vector(scroller.Offset.X, ScrollGlide.At(_from, _to, _clock.Elapsed));
-        if (!ScrollGlide.IsDone(_clock.Elapsed))
+        scroller.Offset = new Vector(scroller.Offset.X, _glideNow.At(_clock.Elapsed));
+        if (!_glideNow.IsDone(_clock.Elapsed))
         {
             topLevel.RequestAnimationFrame(_ => OnFrame(topLevel, number));
         }
+        else
+        {
+            StopGlide();
+        }
     }
 
-    private void StopGlide() => _glideNumber++;
+    private void StopGlide()
+    {
+        _glideNumber++;
+        if (_holdingCovers)
+        {
+            _holdingCovers = false;
+            Thumbnails.Release();
+        }
+    }
 }
