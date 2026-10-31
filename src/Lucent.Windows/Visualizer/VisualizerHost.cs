@@ -17,15 +17,19 @@ public sealed class VisualizerHost : HwndHost
     private const int WS_CLIPSIBLINGS = 0x04000000;
     private const int CS_DBLCLKS = 0x0008;
     private const int WM_ERASEBKGND = 0x0014;
+    private const int WM_MOUSEMOVE = 0x0200;
     private const int WM_LBUTTONUP = 0x0202;
     private const int WM_LBUTTONDBLCLK = 0x0203;
     private const int WM_RBUTTONUP = 0x0205;
+    private const int WM_MOUSELEAVE = 0x02A3;
+    private const uint TME_LEAVE = 0x00000002;
     private const int IDC_ARROW = 32512;
 
     private static bool _classRegistered;
 
     private readonly AudioAnalyzer _analyzer;
     private Renderer? _renderer;
+    private bool _trackingMouse;
     private int _presetIndex;
     private bool _autoCycle = true;
     private int _targetPixels;
@@ -45,6 +49,9 @@ public sealed class VisualizerHost : HwndHost
 
     /// <summary>The song that's playing and its bars, which Auto uses to change visual on a downbeat.</summary>
     public SongClock SongClock { get; } = new();
+
+    /// <summary>The mouse over the visuals, which pushes a Particles visual's dots aside.</summary>
+    public PointerStir Pointer { get; } = new();
 
     /// <summary>Raised on the UI thread with the names of the visuals that loaded.</summary>
     public event EventHandler<IReadOnlyList<string>>? PresetsLoaded;
@@ -297,6 +304,7 @@ public sealed class VisualizerHost : HwndHost
         _renderer.Hdr = _hdr;
         _renderer.AutoCycleChoices = IndicesOf(_renderer.PresetNames, _autoCycleNames);
         _renderer.SongClock = SongClock;
+        _renderer.Pointer = Pointer;
         _renderer.PresetChanged += index => dispatcher.InvokeAsync(() =>
         {
             _presetIndex = index;
@@ -340,6 +348,13 @@ public sealed class VisualizerHost : HwndHost
                 // Direct3D covers the whole window; skipping the erase avoids flicker.
                 handled = true;
                 return new IntPtr(1);
+            case WM_MOUSEMOVE:
+                OnMouseMoved(hwnd, lParam);
+                return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+            case WM_MOUSELEAVE:
+                _trackingMouse = false;
+                Pointer.Left();
+                return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
             case WM_LBUTTONDBLCLK:
                 DoubleClicked?.Invoke(this, EventArgs.Empty);
                 handled = true;
@@ -351,6 +366,28 @@ public sealed class VisualizerHost : HwndHost
             default:
                 return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
         }
+    }
+
+    private void OnMouseMoved(IntPtr hwnd, IntPtr lParam)
+    {
+        if (!_trackingMouse)
+        {
+            // Asks Windows for a WM_MOUSELEAVE when the mouse leaves, which it only sends once per request.
+            var track = new TrackMouseEventInfo { cbSize = (uint)Marshal.SizeOf<TrackMouseEventInfo>(), dwFlags = TME_LEAVE, hwndTrack = hwnd };
+            _trackingMouse = TrackMouseEvent(ref track);
+        }
+
+        GetClientRect(hwnd, out var client);
+        var width = client.Right - client.Left;
+        var height = client.Bottom - client.Top;
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var x = (short)((long)lParam & 0xFFFF);
+        var y = (short)(((long)lParam >> 16) & 0xFFFF);
+        Pointer.MovedTo((double)x / width, (double)y / height);
     }
 
     private static void RegisterWindowClass()
@@ -396,6 +433,32 @@ public sealed class VisualizerHost : HwndHost
         public string lpszClassName;
         public IntPtr hIconSm;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct TrackMouseEventInfo
+    {
+        public uint cbSize;
+        public uint dwFlags;
+        public IntPtr hwndTrack;
+        public uint dwHoverTime;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ClientRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool TrackMouseEvent(ref TrackMouseEventInfo track);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(IntPtr hwnd, out ClientRect rect);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern ushort RegisterClassEx(ref WndClassEx windowClass);
