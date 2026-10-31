@@ -33,6 +33,12 @@ public partial class MainWindow
             (GlowLevel.Normal, "Normal"),
             (GlowLevel.Strong, "Strong"),
         }, _settings.Glow, value => _settings.Glow = value, MenuTips.Glow));
+        menu.Items.Add(Choices("Power", new[]
+        {
+            (PowerMode.Smoothest, "Smoothest"),
+            (PowerMode.Balanced, "Balanced"),
+            (PowerMode.PowerSaver, "Power saver"),
+        }, _settings.Power, value => _settings.Power = value, MenuTips.Power));
 
         var buildUps = new MenuItem { Header = "Build-ups and drops", IsChecked = _settings.BuildUpsAndDrops, ToolTip = MenuTips.BuildUpsAndDrops };
         buildUps.Click += (_, _) => ChangeGraphics(() => _settings.BuildUpsAndDrops = !_settings.BuildUpsAndDrops);
@@ -56,9 +62,9 @@ public partial class MainWindow
         frameRate.Click += (_, _) => ChangeGraphics(() => _settings.ShowFrameRate = !_settings.ShowFrameRate);
         menu.Items.Add(frameRate);
 
-        var background = new MenuItem { Header = "Full frame rate in the background", IsChecked = _settings.FullFrameRateInBackground, ToolTip = MenuTips.FullFrameRateInBackground };
-        background.Click += (_, _) => ChangeGraphics(() => _settings.FullFrameRateInBackground = !_settings.FullFrameRateInBackground);
-        menu.Items.Add(background);
+        var battery = new MenuItem { Header = "Power saver on battery", IsChecked = _settings.PowerSaverOnBattery, ToolTip = MenuTips.PowerSaverOnBattery };
+        battery.Click += (_, _) => ChangeGraphics(() => _settings.PowerSaverOnBattery = !_settings.PowerSaverOnBattery);
+        menu.Items.Add(battery);
 
         menu.Items.Add(new Separator());
         var options = new MenuItem { Header = "All options…", InputGestureText = "O" };

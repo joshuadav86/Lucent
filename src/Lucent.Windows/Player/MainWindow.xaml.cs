@@ -1274,9 +1274,8 @@ public partial class MainWindow : Window
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
         _visualizer.TransitionSeconds = GraphicsOptions.Seconds(_settings.TransitionSpeed);
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
-        FrameRateCap.On = _settings.CapFrameRateAt60;
         _visuals.ShowFrameRate(_settings.ShowFrameRate);
-        BackgroundFrameRate.On = _settings.FullFrameRateInBackground;
+        ApplyPower();
         _visuals.UpdateAutoCycleButton();
         _visuals.UpdatePreviousButton();
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
@@ -1362,6 +1361,9 @@ public partial class MainWindow : Window
             case "Glow" when Enum.TryParse<GlowLevel>(value, out var glow):
                 _settings.Glow = glow;
                 break;
+            case "Power" when Enum.TryParse<PowerMode>(value, out var power):
+                _settings.Power = power;
+                break;
             case "AutoCycleSeconds" when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds):
                 _settings.AutoCycleSeconds = seconds;
                 break;
@@ -1414,13 +1416,9 @@ public partial class MainWindow : Window
         {
             _settings.ShowFrameRate = on;
         }
-        else if (sender == FrameRateCapSwitch)
+        else if (sender == PowerSaverOnBatterySwitch)
         {
-            _settings.CapFrameRateAt60 = on;
-        }
-        else if (sender == BackgroundFrameRateSwitch)
-        {
-            _settings.FullFrameRateInBackground = on;
+            _settings.PowerSaverOnBattery = on;
         }
         else if (sender == BuildUpsSwitch)
         {
@@ -1497,6 +1495,7 @@ public partial class MainWindow : Window
                 "Resolution" => _settings.Resolution.ToString(),
                 "Detail" => _settings.Detail.ToString(),
                 "Glow" => _settings.Glow.ToString(),
+                "Power" => _settings.Power.ToString(),
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
                 "PreviousVisual" => _settings.PreviousVisual.ToString(),
@@ -1513,8 +1512,7 @@ public partial class MainWindow : Window
 
         HdrSwitch.IsChecked = _settings.Hdr;
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
-        FrameRateCapSwitch.IsChecked = _settings.CapFrameRateAt60;
-        BackgroundFrameRateSwitch.IsChecked = _settings.FullFrameRateInBackground;
+        PowerSaverOnBatterySwitch.IsChecked = _settings.PowerSaverOnBattery;
         BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
         MouseParticlesSwitch.IsChecked = _settings.MouseMovesParticles;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;

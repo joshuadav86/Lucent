@@ -9,7 +9,7 @@ namespace Lucent.Mac.Visuals;
 /// <summary>
 /// Draws the visuals into a window's Core Animation Metal layer on its own thread, one frame per
 /// screen refresh (the layer hands out a new picture to draw into each time the screen is ready), or
-/// at about 60 fps on a faster screen with <see cref="FrameRateCap"/> on.
+/// fewer as <see cref="VisualsPower"/> sets (about 60 fps in Balanced).
 /// With HDR wanted and a screen that can show it, the layer switches to half-float pictures in
 /// extended linear sRGB (EDR), the Mac's match for the scRGB swap chain the Windows renderer uses.
 /// </summary>
@@ -135,9 +135,9 @@ public sealed class MetalRenderer : IDisposable
                 }
 
                 var commands = _engine.EncodeFrame(new CAMetalDrawable(drawable).Texture, now, deltaTime);
-                // With the 60 fps cap on a faster screen, each frame stays up for whole refreshes (two
-                // at 120 Hz), and nextDrawable waits for one to come free, so the loop runs half as often.
-                var minimum = FrameRateCap.MinimumFrameSeconds(_engine.Display.RefreshRate);
+                // Balanced and Power saver hold each frame up for whole refreshes on a faster screen (two
+                // at 120 Hz in Balanced), and nextDrawable waits for one to come free, so the loop runs less often.
+                var minimum = VisualsPower.MinimumFrameSeconds(_engine.Display.RefreshRate);
                 if (minimum > 0)
                 {
                     ObjC.SendVoid(commands.NativePtr, "presentDrawable:afterMinimumDuration:", drawable, minimum);

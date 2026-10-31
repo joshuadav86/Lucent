@@ -244,16 +244,14 @@ public sealed class AppSettings
     public bool ShowFrameRate { get; set; }
 
     /// <summary>
-    /// Draw the visuals at most about 60 times a second, even on a 120 Hz or faster screen: about half
-    /// the work there (CPU, GPU and the system's compositor), for a picture made for 60 fps anyway.
+    /// How hard the visuals work: Smoothest (the screen's refresh rate), Balanced (about 60 fps), or
+    /// Power saver (about 30 fps at half the pixels). Smoothest and Balanced keep full frame rate while
+    /// another app has focus; Power saver lets the system slow Lucent down then.
     /// </summary>
-    public bool CapFrameRateAt60 { get; set; } = true;
+    public PowerMode Power { get; set; } = PowerMode.Balanced;
 
-    /// <summary>
-    /// Keep the visuals at full frame rate while another app has focus (on a second screen, say),
-    /// instead of letting the system slow Lucent down. They still stop drawing when minimized or hidden.
-    /// </summary>
-    public bool FullFrameRateInBackground { get; set; } = true;
+    /// <summary>Switch to Power saver by itself while the computer runs on battery.</summary>
+    public bool PowerSaverOnBattery { get; set; }
 
     // ---- Visual changes ----
 

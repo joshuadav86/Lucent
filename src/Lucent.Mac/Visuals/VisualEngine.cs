@@ -1086,7 +1086,7 @@ public sealed partial class VisualEngine : IDisposable
     {
         if (_autoResolutionOn && _targetPixels <= 0 && _activePreset >= 0)
         {
-            _autoResolution.Frame(now, FrameRateCap.FrameRate(Display.RefreshRate), _activePreset);
+            _autoResolution.Frame(now, VisualsPower.FrameRate(Display.RefreshRate), _activePreset);
         }
     }
 
@@ -1094,7 +1094,16 @@ public sealed partial class VisualEngine : IDisposable
     private (int Width, int Height) RenderSizeFor(int windowWidth, int windowHeight)
     {
         var target = _targetPixels;
-        if (target <= 0)
+        // Recordings (off screen) are always drawn in full.
+        var saving = _offscreen ? 1.0 : VisualsPower.PixelShare;
+        if (saving < 1.0)
+        {
+            // Power saver: a share of what would be drawn otherwise, never more than the window's own size.
+            var pixels = (double)windowWidth * windowHeight;
+            var usual = target > 0 ? Math.Min(target, pixels) : (_autoResolutionOn ? _autoResolution.PixelShare : 1.0) * pixels;
+            target = Math.Max(1, (int)(usual * saving));
+        }
+        else if (target <= 0)
         {
             if (!_autoResolutionOn || _autoResolution.PixelShare >= 1.0)
             {
