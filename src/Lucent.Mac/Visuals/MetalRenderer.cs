@@ -81,11 +81,13 @@ public sealed class MetalRenderer : IDisposable
         var lastTime = 0.0;
         var frames = 0;
         var frameRateStart = 0.0;
+        var keptUp = false;
         try
         {
             _engine.StartCompiling();
             while (_running)
             {
+                Lucent.Mac.Visualizer.BackgroundFrameRate.KeepUp(ref keptUp);
                 var now = clock.Elapsed.TotalSeconds;
                 var deltaTime = (float)Math.Clamp(now - lastTime, 0.0, 0.1);
                 lastTime = now;
