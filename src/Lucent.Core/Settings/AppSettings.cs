@@ -512,6 +512,7 @@ public sealed class AppSettings
         ["Champagne Toast"] = "Polytope Bloom",
         ["Single Drop"] = "Superformula",
         ["Fireworks Night"] = "Spiral Shell",
+        ["Horizon Line"] = "Loxodrome",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
