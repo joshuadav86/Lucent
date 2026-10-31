@@ -27,6 +27,9 @@ public sealed class PointerStir
     private float _lastX;
     private float _lastY;
 
+    /// <summary>The "Mouse moves particles" option: off, the mouse leaves the dots alone.</summary>
+    public bool On { get; set; } = true;
+
     /// <summary>Where the mouse is, in the shaders' p units (-aspect..aspect across, -1..1 down).</summary>
     public float X { get; private set; }
 
@@ -99,6 +102,13 @@ public sealed class PointerStir
         lock (_gate)
         {
             (x, y, inside, held, movedAt) = (_x, _y, _inside, _held, _movedAt);
+        }
+
+        // Turned off, it's as if the mouse were never there; anything already pushed drifts back.
+        if (!On)
+        {
+            inside = false;
+            held = false;
         }
 
         // While the button is held the window keeps the mouse, so dragging past the edge still counts.

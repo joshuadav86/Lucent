@@ -38,6 +38,10 @@ public partial class MainWindow
         buildUps.Click += (_, _) => ChangeGraphics(() => _settings.BuildUpsAndDrops = !_settings.BuildUpsAndDrops);
         menu.Items.Add(buildUps);
 
+        var mouseParticles = new MenuItem { Header = "Mouse moves particles", IsChecked = _settings.MouseMovesParticles, ToolTip = MenuTips.MouseMovesParticles };
+        mouseParticles.Click += (_, _) => ChangeGraphics(() => _settings.MouseMovesParticles = !_settings.MouseMovesParticles);
+        menu.Items.Add(mouseParticles);
+
         var hdr = new MenuItem
         {
             Header = "HDR",

@@ -313,6 +313,10 @@
                               Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Theme="{StaticResource OptionHint}" Text="Visuals close in and change colour through a build-up, then burst on the drop." />
 
+                    <CheckBox x:Name="MouseParticlesSwitch" Theme="{StaticResource SwitchToggle}" Content="Mouse moves particles"
+                              Margin="0,18,0,0" Click="OnOptionSwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}" Text="Move the mouse over a particle visual to push its dots aside, or hold the button to grab and throw them." />
+
                     <CheckBox x:Name="HdrSwitch" Theme="{StaticResource SwitchToggle}" Content="HDR" Margin="0,18,0,0"
                               Click="OnOptionSwitched" />
                     <TextBlock x:Name="HdrHint" Theme="{StaticResource OptionHint}" />

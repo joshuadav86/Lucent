@@ -163,6 +163,9 @@ public sealed class AppSettings
     /// <summary>Visuals tense up through a song's build-ups and burst on its drops (see SongLook).</summary>
     public bool BuildUpsAndDrops { get; set; } = true;
 
+    /// <summary>The mouse pushes, grabs and throws a particle visual's dots (see PointerStir).</summary>
+    public bool MouseMovesParticles { get; set; } = true;
+
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
 

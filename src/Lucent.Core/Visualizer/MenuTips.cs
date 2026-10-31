@@ -46,6 +46,8 @@ public static class MenuTips
 
     public const string BuildUpsAndDrops = "Visuals close in and change color through a song's build-up, then burst on the drop.";
 
+    public const string MouseMovesParticles = "Move the mouse over a particle visual to push its dots aside, or hold the button to grab and throw them.";
+
     public const string Hdr = "Let highlights shine brighter than normal white on an HDR screen.";
 
     public const string FrameRate = "Show how many frames a second the visuals are drawn at.";
