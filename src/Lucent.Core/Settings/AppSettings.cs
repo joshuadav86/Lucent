@@ -526,6 +526,9 @@ public sealed class AppSettings
         ["Single Drop"] = "Superformula",
         ["Fireworks Night"] = "Spiral Shell",
         ["Horizon Line"] = "Loxodrome",
+        ["Marble Run"] = "Boy's Surface",
+        ["Mercury Lake"] = "Enneper Bloom",
+        ["Spark Forge"] = "Epicycle Rosette",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
