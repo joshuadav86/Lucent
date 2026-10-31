@@ -101,6 +101,7 @@ public static partial class SelfTest
         failures += Lucent.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.LoudnessSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.EqualizerSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.ListeningWatchdogSelfTest.Run(Console.WriteLine);
         // Before the visuals: their timing pass keeps CI's virtual GPU busy for minutes, and a
         // recording straight after it has stalled.
         failures += TestRecording();

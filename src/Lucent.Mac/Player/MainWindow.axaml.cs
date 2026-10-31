@@ -141,6 +141,7 @@ public partial class MainWindow : Window
             UpdateStationStatus();
             ObserveForScrobbling();
             FollowComputerVolume();
+            WatchListening();
         };
         _positionTimer.Start();
         StartScrobbling();
