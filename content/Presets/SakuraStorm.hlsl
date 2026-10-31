@@ -1,7 +1,7 @@
 // Name: Sakura Storm
-// A gust of cherry blossom petals swirls through a moonlit garden, each petal tumbling and catching the moonlight as it turns, the nearest ones melting into soft pink blurs; the wind rises and falls with the music and every beat shakes loose a new flurry.
+// A gust of glowing neon cherry blossom petals swirls through a moonlit garden, each petal tumbling and flashing white as it turns, the nearest ones melting into soft bokeh; the wind rises and falls with the music and every beat shakes loose a new flurry. Each petal glows with its own band of the spectrum, a great neon blossom turns round the moon, and the hills are traced in light.
 // Family: Particles
-// Tags: Calm, Colourful, 3D
+// Tags: Neon, Colourful, 3D
 // Added: 2026-10-17 17:02
 // Particles: 110000
 
@@ -123,10 +123,15 @@ Sprite Show(Particle particle, uint id)
     float tumble = particle.data.x;
     float face = abs(cos(tumble));
     float glint = pow(saturate(cos(tumble + fixedRandom(id, 11.0) * 6.28)), 24.0);
+    // Neon petals, mostly sakura pink and magenta with some violet and a few teal, each glowing with
+    // its own band of the spectrum.
     float shade = fixedRandom(id, 12.0);
-    float3 petal = lerp(float3(1.0, 0.42, 0.6), float3(1.0, 0.7, 0.8), shade * shade);
-    petal = lerp(petal, float3(0.9, 0.25, 0.5), step(0.88, shade));
-    float3 colour = petal * (0.1 + 0.9 * face) * 0.24 + float3(0.85, 0.85, 1.0) * glint * 0.9 * (0.6 + Treble);
+    float hue = shade < 0.75 ? lerp(0.9, 0.97, shade / 0.75) : (shade < 0.93 ? 0.78 : 0.5);
+    float3 petal = hsv2rgb(hue, 0.72, 1.0);
+    float level = spectrum(0.03 + shade * 0.65);
+    float3 colour = petal * (0.1 + 0.9 * face) * 0.3 * (0.5 + level * 1.4) + float3(0.9, 0.9, 1.0) * glint * 1.1 * (0.6 + Treble);
+    // Petals just shaken loose on the beat burn bright for a moment.
+    colour *= 1.0 + exp(-particle.age * 1.5) * step(shareOf(id), FlurryShare) * 1.5;
     // Fade into the night mist with distance, and in at the edges of the box.
     float mist = exp(-seen.z * 0.09) * smoothstep(0.2, 0.8, seen.z);
     colour *= mist * saturate(particle.age * 2.0) * (0.85 + Level * 0.4);
@@ -159,6 +164,16 @@ float3 Render(float2 uv, float2 p)
     float disc = smoothstep(0.072, 0.066, toMoon);
     float marks = 0.8 + 0.2 * fbm(onMoon * 2.0 + 4.0);
     colour += float3(1.0, 0.95, 0.88) * disc * marks * 1.2;
+    // A great neon blossom turns slowly round the moon: five petals traced in light, the outline
+    // flaring with the bass and a ring of light round the moon on every beat.
+    float2 around = onMoon * 0.07;
+    float spin = atan2(around.y, around.x) + Time * 0.04;
+    float bloom = 0.2 * (0.55 + 0.45 * abs(cos(spin * 2.5))) * (1.0 + Bass * 0.08);
+    float fromBloom = abs(length(around) - bloom);
+    float petals = exp(-pow(fromBloom / 0.0018, 2.0)) + exp(-fromBloom / 0.012) * 0.15;
+    colour += hsv2rgb(0.92, 0.7, 1.0) * petals * (0.35 + Bass * 0.6) * smoothstep(0.05, 0.12, toMoon);
+    float sinceBeat = -log(max(Beat, 1e-4)) / 5.0;
+    colour += hsv2rgb(0.5, 0.6, 1.0) * exp(-pow((toMoon - 0.08 - sinceBeat * 0.2) / 0.002, 2.0)) * Beat * 0.6;
     colour += float3(0.5, 0.55, 0.75) * (exp(-toMoon * 9.0) * 0.22 + exp(-toMoon * 2.5) * 0.06) * (1.0 + Bass * 0.3);
     float cloud = smoothstep(0.45, 0.8, fbm(float2(atan2(direction.x, direction.z) * 3.0 + Time * 0.01, up * 8.0)));
     colour = lerp(colour, float3(0.06, 0.065, 0.1) + float3(0.2, 0.2, 0.25) * exp(-toMoon * 4.0), cloud * smoothstep(0.05, 0.25, up) * 0.6);
@@ -170,6 +185,9 @@ float3 Render(float2 uv, float2 p)
     float3 mistColour = float3(0.05, 0.05, 0.09) + float3(0.08, 0.06, 0.1) * exp(-toMoon * 3.0);
     colour = lerp(colour, mistColour, smoothstep(far + 0.004, far - 0.004, up) * 0.85);
     colour = lerp(colour, float3(0.012, 0.012, 0.025), smoothstep(near + 0.004, near - 0.004, up));
+    // The hills' skylines traced in fine neon, violet far off and pink close by.
+    colour += hsv2rgb(0.78, 0.7, 1.0) * exp(-pow((up - far) / 0.0015, 2.0)) * 0.25 * (0.5 + spectrum(0.1));
+    colour += hsv2rgb(0.93, 0.7, 1.0) * exp(-pow((up - near) / 0.0015, 2.0)) * 0.35 * (0.5 + spectrum(0.3));
     // Paper lanterns glowing far off along the garden path, swaying with the bass.
     float lanternRow = step(0.75, hash(float2(floor(along * 30.0), 3.0)));
     float lantern = lanternRow * exp(-length(float2((frac(along * 30.0) - 0.5) * 2.0, (up - near + 0.012) * 90.0)) * 4.0);

@@ -1,5 +1,8 @@
 // Name: Newton Basins
-// Newton's method hunting five drifting roots: spiralling chains of glowing beads mark the borders where the basins meet.
+// Newton's method hunting five drifting roots: spiralling chains of glowing beads mark the borders where the basins meet,
+// and webs of neon log-spirals wind into them. Each basin's web plays its own band of the spectrum, a finer web of light
+// fills in as the music grows intense, every beat sends pulses of light racing along the spirals into the border,
+// and the roots themselves glow as neon targets that ring on the beat.
 // Family: Fractal
 // Tags: Colourful, Neon
 // Added: 2026-10-16 23:54
@@ -42,7 +45,7 @@ float3 Render(float2 uv, float2 p)
     }
 
     // Relaxed Newton: z -= a f/f'. Near each root the step rotates by 1 - a, which coils the borders into spirals.
-    float twist = 0.55 * sin(Time * 0.083) + Mid * 0.25;
+    float twist = 0.55 * sin(Time * 0.083) + Mid * 0.25 + DropPulse * 0.3;
     float2 relax = float2(1.0, 0.0) - 0.42 * float2(cos(twist), sin(twist));
     float contraction = length(float2(1.0, 0.0) - relax);
 
@@ -109,6 +112,15 @@ float3 Render(float2 uv, float2 p)
     float2 linePx = (0.5 - toLine) / max(cellsPerLinePixel, 1.0e-6);
     float web = saturate(1.2 - linePx.x * 0.9) + saturate(1.2 - linePx.y * 0.9) * 0.6;
     web *= saturate(1.2 - cellsPerPixel * 4.0);
+    // A finer web of light between the main lines, filling in as the music grows intense.
+    float2 fineSpiral = spiral * 3.0;
+    float2 fineLine = (0.5 - abs(frac(fineSpiral) - 0.5)) / max(cellsPerLinePixel * 3.0, 1.0e-6);
+    float fine = (saturate(1.2 - fineLine.x * 1.1) + saturate(1.2 - fineLine.y * 1.1)) * saturate(1.2 - cellsPerPixel * 12.0);
+    fine *= 0.06 + Intensity * 0.22;
+    // Pulses of light race along the spirals into the border over each beat (with no beat to follow,
+    // just as it lands).
+    float pulseAt = (frac(grid.x * 0.25 + BeatPhase) - 0.5) * 6.0;
+    float pulse = exp(-pulseAt * pulseAt) * (SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat);
 
     float de = 1.0 / max(cellsPerPixel, 1.0e-12);           // in pixels: one cell, roughly the distance to the border
     float hueShift = (BeatCount - Beat) * 0.03 + Time * 0.01;
@@ -116,9 +128,25 @@ float3 Render(float2 uv, float2 p)
 
     float depthToBorder = saturate(1.0 - log2(max(de, 1.0)) / 9.0);   // 1 at the border, 0 deep in the basin
     float border = saturate(1.3 - 0.7 / max(cellsPerLinePixel, 1.0e-12));
-    float3 colour = basin * (0.02 + 0.12 * depthToBorder * depthToBorder + web * (0.2 + 0.7 * depthToBorder))
+    // Each basin's web plays its own band of the spectrum.
+    float level = spectrum(0.03 + rootIndex / 5.0 * 0.6);
+    float webGlow = (0.2 + 0.7 * depthToBorder) * (0.6 + level * 1.2) + pulse * 1.4;
+    float3 colour = basin * (0.02 + 0.12 * depthToBorder * depthToBorder + web * webGlow + fine)
                   + lerp(basin, 1.0, 0.25) * border * (0.8 + Bass * 0.6 + Beat * 0.3)
                   + basin * exp(-de * 0.35) * 0.3 * (0.5 + Bass)
                   + float3(0.6, 0.8, 1.0) * border * Treble * 0.4;
+
+    // The roots: neon targets, a bright core in rings that ripple outward on the beat.
+    float2 here = rotate(p, -Time * 0.03) * zoom + 0.35 * float2(sin(Time * 0.05), cos(Time * 0.037));
+    float sinceBeat = -log(max(Beat, 1e-4)) / 5.0;
+    [unroll]
+    for (int t = 0; t < 5; t++)
+    {
+        float d = length(here - roots[t]) / zoom;
+        float3 tint = nbHue(t / 5.0 + hueShift);
+        float ring = exp(-pow((frac(d * 28.0 - Time * 0.4) - 0.5) / 0.08, 2.0)) * exp(-d * 9.0);
+        float ripple = exp(-pow((d - sinceBeat * 0.35) / 0.006, 2.0)) * Beat;
+        colour += tint * (ring * 0.35 + ripple * 0.8) + lerp(tint, 1.0, 0.5) * exp(-d * d / 0.00008) * (0.8 + Bass);
+    }
     return colour + previous(uv) * 0.12;
 }
