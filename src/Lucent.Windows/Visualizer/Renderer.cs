@@ -230,7 +230,7 @@ public sealed partial class Renderer : IDisposable
     /// </summary>
     public SongClock? SongClock { get; set; }
 
-    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside; null when there's no mouse (recording, say).</summary>
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them; null when there's no mouse (recording, say).</summary>
     public PointerStir? Pointer { get; set; }
 
     /// <summary>When on, only the morphing transitions are used.</summary>
@@ -703,6 +703,7 @@ public sealed partial class Renderer : IDisposable
             _constants[33] = pointer.Y;
             _constants[34] = pointer.VelocityX;
             _constants[35] = pointer.VelocityY;
+            _constants[37] = pointer.Grab;
         }
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);

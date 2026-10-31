@@ -263,7 +263,7 @@ public sealed partial class VisualEngine : IDisposable
     /// <summary>The song that's playing and its bars, so Auto can change visual on a downbeat.</summary>
     public SongClock? SongClock { get; set; }
 
-    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside; null when there's no mouse (recording, say).</summary>
+    /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them; null when there's no mouse (recording, say).</summary>
     public PointerStir? Pointer { get; set; }
 
     public bool IsReady(int index) => Volatile.Read(ref _slots[index].State) == PresetSlot.Ready;
@@ -580,6 +580,7 @@ public sealed partial class VisualEngine : IDisposable
             _constants[33] = pointer.Y;
             _constants[34] = pointer.VelocityX;
             _constants[35] = pointer.VelocityY;
+            _constants[37] = pointer.Grab;
         }
 
         var target = _feedback[_current]!;
