@@ -508,6 +508,7 @@ public sealed class AppSettings
         ["Sunset Highway"] = "Cardioid Loom",
         ["Champagne Toast"] = "Polytope Bloom",
         ["Single Drop"] = "Superformula",
+        ["Fireworks Night"] = "Spiral Shell",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
