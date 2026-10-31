@@ -1613,7 +1613,7 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog(owner) == true)
         {
-            await AddPathsAsync(dialog.FileNames);
+            await AddPathsAsync(dialog.FileNames, owner);
         }
     }
 
@@ -1622,15 +1622,15 @@ public partial class MainWindow : Window
         var dialog = new OpenFolderDialog { Title = "Add a music folder", Multiselect = true };
         if (dialog.ShowDialog(owner) == true)
         {
-            await AddPathsAsync(dialog.FolderNames);
+            await AddPathsAsync(dialog.FolderNames, owner);
         }
     }
 
-    /// <summary>Music dropped on the queue: added to the end of it.</summary>
-    public async void AddDroppedPaths(IEnumerable<string> paths) => await AddPathsAsync(TakeDroppedSkins(paths));
+    /// <summary>Music dropped on the queue (<paramref name="over"/>): added to the end of it.</summary>
+    public async void AddDroppedPaths(IEnumerable<string> paths, FrameworkElement? over = null) => await AddPathsAsync(TakeDroppedSkins(paths), over);
 
     /// <summary>Music dropped on the player (or the visuals): it replaces the queue and plays now, as in Winamp.</summary>
-    public async void PlayDroppedPaths(IEnumerable<string> paths)
+    public async void PlayDroppedPaths(IEnumerable<string> paths, FrameworkElement? over = null)
     {
         // A Winamp skin dropped with (or instead of) the music is put on, not played.
         var input = TakeDroppedSkins(paths);
@@ -1639,8 +1639,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var tracks = await Task.Run(() => ExpandPaths(input).Select(Track.FromFile).ToList());
-        ReplaceQueue(tracks, 0);
+        if (await LoadPathsAsync(input, over, "Playing") is { } tracks)
+        {
+            ReplaceQueue(tracks, 0);
+        }
     }
 
     public void ClearQueue()
@@ -1665,16 +1667,82 @@ public partial class MainWindow : Window
     {
         if (DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
-            PlayDroppedPaths(paths);
+            PlayDroppedPaths(paths, this);
         }
     }
 
     /// <summary>Adds files and (recursively) folders, reading tags off the UI thread.</summary>
-    private async Task AddPathsAsync(IEnumerable<string> paths)
+    private async Task AddPathsAsync(IEnumerable<string> paths, FrameworkElement? over = null)
     {
-        var input = paths.ToList();
-        var tracks = await Task.Run(() => ExpandPaths(input).Select(Track.FromFile).ToList());
-        AddToQueue(tracks);
+        if (await LoadPathsAsync(paths.ToList(), over, "Added") is { } tracks)
+        {
+            AddToQueue(tracks);
+        }
+    }
+
+    /// <summary>Files and folders being read now, so the same folder dropped again while it loads is only added once.</summary>
+    private readonly HashSet<string> _loadingPaths = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Reads the tracks in files and folders off the UI thread. A folder can hold thousands of songs and take a while,
+    /// so a note over <paramref name="over"/> (the window they were dropped on, or the player) says how far it has
+    /// got, then how many were added, "<paramref name="done"/> 1,204 songs". Null when every path is already being read.
+    /// </summary>
+    private async Task<List<Track>?> LoadPathsAsync(IReadOnlyList<string> paths, FrameworkElement? over, string done)
+    {
+        var input = new List<string>();
+        var keys = new List<string>();
+        foreach (var path in paths)
+        {
+            var key = MusicFiles.Key(path);
+            if (_loadingPaths.Add(key))
+            {
+                input.Add(path);
+                keys.Add(key);
+            }
+        }
+
+        if (input.Count == 0)
+        {
+            // Dropped again while it's still being read: its note is already up, so nothing more to do.
+            return null;
+        }
+
+        Toast.Busy? note = null;
+        try
+        {
+            over ??= this;
+            Action<MusicLoadProgress>? report = null;
+            if (MusicFiles.AnyFolder(input))
+            {
+                var busy = Toast.ShowBusy(over, new MusicLoadProgress(0, 0, false).Text);
+                var dispatcher = Dispatcher;
+                report = progress => dispatcher.InvokeAsync(() => busy.Update(progress.Text, progress.Fraction));
+                note = busy;
+            }
+
+            var tracks = await Task.Run(() => MusicFiles.Load(input, report));
+            if (note is not null)
+            {
+                note.Close();
+                Toast.Show(over, tracks.Count switch
+                {
+                    0 => "No music found there",
+                    1 => $"{done} 1 song",
+                    _ => $"{done} {tracks.Count:N0} songs",
+                });
+            }
+
+            return tracks;
+        }
+        finally
+        {
+            note?.Close();
+            foreach (var key in keys)
+            {
+                _loadingPaths.Remove(key);
+            }
+        }
     }
 
     public void AddToQueue(IReadOnlyList<Track> tracks)
@@ -1689,38 +1757,6 @@ public partial class MainWindow : Window
         if (wasEmpty && _playlist.Count > 0 && !_player.HasTrack)
         {
             PlayEntry(_settings.Shuffle ? _playlist[_random.Next(_playlist.Count)] : _playlist[0]);
-        }
-    }
-
-    private static IEnumerable<string> ExpandPaths(IEnumerable<string> paths)
-    {
-        foreach (var path in paths)
-        {
-            if (Directory.Exists(path))
-            {
-                IEnumerable<string> files;
-                try
-                {
-                    files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
-                        .Where(VideoFiles.IsPlayable)
-                        .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-                        .ToList();
-                }
-                catch (Exception)
-                {
-                    // A folder we can't read (permissions, disconnected drive) is skipped.
-                    continue;
-                }
-
-                foreach (var file in files)
-                {
-                    yield return file;
-                }
-            }
-            else if (File.Exists(path) && VideoFiles.IsPlayable(path))
-            {
-                yield return path;
-            }
         }
     }
 

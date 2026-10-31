@@ -648,12 +648,14 @@
                     <ControlTemplate TargetType="Slider">
                         <Track x:Name="PART_Track" VerticalAlignment="Center">
                             <Track.DecreaseRepeatButton>
+                                <!-- Both halves run on under the playhead to its middle, so the filled part ends beneath it
+                                     rather than showing its rounded tip in front of it. -->
                                 <RepeatButton Style="{StaticResource SeekEdgeButton}" Command="Slider.DecreaseLarge"
-                                              Background="{DynamicResource AccentGradientBrush}" />
+                                              Background="{DynamicResource AccentGradientBrush}" Margin="0,0,-6,0" />
                             </Track.DecreaseRepeatButton>
                             <Track.IncreaseRepeatButton>
                                 <RepeatButton Style="{StaticResource SeekEdgeButton}" Command="Slider.IncreaseLarge"
-                                              Background="{DynamicResource HoverBrush}" />
+                                              Background="{DynamicResource HoverBrush}" Margin="-6,0,0,0" />
                             </Track.IncreaseRepeatButton>
                             <Track.Thumb>
                                 <Thumb>
