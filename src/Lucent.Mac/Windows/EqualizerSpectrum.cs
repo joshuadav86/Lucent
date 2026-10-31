@@ -117,6 +117,12 @@ public sealed class EqualizerSpectrum : Control
 
     private void Stop() => _running = false;
 
+    /// <summary>
+    /// Set by the screenshots' moving clips, which move the spectrum on themselves with Advance, a frame of the song at a
+    /// time. The screen's own frames would move it on again, as fast as the clip's frames take to save.
+    /// </summary>
+    internal bool AdvancedByHand { get; set; }
+
     // Once a screen frame, like WPF's CompositionTarget.Rendering, for as long as it's showing.
     private void RequestFrame()
     {
@@ -130,7 +136,7 @@ public sealed class EqualizerSpectrum : Control
     private void OnFrame(TimeSpan time)
     {
         _frameRequested = false;
-        if (!_running)
+        if (!_running || AdvancedByHand)
         {
             return;
         }
