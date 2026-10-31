@@ -408,10 +408,6 @@ jobs:
           path: windows-visuals.png
           if-no-files-found: ignore
 
-      - name: Zip app
-        shell: pwsh
-        run: Compress-Archive -Path publish/* -DestinationPath Lucent-win-x64.zip
-
       # Signing: without a certificate, Lucent and its installer are unsigned, so SmartScreen warns
       # people the first time (More info > Run anyway). To sign with Azure Trusted Signing (Artifact
       # Signing), add these repository secrets and nothing else needs to change:
@@ -468,6 +464,22 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item releases/Lucid-win-Setup.exe Lucent-Setup.exe
           Get-ChildItem releases | Format-Table Name, Length -AutoSize | Out-String -Width 200 | Write-Host
+
+      - name: Zip app
+        shell: pwsh
+        run: |
+          # Velopack signs its own copy of the app, which goes in the update package, so the portable zip
+          # takes Lucent.exe and the other programs and libraries from there to be signed too.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $package = [IO.Compression.ZipFile]::OpenRead((Get-Item releases/*-full.nupkg).FullName)
+          try {
+            foreach ($entry in $package.Entries) {
+              if ($entry.FullName -notlike "lib/app/*" -or $entry.Name -notmatch "\.(exe|dll)$") { continue }
+              $target = Join-Path publish $entry.FullName.Substring("lib/app/".Length)
+              if (Test-Path $target) { [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true) }
+            }
+          } finally { $package.Dispose() }
+          Compress-Archive -Path publish/* -DestinationPath Lucent-win-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
