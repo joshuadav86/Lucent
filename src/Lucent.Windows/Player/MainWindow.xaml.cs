@@ -157,6 +157,7 @@ public partial class MainWindow : Window
         SetUpWindowPlaces();
         SetUpSavedLayouts();
         SetUpLucentFullScreen();
+        SubmenuTips.Install();
         if (Saved("Player") is { } placement)
         {
             WindowStartupLocation = WindowStartupLocation.Manual;
