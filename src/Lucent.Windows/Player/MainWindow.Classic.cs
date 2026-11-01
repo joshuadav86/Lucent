@@ -22,6 +22,8 @@ public partial class MainWindow
     private ClassicPlayerView? _classicView;
     private StackPanel? _classicPanel;
     private Border? _classicToolbar;
+    private ClassicSkin? _framedSkin;
+    private bool _framesWindowsAsTheyOpen;
     private readonly Dictionary<string, ImageSource> _classicPreviews = new(StringComparer.OrdinalIgnoreCase);
 
     private bool IsClassic => _settings.ClassicSkin is not null && _classicView is not null;
@@ -88,14 +90,57 @@ public partial class MainWindow
         SkinOtherWindows(_classicView.Player.Skin);
     }
 
-    /// <summary>The equalizer and queue in the classic skin too (at the player's size), or back in Lucent's look with null.</summary>
+    /// <summary>
+    /// The equalizer and queue in the classic skin too (at the player's size), and every other window in the skin's
+    /// frame and colours; or all of them back in Lucent's look with null.
+    /// </summary>
     private void SkinOtherWindows(ClassicSkin? skin)
     {
         var zoom = _settings.ClassicDoubleSize ? 2 : 1;
         EqualizerWindow.ClassicSkin = skin is null ? null : (skin, zoom);
         EqualizerWindow.Current?.SetClassicSkin(skin, zoom);
         _queue.SetClassicSkin(skin, zoom);
+        _framedSkin = skin;
+        foreach (var window in Application.Current.Windows.Cast<Window>())
+        {
+            FrameInSkin(window);
+        }
+
+        if (!_framesWindowsAsTheyOpen)
+        {
+            // Windows that open later (the analyzer, the radio, an editor) take the skin on as they appear.
+            _framesWindowsAsTheyOpen = true;
+            EventManager.RegisterClassHandler(typeof(Window), LoadedEvent, new RoutedEventHandler((sender, _) =>
+            {
+                if (sender is Window window && _framedSkin is not null)
+                {
+                    FrameInSkin(window);
+                }
+            }));
+        }
     }
+
+    /// <summary>Puts the classic skin's frame round one of Lucent's other windows, or takes it off when no skin is on.</summary>
+    private void FrameInSkin(Window window)
+    {
+        if (FramedTitle(window) is { } title)
+        {
+            ClassicWindowSkin.Apply(window, title, _framedSkin, _settings.ClassicDoubleSize ? 2 : 1);
+        }
+    }
+
+    /// <summary>The name a window's classic frame shows, or null for the windows that aren't framed (the player, equalizer and queue have their own skin; dialogs keep Lucent's look).</summary>
+    private static string? FramedTitle(Window window) => window switch
+    {
+        VisualizerWindow => "Visuals",
+        LibraryWindow => "Library",
+        ArtworkWindow => "Artwork",
+        AnalyzerWindow => "Analyzer",
+        RadioWindow => "Radio",
+        VideoWindow => "Video",
+        EditorWindow => "Editor",
+        _ => null,
+    };
 
     /// <summary>A transport button on another classic window (the playlist's), done as the player's would.</summary>
     internal void RunClassicCommand(ClassicCommand command) => OnClassicCommand(command);
