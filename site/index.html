@@ -10,8 +10,9 @@
 <meta property="og:image" content="https://lucentaudio.net/img/full-screen.jpg">
 <meta property="og:url" content="https://lucentaudio.net/">
 <meta name="theme-color" content="#000000">
-<link rel="icon" type="image/png" href="img/icon.png">
-<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="icon" type="image/svg+xml" href="img/lens.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="img/lens-32.png">
+<link rel="apple-touch-icon" href="img/lens-180.png">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,7 +73,8 @@ kbd {
   min-width: 26px; height: 26px; padding: 0 7px; border-radius: 3px;
   border: 1px solid var(--line-2); border-bottom-width: 2px; background: transparent; color: var(--fg);
 }
-.mark { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 44; }
+/* The Lucent lens: two circle arcs and one full sine wave. */
+.mark { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 5.5; }
 
 /* ---------- nav ---------- */
 .nav {
@@ -81,7 +83,7 @@ kbd {
 }
 .nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.brand .mark { width: 30px; height: 23px; }
+.brand .mark { width: 31px; height: 22px; }
 .brand span { font: 500 20px/1 var(--font); letter-spacing: .005em; }
 .brand .beta { font: 400 12px/1 var(--font); color: var(--muted); align-self: flex-start; margin-top: 2px; letter-spacing: .02em; }
 .nav-links { display: flex; gap: 24px; margin-left: auto; }
@@ -575,7 +577,7 @@ footer .credits a { text-decoration: underline; }
 <script data-goatcounter="https://joshuadav86.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="mk" viewBox="160 244 704 536"><path d="M192 512C298 390 400 276 512 276S726 390 832 512"/><path d="M192 512C298 634 400 748 512 748S726 634 832 512"/><path d="M192 512C252 446 302 401 352 401C412 401 452 456 512 512S612 623 672 623S772 578 832 512"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="mk" viewBox="7 19 86 62"><path d="M10 50A42.57 42.57 0 0 1 90 50A42.57 42.57 0 0 1 10 50Z"/><path d="M10 50C16.49 43.88 22.74 38 30 38C37.26 38 43.51 43.88 50 50C56.49 56.12 62.74 62 70 62C77.26 62 83.51 56.12 90 50"/></symbol></svg>
 <header class="nav">
   <div class="wrap">
     <a class="brand" href="#top" aria-label="Lucent home"><svg class="mark" aria-hidden="true"><use href="#mk"/></svg><span>Lucent</span><span class="beta">beta</span></a>
