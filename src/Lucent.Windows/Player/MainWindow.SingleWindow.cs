@@ -126,7 +126,16 @@ public partial class MainWindow
 
         if (IsClassic)
         {
-            _openingSingle = false;
+            // Opening as a single window with a classic skin on: the windows kept out of sight for it go on the screen.
+            if (_openingSingle)
+            {
+                _openingSingle = false;
+                foreach (var (_, window) in TiledWindows().Where(entry => entry.Window.IsVisible && Hostable(entry.Window)))
+                {
+                    SingleWindow.BringBack(window);
+                }
+            }
+
             Toast.Show(this, "Single window works with Lucent's own look, not a classic skin");
             return;
         }
@@ -350,6 +359,12 @@ public partial class MainWindow
         {
             pane.Wanted = new Size(kept.Width, kept.Height);
         }
+
+        // Out of sight, at a size, until it's laid out: the canvas would otherwise measure it with no limit, and a
+        // list in it (a library or queue of thousands of songs) would make every row at once, hanging Lucent.
+        box.Width = pane.Wanted.Width;
+        box.Height = pane.Wanted.Height;
+        box.Visibility = Visibility.Collapsed;
 
         // Its lock, its maximize and its keep-on-top are for a window on its own.
         foreach (var element in LogicalDescendants(content).OfType<FrameworkElement>()
