@@ -326,7 +326,11 @@ public partial class ArtworkWindow : Window
         }
         else if (e.ButtonState == MouseButtonState.Pressed && WindowState == WindowState.Normal)
         {
-            Windows.SingleWindow.FrameOf(this).DragMove();
+            // As a panel in the single window, it drags the panel, to swap it with another.
+            if (!Windows.SingleWindow.DragPanel((DependencyObject)sender, e))
+            {
+                Windows.SingleWindow.FrameOf(this).DragMove();
+            }
         }
     }
 

@@ -289,8 +289,11 @@ public partial class AnalyzerWindow : Window
         // Drag the picture to move the window, as with the artwork.
         if (e.GetCurrentPoint(Display).Properties.IsLeftButtonPressed && WindowState == WindowState.Normal && !_fullScreen.IsOn)
         {
-            // As a panel in the single window, that's the single window.
-            SingleWindow.FrameOf(this).BeginMoveDrag(e);
+            // As a panel in the single window, it drags the panel, to swap it with another.
+            if (!SingleWindow.DragPanel(Display, e))
+            {
+                SingleWindow.FrameOf(this).BeginMoveDrag(e);
+            }
         }
     }
 

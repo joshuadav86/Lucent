@@ -236,6 +236,15 @@ public sealed class AppSettings
     /// <summary>The panels swapped in the single window (one dragged onto another), by name, in order, as <see cref="FullScreenSwaps"/>.</summary>
     public List<List<string>> SingleWindowSwaps { get; set; } = new();
 
+    /// <summary>The dividers between the single window's panels moved by hand, in the order they were moved.</summary>
+    public List<PanelDivider> SingleWindowDividers { get; set; } = new();
+
+    /// <summary>
+    /// Each panel's size as the single window last laid it out (only the width and height), so it's arranged the
+    /// same when it's a single window again, rather than from the windows' own sizes.
+    /// </summary>
+    public Dictionary<string, WindowBounds> SingleWindowSizes { get; set; } = new();
+
     /// <summary>The window layouts saved by name (right-click › Layouts), in the order of their keys, 1 to 9.</summary>
     public List<SavedLayout> Layouts { get; set; } = new();
 

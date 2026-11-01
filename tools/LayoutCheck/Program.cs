@@ -28,10 +28,13 @@ using Lucent.Layout;
 //     each layout, the smallest body really is the smallest any panel layout fits; the body it grows to
 //     fits every panel, or is the most it may grow to; laid out there, every panel is placed inside the
 //     body, at its smallest size or more (the player and equalizer at their own), none over another, and
-//     locks make no difference; and the window put round the open windows lands on the screen.
+//     locks make no difference; and the window put round the open windows lands on the screen. Every
+//     divider between panels dragged as far as it goes either way (and all at once) keeps all of that true,
+//     stops where its room runs out, and never touches the player or the equalizer.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
+var carriedLines = 0;
 
 // Screens in pixels, and the taskbar (Windows) or menu bar and Dock (Mac) taken off their height.
 var windowsScreens = new (int Width, int Height)[] { (1366, 768), (1920, 1080), (1920, 1200), (2560, 1440), (2880, 1800), (3440, 1440), (3840, 2160) };
@@ -128,6 +131,12 @@ foreach (var (setName, windows) in Sets(1.0))
 
 CheckSavedLayouts();
 CheckSingleWindow();
+CheckDividers();
+if (carriedLines == 0)
+{
+    problems.Add("Single window dividers: no layout let the player's column be moved, between the library and the visuals.");
+}
+
 
 Console.WriteLine();
 if (problems.Count > 0)
@@ -626,6 +635,48 @@ void CheckPanels(string name, double width, double height, IReadOnlyList<TileWin
         problems.Add($"{name}: {panel.Key} was left out.");
     }
 
+    CheckPlaced(name, body, result, panels);
+
+    // Every divider dragged as far as it goes each way, and all of them at once: still every panel inside the
+    // body, at its smallest or more, none over another, and the ones that size themselves left alone.
+    var lines = PanelDividers.Lines(result.Places, panels);
+    carriedLines += lines.Count(line => line.Carries.Contains("Player"));
+    foreach (var line in lines)
+    {
+        var (least, most) = PanelDividers.Room(line, result.Places, panels);
+        if (least > 0 || most < 0)
+        {
+            problems.Add($"{name}: the divider between {string.Join("+", line.Before)} and {string.Join("+", line.After)} has no room to stay where it is ({least:0} to {most:0}).");
+        }
+
+        foreach (var offset in new[] { -100000.0, 100000.0 })
+        {
+            var divider = new PanelDivider
+            {
+                Across = line.Across, Before = line.Before.ToList(), After = line.After.ToList(), Carried = line.Carries.ToList(), Offset = offset,
+            };
+            var moved = PanelDividers.Apply(result, panels, new[] { divider });
+            var lineName = $"{name}, divider between {string.Join("+", line.Before)} and {string.Join("+", line.After)} moved {(offset < 0 ? "back" : "on")}";
+            CheckPlaced(lineName, body, moved, panels);
+            var expected = line.Position + line.CarriedWidth + (offset < 0 ? least : most);
+            var after = moved.Places[line.After[0]];
+            if (Math.Abs((line.Across ? after.Top : after.Left) - expected) > 0.5)
+            {
+                problems.Add($"{lineName}: it should be at {expected:0}, but is at {(line.Across ? after.Top : after.Left):0}.");
+            }
+        }
+    }
+
+    var all = lines.Select((line, index) => new PanelDivider
+    {
+        Across = line.Across, Before = line.Before.ToList(), After = line.After.ToList(), Carried = line.Carries.ToList(),
+        Offset = index % 2 == 0 ? 37 : -53,
+    }).ToList();
+    CheckPlaced($"{name}, every divider moved", body, PanelDividers.Apply(result, panels, all), panels);
+}
+
+void CheckPlaced(string name, TileRect body, TileResult result, IReadOnlyList<TileWindow> panels)
+{
     var placed = result.Places.ToList();
     foreach (var (key, place) in placed)
     {
@@ -653,6 +704,22 @@ void CheckPanels(string name, double width, double height, IReadOnlyList<TileWin
                 problems.Add($"{name}: {key} {place} is over {otherKey} {other}.");
             }
         }
+    }
+}
+
+// Dividers kept for the single window: one moved again replaces what was kept for it, as the latest.
+void CheckDividers()
+{
+    checkedCount++;
+    var dividers = new List<PanelDivider>();
+    var first = new DividerLine(false, 300, 0, 600, new[] { "Library" }, new[] { "Visuals" });
+    var second = new DividerLine(true, 400, 300, 900, new[] { "Visuals" }, new[] { "Analyzer" });
+    PanelDividers.Remember(dividers, first, 40);
+    PanelDividers.Remember(dividers, second, -20);
+    PanelDividers.Remember(dividers, first, 60);
+    if (dividers.Count != 2 || !second.Is(dividers[0]) || !first.Is(dividers[1]) || dividers[1].Offset != 60)
+    {
+        problems.Add("Single window dividers: moving one again should replace what was kept for it, as the latest moved.");
     }
 }
 
