@@ -188,6 +188,7 @@ public partial class MainWindow
     private void TileWindows()
     {
         var area = Placement.WorkArea(this);
+        FitEqualizerToPlayer();
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
         var tiles = windows.Select(entry => entry.Tile).ToList();
         var layout = FullScreenLayout.Arrange(new TileRect(area.X, area.Y, area.Width, area.Height), tiles, _settings.FullScreenStyle);
@@ -210,6 +211,7 @@ public partial class MainWindow
         }
 
         RestoreAllWindows();
+        FitEqualizerToPlayer();
         var screen = Placement.WorkArea(this);
         var screenArea = new TileRect(screen.X, screen.Y, screen.Width, screen.Height);
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
@@ -304,9 +306,27 @@ public partial class MainWindow
         return windows;
     }
 
+    /// <summary>
+    /// The equalizer takes the player's width when it opens, and the layouts put it under the player, so it's fitted
+    /// to the player's width as it is now first: a player made bigger since would leave an empty gap beside it.
+    /// </summary>
+    private void FitEqualizerToPlayer()
+    {
+        if (!InSingleWindow && EqualizerWindow.Current is { IsVisible: true } equalizer && !WindowLocks.Holds(equalizer))
+        {
+            equalizer.FitTo(Placement.SizeOf(this).Width);
+        }
+    }
+
     private TileWindow TileOf(string name, Window window)
     {
         var bounds = Placement.BoundsOf(window);
+        if (window is EqualizerWindow && !double.IsNaN(window.Width) && !double.IsNaN(window.Height))
+        {
+            // It sizes itself by hand, and just now may have been fitted to the player: its size as set, which the
+            // window's bounds catch up with only once macOS has resized it.
+            bounds = bounds.WithWidth(window.Width).WithHeight(window.Height);
+        }
         var kind = TileKindOf(window)!.Value;
         var locked = WindowLocks.Holds(window) ? new TileRect(bounds.X, bounds.Y, bounds.Width, bounds.Height) : (TileRect?)null;
         return SizesItself(window)
