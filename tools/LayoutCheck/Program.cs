@@ -24,6 +24,11 @@ using Lucent.Layout;
 //     that layout and keeps its key, renaming can't take another layout's name, names are tidied, the keys
 //     1 to 9 go to the first nine, and a layout saved on a screen that's gone moves onto the player's screen
 //     whole, keeping its shape.
+//   - single window (SingleWindowLayout, U): for each set of panels (editors stay windows of their own) and
+//     each layout, the smallest body really is the smallest any panel layout fits; the body it grows to
+//     fits every panel, or is the most it may grow to; laid out there, every panel is placed inside the
+//     body, at its smallest size or more (the player and equalizer at their own), none over another, and
+//     locks make no difference; and the window put round the open windows lands on the screen.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
@@ -122,6 +127,7 @@ foreach (var (setName, windows) in Sets(1.0))
 }
 
 CheckSavedLayouts();
+CheckSingleWindow();
 
 Console.WriteLine();
 if (problems.Count > 0)
@@ -522,6 +528,132 @@ static List<(string Name, List<TileWindow> Windows)> Sets(double playerScale)
         ("player, equalizer, library, visuals, video and analyzer, no queue", new() { player, equalizer, library, visuals, video, analyzer }),
         ("everything but the queue", new() { player, equalizer, library, artwork, visuals, analyzer, radio, editor }),
     };
+}
+
+// Single window: the windows as panels laid out in one window's body (its top left corner at 0, 0).
+void CheckSingleWindow()
+{
+    var styles = FullScreenLayout.TidyStyles.Prepend(TileStyle.AsTheyAre).ToList();
+    foreach (var playerScale in new[] { 1.0, 1.5 })
+    {
+        foreach (var (setName, windows) in Sets(playerScale))
+        {
+            var panels = windows.Where(window => window.Kind != TileKind.Editor).ToList();
+            foreach (var style in styles)
+            {
+                var name = $"single window, player at {playerScale:P0}, {setName}, {style}";
+                checkedCount++;
+                var (smallestWidth, smallestHeight) = SingleWindowLayout.Smallest(panels, style);
+                if (!SingleWindowLayout.Fits(smallestWidth, 8000, panels, style) || !SingleWindowLayout.Fits(8000, smallestHeight, panels, style))
+                {
+                    problems.Add($"{name}: nothing fits at its smallest size, {smallestWidth:0}x{smallestHeight:0}.");
+                }
+
+                // Any narrower (or shorter) than its smallest by more than a step and nothing fits.
+                if (smallestWidth > Math.Max(SingleWindowLayout.SmallestSide, panels.Max(panel => panel.MinWidth)) + 0.5
+                    && SingleWindowLayout.Fits(smallestWidth - 9, 8000, panels, style))
+                {
+                    problems.Add($"{name}: everything fits narrower than its smallest width, {smallestWidth:0}.");
+                }
+
+                if (smallestHeight > Math.Max(SingleWindowLayout.SmallestSide, panels.Max(panel => panel.MinHeight)) + 0.5
+                    && SingleWindowLayout.Fits(8000, smallestHeight - 9, panels, style))
+                {
+                    problems.Add($"{name}: everything fits shorter than its smallest height, {smallestHeight:0}.");
+                }
+
+                foreach (var (areaName, area) in areas)
+                {
+                    // Grown from its smallest, and from a window about the size people have, up to the screen less the title bar.
+                    foreach (var (startWidth, startHeight) in new[] { (smallestWidth, smallestHeight), (1000.0, 600.0) })
+                    {
+                        var most = (area.Width, area.Height - 34);
+                        var (width, height) = SingleWindowLayout.Grown(startWidth, startHeight, panels, style, most);
+                        var grownName = $"{name}, {areaName}, grown from {startWidth:0}x{startHeight:0} to {width:0}x{height:0}";
+                        if (width < startWidth - 0.5 || height < startHeight - 0.5)
+                        {
+                            problems.Add($"{grownName}: it shrank.");
+                        }
+
+                        var fits = SingleWindowLayout.Fits(width, height, panels, style);
+                        if (!fits && (width < Math.Max(startWidth, most.Width) - 0.5 || height < Math.Max(startHeight, most.Item2) - 0.5))
+                        {
+                            problems.Add($"{grownName}: not everything fits, and it stopped short of the most it could grow.");
+                        }
+
+                        if (fits)
+                        {
+                            CheckPanels(grownName, width, height, panels, style);
+                        }
+                    }
+                }
+
+                // Locked windows are free to move as panels.
+                var locked = panels.Select(panel => panel with { LockedAt = new TileRect(0, 0, panel.Width, panel.Height) }).ToList();
+                var size = SingleWindowLayout.Grown(1200, 800, locked, style, (8000, 8000));
+                CheckPanels($"{name}, every window locked", size.Width, size.Height, locked, style);
+            }
+        }
+    }
+
+    // The window put round the open windows: on the screen, whatever they were doing.
+    foreach (var (areaName, area) in areas)
+    {
+        checkedCount++;
+        var scattered = new[]
+        {
+            new TileRect(area.Left - 300, area.Top + 100, 520, 215),
+            new TileRect(area.Right - 200, area.Bottom - 100, 820, 560),
+            new TileRect(area.Left + 100, area.Top + 50, area.Width * 2, 300),
+        };
+        foreach (var (spot, windows) in new[] { ("scattered", scattered), ("one window", scattered.Take(1).ToArray()), ("none", Array.Empty<TileRect>()) })
+        {
+            var around = SingleWindowLayout.Around(windows, area);
+            if (!around.IsInside(area))
+            {
+                problems.Add($"single window around {spot} windows, {areaName}: {around} is off the screen {area}.");
+            }
+        }
+    }
+}
+
+void CheckPanels(string name, double width, double height, IReadOnlyList<TileWindow> panels, TileStyle style)
+{
+    var body = new TileRect(0, 0, width, height);
+    var result = SingleWindowLayout.Arrange(width, height, panels, style, new List<List<string>> { new() { "Queue", "Visuals" }, new() { "Artwork", "Library" } });
+    foreach (var panel in panels.Where(panel => !result.Places.ContainsKey(panel.Key)))
+    {
+        problems.Add($"{name}: {panel.Key} was left out.");
+    }
+
+    var placed = result.Places.ToList();
+    foreach (var (key, place) in placed)
+    {
+        var panel = panels.Single(candidate => candidate.Key == key);
+        if (!place.IsInside(body))
+        {
+            problems.Add($"{name}: {key} at {place} is outside the window's body {body}.");
+        }
+
+        // The player keeps its size; the equalizer its height (it can stretch across the player's column, as full screen).
+        if (panel.FixedSize && (Math.Abs(place.Height - panel.Height) > 1 || panel.Kind == TileKind.Player && Math.Abs(place.Width - panel.Width) > 1))
+        {
+            problems.Add($"{name}: {key} sizes itself, but was made {place.Width:0}x{place.Height:0}.");
+        }
+
+        if (place.Width < panel.MinWidth - 0.5 || place.Height < panel.MinHeight - 0.5)
+        {
+            problems.Add($"{name}: {key} is {place.Width:0}x{place.Height:0}, smaller than its smallest, {panel.MinWidth}x{panel.MinHeight}.");
+        }
+
+        foreach (var (otherKey, other) in placed.Where(entry => string.CompareOrdinal(entry.Key, key) > 0))
+        {
+            if (place.Overlaps(other))
+            {
+                problems.Add($"{name}: {key} {place} is over {otherKey} {other}.");
+            }
+        }
+    }
 }
 
 // Layouts saved by name: the list kept in the settings, and moving a layout onto a screen.

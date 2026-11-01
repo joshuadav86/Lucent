@@ -34,6 +34,8 @@ public partial class ArtworkWindow : Window
     private ArtworkWindow(AudioPlayer player, AppSettings settings)
     {
         InitializeComponent();
+        // It can be a panel in the single window, kept out of sight while it is.
+        Windows.SingleWindow.Watch(this);
         _player = player;
         _settings = settings;
         Windows.LucentFullScreen.AddTo(ArtMenu, this);
@@ -316,11 +318,15 @@ public partial class ArtworkWindow : Window
     {
         if (e.ClickCount == 2)
         {
-            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            // A panel in the single window doesn't fill the screen on its own.
+            if (!Windows.SingleWindow.Holds(this))
+            {
+                WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            }
         }
         else if (e.ButtonState == MouseButtonState.Pressed && WindowState == WindowState.Normal)
         {
-            DragMove();
+            Windows.SingleWindow.FrameOf(this).DragMove();
         }
     }
 

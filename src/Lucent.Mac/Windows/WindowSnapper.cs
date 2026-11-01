@@ -111,6 +111,9 @@ public sealed class WindowSnapper
     /// <summary>Every one of Lucent's windows that snaps (all of them but the swap and lock outlines).</summary>
     public IReadOnlyList<Window> Windows => _windows;
 
+    /// <summary>The windows it snaps, less those that are panels in the single window (they're out of sight, their insides lent to it).</summary>
+    private IEnumerable<Window> Live => _windows.Where(window => !SingleWindow.Holds(window));
+
     /// <summary>
     /// True while every window moves with the player, docked to it or not (the player's link button).
     /// Locked windows still stay put.
@@ -544,7 +547,7 @@ public sealed class WindowSnapper
             _resizeAlone = AppKit.IsCommandDown;
             _startRect = _known.TryGetValue(window, out var known) ? known : BoxOf(window);
             _startBoxes.Clear();
-            foreach (var other in _windows)
+            foreach (var other in Live)
             {
                 _startBoxes[other] = _known.TryGetValue(other, out var box) ? box : BoxOf(other);
             }
@@ -634,7 +637,7 @@ public sealed class WindowSnapper
             _adjusting = false;
         }
 
-        foreach (var other in _windows)
+        foreach (var other in Live)
         {
             _known[other] = BoxOf(other);
         }
@@ -997,7 +1000,7 @@ public sealed class WindowSnapper
     /// <summary>The visible Lucent windows other than this one (and the ones it's carrying or resizing).</summary>
     private IEnumerable<(Window Window, Box Rect)> OtherWindows(Window self)
     {
-        foreach (var window in _windows)
+        foreach (var window in Live)
         {
             if (window == self || !window.IsVisible || window.WindowState != WindowState.Normal || FullScreen.Fills(window)
                 || _carried.Any(carried => carried.Window == window) || _linked.Any(linked => linked.Window == window))
@@ -1012,7 +1015,7 @@ public sealed class WindowSnapper
     /// <summary>Lucent's other windows that could be docked to the player, shown or hidden.</summary>
     private IEnumerable<(Window Window, Box Rect)> DockableWindows()
     {
-        foreach (var window in _windows)
+        foreach (var window in Live)
         {
             if (window != _main && window.PlatformImpl is not null && window.WindowState == WindowState.Normal && !FullScreen.Fills(window))
             {

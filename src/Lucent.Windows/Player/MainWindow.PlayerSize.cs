@@ -68,7 +68,7 @@ public partial class MainWindow
     /// dragged. Null while it can't be resized.
     /// </summary>
     private double? PlayerShape() =>
-        IsClassic || LucentPlayer.ActualWidth <= 0 || LucentPlayer.ActualHeight <= 0
+        IsClassic || InSingleWindow || LucentPlayer.ActualWidth <= 0 || LucentPlayer.ActualHeight <= 0
             ? null
             : LucentPlayer.ActualHeight / LucentPlayer.ActualWidth;
 
@@ -77,7 +77,7 @@ public partial class MainWindow
     {
         // A drag only moves the player; any width change then is rounding as it changes scale on another screen.
         if (!e.WidthChanged || ActualWidth <= 0 || IsClassic || WindowState != WindowState.Normal || ResizeMode != ResizeMode.CanResize
-            || _snapper.IsDragging)
+            || _snapper.IsDragging || InSingleWindow)
         {
             return;
         }
@@ -96,14 +96,14 @@ public partial class MainWindow
     /// </summary>
     private void OnPlayerResizeFinished()
     {
-        if (IsClassic || SizeToContent == SizeToContent.Height)
+        if (IsClassic || InSingleWindow || SizeToContent == SizeToContent.Height)
         {
             return;
         }
 
         Dispatcher.InvokeAsync(() =>
         {
-            if (!IsClassic && WindowState == WindowState.Normal)
+            if (!IsClassic && !InSingleWindow && WindowState == WindowState.Normal)
             {
                 SizeToContent = SizeToContent.Height;
             }

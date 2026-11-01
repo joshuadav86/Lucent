@@ -28,6 +28,8 @@ public partial class AnalyzerWindow : Window
     private AnalyzerWindow(AudioPlayer player, AppSettings settings)
     {
         InitializeComponent();
+        // It can be a panel in the single window, kept out of sight while it is.
+        Windows.SingleWindow.Watch(this);
         _player = player;
         _settings = settings;
         LucentFullScreen.AddTo(DisplayMenu, this);
@@ -272,7 +274,8 @@ public partial class AnalyzerWindow : Window
         // Drag the picture to move the window, as with the artwork.
         if (e.ButtonState == MouseButtonState.Pressed && WindowState == WindowState.Normal)
         {
-            DragMove();
+            // As a panel in the single window, that's the single window.
+            Windows.SingleWindow.FrameOf(this).DragMove();
         }
     }
 

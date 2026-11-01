@@ -39,6 +39,8 @@ public partial class VideoWindow : Window
     private VideoWindow(AppSettings settings)
     {
         InitializeComponent();
+        // It can be a panel in the single window, kept out of sight while it is.
+        Windows.SingleWindow.Watch(this);
         _settings = settings;
         Width = Math.Max(MinWidth, settings.VideoWindowWidth);
         Height = Math.Max(MinHeight, settings.VideoWindowHeight);

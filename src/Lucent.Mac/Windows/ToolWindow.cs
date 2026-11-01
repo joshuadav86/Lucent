@@ -63,6 +63,9 @@ public class ToolWindow : Window
         }
     }
 
+    /// <summary>Music dropped on this window's panel in the single window, handed on by the player as if it were dropped here.</summary>
+    internal void TakeDrop(DragEventArgs e) => OnDropFiles(this, e);
+
     /// <summary>Files or folders dropped on this window. They play now, replacing the queue.</summary>
     protected virtual void OnMusicDropped(IReadOnlyList<string> paths) => Player?.PlayDroppedPaths(paths, this);
 

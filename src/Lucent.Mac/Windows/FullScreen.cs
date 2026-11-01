@@ -27,6 +27,7 @@ public sealed class FullScreen
     private WindowState _stateBefore;
     private PixelPoint _positionBefore;
     private Size _sizeBefore;
+    private bool _takenOut;
 
     /// <param name="button">The title bar button that toggles it, whose icon and tooltip follow it.</param>
     public FullScreen(Window window, Button button, Shape icon)
@@ -60,6 +61,8 @@ public sealed class FullScreen
         IsOn = !IsOn;
         if (IsOn)
         {
+            // A panel of the single window is a window of its own while it's full screen.
+            _takenOut = SingleWindow.TakeOut(_window);
             _stateBefore = _window.WindowState == WindowState.Minimized ? WindowState.Normal : _window.WindowState;
             if (_window.WindowState == WindowState.Normal)
             {
@@ -98,6 +101,12 @@ public sealed class FullScreen
         }
 
         UpdateButton();
+        if (!IsOn && _takenOut)
+        {
+            _takenOut = false;
+            SingleWindow.PutBack(_window);
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
