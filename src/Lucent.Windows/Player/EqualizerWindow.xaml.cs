@@ -32,8 +32,8 @@ public partial class EqualizerWindow : Window
     private EqualizerBands _bands;
     private double _columnWidth;
     // The width it keeps when it opens from the player: the player's own, so it docks underneath
-    // like Winamp's. Null for its natural width.
-    private readonly double? _fitWidth;
+    // like Winamp's. Null for its natural width. Full screen and Tidy layout fit it to the player again (FitTo).
+    private double? _fitWidth;
 
     // The preamp column and the +12/0/−12 scale beside it, to the left of the band sliders.
     private const double PreampAndScaleWidth = 48 + 26 + 6;
@@ -320,6 +320,29 @@ public partial class EqualizerWindow : Window
 
         CurveFrame.Width = _columnWidth * _bands.Count;
         FitToContent();
+    }
+
+    /// <summary>
+    /// Fits the equalizer to <paramref name="width"/> (the player's, as it is now), so under the player it fills the
+    /// column rather than leaving a gap beside it after the player's been made bigger. Nothing changes in a classic
+    /// skin, which keeps its own size, or when it's that width already.
+    /// </summary>
+    public void FitTo(double width)
+    {
+        if (ClassicSkin is not null || width <= 0 || _fitWidth is { } now && Math.Abs(now - width) < 0.5)
+        {
+            return;
+        }
+
+        FinishGlide();
+        _fitWidth = width;
+        // Start the top row from its full look: FitHeader takes away only what this width needs.
+        BandsLabel.Visibility = Visibility.Visible;
+        BandsGroup.Margin = new Thickness(16, 0, 16, 0);
+        FitHeader();
+        BuildBands();
+        ShowSettings();
+        UpdateLayout();
     }
 
     // How wide a band's label is drawn at this size.

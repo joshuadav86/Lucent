@@ -147,6 +147,7 @@ public partial class MainWindow
     private void TileWindows()
     {
         var area = ScreenArea.Of(this);
+        FitEqualizerToPlayer();
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
         var tiles = windows.Select(entry => entry.Tile).ToList();
         var layout = FullScreenLayout.Arrange(new TileRect(area.Left, area.Top, area.Width, area.Height), tiles, _settings.FullScreenStyle);
@@ -169,6 +170,7 @@ public partial class MainWindow
         }
 
         RestoreAllWindows();
+        FitEqualizerToPlayer();
         var screen = ScreenArea.Of(this);
         var screenArea = new TileRect(screen.Left, screen.Top, screen.Width, screen.Height);
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
@@ -231,6 +233,18 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// The equalizer takes the player's width when it opens, and the layouts put it under the player, so it's fitted
+    /// to the player's width as it is now first: a player made bigger since would leave an empty gap beside it.
+    /// </summary>
+    private void FitEqualizerToPlayer()
+    {
+        if (!InSingleWindow && EqualizerWindow.Current is { IsVisible: true } equalizer && !WindowLocks.Holds(equalizer))
+        {
+            equalizer.FitTo(SizeOf(this).Width);
+        }
+    }
+
     /// <summary>The shown windows Lucent full screen lays out, by the names their places are kept under.</summary>
     private List<(string Name, Window Window)> TiledWindows()
     {
@@ -258,7 +272,10 @@ public partial class MainWindow
 
     private TileWindow TileOf(string name, Window window)
     {
-        var size = SizeOf(window);
+        // The equalizer sizes itself by hand and may just have been fitted to the player: its size as set.
+        var size = window is EqualizerWindow && !double.IsNaN(window.Width) && !double.IsNaN(window.Height)
+            ? new Size(window.Width, window.Height)
+            : SizeOf(window);
         var kind = TileKindOf(window)!.Value;
         var fixedSize = SizesItself(window);
         var locked = WindowLocks.Holds(window) ? new TileRect(window.Left, window.Top, size.Width, size.Height) : (TileRect?)null;
