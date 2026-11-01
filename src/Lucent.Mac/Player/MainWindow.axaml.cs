@@ -141,6 +141,7 @@ public partial class MainWindow : Window
             UpdateStationStatus();
             ObserveForScrobbling();
             FollowComputerVolume();
+            WatchListening();
         };
         _positionTimer.Start();
         StartScrobbling();
@@ -451,23 +452,7 @@ public partial class MainWindow : Window
         }
 
         var delta = e.NewSize.Height - e.PreviousSize.Height;
-        var candidates = new List<Window> { _queue, _libraryWindow, _visuals };
-        if (EqualizerWindow.Current is { } equalizer)
-        {
-            candidates.Add(equalizer);
-        }
-
-        var column = new List<Window>();
-        var edge = Top + e.PreviousSize.Height;
-        // A locked window stays put, and so do the ones under it.
-        while (candidates.FirstOrDefault(window => !column.Contains(window) && window.WindowState == WindowState.Normal
-                   && !WindowLocks.IsLocked(window) && Math.Abs(window.Top() - edge) < 2
-                   && window.Left() < Left + ActualWidth - 2 && window.Left() + Placement.SizeOf(window).Width > Left + 2) is { } next)
-        {
-            column.Add(next);
-            edge = next.Top() + Placement.SizeOf(next).Height;
-        }
-
+        var column = ColumnUnderPlayer(Top + e.PreviousSize.Height);
         for (var i = 0; i < column.Count; i++)
         {
             var window = column[i];
@@ -480,6 +465,30 @@ public partial class MainWindow : Window
         }
 
         AlignBesidePlayer();
+    }
+
+    /// <summary>
+    /// The windows stacked under the player, top to bottom: the one whose top is at <paramref name="edge"/>
+    /// (the player's bottom), the one under that, and so on. A locked window stays put, and so do the ones under it.
+    /// </summary>
+    private List<Window> ColumnUnderPlayer(double edge)
+    {
+        var candidates = new List<Window> { _queue, _libraryWindow, _visuals };
+        if (EqualizerWindow.Current is { } equalizer)
+        {
+            candidates.Add(equalizer);
+        }
+
+        var column = new List<Window>();
+        while (candidates.FirstOrDefault(window => !column.Contains(window) && window.WindowState == WindowState.Normal
+                   && !WindowLocks.IsLocked(window) && Math.Abs(window.Top() - edge) < 2
+                   && window.Left() < Left + ActualWidth - 2 && window.Left() + Placement.SizeOf(window).Width > Left + 2) is { } next)
+        {
+            column.Add(next);
+            edge = next.Top() + Placement.SizeOf(next).Height;
+        }
+
+        return column;
     }
 
     /// <summary>
@@ -1438,7 +1447,7 @@ public partial class MainWindow : Window
         _visualizer.TransitionSeconds = GraphicsOptions.Seconds(_settings.TransitionSpeed);
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
         _visuals.ShowFrameRate(_settings.ShowFrameRate);
-        BackgroundFrameRate.On = _settings.FullFrameRateInBackground;
+        ApplyPower();
         _visuals.UpdateAutoCycleButton();
         _visuals.UpdatePreviousButton();
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;
@@ -1535,6 +1544,9 @@ public partial class MainWindow : Window
             case "Glow" when Enum.TryParse<GlowLevel>(value, out var glow):
                 _settings.Glow = glow;
                 break;
+            case "Power" when Enum.TryParse<PowerMode>(value, out var power):
+                _settings.Power = power;
+                break;
             case "AutoCycleSeconds" when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds):
                 _settings.AutoCycleSeconds = seconds;
                 break;
@@ -1586,10 +1598,6 @@ public partial class MainWindow : Window
         else if (sender == FrameRateSwitch)
         {
             _settings.ShowFrameRate = on;
-        }
-        else if (sender == BackgroundFrameRateSwitch)
-        {
-            _settings.FullFrameRateInBackground = on;
         }
         else if (sender == BuildUpsSwitch)
         {
@@ -1666,6 +1674,7 @@ public partial class MainWindow : Window
                 "Resolution" => _settings.Resolution.ToString(),
                 "Detail" => _settings.Detail.ToString(),
                 "Glow" => _settings.Glow.ToString(),
+                "Power" => _settings.Power.ToString(),
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
                 "PreviousVisual" => _settings.PreviousVisual.ToString(),
@@ -1682,7 +1691,6 @@ public partial class MainWindow : Window
 
         HdrSwitch.IsChecked = _settings.Hdr;
         FrameRateSwitch.IsChecked = _settings.ShowFrameRate;
-        BackgroundFrameRateSwitch.IsChecked = _settings.FullFrameRateInBackground;
         BuildUpsSwitch.IsChecked = _settings.BuildUpsAndDrops;
         MouseParticlesSwitch.IsChecked = _settings.MouseMovesParticles;
         AutoCycleSwitch.IsChecked = _settings.AutoCycle;

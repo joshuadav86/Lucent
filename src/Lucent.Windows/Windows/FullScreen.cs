@@ -53,15 +53,21 @@ public sealed class FullScreen
             // Leave Maximized first so Windows recalculates the size without the frame, and the
             // window covers the taskbar too.
             _window.WindowState = WindowState.Normal;
-            _window.WindowStyle = WindowStyle.None;
-            _window.ResizeMode = ResizeMode.NoResize;
+            CaptionRepaint.Change(_window, () =>
+            {
+                _window.WindowStyle = WindowStyle.None;
+                _window.ResizeMode = ResizeMode.NoResize;
+            });
             _window.WindowState = WindowState.Maximized;
             _window.Activate();
         }
         else
         {
-            _window.WindowStyle = WindowStyle.SingleBorderWindow;
-            _window.ResizeMode = ResizeMode.CanResize;
+            CaptionRepaint.Change(_window, () =>
+            {
+                _window.WindowStyle = WindowStyle.SingleBorderWindow;
+                _window.ResizeMode = ResizeMode.CanResize;
+            });
             _window.WindowState = _stateBefore;
             if (_stateBefore == WindowState.Normal && !_boundsBefore.IsEmpty)
             {
@@ -94,8 +100,11 @@ public sealed class FullScreen
         if (IsOn && !_switching && _window.WindowState != WindowState.Maximized)
         {
             IsOn = false;
-            _window.WindowStyle = WindowStyle.SingleBorderWindow;
-            _window.ResizeMode = ResizeMode.CanResize;
+            CaptionRepaint.Change(_window, () =>
+            {
+                _window.WindowStyle = WindowStyle.SingleBorderWindow;
+                _window.ResizeMode = ResizeMode.CanResize;
+            });
             UpdateButton();
             PutBackIfTakenOut();
             Changed?.Invoke(this, EventArgs.Empty);
