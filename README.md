@@ -3,7 +3,7 @@
 <h1 align="center">Lucent</h1>
 
 <p align="center"><b>See what you're hearing.</b><br>
-A free, open-source music and video player for Windows and Mac, with 448 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
+A free, open-source music and video player for Windows and Mac, with 449 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8B5CF6" alt="License: MIT"></a>
@@ -17,7 +17,7 @@ A free, open-source music and video player for Windows and Mac, with 448 live GP
 
 ## What's inside
 
-- **448 visuals**, drawn live on your graphics card: 200 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio.
+- **449 visuals**, drawn live on your graphics card: 201 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio.
 - **Windows that work together.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
 - **Video player.** MP4, MOV, MKV, WebM, and more play in a window of their own, with the sound through the EQ and visuals.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
