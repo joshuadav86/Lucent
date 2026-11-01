@@ -49,6 +49,9 @@ public static class ThemeManager
             "#F2F2F2", "#8C8C8C", "#505050", "#E5E5E5", "#2E2E2E", "#FAFAFA", "#A3A3A3", "#0C0C0C"),
         new Theme("Rosé", "#120A0D", "#1A0F14", "#22141A", "#2C1A22", "#331F28",
             "#FFEFF4", "#B48C9A", "#6E4E5A", "#FF8FB1", "#4A1F2E", "#F472B6", "#FB923C", "#FFFFFF"),
+        // True black and warm white, with no gradient: the visuals are the only colour. Made for Linework.
+        new Theme("Ivory", "#000000", "#0A0A09", "#121211", "#1C1B19", "#2A2925",
+            "#EEEAE2", "#9A958B", "#5C5852", "#EEEAE2", "#26241F", "#EEEAE2", "#EEEAE2", "#000000"),
     };
 
     public static Theme Find(string? name) =>

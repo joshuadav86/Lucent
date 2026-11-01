@@ -23,8 +23,8 @@ public enum SkinFinish
 }
 
 /// <summary>
-/// A skin: the shape, type and finish of everything around the visuals, the same five as on Windows.
-/// The fonts are the nearest ones every Mac has.
+/// A skin: the shape, type and finish of everything around the visuals, the same six as on Windows.
+/// The fonts are the nearest ones every Mac has, except Linework's Jost, which Lucent carries.
 /// </summary>
 /// <param name="Rounding">How rounded corners are, compared with Lucent's own (1).</param>
 /// <param name="RoundShapes">Whether pills, knobs and the play button are fully round.</param>
@@ -63,6 +63,10 @@ public static class SkinManager
         new Skin("Studio", "Brushed metal and an inset display, like rack-mounted hi-fi gear.", "Graphite",
             "DIN Alternate, Avenir Next Condensed", "DIN Alternate, Avenir Next Condensed", FontWeight.Normal,
             Rounding: 0.5, RoundShapes: true, SkinFinish.Metal),
+        // Lucent's website look, in Jost, which Lucent carries (Assets/Fonts, from assets/fonts/Jost).
+        new Skin("Linework", "Square corners, fine lines, and geometric type on true black.", "Ivory",
+            "avares://Lucent/Assets/Fonts#Jost", "avares://Lucent/Assets/Fonts#Jost", FontWeight.Medium,
+            Rounding: 0, RoundShapes: false, SkinFinish.Flat),
     };
 
     // Lucent's corner sizes, which a skin's Rounding scales. Each is a resource App.axaml also defines.

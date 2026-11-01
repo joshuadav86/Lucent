@@ -1,10 +1,14 @@
-"""Builds Lucent's "Lens" icon: a lens whose outline is a standing wave, with the live wave running through it.
+"""Builds Lucent's icon: a slim lens with a wave running through it.
 
     python make_icon.py <output folder>
 
-Writes lucent-icon.svg (the 1024 x 1024 master), lucent-icon.png (README logo), Lucent.ico (app and window icon,
-16 to 256 px) and Lucent-64.png (the title bar). Below 40 px the mark is drawn bolder and the inner wave gets
-flatter crests, so it still reads as a wave in Explorer and the taskbar. Needs Pillow, NumPy and CairoSVG.
+The lens is a vesica: two equal circles, each passing through the other's centre, so it is exactly sqrt 3 times as
+long as it is thick. The wave is one full sine wave, eased to leave each tip level, so the three lines meet in a clean
+point instead of the wave folding into the outline.
+
+Writes lucent-icon.svg (the 1024 x 1024 master), lucent-icon.png (README logo and the Mac icon's source),
+Lucent.ico (app and window icon, 16 to 256 px) and Lucent-64.png (the title bar). Below 40 px the mark is drawn
+larger and bolder, so it still reads as a wave in Explorer and the taskbar. Needs Pillow, NumPy and CairoSVG.
 """
 import io
 import math
@@ -43,19 +47,27 @@ def squircle(half, n=5.0):
     return curve(f, 48) + " Z"
 
 
-def icon_svg(stroke=56, width=640, height=236, wave=0.47, flatten=0.0):
-    """The icon in a 1024 frame. stroke, width and height size the lens; wave is the inner wave's height
-    relative to the lens; flatten > 0 gives the inner wave flatter crests and a steeper middle."""
+def wave_shape(u):
+    """One full sine wave, eased by sin(pi u) ** 0.6 so it leaves both tips level, scaled to peak at +-1."""
+    return math.sin(2 * math.pi * u) * abs(math.sin(math.pi * u)) ** 0.6 / 0.84113
+
+
+def icon_svg(stroke=46, width=680, wave=0.43):
+    """The icon in a 1024 frame. stroke and width size the lens (its thickness follows from the vesica);
+    wave is the inner wave's height relative to the lens's half-thickness."""
     x0 = 512 - width / 2
+    height = width / (2 * math.sqrt(3))       # half-thickness of a vesica
+    radius = width / math.sqrt(3)             # each arc's circle
 
-    def inner(u):
-        s = math.sin(2 * math.pi * u)
-        shaped = s if flatten == 0 else math.tanh(flatten * s) / math.tanh(flatten)
-        return (x0 + width * u, 512 - wave * height * shaped)
+    def arc(sign):
+        def f(u):
+            x = x0 + width * u
+            return (x, 512 - sign * (math.sqrt(radius * radius - (x - 512) ** 2) - (radius - height)))
+        return f
 
-    upper = curve(lambda u: (x0 + width * u, 512 - height * math.sin(math.pi * u)), 16)
-    lower = curve(lambda u: (x0 + width * u, 512 + height * math.sin(math.pi * u)), 16)
-    middle = curve(inner, 24 if flatten == 0 else 48)
+    upper = curve(arc(1), 16)
+    lower = curve(arc(-1), 16)
+    middle = curve(lambda u: (x0 + width * u, 512 - wave * height * wave_shape(u)), 32)
     tile = squircle(496)
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
 <defs>
@@ -78,11 +90,11 @@ def icon_svg(stroke=56, width=640, height=236, wave=0.47, flatten=0.0):
 
 def design_for(size):
     if size <= 24:
-        return dict(stroke=92, width=840, height=316, wave=0.42, flatten=3.0)
+        return dict(stroke=84, width=860)
     if size <= 32:
-        return dict(stroke=70, width=720, height=266, wave=0.46, flatten=1.5)
+        return dict(stroke=66, width=780)
     if size <= 40:
-        return dict(stroke=60, width=680, height=250, wave=0.48)
+        return dict(stroke=56, width=720)
     return {}
 
 
