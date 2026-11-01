@@ -521,7 +521,16 @@ public sealed class AppSettings
         }
         catch (Exception)
         {
-            // A damaged settings file just means starting from the defaults.
+            // A damaged settings file just means starting from the defaults. A copy is kept beside it first, as the
+            // next save writes over it, so what was in it can still be got back.
+            try
+            {
+                File.Copy(FilePath, FilePath + ".damaged", overwrite: true);
+            }
+            catch (Exception)
+            {
+            }
+
             return new AppSettings { AutoResolutionOffered = true, AnalyzerLoudnessOffered = true };
         }
 
@@ -626,17 +635,36 @@ public sealed class AppSettings
         }
     }
 
+    // One save at a time, so two never write the file at once.
+    private static readonly object SaveGate = new();
+
+    /// <summary>
+    /// Writes the settings beside the file and then swaps it in, so a crash or power cut mid-save leaves the last
+    /// settings whole rather than a cut-off file (which <see cref="Load"/> would have to throw away, with every
+    /// library folder, layout and favorite in it).
+    /// </summary>
     public void Save()
     {
-        try
+        lock (SaveGate)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOptions));
+            try
+            {
+                SaveWhole(FilePath, JsonSerializer.Serialize(this, JsonOptions));
+            }
+            catch (Exception)
+            {
+                // Not being able to save preferences shouldn't interrupt the music.
+            }
         }
-        catch (Exception)
-        {
-            // Not being able to save preferences shouldn't interrupt the music.
-        }
+    }
+
+    /// <summary>Writes <paramref name="text"/> to a file beside <paramref name="path"/>, then moves it into place.</summary>
+    internal static void SaveWhole(string path, string text)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var temporary = path + ".saving";
+        File.WriteAllText(temporary, text);
+        File.Move(temporary, path, overwrite: true);
     }
 }
 

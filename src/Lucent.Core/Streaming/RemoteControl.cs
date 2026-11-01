@@ -551,7 +551,7 @@ public sealed class RemoteControl : IDisposable
         }
         catch (Exception ex)
         {
-            NoteWhetherOpen();
+            NoteWhetherOpen(null);
             Report(ex);
             return;
         }
@@ -561,7 +561,7 @@ public sealed class RemoteControl : IDisposable
             return;
         }
 
-        NoteWhetherOpen();
+        NoteWhetherOpen(state);
 
         // The device takes a moment to report a volume just set, so what was asked for shows until then.
         if (state is { Volume: not null } && State is { Volume: { } asked } && (_sendingVolume || DateTime.UtcNow < _volumeHeldUntil))
@@ -745,8 +745,9 @@ public sealed class RemoteControl : IDisposable
     }
 
     // Asks whether the app is running here, after each read, for NeedsOpening. A button that failed while it wasn't is
-    // forgotten once it's open again by other means, so the Open button never presses an old one.
-    private void NoteWhetherOpen()
+    // forgotten once it's open again by other means, so the Open button never presses an old one. While the app plays
+    // it's plainly open, so the process list (a look through every running program, on the UI thread) isn't read.
+    private void NoteWhetherOpen(RemoteState? state)
     {
         if (Player is not IRemoteOpener opener)
         {
@@ -755,7 +756,7 @@ public sealed class RemoteControl : IDisposable
 
         try
         {
-            _appOpen = opener.IsOpen;
+            _appOpen = state is { IsPlaying: true } || opener.IsOpen;
         }
         catch (Exception)
         {
