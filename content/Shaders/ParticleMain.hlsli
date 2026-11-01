@@ -83,7 +83,10 @@ float2 Gather(float2 p, uint id, inout float light)
 
     // Nearer dots set off sooner, with a little scatter, and each takes a moment to arrive.
     float start = (sqrt(distanceSquared) / reach * 0.65 + fixedRandom(id, 63.0) * 0.35) * GatherStagger;
-    float come = smoothstep(0.0, 1.0, saturate((BallAge - start) / GatherTime)) * BallHeld;
+    // Let go, each dot heads home at its own moment as the hold fades, so the thrown cloud keeps its
+    // orbits and thins out dot by dot rather than all of it blurring home at once.
+    float leave = lerp(0.2, 0.85, fixedRandom(id, 67.0));
+    float come = smoothstep(0.0, 1.0, saturate((BallAge - start) / GatherTime)) * smoothstep(leave - 0.15, leave + 0.15, BallHeld);
     if (come <= 0.0)
     {
         return p;
