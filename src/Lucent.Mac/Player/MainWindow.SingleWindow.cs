@@ -354,6 +354,12 @@ public partial class MainWindow
             pane.Wanted = new Size(kept.Width, kept.Height);
         }
 
+        // Out of sight, at a size, until it's laid out: the canvas would otherwise measure it with no limit, and a
+        // list in it (a library or queue of thousands of songs) would make every row at once, hanging Lucent.
+        box.Width = pane.Wanted.Width;
+        box.Height = pane.Wanted.Height;
+        box.IsVisible = false;
+
         // Its lock, its maximize and its keep-on-top are for a window on its own.
         pane.Hidden.AddRange(content.GetLogicalDescendants().OfType<Control>()
             .Where(control => control.IsVisible && (control is LockButton || control.Name is "MaximizeButton" or "OnTopToggle")));

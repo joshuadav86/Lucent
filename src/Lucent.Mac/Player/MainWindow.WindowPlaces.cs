@@ -175,6 +175,8 @@ public partial class MainWindow
         {
             _settings.PlayerScale = 1;
             ApplyPlayerSize();
+            // The equalizer back to the usual player's width too, rather than the one it was last fitted to.
+            EqualizerWindow.Current?.FitTo(PlayerWidth);
         }
 
         _queue.Hide();

@@ -412,7 +412,10 @@ public partial class MainWindow : Window
         var playerWidth = ActualWidth;
         var playerHeight = ActualHeight;
         var equalizer = OpenEqualizerWindow;
-        var equalizerHeight = equalizer is null ? 0 : SizeOf(equalizer).Height;
+        // The equalizer as wide as the player is now (it keeps the width it was last fitted to otherwise), at the
+        // height that gives it, which it's set to straight away.
+        (equalizer as EqualizerWindow)?.FitTo(playerWidth);
+        var equalizerHeight = equalizer is null ? 0 : !double.IsNaN(equalizer.Height) ? equalizer.Height : SizeOf(equalizer).Height;
         var queueHeight = Math.Clamp(Math.Min(work.Height * 0.36, work.Height - playerHeight - equalizerHeight - 40), _queue.MinHeight, 360);
         // The windows beside the player run down to the bottom of the column under it, so a hidden
         // queue doesn't count.
