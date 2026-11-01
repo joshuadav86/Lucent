@@ -21,6 +21,8 @@ public static class SingleWindow
 
     private const int WM_WINDOWPOSCHANGING = 0x0046;
     private const int WM_WINDOWPOSCHANGED = 0x0047;
+    private const int WM_STYLECHANGED = 0x007D;
+    private const int WM_SHOWWINDOW = 0x0018;
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint SWP_SHOWWINDOW = 0x0040;
     private const int SW_HIDE = 0;
@@ -91,19 +93,12 @@ public static class SingleWindow
                         Marshal.StructureToPtr(position, lParam, false);
                     }
                 }
-                else if (msg == WM_WINDOWPOSCHANGED && lParam != IntPtr.Zero && Holds(window)
-                         && (Marshal.PtrToStructure<WindowPos>(lParam).Flags & SWP_SHOWWINDOW) != 0)
+                else if ((msg is WM_WINDOWPOSCHANGED or WM_STYLECHANGED or WM_SHOWWINDOW) && Holds(window))
                 {
-                    // Shown anyway while its insides are in a panel (a way of showing that skips the check
-                    // above): an empty window over the single window, which once hid the radio's panel. It's
-                    // put away again as soon as the showing's done.
-                    window.Dispatcher.InvokeAsync(() =>
-                    {
-                        if (Holds(window))
-                        {
-                            PutAway(window);
-                        }
-                    });
+                    // It can still end up on the screen while its insides are in a panel, an empty window over
+                    // the single window (which hid the radio's panel): WPF sets the visible style bit itself
+                    // right after showing a window, which skips the check above. Put away again once that's done.
+                    PutAwaySoon(window);
                 }
 
                 return IntPtr.Zero;
@@ -116,8 +111,21 @@ public static class SingleWindow
         if (new WindowInteropHelper(window).Handle is var handle && handle != IntPtr.Zero)
         {
             ShowWindow(handle, SW_HIDE);
+            PutAwaySoon(window);
         }
     }
+
+    /// <summary>
+    /// Once whatever's showing it has finished, takes a window that's a panel off the screen if it's on it, as an
+    /// empty window over the single window.
+    /// </summary>
+    private static void PutAwaySoon(Window window) => window.Dispatcher.InvokeAsync(() =>
+    {
+        if (Holds(window) && new WindowInteropHelper(window).Handle is var handle && handle != IntPtr.Zero && IsWindowVisible(handle))
+        {
+            ShowWindow(handle, SW_HIDE);
+        }
+    });
 
     /// <summary>Puts a window put away with <see cref="PutAway"/> back on the screen, without taking the focus.</summary>
     public static void BringBack(Window window)
@@ -177,4 +185,7 @@ public static class SingleWindow
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr hwnd, int command);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hwnd);
 }
