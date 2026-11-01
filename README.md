@@ -1,14 +1,18 @@
-<p align="center"><img src="assets/lucent-icon.png" width="112" alt="Lucent icon"></p>
-
-<h1 align="center">Lucent</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/lucent-wordmark-dark.svg">
+    <img src="assets/lucent-wordmark-light.svg" width="300" alt="Lucent">
+  </picture>
+</p>
 
 <p align="center"><b>See what you're hearing.</b><br>
-A free, open-source music and video player for Windows and Mac, with 450 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ.</p>
+A free, open-source music and video player for Windows and Mac, with 450 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ. Made for everyone, deep enough for audio nerds.</p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8B5CF6" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/platform-Windows%2010%2B%20%7C%20macOS%2012%2B-22D3EE" alt="Platforms: Windows 10 and later, macOS 12 and later">
-  <img src="https://img.shields.io/badge/status-beta-F59E0B" alt="Status: beta">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-EEEAE2?style=flat-square&labelColor=000000" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2B%20%7C%20macOS%2012%2B-EEEAE2?style=flat-square&labelColor=000000" alt="Platforms: Windows 10 and later, macOS 12 and later">
+  <img src="https://img.shields.io/badge/.NET-10-EEEAE2?style=flat-square&labelColor=000000" alt=".NET 10">
+  <img src="https://img.shields.io/badge/status-beta-EEEAE2?style=flat-square&labelColor=000000" alt="Status: beta">
 </p>
 
 <p align="center"><b>Not a developer? Download the free beta at <a href="https://lucentaudio.net">lucentaudio.net</a>.</b></p>
