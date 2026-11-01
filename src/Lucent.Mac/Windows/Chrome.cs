@@ -82,6 +82,13 @@ public static class Chrome
             }
         }
 
+        // A panel's title bar in the single window drags the panel, to swap it with another.
+        if (SingleWindow.DragPanel(caption, e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (caption.GetVisualRoot() is Window window && !FullScreen.Fills(window))
         {
             window.BeginMoveDrag(e);

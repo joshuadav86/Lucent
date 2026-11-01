@@ -98,6 +98,7 @@ public partial class MainWindow
         SingleWindow.PaneOf = window => _panes.TryGetValue(window, out var pane) ? pane.Box : null;
         SingleWindow.TakeOut = TakeOutOfSingleWindow;
         SingleWindow.PutBack = PutBackInSingleWindow;
+        SingleWindow.DragPanel = StartPanelDrag;
         // A window opened while it's on becomes a panel, and one closed takes its panel with it.
         IsVisibleProperty.Changed.AddClassHandler<Window>((window, _) => OnWindowShownOrHidden(window));
     }
@@ -212,6 +213,7 @@ public partial class MainWindow
         _singleFrame = null;
         _header = null;
         _paneArea = null;
+        ForgetPanelDrags();
         LinkToggle.IsVisible = true;
         foreach (var lockButton in TitleButtons.Children.OfType<LockButton>())
         {
@@ -339,8 +341,16 @@ public partial class MainWindow
         }
 
         box.Child = content;
+        WatchPanelDrags(box);
         _paneArea.Children.Add(box);
         var pane = new Pane(window, box, content, styles, sizing) { Wanted = wanted };
+        // The size it had as a panel last time, so it's arranged as it was (not the equalizer, which sizes itself).
+        if (TileKindOf(window) != TileKind.Equalizer && KeyOf(pane) is { } name
+            && _settings.SingleWindowSizes.TryGetValue(name, out var kept) && kept.Width > 0 && kept.Height > 0)
+        {
+            pane.Wanted = new Size(kept.Width, kept.Height);
+        }
+
         // Its lock, its maximize and its keep-on-top are for a window on its own.
         pane.Hidden.AddRange(content.GetLogicalDescendants().OfType<Control>()
             .Where(control => control.IsVisible && (control is LockButton || control.Name is "MaximizeButton" or "OnTopToggle")));
@@ -566,7 +576,8 @@ public partial class MainWindow
             }
         }
 
-        var layout = SingleWindowLayout.Arrange(body.Width, body.Height, tiles, style, _settings.SingleWindowSwaps);
+        var laidOut = SingleWindowLayout.Arrange(body.Width, body.Height, tiles, style, _settings.SingleWindowSwaps);
+        var layout = WithDividers(laidOut, tiles);
         foreach (var (box, tile) in panels)
         {
             if (!layout.Places.TryGetValue(tile.Key, out var place))
@@ -584,14 +595,18 @@ public partial class MainWindow
                 box.Height = place.Height;
             }
 
-            if (_panes.Values.FirstOrDefault(pane => pane.Box == box) is { } pane && !tile.FixedSize)
+            // What it'd like as the layout has it, not as a line moved by hand has it, or each layout would
+            // move the line again on top of the last.
+            if (_panes.Values.FirstOrDefault(pane => pane.Box == box) is { } pane && !tile.FixedSize
+                && laidOut.Places.TryGetValue(tile.Key, out var wanted))
             {
-                pane.Wanted = new Size(place.Width, place.Height);
+                pane.Wanted = new Size(wanted.Width, wanted.Height);
+                _settings.SingleWindowSizes[tile.Key] = new WindowBounds { Width = wanted.Width, Height = wanted.Height };
             }
         }
     }
 
-    /// <summary>Tidy layout (Shift+D) in the single window: the panels in the next balanced layout, any swaps forgotten.</summary>
+    /// <summary>Tidy layout (Shift+D) in the single window: the panels in the next balanced layout, any swaps and lines moved forgotten.</summary>
     private void TidySingleWindow()
     {
         if (_paneArea is null)
@@ -606,6 +621,7 @@ public partial class MainWindow
             panels.Select(panel => panel.Tile).ToList(), now, _settings.SingleWindowStyle);
         _settings.SingleWindowStyle = style;
         _settings.SingleWindowSwaps.Clear();
+        _settings.SingleWindowDividers.Clear();
         Retile();
         Toast.Show(PlayerRoot, FullScreenLayout.NameOf(style));
     }

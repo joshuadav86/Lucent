@@ -1,4 +1,10 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.VisualTree;
+using Lucent.Layout;
+using Lucent.Mac.Windows;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Lucent.Playlist;
@@ -66,6 +72,9 @@ public partial class MainWindow
         }
 
         _settings.SingleWindowStyle = style;
+        _settings.SingleWindowSwaps.Clear();
+        _settings.SingleWindowDividers.Clear();
+        _settings.SingleWindowSizes.Clear();
         _settings.SingleWindowPlace = new Lucent.Settings.WindowBounds { Left = 0, Top = 0, Width = width, Height = height };
         EnterSingleWindow();
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
@@ -74,6 +83,68 @@ public partial class MainWindow
         UpdateLayout();
         Retile();
         UpdateLayout();
+    }
+
+    /// <summary>
+    /// The single window rearranged with the mouse, as someone would: the library dragged by its title bar onto
+    /// the visuals to swap them, then the player's column dragged 140 points, then the whole arrangement kept as a
+    /// saved layout and opened again. Says what happened.
+    /// </summary>
+    internal string PreviewRearrangeSingleWindow()
+    {
+        var notes = new List<string>();
+        if (_paneArea is null || _panes.Values.FirstOrDefault(pane => KeyOf(pane) == "Library") is not { } library)
+        {
+            return "not a single window with the library";
+        }
+
+        Point InWindow(double x, double y) => _paneArea.TranslatePoint(new Point(x, y), this) ?? new Point(x, y);
+        var caption = library.Content.GetVisualDescendants().OfType<Control>().First(Chrome.GetIsCaption);
+        var press = caption.TranslatePoint(new Point(8, caption.Bounds.Height / 2), this) ?? default;
+        var visuals = _laidOut!.Places["Visuals"];
+        var drop = InWindow(visuals.Left + visuals.Width / 2, visuals.Top + visuals.Height / 2);
+        this.MouseDown(press, MouseButton.Left);
+        this.MouseMove(new Point(press.X + 20, press.Y + 20));
+        this.MouseMove(drop);
+        notes.Add($"outline over the visuals: {_swapOutline is not null && Canvas.GetLeft(_swapOutline) == visuals.Left}");
+        this.MouseUp(drop, MouseButton.Left);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        notes.Add($"swapped: {string.Join(", ", _settings.SingleWindowSwaps.Select(swap => string.Join("<>", swap)))}");
+
+        var grip = _grips.FirstOrDefault(entry => entry.Tag is GripFor { Line.Carries.Count: > 0 })
+            ?? _grips.FirstOrDefault(entry => entry.Tag is GripFor { Line.Across: false });
+        if (grip?.Tag is GripFor { Line: var moving })
+        {
+            var at = InWindow(moving.Position, (moving.Start + moving.End) / 2);
+            this.MouseDown(at, MouseButton.Left);
+            this.MouseMove(new Point(at.X + 70, at.Y));
+            this.MouseMove(new Point(at.X + 140, at.Y));
+            this.MouseUp(new Point(at.X + 140, at.Y), MouseButton.Left);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            notes.Add($"line between {string.Join("+", moving.Before)} and {string.Join("+", moving.After)} moved to " +
+                $"{string.Join(", ", _settings.SingleWindowDividers.Select(divider => divider.Offset.ToString("0")))}");
+            notes.Add($"now: {string.Join(", ", _laidOut!.Places.Select(entry => $"{entry.Key} {entry.Value.Left:0},{entry.Value.Top:0} {entry.Value.Width:0}x{entry.Value.Height:0}"))}");
+        }
+        else
+        {
+            notes.Add("no line to drag");
+        }
+
+        // Kept as a saved layout, and opened again from separate windows.
+        var before = string.Join(", ", _laidOut!.Places.Select(entry => $"{entry.Key} {entry.Value.Left:0},{entry.Value.Top:0} {entry.Value.Width:0}x{entry.Value.Height:0}"));
+        var saved = CurrentLayout("Rearranged");
+        LeaveSingleWindow();
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        OpenLayout(saved);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Width = 1600;
+        Height = 900;
+        UpdateLayout();
+        Retile();
+        var after = _laidOut is null ? "none" : string.Join(", ", _laidOut.Places.Select(entry => $"{entry.Key} {entry.Value.Left:0},{entry.Value.Top:0} {entry.Value.Width:0}x{entry.Value.Height:0}"));
+        notes.Add($"saved layout opened again: single window {InSingleWindow}, same panels {before == after}{(before == after ? "" : $" ({after})")}");
+        UpdateLayout();
+        return string.Join("\n", notes);
     }
 
     /// <summary>The player's capture, for the screenshots to play a song into.</summary>
