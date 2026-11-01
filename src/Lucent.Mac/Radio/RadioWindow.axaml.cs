@@ -90,7 +90,11 @@ public partial class RadioWindow : Window
     {
         if (_instance is not null)
         {
-            _instance.Activate();
+            if (!Windows.SingleWindow.Holds(_instance))
+            {
+                _instance.Activate();
+            }
+
             return;
         }
 

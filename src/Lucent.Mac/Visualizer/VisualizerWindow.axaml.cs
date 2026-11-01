@@ -237,7 +237,7 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         // Typing goes to the window that's active, so make it this one (V may have been pressed in the player).
-        if (!IsActive)
+        if (!IsActive && !SingleWindow.Holds(this))
         {
             Activate();
         }
@@ -1142,8 +1142,14 @@ public partial class VisualizerWindow : ToolWindow
         }
     }
 
-    private void MaximizeOrRestore() =>
-        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    private void MaximizeOrRestore()
+    {
+        // A panel in the single window doesn't fill the screen on its own (F11 takes it full screen).
+        if (!SingleWindow.Holds(this))
+        {
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        }
+    }
 
     private void OnWindowStateChanged()
     {

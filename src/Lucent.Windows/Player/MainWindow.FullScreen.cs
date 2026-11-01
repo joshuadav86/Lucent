@@ -49,6 +49,13 @@ public partial class MainWindow
 
     public void ToggleLucentFullScreen()
     {
+        // As a single window, full screen is that window filling the screen.
+        if (InSingleWindow)
+        {
+            ToggleSingleWindowFill();
+            return;
+        }
+
         if (_settings.LucentFullScreen)
         {
             LeaveLucentFullScreen(putBack: true);
@@ -153,6 +160,12 @@ public partial class MainWindow
     /// </summary>
     public void TidyLayout()
     {
+        if (InSingleWindow)
+        {
+            TidySingleWindow();
+            return;
+        }
+
         RestoreAllWindows();
         var screen = ScreenArea.Of(this);
         var screenArea = new TileRect(screen.Left, screen.Top, screen.Width, screen.Height);

@@ -133,6 +133,7 @@ public partial class MainWindow
     /// </summary>
     public void OpenLayout(SavedLayout layout)
     {
+        LeaveSingleWindow();
         LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         // Unlocked while they move; the layout's own locks go on once they're in place.

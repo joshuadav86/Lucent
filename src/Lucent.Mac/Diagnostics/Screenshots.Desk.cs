@@ -213,6 +213,17 @@ public static partial class Screenshots
         return Compose(new Size(screen.Width, screen.Height), shots.Select(shot => (shot.Picture, shot.At)));
     }
 
+    /// <summary>Single window (U): the visuals, queue, library and equalizer as panels in the player's window, one title bar over them all.</summary>
+    private static Window PreviewSingleWindow(TileStyle style, bool artwork = false)
+    {
+        var player = (MainWindow)PreviewPlayer("Lucent");
+        player.Show();
+        Dispatcher.UIThread.RunJobs();
+        player.PreviewSingleWindow(1600, 900, style, artwork);
+        Dispatcher.UIThread.RunJobs();
+        return player;
+    }
+
     /// <summary>Draws a window, at <paramref name="size"/> if given, the way the catalog draws one.</summary>
     private static Bitmap Draw(Window window, Size? size, bool close = true)
     {

@@ -33,6 +33,7 @@ public partial class VisualizerWindow
     private bool _exitShowing;
     private Point? _lastPointer;
     private DateTime _exitButtonUntil;
+    private bool _takenOutForFullscreen;
 
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => ToggleFullscreen();
 
@@ -47,6 +48,12 @@ public partial class VisualizerWindow
         if (!_isFullscreen && !IsVisible)
         {
             ShowWindow();
+        }
+
+        // A panel of the single window is a window of its own while it's full screen.
+        if (!_isFullscreen)
+        {
+            _takenOutForFullscreen = SingleWindow.TakeOut(this);
         }
 
         _isFullscreen = !_isFullscreen;
@@ -103,6 +110,11 @@ public partial class VisualizerWindow
         else
         {
             StopExitButton();
+            if (_takenOutForFullscreen)
+            {
+                _takenOutForFullscreen = false;
+                SingleWindow.PutBack(this);
+            }
         }
     }
 

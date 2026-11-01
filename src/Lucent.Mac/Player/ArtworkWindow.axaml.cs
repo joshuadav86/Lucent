@@ -410,12 +410,17 @@ public partial class ArtworkWindow : Window
 
         if (e.ClickCount == 2)
         {
-            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            // A panel in the single window doesn't fill the screen on its own.
+            if (!SingleWindow.Holds(this))
+            {
+                WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            }
+
             e.Handled = true;
         }
         else if (WindowState == WindowState.Normal)
         {
-            BeginMoveDrag(e);
+            SingleWindow.FrameOf(this).BeginMoveDrag(e);
             e.Handled = true;
         }
     }

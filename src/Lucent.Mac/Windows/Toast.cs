@@ -116,6 +116,8 @@ public static class Toast
             s_closing?.Dispose();
             s_closing = null;
 
+            // A window that's a panel in the single window is out of sight: the toast goes over its panel.
+            over = SingleWindow.Shown(over);
             var badge = new Border
             {
                 CornerRadius = new CornerRadius(8),

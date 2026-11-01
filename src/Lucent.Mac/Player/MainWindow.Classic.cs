@@ -28,6 +28,12 @@ public partial class MainWindow
     /// <summary>Shows the player in the classic skin the settings name, or as Lucent's own player when there's none.</summary>
     private void ApplyClassicSkin()
     {
+        // A classic skin's windows are fixed-size pictures, which don't go in a single window.
+        if (_settings.ClassicSkin is not null)
+        {
+            LeaveSingleWindow();
+        }
+
         if (_settings.ClassicSkin is not { } name)
         {
             if (_classicPanel is not null)

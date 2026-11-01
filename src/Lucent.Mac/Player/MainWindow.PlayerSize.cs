@@ -65,7 +65,7 @@ public partial class MainWindow
     /// <summary>Scales the player to fill its new width, and remembers how big it is.</summary>
     private void OnPlayerWidthChanged(object? sender, SizeChangedEventArgs e)
     {
-        if (!e.WidthChanged || Bounds.Width <= 0 || IsClassic || WindowState != WindowState.Normal || !CanResize)
+        if (!e.WidthChanged || Bounds.Width <= 0 || IsClassic || WindowState != WindowState.Normal || !CanResize || InSingleWindow)
         {
             return;
         }
@@ -85,7 +85,7 @@ public partial class MainWindow
     private void KeepPlayerShape()
     {
         var size = LucentPlayer.Bounds.Size;
-        if (!OperatingSystem.IsMacOS() || IsClassic || size.Width <= 0 || size.Height <= 0)
+        if (!OperatingSystem.IsMacOS() || IsClassic || InSingleWindow || size.Width <= 0 || size.Height <= 0)
         {
             return;
         }
@@ -105,14 +105,14 @@ public partial class MainWindow
     /// </summary>
     private void OnPlayerResizeFinished()
     {
-        if (IsClassic || SizeToContent == SizeToContent.Height)
+        if (IsClassic || InSingleWindow || SizeToContent == SizeToContent.Height)
         {
             return;
         }
 
         Dispatcher.UIThread.Post(() =>
         {
-            if (!IsClassic && WindowState == WindowState.Normal)
+            if (!IsClassic && !InSingleWindow && WindowState == WindowState.Normal)
             {
                 SizeToContent = SizeToContent.Height;
             }
