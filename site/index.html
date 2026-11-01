@@ -562,6 +562,10 @@ ul.ticks li::before { content: ""; position: absolute; left: 0; top: .8em; width
 .about-photo { width: 100%; max-width: 460px; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--line); border-radius: var(--r); }
 .about-bio { display: grid; gap: 16px; max-width: 62ch; }
 .about-bio p { color: var(--muted); font-size: 18px; }
+.about-social { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 6px; }
+.about-social a { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line-2); padding-bottom: 2px; transition: border-color .2s; }
+.about-social a:hover { border-color: var(--fg); }
+.about-social svg { width: 16px; height: 16px; flex: none; }
 .contact { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 16px; margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--line); max-width: 680px; }
 .contact h3, .contact .full { grid-column: 1 / -1; }
 .contact label { display: grid; gap: 6px; font-size: 15px; color: var(--muted); min-width: 0; }
@@ -1005,6 +1009,11 @@ footer .credits a { text-decoration: underline; }
           <p>I'm a veteran game audio developer of almost 20 years, mostly known for my contributing work on the Borderlands franchise. In my free time I also make tons of music for fun, and I've been building Lucent.</p>
           <p>Lucent is designed to be the dream media player I've always wanted. Something that everyone can enjoy and audio pros can get a lot of use out of as well. I believe Lucent should follow the spirit of other apps like this and be completely free and open source.</p>
           <p>I hope you enjoy using it as much as I enjoy making it. Contact me if you ever have any questions, want to chat, or have any feedback!</p>
+          <nav class="about-social" aria-label="Josh elsewhere">
+            <a href="https://bsky.app/profile/keplernorth.bsky.social" target="_blank" rel="noopener me"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.4 3.6c2.4 1.8 5 5.5 6 7.4 1-1.9 3.6-5.6 6-7.4 1.7-1.3 4.6-2.3 4.6 1 0 .6-.4 5.5-.6 6.3-.8 2.8-3.6 3.5-6.2 3.1 4.5.8 5.6 3.3 3.2 5.8-4.7 4.8-6.7-1.2-7.2-2.7l-.1-.3-.1.3c-.5 1.5-2.5 7.5-7.2 2.7-2.4-2.5-1.3-5 3.2-5.8-2.6.4-5.4-.3-6.2-3.1C.6 10.1.2 5.2.2 4.6c0-3.3 2.9-2.3 4.6-1z"/></svg>Bluesky</a>
+            <a href="https://www.instagram.com/kepler_north/" target="_blank" rel="noopener me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r=".6" fill="currentColor" stroke="none"/></svg>Instagram</a>
+            <a href="https://www.linkedin.com/in/joshuadav/" target="_blank" rel="noopener me"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.75h4v11H3zM9.5 9.75h3.8v1.5h.06c.53-1 1.84-2.06 3.8-2.06 4.06 0 4.84 2.67 4.84 6.15v6.41h-4v-5.68c0-1.36-.03-3.1-1.89-3.1-1.9 0-2.18 1.48-2.18 3v5.78h-4z"/></svg>LinkedIn</a>
+          </nav>
         </div>
         <!-- Messages go through Web3Forms, which emails them on. The access key only lets this form send to that inbox,
              so the address itself never appears in the page. -->
