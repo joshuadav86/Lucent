@@ -424,8 +424,8 @@ ul.ticks li::before { content: ""; position: absolute; left: 0; top: .8em; width
 .lw-vis video { object-fit: contain; }
 .lw-vis span { position: absolute; left: 8px; bottom: 8px; font-size: 10.5px; color: #fff; background: rgba(0,0,0,.55); padding: 3px 8px; border-radius: var(--k-round); }
 
-/* Retro: raised bevels around a sunken black LCD with scan lines. */
-[data-skin="Retro"] .desk {
+/* Verdes: raised bevels around a sunken black LCD with scan lines. */
+[data-skin="Verdes"] .desk {
   --k-wr: 0px; --k-cr: 0px; --k-round: 2px;
   --k-ui: Tahoma, Verdana, var(--font-body); --k-disp: "VT323", "Lucida Console", var(--font-mono); --k-dw: 400; --k-case: uppercase; --k-track: .04em;
   --k-win: var(--surface); --k-shadow: 0 30px 60px -30px rgba(0,0,0,.7), inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--lo);
@@ -438,10 +438,10 @@ ul.ticks li::before { content: ""; position: absolute; left: 0; top: .8em; width
   --k-face: linear-gradient(180deg, var(--raised), var(--surface)); --k-blight: var(--hi); --k-bdark: var(--lo); --k-glyph: var(--fg);
   --k-pglow: none;
 }
-[data-skin="Retro"] .lw-time { font-size: 38px; }
-[data-skin="Retro"] .desk { --k-knob: var(--k-face); --k-kr: 0; --k-kw: 14px; --k-kh: 11px; --k-track-in: inset 1px 1px 0 rgba(0,0,0,.6); }
-[data-skin="Retro"] .lw-seek, [data-skin="Retro"] .lw-vol i { border-radius: 0; box-shadow: inset 1px 1px 0 var(--lo); }
-[data-skin="Retro"] .lw-play { width: 30px; height: 26px; }
+[data-skin="Verdes"] .lw-time { font-size: 38px; }
+[data-skin="Verdes"] .desk { --k-knob: var(--k-face); --k-kr: 0; --k-kw: 14px; --k-kh: 11px; --k-track-in: inset 1px 1px 0 rgba(0,0,0,.6); }
+[data-skin="Verdes"] .lw-seek, [data-skin="Verdes"] .lw-vol i { border-radius: 0; box-shadow: inset 1px 1px 0 var(--lo); }
+[data-skin="Verdes"] .lw-play { width: 30px; height: 26px; }
 /* Glass: frosted, see-through panes, light along the top, glossy round buttons. */
 [data-skin="Glass"] .desk {
   --k-wr: 19px; --k-cr: 13px;
@@ -1516,7 +1516,7 @@ footer .credits a { text-decoration: underline; }
   };
   const SKINS = [
     ["Lucent", "Soft corners, hairlines, and calm, modern type", "Midnight", { r: "14px", glow: "0 0 0 transparent" }],
-    ["Retro", "Square corners, raised buttons, and a black LCD, like 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
+    ["Verdes", "Square corners, raised buttons, and a black LCD, like 1999", "Emerald", { r: "2px", glow: "0 0 0 transparent" }],
     ["Glass", "Frosted panes, soft light, and big round buttons", "Deep Ocean", { r: "24px", glow: "0 0 0 1px rgba(255,255,255,.06)" }],
     ["Neon", "Hard edges that glow, over scan lines", "Ultraviolet", { r: "0px", glow: "0 0 18px -2px var(--a1)" }],
     ["Studio", "Brushed metal and an inset display, like hi-fi gear", "Graphite", { r: "6px", glow: "inset 0 1px 0 rgba(255,255,255,.08)" }],
@@ -1735,7 +1735,7 @@ footer .credits a { text-decoration: underline; }
   function applySkin(name) {
     const s = SKINS.find(x => x[0] === name); cur.skin = name;
     if (!s[4]) lastShape = name;
-    root.dataset.skin = s[4] ? "Retro" : name;
+    root.dataset.skin = s[4] ? "Verdes" : name;
     skinList.querySelectorAll(".skin").forEach(x => x.setAttribute("aria-pressed", x.dataset.s === name));
     themeList.querySelectorAll(".swatch").forEach(x => x.setAttribute("aria-pressed", x.dataset.t === cur.theme && !s[4]));
     hint(); save(); drawSkinsDesk();
@@ -1745,7 +1745,7 @@ footer .credits a { text-decoration: underline; }
     : `Theme: ${cur.theme} · Skin: ${cur.skin}`;
   const save = () => { try { localStorage.setItem("lucent-look", JSON.stringify(cur)); } catch (e) {} };
   try { const s = JSON.parse(localStorage.getItem("lucent-look") || "null"); if (s && THEMES[s.theme]) cur = s; } catch (e) {}
-  if (cur.skin === "Classic") cur.skin = "Retro"; // Retro was called Classic before
+  if (cur.skin === "Classic" || cur.skin === "Retro") cur.skin = "Verdes"; // Verdes was called Classic, then Retro
   applySkin(SKINS.some(s => s[0] === cur.skin) ? cur.skin : "Lucent"); applyTheme(cur.theme);
 
   /* ---------- loop ---------- */

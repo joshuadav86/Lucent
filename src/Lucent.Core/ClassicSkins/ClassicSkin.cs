@@ -7,7 +7,7 @@ namespace Lucent.ClassicSkins;
 
 /// <summary>
 /// A classic Winamp skin (.wsz): a zip of .bmp sprite sheets and a few text files, laid out the way Winamp 2
-/// laid them out. Lucent reads the main window's, the equalizer's and the playlist's sheets, the visualizer's
+/// laid them out. Lucent reads the main window's, the equalizer's, the playlist's and the other windows' (gen) sheets, the visualizer's
 /// colours and the playlist's colours and font. Like Winamp, a skin
 /// that leaves a sheet out borrows it from the default skin (Lucent's own), and one without a balance
 /// sheet uses its volume sheet for both.
@@ -18,7 +18,7 @@ public sealed partial class ClassicSkin
     public static readonly string[] SheetNames =
     {
         "main", "titlebar", "cbuttons", "numbers", "nums_ex", "playpaus", "monoster", "posbar", "volume", "balance",
-        "shufrep", "text", "eqmain", "pledit",
+        "shufrep", "text", "eqmain", "pledit", "gen",
     };
 
     // A skin is a few hundred kilobytes; anything far bigger isn't one, and isn't unpacked.
