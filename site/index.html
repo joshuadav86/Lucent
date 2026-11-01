@@ -21,8 +21,9 @@
 html, body { margin: 0; }
 [hidden] { display: none !important; }
 /* Linework: true black, warm white type, and one thin line. Only Lucent's visuals glow; everything around
-   them stays quiet, so the visuals sit in the page without frames.
-   The theme swatches under Skins and themes recolor only the mock windows (.desk), the way Lucent's themes recolor the app. */
+   them stays quiet, so the visuals sit in the page without frames. That's the page in the Linework skin and Ivory theme.
+   Picking another skin or theme under Skins and themes restyles the whole page with it, mock windows included:
+   themes set the colors and the accent (--accent, --accent-fill), skins set the corners (--r) and glow (--glow). */
 :root {
   --bg: #000000;
   --surface: #0C0C0B;
@@ -30,15 +31,19 @@ html, body { margin: 0; }
   --muted: #9A958B;
   --line: rgba(238,234,226,.16);
   --line-2: rgba(238,234,226,.34);
-  --a1: #8B5CF6;          /* Midnight's colors, for the mock windows until a theme is picked */
-  --a2: #22D3EE;
-  --on-accent: #ffffff;
+  --a1: #EEEAE2;          /* Ivory: the accent is the warm white itself */
+  --a2: #EEEAE2;
+  --on-accent: #000000;
+  --accent: var(--fg); --accent-fill: var(--fg); --accent-ink: var(--bg);
+  --r: 0px; --glow: 0 0 0 transparent;
   --font: "Jost", "Futura", "Century Gothic", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-display: var(--font);
   --font-body: var(--font);
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
   color-scheme: dark;
 }
+/* Any theme but Ivory: accents take the theme's two colors, as in the app. */
+:root[data-themed] { --accent: var(--a2); --accent-fill: linear-gradient(135deg, var(--a1), var(--a2)); --accent-ink: var(--on-accent); }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
@@ -90,11 +95,11 @@ kbd {
 .nav-links a:hover { color: var(--fg); }
 .btn {
   display: inline-flex; align-items: center; gap: 10px; text-decoration: none; cursor: pointer;
-  border: 0; border-radius: 0; padding: 15px 22px; font: 500 16px/1 var(--font);
-  background: var(--fg); color: var(--bg);
-  transition: background .2s, color .2s, box-shadow .2s;
+  border: 0; border-radius: var(--r); padding: 15px 22px; font: 500 16px/1 var(--font);
+  background: var(--accent-fill); color: var(--accent-ink); box-shadow: var(--glow);
+  transition: filter .2s, color .2s, box-shadow .2s;
 }
-.btn:hover { background: #fff; }
+.btn:hover { filter: brightness(1.08); }
 .btn svg { width: 17px; height: 17px; flex: none; }
 .btn.small { padding: 10px 16px; font-size: 15px; }
 .btn.ghost { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-2); }
@@ -106,7 +111,7 @@ kbd {
 @media (max-width: 760px) { .nav-links { display: none; } .nav-coffee { margin-left: auto; } }
 
 /* ---------- hero ---------- */
-.hero { position: relative; isolation: isolate; overflow: hidden; }
+.hero { position: relative; isolation: isolate; overflow: hidden; background: var(--bg); }
 /* A Lucent original, frameless: its black is the page's black, it runs to the window's right edge,
    and it sits centred on the headline and copy, its left edge fading under the text. */
 .hero-top { display: grid; grid-template-columns: minmax(0, 620px) minmax(0, 1fr); align-items: center; }
@@ -119,6 +124,11 @@ kbd {
   mask-composite: intersect;
 }
 .hero-art video, .hero-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The clip is lines on black. Lighten drops its black into any theme's background; on a light theme it's
+   inverted (hues kept) and darkened in, so the lines sit on the page as dark lines instead. */
+.hero-art { mix-blend-mode: lighten; }
+[data-light] .hero-art { mix-blend-mode: darken; }
+[data-light] .hero-art video, [data-light] .hero-art img { filter: invert(1) hue-rotate(180deg); }
 .hero .wrap { padding-block: clamp(40px, 5vw, 80px) 0; display: grid; gap: 30px; }
 .hero h1 { max-width: 6.4em; }
 .hero-copy { display: grid; gap: 30px; max-width: 620px; }
@@ -144,7 +154,7 @@ kbd {
 .tour-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; }
 .tour-bar .chip { padding: 7px 12px 7px 10px; font-size: 14px; align-items: center; }
 .tour-bar .chip i { width: 8px; height: 8px; box-shadow: inset 0 0 0 1px currentColor; transition: background .2s; }
-.tour-bar .chip[aria-pressed="true"] i { background: var(--fg); box-shadow: none; }
+.tour-bar .chip[aria-pressed="true"] i { background: var(--accent); box-shadow: none; }
 .tour-bar .tour-act { margin-left: auto; display: flex; gap: 6px; }
 .tour-bar .tour-act button { border: 0; background: transparent; color: var(--muted); font: 400 14px/1 var(--font); padding: 8px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line-2); }
 .tour-bar .tour-act button:hover { color: var(--fg); }
@@ -208,17 +218,17 @@ section.band { padding-block: clamp(80px, 9vw, 132px); overflow-x: clip; border-
 /* ---------- visuals ---------- */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
 .chip {
-  border: 1px solid var(--line); background: transparent; border-radius: 0; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; border-radius: var(--r); cursor: pointer;
   padding: 8px 14px; font-size: 15px; color: var(--muted); display: inline-flex; gap: 8px; align-items: baseline;
   transition: color .2s, border-color .2s;
 }
 .chip small { font: 400 13px var(--font); font-variant-numeric: tabular-nums; opacity: .8; }
 .chip:hover { color: var(--fg); border-color: var(--line-2); }
-.chip[aria-pressed="true"] { color: var(--fg); border-color: var(--fg); }
+.chip[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); }
 /* Frameless tiles: the clip, then its name under it. */
 .gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 16px; grid-auto-flow: dense; }
 .tile { position: relative; margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; animation: tileIn .45s both; }
-.tile img, .tile video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; }
+.tile img, .tile video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; border-radius: var(--r); }
 .tile.big { grid-column: span 2; grid-row: span 2; }
 .tile.big img, .tile.big video { aspect-ratio: auto; flex: 1 1 0; min-height: 0; height: 100%; }
 .tile figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 500; }
@@ -238,7 +248,7 @@ section.band { padding-block: clamp(80px, 9vw, 132px); overflow-x: clip; border-
 /* ---------- player / snapping ---------- */
 .alt { background: var(--bg); }
 .classic-shot { max-width: 550px; image-rendering: pixelated; }
-.screen { overflow: hidden; border: 1px solid var(--line); background: #000; }
+.screen { overflow: hidden; border: 1px solid var(--line); background: #000; border-radius: var(--r); }
 .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 5vw, 80px); align-items: center; }
 .split > div { min-width: 0; }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
@@ -254,18 +264,18 @@ section.band { padding-block: clamp(80px, 9vw, 132px); overflow-x: clip; border-
 .eq-panel { background: #050505; border: 1px solid var(--line); overflow: hidden; }
 .eq-top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 .eq-top .label { font: 500 12px/1 var(--font); letter-spacing: .08em; color: var(--muted); margin-right: auto; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 .seg button { border: 0; background: transparent; padding: 7px 11px; font: 500 14px/1 var(--font); font-variant-numeric: tabular-nums; color: var(--muted); cursor: pointer; }
 .seg button:hover { color: var(--fg); }
-.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
-.seg button[aria-pressed="true"] kbd { color: var(--bg); border-color: rgba(0,0,0,.35); }
-select { font: 500 14px var(--font); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 0; padding: 6px 10px; }
+.seg button[aria-pressed="true"] { background: var(--accent-fill); color: var(--accent-ink); }
+.seg button[aria-pressed="true"] kbd { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent-ink) 35%, transparent); }
+select { font: 500 14px var(--font); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; }
 #eq { display: block; width: 100%; height: 300px; touch-action: none; cursor: ns-resize; }
 .eq-foot { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); font: 400 13px/1.4 var(--font); color: var(--muted); flex-wrap: wrap; }
 ul.ticks { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
 ul.ticks li { padding-left: 24px; position: relative; color: var(--muted); }
 ul.ticks li b { color: var(--fg); font-weight: 500; }
-ul.ticks li::before { content: ""; position: absolute; left: 0; top: .8em; width: 12px; height: 1px; background: var(--fg); }
+ul.ticks li::before { content: ""; position: absolute; left: 0; top: .8em; width: 12px; height: 1px; background: var(--accent); }
 
 /* ---------- analyzer ---------- */
 .analyzer { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
@@ -334,7 +344,7 @@ ul.ticks li::before { content: ""; position: absolute; left: 0; top: .8em; width
   position: relative; isolation: isolate; display: grid; gap: 6px;
   font-family: var(--k-ui); color: var(--fg); line-height: 1.3; user-select: none;
 }
-.desk[data-light] { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
+[data-light] .desk { --hi: rgba(255,255,255,.9); --lo: rgba(15,27,42,.28); }
 /* A soft wash of the accent behind the windows, so Glass has something to frost. */
 .desk::before {
   content: ""; position: absolute; inset: -8% -6%; z-index: -1; pointer-events: none; filter: blur(30px);
@@ -833,13 +843,13 @@ footer .credits a { text-decoration: underline; }
       <div class="stack">
         <p class="eyebrow">Skins and themes</p>
         <h2 id="skins-title">Six skins. Nine themes. Any combination.</h2>
-        <p class="lede">Skins set the shape, themes set the colors. Pick one of each and watch the player change.</p>
+        <p class="lede">Skins set the shape, themes set the colors. Pick one of each and watch the player, and this page, change with it.</p>
         <p class="lede">Or go retro with the Lucent Classic pixel skin, or drop in any classic .wsz skin.</p>
         <div class="skins" role="group" aria-label="Skins" id="skinList"></div>
       </div>
       <div class="stack">
         <div class="themes" role="group" aria-label="Themes" id="themeList"></div>
-        <p class="try-hint" id="themeHint">Theme: Midnight · Skin: Lucent</p>
+        <p class="try-hint" id="themeHint">Theme: Ivory · Skin: Linework</p>
         <div class="desk" id="deskSkins" role="img" aria-label="The Lucent player, equalizer, and queue in the chosen skin and theme"></div>
       </div>
     </div>
@@ -1481,7 +1491,7 @@ footer .credits a { text-decoration: underline; }
     "Ember":       { bg: "#120806", surface: "#22120C", fg: "#FFF1EA", muted: "#C09F92", a1: "#F97316", a2: "#EF4444" },
     "Graphite":    { bg: "#0C0C0C", surface: "#1B1B1B", fg: "#F2F2F2", muted: "#A3A3A3", a1: "#A3A3A3", a2: "#FAFAFA", dark: true },
     "Rosé":        { bg: "#120A0D", surface: "#22141A", fg: "#FFEFF4", muted: "#C29FAC", a1: "#F472B6", a2: "#FB923C" },
-    "Ivory":       { bg: "#000000", surface: "#121211", fg: "#EEEAE2", muted: "#9A958B", a1: "#EEEAE2", a2: "#EEEAE2", dark: true, line: "rgba(238,234,226,.16)" }
+    "Ivory":       { bg: "#000000", surface: "#121211", fg: "#EEEAE2", muted: "#9A958B", a1: "#EEEAE2", a2: "#EEEAE2", dark: true, line: "rgba(238,234,226,.16)", line2: "rgba(238,234,226,.34)" }
   };
   const SKINS = [
     ["Lucent", "Soft corners, hairlines, and calm, modern type", "Midnight", { r: "14px", glow: "0 0 0 transparent" }],
@@ -1492,7 +1502,7 @@ footer .credits a { text-decoration: underline; }
     ["Linework", "Square corners, fine lines, and geometric type on true black", "Ivory", { r: "0px", glow: "0 0 0 transparent" }],
     ["Lucent Classic", "Retro pixel art on the player, equalizer, and queue", null, { r: "2px", glow: "0 0 0 transparent" }, true]
   ];
-  let cur = { theme: "Midnight", skin: "Lucent" }, lastShape = "Lucent";
+  let cur = { theme: "Ivory", skin: "Linework" }, lastShape = "Linework";
   const themeList = document.getElementById("themeList"), skinList = document.getElementById("skinList");
   const deskSkins = document.getElementById("deskSkins"), deskPlayer = document.getElementById("deskPlayer");
   for (const name in THEMES) {
@@ -1691,13 +1701,15 @@ footer .credits a { text-decoration: underline; }
   }
   function applyTheme(name) {
     const t = THEMES[name]; cur.theme = name;
-    // Like the app, a theme colors Lucent's windows: here, the mock windows. The page itself stays Linework.
-    for (const desk of [deskPlayer, deskSkins]) {
-      for (const k of ["bg", "surface", "fg", "muted", "a1", "a2"]) desk.style.setProperty("--" + k, t[k]);
-      desk.style.setProperty("--line", t.line || (t.light ? "rgba(15,27,42,.12)" : "rgba(255,255,255,.10)"));
-      desk.style.setProperty("--on-accent", t.dark ? t.bg : "#ffffff");
-      desk.toggleAttribute("data-light", !!t.light);
-    }
+    // A theme colors the whole page and its mock windows, the way it colors the whole app. Ivory is the page's own.
+    for (const k of ["bg", "surface", "fg", "muted", "a1", "a2"]) root.style.setProperty("--" + k, t[k]);
+    root.style.setProperty("--line", t.line || (t.light ? "rgba(15,27,42,.12)" : "rgba(255,255,255,.10)"));
+    root.style.setProperty("--line-2", t.line2 || (t.light ? "rgba(15,27,42,.26)" : "rgba(255,255,255,.22)"));
+    root.style.setProperty("--on-accent", t.dark ? t.bg : "#ffffff");
+    root.style.colorScheme = t.light ? "light" : "dark";
+    root.toggleAttribute("data-light", !!t.light);
+    root.toggleAttribute("data-themed", name !== "Ivory");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.bg);
     themeList.querySelectorAll(".swatch").forEach(s => s.setAttribute("aria-pressed", s.dataset.t === name && !isWsz()));
     if (mapName === "theme") cmap = MAPS.theme();
     hint(); save(); drawSkinsDesk();
@@ -1706,6 +1718,7 @@ footer .credits a { text-decoration: underline; }
     const s = SKINS.find(x => x[0] === name); cur.skin = name;
     if (!s[4]) lastShape = name;
     root.dataset.skin = s[4] ? "Retro" : name;
+    root.style.setProperty("--r", s[3].r); root.style.setProperty("--glow", s[3].glow);
     skinList.querySelectorAll(".skin").forEach(x => x.setAttribute("aria-pressed", x.dataset.s === name));
     themeList.querySelectorAll(".swatch").forEach(x => x.setAttribute("aria-pressed", x.dataset.t === cur.theme && !s[4]));
     hint(); save(); drawSkinsDesk();
@@ -1713,10 +1726,11 @@ footer .credits a { text-decoration: underline; }
   const hint = () => document.getElementById("themeHint").textContent = isWsz()
     ? "Skin: Lucent Classic · it brings its own colors"
     : `Theme: ${cur.theme} · Skin: ${cur.skin}`;
-  const save = () => { try { localStorage.setItem("lucent-look", JSON.stringify(cur)); } catch (e) {} };
-  try { const s = JSON.parse(localStorage.getItem("lucent-look") || "null"); if (s && THEMES[s.theme]) cur = s; } catch (e) {}
+  // Kept for this visit only, so every new visit opens in the site's own Linework look.
+  const save = () => { try { sessionStorage.setItem("lucent-look", JSON.stringify(cur)); } catch (e) {} };
+  try { const s = JSON.parse(sessionStorage.getItem("lucent-look") || "null"); if (s && THEMES[s.theme]) cur = s; } catch (e) {}
   if (cur.skin === "Classic") cur.skin = "Retro"; // Retro was called Classic before
-  applySkin(SKINS.some(s => s[0] === cur.skin) ? cur.skin : "Lucent"); applyTheme(cur.theme);
+  applySkin(SKINS.some(s => s[0] === cur.skin) ? cur.skin : "Linework"); applyTheme(cur.theme);
 
   /* ---------- loop ---------- */
   const t0 = performance.now() - 102000;
