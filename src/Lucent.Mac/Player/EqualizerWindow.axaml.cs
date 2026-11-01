@@ -142,6 +142,34 @@ public partial class EqualizerWindow : Window
         PreampSlider.AddHandler(PointerPressedEvent, OnPreampPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         PreampSlider.AddHandler(PointerWheelChangedEvent, (_, e) => Nudge(PreampSlider, e), RoutingStrategies.Tunnel);
         SliderArea.AddHandler(PointerPressedEvent, OnSliderAreaMouseDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        // The curve can be dragged up and down too: it moves the slider under the pointer.
+        CurveFrame.Cursor = new Cursor(StandardCursorType.SizeNorthSouth);
+        ToolTip.SetTip(CurveFrame, "Drag the curve up or down to move the slider below. Double-click to reset.");
+        CurveFrame.PointerPressed += OnCurvePressed;
+        CurveFrame.PointerMoved += OnCurveMoved;
+        CurveFrame.PointerReleased += (_, e) => e.Pointer.Capture(null);
+        CurveFrame.PointerCaptureLost += (_, _) =>
+        {
+            _curveBand = -1;
+            if (!CurveFrame.IsPointerOver)
+            {
+                ShowHint();
+            }
+        };
+        CurveFrame.PointerExited += (_, _) =>
+        {
+            if (_curveBand < 0)
+            {
+                ShowHint();
+            }
+        };
+        CurveFrame.PointerWheelChanged += (_, e) =>
+        {
+            if (BandAt(e.GetPosition(CurveCanvas).X) is { } band)
+            {
+                Nudge(_bandSliders[band], e);
+            }
+        };
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         PositionChanged += (_, _) => RememberPosition();
         Loaded += (_, _) => RedrawCurve();
@@ -740,6 +768,62 @@ public partial class EqualizerWindow : Window
 
     // Grabbing a slider mid-glide finishes the glide first, so the slider is where it looks.
     private void OnSliderAreaMouseDown(object? sender, PointerPressedEventArgs e) => FinishGlide();
+
+    // ---- Dragging the curve ----
+
+    // The band being dragged on the curve (or -1), and where the drag started.
+    private int _curveBand = -1;
+    private double _curveFromY;
+    private double _curveFromDb;
+
+    // The band whose slider is under this point of the curve: each band's centre is above the middle of its column.
+    private int? BandAt(double x) =>
+        _columnWidth > 0 && _bandSliders.Count > 0 ? Math.Clamp((int)Math.Floor(x / _columnWidth), 0, _bandSliders.Count - 1) : null;
+
+    private void OnCurvePressed(object? sender, PointerPressedEventArgs e)
+    {
+        var point = e.GetPosition(CurveCanvas);
+        if (!e.GetCurrentPoint(CurveFrame).Properties.IsLeftButtonPressed || BandAt(point.X) is not { } band)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        if (e.ClickCount == 2)
+        {
+            _bandSliders[band].Value = 0;
+            return;
+        }
+
+        // The slider follows the pointer from where it was, at the curve's scale, so the curve moves with the pointer.
+        // Captured before the band is set: the capture moving here from the part pressed reports a lost capture.
+        e.Pointer.Capture(CurveFrame);
+        _curveFromY = point.Y;
+        _curveFromDb = _bandSliders[band].Value;
+        _curveBand = band;
+        ShowBandStatus(band);
+    }
+
+    private void OnCurveMoved(object? sender, PointerEventArgs e)
+    {
+        var point = e.GetPosition(CurveCanvas);
+        if (_curveBand < 0)
+        {
+            // Hovering names the band a drag would move.
+            if (BandAt(point.X) is { } band)
+            {
+                ShowBandStatus(band);
+            }
+
+            return;
+        }
+
+        var slider = _bandSliders[_curveBand];
+        var dbPerPixel = CurveRangeDb / ((CurveFrame.Height - 2) / 2 - 4);
+        var db = _curveFromDb + (_curveFromY - point.Y) * dbPerPixel;
+        // Half-decibel steps, like the sliders.
+        slider.Value = Math.Clamp(Math.Round(db * 2) / 2, slider.Minimum, slider.Maximum);
+    }
 
     // ---- Changing the settings ----
 
