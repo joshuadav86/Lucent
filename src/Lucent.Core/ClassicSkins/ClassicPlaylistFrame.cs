@@ -122,6 +122,13 @@ public sealed class ClassicPlaylistFrame : IClassicSurface
         _canvas.Resize(snappedWidth, snappedHeight);
     }
 
+    /// <summary>
+    /// Makes the frame exactly this size in skin pixels (no smaller than the smallest), for a window something
+    /// else has sized: a saved layout, Lucent full screen, a swap. Only the frame's own corner keeps to the steps,
+    /// so the frame always fills its window and the songs stay between its title and bottom bars.
+    /// </summary>
+    public void Fill(int width, int height) => _canvas.Resize(Math.Max(MinWidth, width), Math.Max(MinHeight, height));
+
     // ---- Drawing ----
 
     public void Render()

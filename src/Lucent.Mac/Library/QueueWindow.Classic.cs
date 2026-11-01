@@ -95,6 +95,8 @@ public partial class QueueWindow
             ((INotifyCollectionChanged)PlaylistView.Items).CollectionChanged += (_, _) => UpdateRunningTime();
             Activated += (_, _) => ShowClassicState(force: true);
             Deactivated += (_, _) => ShowClassicState(force: true);
+            // A layout, Lucent full screen or a swap can size the window; the frame follows it.
+            SizeChanged += (_, _) => FollowWindowSize();
         }
 
         if (!_classicOn)
@@ -143,14 +145,45 @@ public partial class QueueWindow
     private void FitClassic()
     {
         var scale = _classicView!.Scale;
+        LayOutClassic();
+        Width = _frame!.Width * scale;
+        Height = _frame.Height * scale;
+    }
+
+    /// <summary>
+    /// Sizes the frame to the window when something other than the frame's own corner sized it (a saved layout,
+    /// Lucent full screen, a swap), so the bottom bar stays at the bottom and the songs stop above it.
+    /// </summary>
+    private void FollowWindowSize()
+    {
+        if (!_classicOn)
+        {
+            return;
+        }
+
+        var scale = _classicView!.Scale;
+        var (windowWidth, windowHeight) = (Bounds.Width, Bounds.Height);
+        var width = (int)Math.Round(windowWidth / scale);
+        var height = (int)Math.Round(windowHeight / scale);
+        if (windowWidth <= 0 || windowHeight <= 0 || (width == _frame!.Width && height == _frame.Height))
+        {
+            return;
+        }
+
+        _frame.Fill(width, height);
+        LayOutClassic();
+    }
+
+    /// <summary>Lays the lists over the frame's middle, at the frame's scale, and draws it.</summary>
+    private void LayOutClassic()
+    {
+        var scale = _classicView!.Scale;
         var (left, top, width, height) = _frame!.ListArea;
         // Winamp's rows are 13 skin pixels high, in 9-pixel text.
         Resources["ClassicRowHeight"] = 13 * scale;
         Resources["ClassicFontSize"] = 9.5 * scale;
         _classicLists!.Margin = new Thickness(left * scale, (top + 2) * scale, (_frame.Width - left - width) * scale,
             (_frame.Height - top - height + 1) * scale);
-        Width = _frame.Width * scale;
-        Height = _frame.Height * scale;
         ShowClassicState(force: true);
     }
 
