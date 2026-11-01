@@ -32,7 +32,7 @@ A free, open-source music and video player for Windows and Mac, with 448 live GP
 <table>
 <tr>
 <td width="33%"><img src="site/img/black-hole.jpg" alt="Black Hole"><br><sub><b>Black Hole</b></sub></td>
-<td width="33%"><img src="site/img/diamond-fire.jpg" alt="Diamond Fire"><br><sub><b>Diamond Fire</b></sub></td>
+<td width="33%"><img src="site/img/riemann-sphere.jpg" alt="Riemann Sphere"><br><sub><b>Riemann Sphere</b></sub></td>
 <td width="33%"><img src="site/img/galaxy-collision.jpg" alt="Galaxy Collision"><br><sub><b>Galaxy Collision</b></sub></td>
 </tr>
 <tr>

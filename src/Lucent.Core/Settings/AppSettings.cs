@@ -547,6 +547,7 @@ public sealed class AppSettings
         ["Mercury Lake"] = "Enneper Bloom",
         ["Spark Forge"] = "Epicycle Rosette",
         ["Ringed World"] = "Tetra Vortex",
+        ["Diamond Fire"] = "Riemann Sphere",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
