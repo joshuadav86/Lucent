@@ -262,7 +262,8 @@ public partial class MainWindow
         }
         else if (layout.SingleWindow && !IsClassic)
         {
-            _settings.SingleWindowPlace = layout.SingleWindowPlace is { } place ? SavedLayouts.Copy(place) : null;
+            // Moved along with the player if the layout was moved onto the player's screen.
+            _settings.SingleWindowPlace = SavedLayouts.MovedLike(layout.SingleWindowPlace, layout.Windows, places);
             _settings.SingleWindowStyle = layout.SingleWindowStyle;
             _settings.SingleWindowSwaps = layout.SingleWindowSwaps.Select(swap => swap.ToList()).ToList();
             _settings.SingleWindowDividers = PanelDividers.Copy(layout.SingleWindowDividers);
@@ -279,17 +280,19 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Where the layout puts each window. Saved with the player on a screen that's not there now, the whole
-    /// layout moves onto the player's screen, keeping its shape. Otherwise a window whose place is off the
-    /// screens now is left out, to open docked to the player instead.
+    /// Where the layout puts each window. A layout opens on the screen the player is on now: saved with the
+    /// player on another screen (or one that's not there now), the whole layout moves onto the player's screen,
+    /// keeping its shape. Otherwise a window whose place is off the screens now is left out, to open docked to
+    /// the player instead.
     /// </summary>
     private Dictionary<string, WindowBounds> PlacesOnScreen(SavedLayout layout)
     {
         static Rect RectOf(WindowBounds place) => new(place.Left, place.Top, place.Width, place.Height);
-        if (layout.Windows.TryGetValue("Player", out var player) && !IsOnScreen(RectOf(player)))
+        var area = ScreenArea.Of(this);
+        var screen = new TileRect(area.Left, area.Top, area.Width, area.Height);
+        if (layout.Windows.TryGetValue("Player", out var player) && (!IsOnScreen(RectOf(player)) || !SavedLayouts.PlayerOn(layout.Windows, screen)))
         {
-            var area = ScreenArea.Of(this);
-            return SavedLayouts.MovedOnto(layout.Windows, new TileRect(area.Left, area.Top, area.Width, area.Height));
+            return SavedLayouts.MovedOnto(layout.Windows, screen);
         }
 
         return layout.Windows.Where(entry => IsOnScreen(RectOf(entry.Value)))

@@ -128,6 +128,81 @@ public static class SavedLayouts
     };
 
     /// <summary>
+    /// The places the windows go back to (leaving Lucent's full screen, say), fitted round the player at the width
+    /// it is now, <paramref name="playerWidth"/>, if that's changed since they were kept: the windows to its right
+    /// move along by the difference, rather than leaving a gap beside it or going over it, and a window under it
+    /// that was as wide as it takes its new width.
+    /// </summary>
+    public static Dictionary<string, WindowBounds> FittedToPlayer(IReadOnlyDictionary<string, WindowBounds> places, double playerWidth)
+    {
+        var fitted = places.ToDictionary(entry => entry.Key, entry => Copy(entry.Value));
+        if (!places.TryGetValue("Player", out var player) || playerWidth <= 0 || Math.Abs(playerWidth - player.Width) < 1)
+        {
+            return fitted;
+        }
+
+        const double flush = 2;
+        var right = player.Left + player.Width;
+        var change = playerWidth - player.Width;
+        foreach (var (name, place) in fitted)
+        {
+            if (name == "Player")
+            {
+                place.Width = playerWidth;
+            }
+            else if (place.Left >= right - flush)
+            {
+                place.Left += change;
+            }
+            else if (Math.Abs(place.Left - player.Left) < flush && Math.Abs(place.Width - player.Width) < flush && place.Top >= player.Top + player.Height - flush)
+            {
+                place.Width = playerWidth;
+            }
+        }
+
+        return fitted;
+    }
+
+    /// <summary>
+    /// True when the layout's player (its middle) is on <paramref name="area"/>, the screen the player is on now. A
+    /// layout saved on another screen is moved onto this one as it opens, rather than taking the player over there.
+    /// </summary>
+    public static bool PlayerOn(IReadOnlyDictionary<string, WindowBounds> places, TileRect area)
+    {
+        if (!places.TryGetValue("Player", out var player))
+        {
+            return true;
+        }
+
+        var x = player.Left + player.Width / 2;
+        var y = player.Top + player.Height / 2;
+        return x >= area.Left && x < area.Right && y >= area.Top && y < area.Bottom;
+    }
+
+    /// <summary>
+    /// <paramref name="place"/> (the single window's, say) moved as far as the layout's player was moved from
+    /// <paramref name="from"/> to <paramref name="to"/>, so it comes along onto the same screen. Unmoved if either
+    /// has no player.
+    /// </summary>
+    public static WindowBounds? MovedLike(WindowBounds? place, IReadOnlyDictionary<string, WindowBounds> from,
+        IReadOnlyDictionary<string, WindowBounds> to)
+    {
+        if (place is null)
+        {
+            return null;
+        }
+
+        var moved = Copy(place);
+        if (from.TryGetValue("Player", out var before) && to.TryGetValue("Player", out var after))
+        {
+            moved.Left += after.Left - before.Left;
+            moved.Top += after.Top - before.Top;
+        }
+
+        return moved;
+    }
+
+    /// <summary>
     /// The layout's places moved together onto <paramref name="area"/>, for when it was saved with the player on a
     /// screen that isn't there now: the whole group keeps its shape, centred on the area, with its top left on it
     /// (so the title bars can be reached) when it's bigger than the area.

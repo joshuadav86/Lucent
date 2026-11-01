@@ -79,6 +79,7 @@ public partial class MainWindow : Window
         _snapper.MoveFinished += (_, _) => SavePlacements();
         _snapper.MoveFinished += (_, _) => OnPlayerResizeFinished();
         _snapper.PlayerShape = PlayerShape;
+        _snapper.FitsPlayer = window => window is EqualizerWindow;
         SnapEveryWindow();
         SizeChanged += OnPlayerWidthChanged;
         StateChanged += OnPlayerStateChanged;
@@ -408,8 +409,11 @@ public partial class MainWindow : Window
     /// </summary>
     private void ArrangeFirstTime()
     {
+        // The player at the width its scale gives it first, so the layout isn't built round a window that's
+        // still stretched (or squeezed) from before.
+        KeepPlayerWidth();
         var work = ScreenArea.Of(this);
-        var playerWidth = ActualWidth;
+        var playerWidth = IsClassic ? ActualWidth : PlayerWidth * PlayerScale;
         var playerHeight = ActualHeight;
         var equalizer = OpenEqualizerWindow;
         // The equalizer as wide as the player is now (it keeps the width it was last fitted to otherwise), at the

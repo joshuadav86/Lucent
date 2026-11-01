@@ -108,6 +108,18 @@ public sealed class WindowSnapper
     /// <summary>Raised when the user finishes moving or resizing one of the windows.</summary>
     public event EventHandler? MoveFinished;
 
+    /// <summary>True while any window is being moved or resized by hand.</summary>
+    public bool IsBusy => _moving is not null;
+
+    /// <summary>True while one of <paramref name="window"/>'s edges is being dragged.</summary>
+    public bool IsResizing(Window window) => _resized && _moving == window;
+
+    /// <summary>
+    /// A window that isn't resizable on its own but takes the player's width (the equalizer, which lays itself out
+    /// to it): docked under the player, its edge goes with the player's as that's dragged.
+    /// </summary>
+    public Func<Window, bool>? FitsPlayer { get; set; }
+
     /// <summary>Every one of Lucent's windows that snaps (all of them but the swap and lock outlines).</summary>
     public IReadOnlyList<Window> Windows => _windows;
 
@@ -706,8 +718,9 @@ public sealed class WindowSnapper
             var opposite = Opposite(side);
 
             // Windows whose edge runs along the same line go with it.
+            // Under the player that includes the equalizer, which is fitted to the player's new width once it's done.
             var along = group.Where(other => Math.Abs(Get(other.Rect, side) - line) <= flush).ToList();
-            if (along.Any(other => !Resizable(other.Window)))
+            if (along.Any(other => !Resizable(other.Window) && !(window == _main && FollowsPlayer(other.Window))))
             {
                 along.Clear();
             }
@@ -745,6 +758,8 @@ public sealed class WindowSnapper
     /// shape, so only dragging its own edges resizes it.
     /// </summary>
     private bool Resizable(Window window) => window != _main && window.CanResize;
+
+    private bool FollowsPlayer(Window window) => !WindowLocks.IsLocked(window) && FitsPlayer?.Invoke(window) == true;
 
     /// <summary>Moves the linked windows with the edges of the one being resized, keeping each above its minimum size.</summary>
     private void MoveLinked(ref Box rect)

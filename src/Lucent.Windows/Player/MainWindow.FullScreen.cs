@@ -98,9 +98,11 @@ public partial class MainWindow
         if (putBack)
         {
             RestoreAllWindows();
+            // Closed up round the player at its width now, in case it's changed since they were kept.
+            var back = SavedLayouts.FittedToPlayer(_settings.WindowsBeforeFullScreen, IsClassic ? SizeOf(this).Width : PlayerWidth * PlayerScale);
             foreach (var (name, window) in TiledWindows())
             {
-                if (!_settings.WindowsBeforeFullScreen.TryGetValue(name, out var before) || WindowLocks.Holds(window))
+                if (!back.TryGetValue(name, out var before) || WindowLocks.Holds(window))
                 {
                     continue;
                 }

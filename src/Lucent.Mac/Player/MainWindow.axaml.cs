@@ -106,6 +106,7 @@ public partial class MainWindow : Window
         _snapper = new WindowSnapper(this);
         _snapper.MoveFinished += (_, _) => SavePlacements();
         _snapper.MoveFinished += (_, _) => OnPlayerResizeFinished();
+        _snapper.FitsPlayer = window => window is EqualizerWindow;
         SnapEveryWindow();
         SizeChanged += OnPlayerWidthChanged;
         LucentPlayer.SizeChanged += (_, _) => KeepPlayerShape();
@@ -497,8 +498,11 @@ public partial class MainWindow : Window
     /// </summary>
     private void ArrangeFirstTime()
     {
+        KeepPlayerWidth();
         var work = Placement.WorkArea(this);
-        var playerWidth = ActualWidth;
+        // The player's width as its scale gives it, so the layout isn't built round a window that's still
+        // stretched (or squeezed) from before; it's put back to that width once it settles.
+        var playerWidth = IsClassic ? ActualWidth : PlayerWidth * PlayerScale;
         var playerHeight = ActualHeight;
         var equalizer = OpenEqualizerWindow;
         // The equalizer as wide as the player is now (it keeps the width it was last fitted to otherwise), at the

@@ -144,6 +144,18 @@ public sealed class WindowSnapper
     /// </summary>
     public bool IsDragging => _moving != IntPtr.Zero && !_resized && !_held;
 
+    /// <summary>True while any window is being moved or resized by hand.</summary>
+    public bool IsBusy => _moving != IntPtr.Zero;
+
+    /// <summary>True while one of <paramref name="window"/>'s edges is being dragged.</summary>
+    public bool IsResizing(Window window) => _moving != IntPtr.Zero && _resized && !_held && _moving == Handle(window);
+
+    /// <summary>
+    /// A window that isn't resizable on its own but takes the player's width (the equalizer, which lays itself out
+    /// to it): docked under the player, its edge goes with the player's as that's dragged.
+    /// </summary>
+    public Func<Window, bool>? FitsPlayer { get; set; }
+
     /// <summary>Raised when the user finishes moving or resizing one of the windows.</summary>
     public event EventHandler? MoveFinished;
 
@@ -525,6 +537,7 @@ public sealed class WindowSnapper
         const int flush = 2;
         var self = Visible(_startRect, _startMargins);
         var group = Group(hwnd, self);
+        var player = hwnd == Handle(_main);
         var sides = new List<Side>();
         if (edge is WMSZ_LEFT or WMSZ_TOPLEFT or WMSZ_BOTTOMLEFT)
         {
@@ -562,9 +575,10 @@ public sealed class WindowSnapper
             var line = Get(self, side);
             var opposite = Opposite(side);
 
-            // Windows whose edge runs along the same line go with it.
+            // Windows whose edge runs along the same line go with it. Under the player that includes the
+            // equalizer, which is fitted to the player's new width once the drag ends.
             var along = group.Where(other => Math.Abs(Get(other.Rect, side) - line) <= flush).ToList();
-            if (along.Any(other => !Resizable(other.Handle)))
+            if (along.Any(other => !Resizable(other.Handle) && !(player && FollowsPlayer(other.Handle))))
             {
                 along.Clear();
             }
@@ -679,6 +693,9 @@ public sealed class WindowSnapper
         handle != Handle(_main)
         && HwndSource.FromHwnd(handle)?.RootVisual is Window { ResizeMode: ResizeMode.CanResize or ResizeMode.CanResizeWithGrip } window
         && !WindowLocks.IsLocked(window);
+
+    private bool FollowsPlayer(IntPtr handle) =>
+        HwndSource.FromHwnd(handle)?.RootVisual is Window window && !WindowLocks.IsLocked(window) && FitsPlayer?.Invoke(window) == true;
 
     private static bool IsLocked(IntPtr handle) => HwndSource.FromHwnd(handle)?.RootVisual is Window window && WindowLocks.IsLocked(window);
 
