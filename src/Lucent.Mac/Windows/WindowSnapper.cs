@@ -155,6 +155,13 @@ public sealed class WindowSnapper
             return;
         }
 
+        // A panel's title bar in the single window drags the panel, to swap it with another, not the window.
+        if (SingleWindow.DragPanel(e.Source as Visual ?? window, e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (WindowLocks.IsLocked(window))
         {
             // Locked in place: its title bar doesn't move it (handled, so macOS doesn't either), but it says

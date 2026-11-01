@@ -67,7 +67,8 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     public bool IsOpen => _found;
 
     /// <summary>Opens the site in a browser Lucent can reach that's already running (Safari, say), or else the default one.</summary>
-    public Task OpenAsync(CancellationToken cancel) => AppOpener.OpenWebsiteAsync(Website, RunningBrowsers().FirstOrDefault(), cancel);
+    public async Task OpenAsync(CancellationToken cancel) =>
+        await AppOpener.OpenWebsiteAsync(Website, (await RunningBrowsersAsync()).FirstOrDefault(), cancel);
 
     /// <summary>An AppleScript condition that's true when the address in <paramref name="url"/> is one of the site's player pages.</summary>
     protected abstract string Address(string url);
@@ -138,7 +139,7 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     {
         var found = new List<(Tab Tab, string[] Song)>();
         string? problem = null;
-        foreach (var browser in RunningBrowsers())
+        foreach (var browser in await RunningBrowsersAsync())
         {
             string output;
             try
@@ -281,7 +282,7 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     /// <summary>Runs the JavaScript (after <see cref="Helpers"/>) in the tab last shown and returns what it returns ("gone" when the tab has).</summary>
     protected async Task<string> AskTabAsync(string script, CancellationToken cancel)
     {
-        if (_tab is not { } tab || !RunningBrowsers().Contains(tab.Browser))
+        if (_tab is not { } tab || !await Task.Run(() => AppOpener.IsRunning(tab.Browser), cancel))
         {
             throw new RemoteProblem($"{NotOpen} in Safari, Chrome, Edge or Brave, then Lucent can control it.");
         }
@@ -331,17 +332,10 @@ public abstract class BrowserTabRemote : IRemotePlayer, IRemoteVolume, IRemoteLi
     /// <summary>A JavaScript string, so nothing in <paramref name="text"/> can get out of it.</summary>
     protected static string Json(string text) => System.Text.Json.JsonSerializer.Serialize(text);
 
-    private static IEnumerable<string> RunningBrowsers() =>
-        Browsers.Where(browser =>
-        {
-            var processes = Process.GetProcessesByName(browser);
-            foreach (var process in processes)
-            {
-                process.Dispose();
-            }
-
-            return processes.Length > 0;
-        });
+    // Looking through the running programs takes a moment for each browser, and a read comes every second or so, so
+    // it's done away from the UI thread, where it held up the windows (and the visuals drawn on it).
+    private static Task<List<string>> RunningBrowsersAsync() =>
+        Task.Run(() => Browsers.Where(AppOpener.IsRunning).ToList());
 
     // JavaScript writes numbers with a point whatever the Mac's region.
     private static TimeSpan Seconds(string text) =>

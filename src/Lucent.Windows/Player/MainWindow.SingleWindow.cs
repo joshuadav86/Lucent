@@ -94,6 +94,7 @@ public partial class MainWindow
         SingleWindow.KeepsOutOfSight = window => (InSingleWindow || _openingSingle) && Hostable(window) && !_takenOut.Contains(window);
         SingleWindow.TakeOut = TakeOutOfSingleWindow;
         SingleWindow.PutBack = PutBackInSingleWindow;
+        SingleWindow.DragPanel = StartPanelDrag;
         // A window opened while it's on becomes a panel, and one closed takes its panel with it.
         SingleWindow.ShownOrHidden = OnWindowShownOrHidden;
         _openingSingle = _settings.SingleWindow;
@@ -222,6 +223,7 @@ public partial class MainWindow
         _singleFrame = null;
         _header = null;
         _paneArea = null;
+        ForgetPanelDrags();
         LinkToggle.Visibility = Visibility.Visible;
         foreach (var lockButton in TitleButtons.Children.OfType<LockButton>())
         {
@@ -339,8 +341,16 @@ public partial class MainWindow
         var caption = WindowChrome.GetWindowChrome(window)?.CaptionHeight ?? 34;
         box.MouseLeftButtonDown += (_, e) => OnPaneCaptionPressed(box, caption, e);
         box.MouseRightButtonUp += (_, e) => OnPaneCaptionRightClick(box, caption, e);
+        WatchPanelDrags(box);
         _paneArea.Children.Add(box);
         var pane = new Pane(window, box, content, sizing) { Wanted = wanted };
+        // The size it had as a panel last time, so it's arranged as it was (not the equalizer, which sizes itself).
+        if (TileKindOf(window) != TileKind.Equalizer && KeyOf(pane) is { } name
+            && _settings.SingleWindowSizes.TryGetValue(name, out var kept) && kept.Width > 0 && kept.Height > 0)
+        {
+            pane.Wanted = new Size(kept.Width, kept.Height);
+        }
+
         // Its lock, its maximize and its keep-on-top are for a window on its own.
         foreach (var element in LogicalDescendants(content).OfType<FrameworkElement>()
                      .Where(element => element.Visibility == Visibility.Visible && (element is LockButton || element.Name is "MaximizeButton" or "OnTopToggle")))
@@ -384,17 +394,22 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>A press on a panel's title strip (where its window's title bar would drag it) moves the single window.</summary>
+    /// <summary>
+    /// A press on a panel's title strip (where its window's title bar would drag it) drags the panel, to swap it
+    /// with another; the equalizer's, which can't swap, moves the single window.
+    /// </summary>
     private void OnPaneCaptionPressed(Border box, double caption, MouseButtonEventArgs e)
     {
-        if (e.Handled || e.ClickCount != 1 || e.GetPosition(box).Y > caption || e.LeftButton != MouseButtonState.Pressed
-            || WindowState != WindowState.Normal)
+        if (e.Handled || e.ClickCount != 1 || e.GetPosition(box).Y > caption || e.LeftButton != MouseButtonState.Pressed)
         {
             return;
         }
 
         e.Handled = true;
-        DragMove();
+        if (!StartPanelDrag(box, e) && WindowState == WindowState.Normal)
+        {
+            DragMove();
+        }
     }
 
     /// <summary>A right-click on a panel's title strip gets Lucent's window menu, as a window's title bar does.</summary>
@@ -536,7 +551,8 @@ public partial class MainWindow
             }
         }
 
-        var layout = SingleWindowLayout.Arrange(body.Width, body.Height, tiles, style, _settings.SingleWindowSwaps);
+        var laidOut = SingleWindowLayout.Arrange(body.Width, body.Height, tiles, style, _settings.SingleWindowSwaps);
+        var layout = WithDividers(laidOut, tiles);
         foreach (var (box, tile) in panels)
         {
             if (!layout.Places.TryGetValue(tile.Key, out var place))
@@ -554,14 +570,18 @@ public partial class MainWindow
                 box.Height = place.Height;
             }
 
-            if (_panes.Values.FirstOrDefault(pane => pane.Box == box) is { } pane && !tile.FixedSize)
+            // What it'd like as the layout has it, not as a line moved by hand has it, or each layout would
+            // move the line again on top of the last.
+            if (_panes.Values.FirstOrDefault(pane => pane.Box == box) is { } pane && !tile.FixedSize
+                && laidOut.Places.TryGetValue(tile.Key, out var wanted))
             {
-                pane.Wanted = new Size(place.Width, place.Height);
+                pane.Wanted = new Size(wanted.Width, wanted.Height);
+                _settings.SingleWindowSizes[tile.Key] = new WindowBounds { Width = wanted.Width, Height = wanted.Height };
             }
         }
     }
 
-    /// <summary>Tidy layout (Shift+D) in the single window: the panels in the next balanced layout, any swaps forgotten.</summary>
+    /// <summary>Tidy layout (Shift+D) in the single window: the panels in the next balanced layout, any swaps and lines moved forgotten.</summary>
     private void TidySingleWindow()
     {
         if (_paneArea is null)
@@ -576,6 +596,7 @@ public partial class MainWindow
             panels.Select(panel => panel.Tile).ToList(), now, _settings.SingleWindowStyle);
         _settings.SingleWindowStyle = style;
         _settings.SingleWindowSwaps.Clear();
+        _settings.SingleWindowDividers.Clear();
         Retile();
         Toast.Show(PlayerRoot, FullScreenLayout.NameOf(style));
     }

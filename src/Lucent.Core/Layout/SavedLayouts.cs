@@ -5,7 +5,7 @@ namespace Lucent.Layout;
 /// <summary>
 /// A window layout saved under a name (right-click › Layouts › Save current layout…): which windows are
 /// open, where each one is and how big, which are locked, whether they're linked to the player, the
-/// player's size, and whether Lucent was full screen. Picking it from the Layouts menu, or pressing its
+/// player's size, and whether Lucent was full screen or a single window. Picking it from the Layouts menu, or pressing its
 /// number (1 to 9), puts the windows back that way.
 /// </summary>
 public sealed class SavedLayout
@@ -31,6 +31,23 @@ public sealed class SavedLayout
     public TileStyle FullScreenStyle { get; set; } = TileStyle.AsTheyAre;
 
     public List<List<string>> FullScreenSwaps { get; set; } = new();
+
+    /// <summary>
+    /// Lucent was a single window (U), at <see cref="SingleWindowPlace"/>, with <see cref="SingleWindowStyle"/>,
+    /// <see cref="SingleWindowSwaps"/>, <see cref="SingleWindowDividers"/> and <see cref="SingleWindowSizes"/>. <see cref="Windows"/> is then
+    /// where the windows go back to when it's switched off.
+    /// </summary>
+    public bool SingleWindow { get; set; }
+
+    public WindowBounds? SingleWindowPlace { get; set; }
+
+    public TileStyle SingleWindowStyle { get; set; } = TileStyle.AsTheyAre;
+
+    public List<List<string>> SingleWindowSwaps { get; set; } = new();
+
+    public List<PanelDivider> SingleWindowDividers { get; set; } = new();
+
+    public Dictionary<string, WindowBounds> SingleWindowSizes { get; set; } = new();
 
     /// <summary>The player's size (<see cref="AppSettings.PlayerScale"/>).</summary>
     public double PlayerScale { get; set; } = 1;
