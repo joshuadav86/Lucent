@@ -173,6 +173,18 @@ internal static class LayoutCheck
     private static async Task<List<string>> CheckSingleWindowAsync(Window main, Window visuals)
     {
         var lines = new List<string>();
+        // Starting wholly on the screen: macOS pulls a window that hangs off the edge back on as it's shown again,
+        // which on a small screen (the Apple silicon runners' is 1024 x 768) would read as coming back in the wrong place.
+        var work = Placement.WorkArea(visuals);
+        var size = Placement.SizeOf(visuals);
+        var left = Math.Max(work.Left, Math.Min(visuals.Left(), work.Right - size.Width));
+        var top = Math.Max(work.Top, Math.Min(visuals.Top(), work.Bottom - size.Height));
+        if (Math.Abs(left - visuals.Left()) > 0.5 || Math.Abs(top - visuals.Top()) > 0.5)
+        {
+            visuals.MoveTo(left, top);
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
         var before = Describe(visuals);
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
