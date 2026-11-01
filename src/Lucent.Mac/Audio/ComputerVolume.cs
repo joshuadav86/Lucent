@@ -13,6 +13,8 @@ internal static unsafe class ComputerVolume
     private const uint VirtualMainVolumeProperty = 0x766D7663; // 'vmvc': the one volume macOS shows for the whole output
     private const uint VolumeScalarProperty = 0x766F6C6D;      // 'volm': one channel's (or the main element's) volume
     private const uint MuteProperty = 0x6D757465;              // 'mute'
+    private const uint DecibelsProperty = 0x766D6462;          // 'vmdb': an element's volume in decibels
+    private const uint DecibelRangeProperty = 0x76646223;      // 'vdb#': the decibels it goes from and to
 
     /// <summary>The volume from 0 to 1 and whether it's muted, or null when the output has no volume to read (some HDMI and digital outputs).</summary>
     public static (double Level, bool Muted)? Read()
@@ -75,6 +77,48 @@ internal static unsafe class ComputerVolume
         catch (Exception)
         {
             // The output went away between reads: the next read shows whatever's there now.
+        }
+    }
+
+    /// <summary>
+    /// Turns the volume down by <paramref name="decibels"/> (as far as the output goes). False when the output has no
+    /// volume in decibels to change.
+    /// </summary>
+    public static bool TurnDown(double decibels)
+    {
+        try
+        {
+            if (DefaultOutput() is not { } device)
+            {
+                return false;
+            }
+
+            // The main element where the output has one, otherwise the left and right channels.
+            var turned = false;
+            foreach (var element in Get(device, DecibelsProperty, ElementMain) is null ? new uint[] { 1, 2 } : new uint[] { ElementMain })
+            {
+                if (Get(device, DecibelsProperty, element) is not { } now)
+                {
+                    continue;
+                }
+
+                var wanted = now - decibels;
+                var range = new AudioObjectPropertyAddress(DecibelRangeProperty, ScopeOutput) { Element = element };
+                var limits = default(AudioValueRange);
+                var size = (uint)sizeof(AudioValueRange);
+                if (AudioObjectGetPropertyData(device, &range, 0, null, ref size, &limits) == 0)
+                {
+                    wanted = Math.Clamp(wanted, limits.Minimum, limits.Maximum);
+                }
+
+                turned |= Put(device, DecibelsProperty, element, (float)wanted);
+            }
+
+            return turned;
+        }
+        catch (Exception)
+        {
+            return false;
         }
     }
 
