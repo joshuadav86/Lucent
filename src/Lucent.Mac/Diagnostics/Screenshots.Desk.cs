@@ -214,13 +214,19 @@ public static partial class Screenshots
     }
 
     /// <summary>Single window (U): the visuals, queue, library and equalizer as panels in the player's window, one title bar over them all.</summary>
-    private static Window PreviewSingleWindow(TileStyle style, bool artwork = false)
+    /// <param name="rearrange">Then a panel's dragged onto another and a line between panels dragged, with the mouse (printed).</param>
+    private static Window PreviewSingleWindow(TileStyle style, bool artwork = false, bool rearrange = false)
     {
         var player = (MainWindow)PreviewPlayer("Lucent");
         player.Show();
         Dispatcher.UIThread.RunJobs();
         player.PreviewSingleWindow(1600, 900, style, artwork);
         Dispatcher.UIThread.RunJobs();
+        if (rearrange)
+        {
+            Console.WriteLine(player.PreviewRearrangeSingleWindow());
+            Dispatcher.UIThread.RunJobs();
+        }
         return player;
     }
 

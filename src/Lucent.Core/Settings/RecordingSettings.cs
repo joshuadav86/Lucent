@@ -139,8 +139,7 @@ public sealed class RecordingSettings
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-                File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOptions));
+                AppSettings.SaveWhole(FilePath, JsonSerializer.Serialize(this, JsonOptions));
             }
             catch (Exception)
             {

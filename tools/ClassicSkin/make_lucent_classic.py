@@ -777,6 +777,77 @@ def pledit_bmp():
     return image
 
 
+# ---- Other windows (gen.bmp): the frame Winamp put round its other windows, which Lucent puts round its own ----
+
+GEN_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+GEN_TEXT_TOP = 5
+
+
+def gen_bmp():
+    image = Image.new("RGB", (194, 109), BLACK)
+    draw = ImageDraw.Draw(image)
+
+    def bar_colour(row, active):
+        top = (46, 44, 66) if active else (30, 30, 40)
+        bottom = (20, 20, 30) if active else (16, 16, 22)
+        return mix(top, bottom, row / 19)
+
+    def top_piece(x, y, active, kind):
+        vertical(draw, x, y, x + 24, y + 19, bar_colour(0, active), bar_colour(19, active))
+        draw.line((x, y, x + 24, y), fill=EDGE_LIGHT if active else (44, 44, 56))
+        draw.line((x, y + 19, x + 24, y + 19), fill=EDGE_DARK)
+        ridge = (64, 60, 92) if active else (40, 40, 52)
+        # Grip ridges, stopping short of the title on its two ends and of the close button.
+        x0 = x + {"left": 3, "right_end": 4}.get(kind, 0)
+        x1 = x + 24 - {"left_end": 4, "right": 13}.get(kind, 0)
+        if kind != "center":
+            for gy in (y + 5, y + 8, y + 11):
+                draw.line((x0, gy, x1, gy), fill=ridge)
+                draw.line((x0, gy + 1, x1, gy + 1), fill=EDGE_DARK)
+        if kind == "left":
+            draw.line((x, y, x, y + 19), fill=EDGE_LIGHT if active else (44, 44, 56))
+        if kind == "right":
+            draw.line((x + 24, y, x + 24, y + 19), fill=EDGE_DARK)
+            small_button(draw, x + 14, y + 3, CLOSE_GLYPH, False)
+        if kind == "center" and active:
+            horizontal(draw, x, y + 13, x + 24, y + 13, gradient)
+
+    for y, active in ((0, True), (21, False)):
+        for x, kind in ((0, "left"), (26, "left_end"), (52, "center"), (78, "right_end"), (104, "fill"), (130, "right")):
+            top_piece(x, y, active, kind)
+
+    # The bottom bar's ends (125 x 14, the right one with a resize grip) and the tile between them.
+    for x, y, w in ((0, 42, 125), (0, 57, 125), (127, 72, 25)):
+        vertical(draw, x, y, x + w - 1, y + 13, BODY_LIGHT, BODY_DARK)
+        draw.line((x, y, x + w - 1, y), fill=(16, 16, 24))
+        draw.line((x, y + 13, x + w - 1, y + 13), fill=EDGE_DARK)
+    draw.line((0, 42, 0, 55), fill=EDGE_LIGHT)
+    draw.line((124, 57, 124, 70), fill=EDGE_DARK)
+    for i in range(3):
+        draw.line((124 - 3 - i * 4, 69, 123, 69 - 3 - i * 4), fill=FAINT)
+
+    # The edges: left 11 wide and right 8, each with a piece for its bottom 24 pixels.
+    for x, w, h in ((127, 11, 29), (158, 11, 24), (139, 8, 29), (170, 8, 24)):
+        vertical(draw, x, 42, x + w - 1, 42 + h - 1, BODY, BODY)
+        draw.line((x, 42, x, 42 + h - 1), fill=EDGE_LIGHT)
+        draw.line((x + w - 1, 42, x + w - 1, 42 + h - 1), fill=EDGE_DARK)
+
+    # The close button held down.
+    small_button(draw, 148, 42, CLOSE_GLYPH, True)
+
+    # The title's letters, active (y 88) and not (y 96): each 7 high, in the title bar's own colours, with a
+    # column of the colour at x 0 between them, which is how a player finds where each one ends.
+    for y, active in ((88, True), (96, False)):
+        x = 1
+        for letter in GEN_LETTERS:
+            width = len(FONT[letter][0]) + 1
+            for row in range(7):
+                draw.line((x, y + row, x + width - 1, y + row), fill=bar_colour(GEN_TEXT_TOP + row, active))
+            text(draw, x, y + 1, letter, TEXT if active else MUTED)
+            x += width + 1
+    return image
+
+
 def pledit_txt():
     return ("[Text]\n"
             "Normal=#B8C4E0\n"
@@ -817,6 +888,7 @@ def build():
         "text.bmp": text_bmp(),
         "eqmain.bmp": eqmain_bmp(),
         "pledit.bmp": pledit_bmp(),
+        "gen.bmp": gen_bmp(),
     }
     return sheets
 

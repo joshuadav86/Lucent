@@ -34,7 +34,7 @@ public static partial class Screenshots
     {
         ("Player", () => PreviewPlayer("Lucent")),
         ("Player-Lucent", () => PreviewPlayer("Lucent")),
-        ("Player-Retro", () => PreviewPlayer("Retro")),
+        ("Player-Verdes", () => PreviewPlayer("Verdes")),
         ("Player-Glass", () => PreviewPlayer("Glass")),
         ("Player-Neon", () => PreviewPlayer("Neon")),
         ("Player-Studio", () => PreviewPlayer("Studio")),
@@ -105,6 +105,7 @@ public static partial class Screenshots
         ("FullScreen", () => PreviewFullScreen()),
         ("SingleWindow", () => PreviewSingleWindow(Lucent.Layout.TileStyle.AsTheyAre)),
         ("SingleWindow-Centred", () => PreviewSingleWindow(Lucent.Layout.TileStyle.Centred, artwork: true)),
+        ("SingleWindow-Rearranged", () => PreviewSingleWindow(Lucent.Layout.TileStyle.AsTheyAre, rearrange: true)),
     };
 
     public static int Run(string[] args)

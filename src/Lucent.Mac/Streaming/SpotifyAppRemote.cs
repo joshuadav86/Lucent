@@ -140,8 +140,8 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteVolum
     private static async Task<string> RunAsync(string script, CancellationToken cancel)
     {
         // A script naming an app that isn't installed makes macOS ask the user where it is, so Spotify has to be
-        // running before one is run.
-        if (!IsRunning())
+        // running before one is run. Looked for away from the UI thread, as a read comes every second or so.
+        if (!await Task.Run(IsRunning, cancel))
         {
             return "closed";
         }
