@@ -86,14 +86,15 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteVolum
         bool? shuffle = fields.Length > 8 ? Flag(fields[8]) : null;
         RepeatMode? repeat = fields.Length > 9 ? Flag(fields[9]) switch { true => RepeatMode.All, false => RepeatMode.Off, null => null } : null;
         double? volume = fields.Length > 10 && int.TryParse(fields[10], NumberStyles.None, CultureInfo.InvariantCulture, out var percent)
-            ? Math.Clamp(percent / 100.0, 0, 1)
+            ? SpotifyVolume.FromSpotify(percent / 100.0)
             : null;
         return new RemoteState(track, playing, Seconds(fields[6]), readAt, Volume: volume, Shuffle: shuffle, Repeat: repeat);
     }
 
-    // Spotify's own volume slider, which is also its Spotify Connect volume for this Mac.
+    // Spotify's own volume slider, which is also its Spotify Connect volume for this Mac. Its curve is much steeper
+    // than Lucent's bar, so the bar's place is converted (SpotifyVolume).
     public Task SetVolumeAsync(double volume, CancellationToken cancel) =>
-        TellAsync($"set sound volume to {(int)Math.Round(Math.Clamp(volume, 0, 1) * 100)}", cancel);
+        TellAsync($"set sound volume to {SpotifyVolume.ToSpotifyPercent(volume)}", cancel);
 
     private static bool? Flag(string text) => text switch { "true" => true, "false" => false, _ => null };
 
