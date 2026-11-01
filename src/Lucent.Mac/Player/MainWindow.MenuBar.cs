@@ -187,6 +187,8 @@ public partial class MainWindow
         var layouts = new NativeMenu();
         FillLayoutsMenu(layouts);
         window.Add(new NativeMenuItem("Layouts") { Menu = layouts });
+        var normalSize = Item("Normal Player Size", NormalPlayerSize, new KeyGesture(Key.D0, KeyModifiers.Meta));
+        window.Add(normalSize);
         window.Add(Item("Reset to Default Layout", ResetLayout));
         window.Add(Item("Shrink Everything", ShrinkWindows));
         var link = Check("Move Every Window with the Player", ToggleLink);
@@ -206,6 +208,7 @@ public partial class MainWindow
             fullScreen.IsChecked = _settings.LucentFullScreen;
             single.IsChecked = InSingleWindow;
             single.IsEnabled = InSingleWindow || !IsClassic;
+            normalSize.IsEnabled = PlayerIsEnlarged;
             FillLayoutsMenu(layouts);
         };
         bar.Add(new NativeMenuItem("Window") { Menu = window });
