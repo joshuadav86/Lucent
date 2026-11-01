@@ -566,6 +566,7 @@ public sealed class AppSettings
         ["Spark Forge"] = "Epicycle Rosette",
         ["Ringed World"] = "Tetra Vortex",
         ["Tide Line"] = "Hyperboloid",
+        ["Diamond Fire"] = "Riemann Sphere",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
