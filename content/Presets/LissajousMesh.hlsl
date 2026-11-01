@@ -24,23 +24,39 @@ float3 knotRates(float shape)
     return float3(3.0, 5.0, 4.0);
 }
 
-// Every 8 beats the next shape takes over, morphing across the first couple of beats.
-float3 currentRates()
+// Every 8 beats the next shape takes over, morphing across the first couple of beats. How far the
+// morph has got: 0 still the last shape, 1 the new one.
+float morphAmount()
 {
-    float shape = floor(BeatCount / 8.0);
     float beatsIn = wrap(BeatCount, 8.0) + saturate(1.0 - Beat);
-    float morph = smoothstep(0.0, 2.5, beatsIn);
-    return lerp(knotRates(shape - 1.0), knotRates(shape), morph);
+    return smoothstep(0.0, 2.5, beatsIn);
 }
 
-float3 knotPoint(float t, float strand)
+// Where strand's curve is at t for one shape's rates.
+float3 knotAt(float3 rates, float t, float strand)
 {
-    float3 rates = currentRates();
     // Each strand is offset a little in phase from the last; the offsets breathe slowly with
     // the mids, opening and closing the mesh.
     float offset = (strand / (Strands - 1.0) - 0.5) * (0.5 + Mid * 0.25 + sin(Time * 0.19) * 0.15);
     float3 phase = float3(0.7 + offset, 0.2 + Time * 0.03, 1.3 - offset * 0.6);
     return sin(rates * t + phase) * float3(1.0, 0.85, 0.9);
+}
+
+// The morph blends the old knot's points into the new knot's, rather than blending their rates: in
+// between, whole-number rates would turn fractional, the curves would no longer close, and each strand
+// would split open and scatter into dust across the gap. Blending the points keeps every curve a
+// closed loop all the way through.
+float3 knotPoint(float t, float strand)
+{
+    float shape = floor(BeatCount / 8.0);
+    float morph = morphAmount();
+    float3 now = knotAt(knotRates(shape), t, strand);
+    if (morph >= 1.0)
+    {
+        return now;
+    }
+
+    return lerp(knotAt(knotRates(shape - 1.0), t, strand), now, morph);
 }
 
 // The specks race along their curves, so the mouse parts them where they're drawn rather than pushing each one (see ParticleMain.hlsli).
@@ -60,14 +76,12 @@ void Simulate(inout Particle particle, uint id)
 {
     float dt = min(DeltaTime, 0.05);
     float speed = (0.07 + Bass * 0.18 + Beat * 0.08) * (0.9 + fixedRandom(id, 3.0) * 0.2);
+    float before = particle.data.x;
     particle.data.x = wrap(particle.data.x + speed * dt, 2.0 * PI);
     float3 moved = knotPoint(particle.data.x, particle.data.y);
-    particle.velocity = (moved - particle.position) / max(DeltaTime, 1e-4);
-    // While the shape is morphing the curve isn't closed, so skip the streak across the gap.
-    if (length(particle.velocity) * dt > 0.1)
-    {
-        particle.velocity = 0.0;
-    }
+    // The streak follows the speck along its curve only: the curve's own slow drift and morph would draw
+    // every speck out sideways into a fan of dust.
+    particle.velocity = (moved - knotPoint(before, particle.data.y)) / max(dt, 1e-4);
     particle.position = moved;
 }
 
@@ -98,10 +112,7 @@ Sprite Show(Particle particle, uint id)
     colour *= 0.1 * (0.5 + level * 1.5) + flash * 0.18;
     // Particles bunch up where a curve turns back on itself (it moves slowly there), which
     // would make hot spots; dim them by how slowly the curve moves at that point.
-    float3 rates = currentRates();
-    float offset = (particle.data.y / (Strands - 1.0) - 0.5) * (0.5 + Mid * 0.25 + sin(Time * 0.19) * 0.15);
-    float3 phase = float3(0.7 + offset, 0.2 + Time * 0.03, 1.3 - offset * 0.6);
-    float pace = length(rates * cos(rates * particle.data.x + phase) * float3(1.0, 0.85, 0.9));
+    float pace = length(knotPoint(particle.data.x + 0.01, particle.data.y) - knotPoint(particle.data.x - 0.01, particle.data.y)) / 0.02;
     colour *= 0.06 + 0.94 * smoothstep(0.8, 4.0, pace);
     colour *= 1.0 + step(0.996, fixedRandom(id, 6.0)) * Treble * 5.0;
 

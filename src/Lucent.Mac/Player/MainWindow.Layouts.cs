@@ -10,9 +10,9 @@ namespace Lucent.Mac;
 
 // Layouts saved by name (right-click › Layouts in any of Lucent's windows, or Window › Layouts): "Save
 // current layout…" keeps which windows are open, where each is and how big, the locks, the link, the
-// player's size and whether Lucent's full screen, and picking the layout from the same menu (or pressing its
-// number, 1 to 9) puts them all back that way. Kept in the settings (AppSettings.Layouts, SavedLayouts in
-// Lucent.Core).
+// player's size, and whether Lucent's full screen or a single window (with how its panels are arranged), and
+// picking the layout from the same menu (or pressing its number, 1 to 9) puts them all back that way. Kept
+// in the settings (AppSettings.Layouts, SavedLayouts in Lucent.Core).
 public partial class MainWindow
 {
     private void SetUpSavedLayouts()
@@ -105,9 +105,26 @@ public partial class MainWindow
             FullScreenSwaps = _settings.FullScreenSwaps.Select(swap => swap.ToList()).ToList(),
             PlayerScale = _settings.PlayerScale,
         };
+        if (InSingleWindow)
+        {
+            // A single window keeps where it is itself, and how its panels are arranged.
+            SaveSingleWindowPlace();
+            layout.SingleWindow = true;
+            layout.SingleWindowPlace = _settings.SingleWindowPlace is { } place ? SavedLayouts.Copy(place) : null;
+            layout.SingleWindowStyle = _settings.SingleWindowStyle;
+            layout.SingleWindowSwaps = _settings.SingleWindowSwaps.Select(swap => swap.ToList()).ToList();
+            layout.SingleWindowDividers = PanelDividers.Copy(_settings.SingleWindowDividers);
+            layout.SingleWindowSizes = _settings.SingleWindowSizes.ToDictionary(entry => entry.Key, entry => SavedLayouts.Copy(entry.Value));
+        }
+
         foreach (var (key, window) in TiledWindows())
         {
-            if (_settings.LucentFullScreen && _settings.WindowsBeforeFullScreen.TryGetValue(key, out var before))
+            if (InSingleWindow && _settings.Windows.TryGetValue(key, out var asWindow))
+            {
+                // As a single window, it keeps where the windows go back to (and the player's own place).
+                layout.Windows[key] = SavedLayouts.Copy(asWindow);
+            }
+            else if (_settings.LucentFullScreen && _settings.WindowsBeforeFullScreen.TryGetValue(key, out var before))
             {
                 // Full screen, it keeps where they go back to; opening it lays them out full screen again.
                 layout.Windows[key] = SavedLayouts.Copy(before);
@@ -129,7 +146,7 @@ public partial class MainWindow
     /// <summary>
     /// Puts the windows back as a layout has them: the ones it had open opened and the rest closed (the video,
     /// the radio and editors stay as they are, as closing them would stop what's in them), each in its place,
-    /// locked and linked as they were, and full screen again if it was saved that way.
+    /// locked and linked as they were, and full screen or a single window again if it was saved that way.
     /// </summary>
     public void OpenLayout(SavedLayout layout)
     {
@@ -241,6 +258,16 @@ public partial class MainWindow
             EnterLucentFullScreen();
             _settings.FullScreenSwaps = layout.FullScreenSwaps.Select(swap => swap.ToList()).ToList();
             TileWindows();
+        }
+        else if (layout.SingleWindow && !IsClassic)
+        {
+            _settings.SingleWindowPlace = layout.SingleWindowPlace is { } place ? SavedLayouts.Copy(place) : null;
+            _settings.SingleWindowStyle = layout.SingleWindowStyle;
+            _settings.SingleWindowSwaps = layout.SingleWindowSwaps.Select(swap => swap.ToList()).ToList();
+            _settings.SingleWindowDividers = PanelDividers.Copy(layout.SingleWindowDividers);
+            _settings.SingleWindowSizes = layout.SingleWindowSizes.ToDictionary(entry => entry.Key, entry => SavedLayouts.Copy(entry.Value));
+            // Where the windows are now is kept as it goes in, for them to go back to.
+            EnterSingleWindow();
         }
         else
         {

@@ -420,7 +420,11 @@ public partial class ArtworkWindow : Window
         }
         else if (WindowState == WindowState.Normal)
         {
-            SingleWindow.FrameOf(this).BeginMoveDrag(e);
+            // As a panel in the single window, it drags the panel, to swap it with another.
+            if (sender is not Visual from || !SingleWindow.DragPanel(from, e))
+            {
+                SingleWindow.FrameOf(this).BeginMoveDrag(e);
+            }
             e.Handled = true;
         }
     }

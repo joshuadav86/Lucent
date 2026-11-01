@@ -51,6 +51,13 @@ public static class SingleWindow
     /// <summary>Puts a window taken out with <see cref="TakeOut"/> back in the single window, if it's still on.</summary>
     public static Action<Window> PutBack { get; set; } = _ => { };
 
+    /// <summary>
+    /// Starts dragging a panel by whatever drags its window (the analyzer's picture, say), to drop it on another
+    /// panel and swap the two. False when <paramref name="from"/> isn't in a panel that can swap (the equalizer
+    /// sizes itself), so the window moves as usual.
+    /// </summary>
+    public static Func<DependencyObject, MouseButtonEventArgs, bool> DragPanel { get; set; } = (_, _) => false;
+
     /// <summary>True while the window is a panel in the single window.</summary>
     public static bool Holds(Window window) => PaneOf(window) is not null;
 

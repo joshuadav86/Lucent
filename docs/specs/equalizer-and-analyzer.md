@@ -4,6 +4,7 @@
 
 **Equalizer (E):**
 - 4, 8, 16, 24, or 32 faders drawn over the live spectrum, with 15 presets and a balance control.
+- The response curve above the faders can be dragged up or down: it moves the fader under the pointer (half-dB steps, double-click resets, the wheel nudges), and hovering it names that band.
 - The spectrum shows energy per slice of an octave (bins averaged, 3 dB per octave lift), so pink noise draws flat and music falls away at the top as much as it really does.
 - Shapes only the player's sound. Its spectrum pauses while the editor plays, because the EQ doesn't shape the editor.
 - Shapes the streaming app Lucent controls (Spotify, Apple Music, YouTube Music, and the rest) only when "EQ streaming apps too" is on in Options › Sound (off by default). While an app is in control the status line says whether the EQ reaches it, with a Turn on or Set up button when it doesn't; the spectrum moves either way because it hears the app.
