@@ -108,7 +108,7 @@ public partial class MainWindow
             MinWidth = PlayerWidth;
             MaxWidth = PlayerWidth * LargestPlayerScale;
             SizeToContent = SizeToContent.Height;
-            Width = PlayerWidth * scale;
+            SetPlayerWidth(PlayerWidth * scale);
             ScalePlayer(scale);
         }
         finally
@@ -118,6 +118,46 @@ public partial class MainWindow
 
         _settings.PlayerScale = scale;
         _scaleAtResizeEnd = scale;
+        Dispatcher.UIThread.Post(KeepPlayerWidth, DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// Sizes the window to <paramref name="width"/>, even when its Width already says so: a drag or a layout
+    /// that placed the window directly leaves Width at an old value, and setting it to that again changes
+    /// nothing, which once left a "Reset to default layout" player at its usual scale in a window still
+    /// stretched to its old size.
+    /// </summary>
+    private void SetPlayerWidth(double width)
+    {
+        if (Math.Abs(Width - width) < 0.5 && Math.Abs(Bounds.Width - width) > 0.5)
+        {
+            ClearValue(WidthProperty);
+        }
+
+        Width = width;
+    }
+
+    /// <summary>Once the windows have settled, makes sure the player's window is as wide as its scale says.</summary>
+    private void KeepPlayerWidth()
+    {
+        if (IsClassic || InSingleWindow || WindowState != WindowState.Normal || Bounds.Width <= 0)
+        {
+            return;
+        }
+
+        var width = PlayerWidth * PlayerScale;
+        if (Math.Abs(Bounds.Width - width) > 1)
+        {
+            _applyingPlayerSize = true;
+            try
+            {
+                SetPlayerWidth(width);
+            }
+            finally
+            {
+                _applyingPlayerSize = false;
+            }
+        }
     }
 
     /// <summary>
@@ -196,7 +236,7 @@ public partial class MainWindow
             {
                 // The width it was dragged to, first: going back to following its content sizes the window
                 // from its Width, which a drag doesn't change, so the player sprang back to its old size.
-                Width = PlayerWidth * PlayerScale;
+                SetPlayerWidth(PlayerWidth * PlayerScale);
                 SizeToContent = SizeToContent.Height;
             }
         }, DispatcherPriority.Background);
