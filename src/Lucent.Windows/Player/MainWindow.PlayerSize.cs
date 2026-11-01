@@ -59,7 +59,15 @@ public partial class MainWindow
         MinWidth = PlayerWidth;
         MaxWidth = PlayerWidth * LargestPlayerScale;
         SizeToContent = SizeToContent.Height;
-        Width = PlayerWidth * PlayerScale;
+        var width = PlayerWidth * PlayerScale;
+        if (ActualWidth > 0 && Math.Abs(ActualWidth - width) > 0.5 && Math.Abs(Width - width) < 0.5)
+        {
+            // The window is another width than its Width says (it was sized directly, around WPF), and setting
+            // the same Width again wouldn't resize it: it'd stay stretched with the player drawn at its old scale.
+            ClearValue(WidthProperty);
+        }
+
+        Width = width;
         ScalePlayer(PlayerScale);
     }
 
