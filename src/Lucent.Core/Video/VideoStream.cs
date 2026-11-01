@@ -80,6 +80,7 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
     private long _pausedAt = -1;
     private long _lengthMs;
     private long? _seekMs;
+    private long _seekSentAt;
     private long _startMs;
     private bool _started;
     private bool _wantPlaying;
@@ -192,8 +193,13 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
         };
         _player.TimeChanged += (_, e) =>
         {
-            // A seek has landed once libVLC reports a time near where it was sent.
-            if (_seekMs is { } target && Math.Abs(e.Time - target) < 2000)
+            // A seek has landed once libVLC reports a time at (or a little past) where it was sent. Starting again
+            // after the end, libVLC first says 0 (and a time left over from before can still come in), which isn't
+            // the seek landing: taken as one, the time read 0 until libVLC caught up, a while on a slow Mac. A seek
+            // that never reports near its target (one that landed well before it) is let go after a few seconds.
+            if (_seekMs is { } target
+                && ((e.Time >= target - SeekLandsEarlyMs && e.Time < target + SeekLandsLateMs)
+                    || Environment.TickCount64 - _seekSentAt > SeekGiveUpMs))
             {
                 _seekMs = null;
             }
@@ -764,6 +770,12 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
 
     // ---- Seeking and closing ----
 
+    // How far before or after its target libVLC may first report a seek's time and still have landed it, and how
+    // long until a seek that never reports near its target stops holding the time shown.
+    private const long SeekLandsEarlyMs = 500;
+    private const long SeekLandsLateMs = 1000;
+    private const long SeekGiveUpMs = 3000;
+
     private void Seek(long ms)
     {
         if (IsLive)
@@ -802,6 +814,7 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
             return;
         }
 
+        _seekSentAt = Environment.TickCount64;
         _seekMs = ms;
         _anchorMs = -1;
         _player.Time = ms;
@@ -840,7 +853,9 @@ public sealed class VideoStream : WaveStream, IPlayerControlled, ILiveStream
         }
 
         _media.AddOption($":start-time={ms / 1000.0:0.###}".Replace(',', '.'));
+        _seekSentAt = Environment.TickCount64;
         _seekMs = ms;
+        _anchorMs = -1;
         _player.Play();
     }
 
