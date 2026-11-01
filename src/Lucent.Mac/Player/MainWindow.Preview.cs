@@ -46,6 +46,36 @@ public partial class MainWindow
         _meter.ShowSample();
     }
 
+    /// <summary>
+    /// Single window, <paramref name="width"/> by <paramref name="height"/>, with the visuals, queue, library and
+    /// equalizer as panels in it (and the artwork too with <paramref name="artwork"/>), laid out with <paramref name="style"/>.
+    /// </summary>
+    internal void PreviewSingleWindow(double width, double height, Lucent.Layout.TileStyle style, bool artwork = false)
+    {
+        ShowTool(_visuals);
+        ShowTool(_queue);
+        ShowTool(_libraryWindow);
+        if (OpenEqualizerWindow is null)
+        {
+            OpenEqualizer();
+        }
+
+        if (artwork && !ArtworkWindow.IsOpen)
+        {
+            ToggleArtwork();
+        }
+
+        _settings.SingleWindowStyle = style;
+        _settings.SingleWindowPlace = new Lucent.Settings.WindowBounds { Left = 0, Top = 0, Width = width, Height = height };
+        EnterSingleWindow();
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Width = width;
+        Height = height;
+        UpdateLayout();
+        Retile();
+        UpdateLayout();
+    }
+
     /// <summary>The player's capture, for the screenshots to play a song into.</summary>
     internal Lucent.Audio.AudioCapture PreviewCapture => _player.Capture;
 

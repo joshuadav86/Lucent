@@ -37,6 +37,8 @@ public partial class RadioWindow : Window
     private RadioWindow(MainWindow player, AppSettings settings)
     {
         InitializeComponent();
+        // It can be a panel in the single window, kept out of sight while it is.
+        Windows.SingleWindow.Watch(this);
         _player = player;
         _settings = settings;
         if (!Genres.All.Any(genre => genre.Name == settings.RadioSection) && !RadioGuide.IsLocal(settings.RadioSection))
@@ -74,7 +76,11 @@ public partial class RadioWindow : Window
     {
         if (_instance is not null)
         {
-            _instance.Activate();
+            if (!Windows.SingleWindow.Holds(_instance))
+            {
+                _instance.Activate();
+            }
+
             return;
         }
 

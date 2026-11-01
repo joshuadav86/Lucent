@@ -38,10 +38,11 @@ public partial class MainWindow
     /// or it's locked there, or Lucent is just starting (when everything goes back as it was). Returns
     /// false when it should dock to the player instead: it was docked, or it's never been placed.
     /// </summary>
-    private bool OpenWhereLeft(Window window)
+    /// <param name="evenDocked">Back where it was even if it was docked (leaving single window, which puts the player back too).</param>
+    private bool OpenWhereLeft(Window window, bool evenDocked = false)
     {
         if (WindowLocks.NameOf(window) is not { } name || Saved(name) is not { } saved
-            || saved.Docked && !_openingWindows && !WindowLocks.IsLocked(window))
+            || saved.Docked && !_openingWindows && !evenDocked && !WindowLocks.IsLocked(window))
         {
             return false;
         }
@@ -155,6 +156,7 @@ public partial class MainWindow
     /// </summary>
     public void ResetLayout()
     {
+        LeaveSingleWindow();
         LeaveLucentFullScreen(putBack: false);
         RestoreAllWindows();
         if (_visuals.IsFullscreen)

@@ -201,13 +201,17 @@ public partial class EqualizerWindow : Window
     {
         if (_open is not null)
         {
-            _open.Activate();
+            if (!SingleWindow.Holds(_open))
+            {
+                _open.Activate();
+            }
+
             openChanged?.Invoke(true);
             return _open;
         }
 
         var main = owner as MainWindow;
-        var window = Create(player, settings, main?.Bounds.Width);
+        var window = Create(player, settings, main?.PlayerColumnWidth);
         if (main is not null)
         {
             main.DockEqualizer(window);
