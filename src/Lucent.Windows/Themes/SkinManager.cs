@@ -63,6 +63,10 @@ public static class SkinManager
         new Skin("Studio", "Brushed metal and an inset display, like rack-mounted hi-fi gear.", "Graphite",
             "Bahnschrift, Segoe UI", "Bahnschrift, Segoe UI", FontWeights.Normal,
             Rounding: 0.5, RoundShapes: true, SkinFinish.Metal),
+        // Lucent's website look. Jost isn't on Windows, so Lucent carries it (Assets/Fonts, from assets/fonts/Jost).
+        new Skin("Linework", "Square corners, fine lines, and geometric type on true black.", "Ivory",
+            "./Assets/Fonts/#Jost, Segoe UI Variable Text, Segoe UI", "./Assets/Fonts/#Jost, Segoe UI Variable Text, Segoe UI", FontWeights.Medium,
+            Rounding: 0, RoundShapes: false, SkinFinish.Flat),
     };
 
     // Lucent's corner sizes, which a skin's Rounding scales. Each is a resource App.xaml also defines.
@@ -116,8 +120,8 @@ public static class SkinManager
 
         var values = new Dictionary<string, object>
         {
-            ["UiFont"] = new FontFamily(skin.UiFont),
-            ["DisplayFont"] = new FontFamily(skin.DisplayFont),
+            ["UiFont"] = Font(skin.UiFont),
+            ["DisplayFont"] = Font(skin.DisplayFont),
             ["DisplayWeight"] = skin.DisplayWeight,
             ["RoundCorner"] = new CornerRadius(skin.RoundShapes ? 999 : Math.Max(1, 3 * skin.Rounding)),
         };
@@ -360,6 +364,12 @@ public static class SkinManager
         });
         return card;
     }
+
+    /// <summary>
+    /// A skin's font list. System fonts are found by name; the ones Lucent carries are named
+    /// "./Assets/Fonts/#Family" and found in the app's own resources.
+    /// </summary>
+    private static FontFamily Font(string names) => new(new Uri("pack://application:,,,/"), names);
 
     private static bool IsLight(Color colour) => (0.299 * colour.R + 0.587 * colour.G + 0.114 * colour.B) / 255 > 0.5;
 

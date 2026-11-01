@@ -70,6 +70,9 @@
     <!-- The WavPack and Monkey's Audio decoders are ports of theirs (BSD licences). -->
     <None Include="..\..\assets\licenses\LICENSE-WavPack.txt" Link="Licenses/LICENSE-WavPack.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\assets\licenses\LICENSE-MonkeysAudio.txt" Link="Licenses/LICENSE-MonkeysAudio.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Jost, the Linework skin's type, and its licence (SIL Open Font License). -->
+    <AvaloniaResource Include="..\..\assets\fonts\Jost\*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
+    <None Include="..\..\assets\licenses\LICENSE-Jost.txt" Link="Licenses/LICENSE-Jost.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup Condition="Exists('$(DxcLibraryFolder)/libdxcompiler.dylib')">

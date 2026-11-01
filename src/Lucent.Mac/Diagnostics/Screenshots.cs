@@ -38,6 +38,7 @@ public static partial class Screenshots
         ("Player-Glass", () => PreviewPlayer("Glass")),
         ("Player-Neon", () => PreviewPlayer("Neon")),
         ("Player-Studio", () => PreviewPlayer("Studio")),
+        ("Player-Linework", () => PreviewPlayer("Linework")),
         ("Player-ClassicSkin", () => PreviewClassicPlayer(shaded: false)),
         ("Player-ClassicSkin-Shade", () => PreviewClassicPlayer(shaded: true)),
         ("Player-Options", () => PreviewOptions("Graphics")),

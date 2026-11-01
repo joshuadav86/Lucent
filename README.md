@@ -24,7 +24,7 @@ A free, open-source music and video player for Windows and Mac, with 448 live GP
 - **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
 - **A real library.** Show any tag as a column, sort by it, find duplicates, and scrobble to Last.fm. Your queue is still there next time.
 - **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
-- **Skins and themes.** Five skins, eight themes, and Lucent Classic, a pixel skin in the spirit of classic desktop players. Any .wsz skin works too.
+- **Skins and themes.** Six skins, nine themes, and Lucent Classic, a pixel skin in the spirit of classic desktop players. Any .wsz skin works too.
 - **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.
 - **Your streaming apps, too.** Spotify, Apple Music, TIDAL, Pandora, SoundCloud, and YouTube play with Lucent's visuals and controls.
 - **Sounds right.** Gapless, crossfades, bit-perfect exclusive mode, and 15 formats from MP3 and FLAC to WavPack and APE.
