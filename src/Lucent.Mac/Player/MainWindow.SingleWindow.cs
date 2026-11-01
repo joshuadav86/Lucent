@@ -228,6 +228,7 @@ public partial class MainWindow
         }
 
         // Each window where it was left, or docked to the player if it's never been placed, then back in sight.
+        var placed = new List<(Window, PixelPoint)>();
         foreach (var window in giveBack.Where(window => window.IsVisible))
         {
             // Docked ones too: the player's back where it was, so the group fits together as it did.
@@ -243,9 +244,11 @@ public partial class MainWindow
                 }
             }
 
-            BringBack(window);
+            BringBack(window, belong: false);
+            placed.Add((window, window.Position));
         }
 
+        _ = BelongAfterLeaving(placed);
         Dispatcher.UIThread.Post(() =>
         {
             KeepPlayerShape();
@@ -416,17 +419,25 @@ public partial class MainWindow
         window.UpdateLayout();
     }
 
-    /// <summary>Takes a window off the screen without closing it, as Lucent does with the windows while the player's in the Dock.</summary>
-    private static void PutAway(Window window)
+    /// <summary>
+    /// Takes a window off the screen without closing it, as Lucent does with the windows while the player's in the
+    /// Dock. It stops belonging to the player too, so moving the single window doesn't carry it along out of sight.
+    /// </summary>
+    private void PutAway(Window window)
     {
         if (NativeWindow(window) is var native && native != IntPtr.Zero)
         {
+            if (NativeWindow(this) is var player && player != IntPtr.Zero)
+            {
+                ObjC.SendVoid(player, "removeChildWindow:", native);
+            }
+
             ObjC.SendVoid(native, "orderOut:", IntPtr.Zero);
         }
     }
 
-    /// <summary>Puts a window put away with <see cref="PutAway"/> back on the screen, belonging to the player again.</summary>
-    private void BringBack(Window window)
+    /// <summary>Puts a window put away with <see cref="PutAway"/> back on the screen, belonging to the player again unless <paramref name="belong"/> is false.</summary>
+    private void BringBack(Window window, bool belong = true)
     {
         var native = NativeWindow(window);
         if (native == IntPtr.Zero)
@@ -435,12 +446,52 @@ public partial class MainWindow
         }
 
         // Ordered out, it stopped belonging to the player (and moving with it); it does again, in front of it.
+        if (belong)
+        {
+            Belong(native);
+        }
+
+        ObjC.SendVoid(native, "orderFront:", IntPtr.Zero);
+    }
+
+    /// <summary>Makes a window belong to the player again, so it moves with it and stays in front of it.</summary>
+    private void Belong(IntPtr native)
+    {
         if (NativeWindow(this) is var player && player != IntPtr.Zero)
         {
             ObjC.SendVoid(player, "addChildWindow:ordered:", native, 1UL);
         }
+    }
 
-        ObjC.SendVoid(native, "orderFront:", IntPtr.Zero);
+    /// <summary>
+    /// Once the player's settled at its own place and size after single window: each window it gave back is put
+    /// where it was meant to go, if it's been carried off, and belongs to the player again. (Belonging to it any
+    /// sooner, macOS can carry them along as the player's frame goes back from the single window's.)
+    /// </summary>
+    private async Task BelongAfterLeaving(List<(Window Window, PixelPoint At)> placed)
+    {
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+        if (InSingleWindow || IsShuttingDown)
+        {
+            return;
+        }
+
+        foreach (var (window, at) in placed)
+        {
+            if (!window.IsVisible || SingleWindow.Holds(window) || NativeWindow(window) is var native && native == IntPtr.Zero)
+            {
+                continue;
+            }
+
+            if (window.Position != at)
+            {
+                window.Position = at;
+            }
+
+            Belong(NativeWindow(window));
+        }
+
+        SavePlacements();
     }
 
     /// <summary>Lets the window be any shape (the player alone keeps its shape as it's resized).</summary>
