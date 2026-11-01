@@ -22,6 +22,11 @@ public sealed class SystemAudio : IDisposable
     private readonly AudioCapture _capture;
     private WasapiLoopbackCapture? _loopback;
 
+    // Told when Windows switches its default output (headphones plugged in, say). Loopback stays on the output it
+    // started on and hears nothing once Windows plays through another, so it has to start again on the new one.
+    private MMDeviceEnumerator? _devices;
+    private OutputWatch? _outputWatch;
+
     // Listening to one app: the thread that reads it (and owns Windows' audio client for it), whether it has
     // started handing sound on, and whether it's been told to stop.
     private Thread? _appThread;
@@ -33,7 +38,10 @@ public sealed class SystemAudio : IDisposable
 
     private SystemAudio(AudioCapture capture) => _capture = capture;
 
-    /// <summary>Raised (on a background thread) when Windows stops the listening, say because the output went away.</summary>
+    /// <summary>
+    /// Raised (on a background thread) when Windows stops the listening, say because the output went away, or when it
+    /// switches to another output. Start again to follow it.
+    /// </summary>
     public event EventHandler<Exception?>? Stopped;
 
     /// <summary>
@@ -65,7 +73,74 @@ public sealed class SystemAudio : IDisposable
         }
 
         listener._loopback = loopback;
+        listener.WatchOutput();
         return listener;
+    }
+
+    // Without the watch it still listens; it just won't follow a change of output by itself.
+    private void WatchOutput()
+    {
+        try
+        {
+            _devices = new MMDeviceEnumerator();
+            _outputWatch = new OutputWatch(this);
+            _devices.RegisterEndpointNotificationCallback(_outputWatch);
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"Couldn't watch for a change of output: {ex.Message}");
+            _outputWatch = null;
+            _devices?.Dispose();
+            _devices = null;
+        }
+    }
+
+    private void StopWatchingOutput()
+    {
+        if (_devices is { } devices && _outputWatch is { } watch)
+        {
+            try
+            {
+                devices.UnregisterEndpointNotificationCallback(watch);
+            }
+            catch (Exception)
+            {
+                // Going anyway.
+            }
+        }
+
+        _outputWatch = null;
+        _devices?.Dispose();
+        _devices = null;
+    }
+
+    // Windows calls these from its own thread, and mustn't be held up, so each just passes the news on.
+    private sealed class OutputWatch(SystemAudio listener) : IMMNotificationClient
+    {
+        public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
+        {
+            // Loopback listens to the multimedia default (Windows reports each role's change separately).
+            if (flow == DataFlow.Render && role == Role.Multimedia && listener._loopback is not null)
+            {
+                ThreadPool.QueueUserWorkItem(_ => listener.Stopped?.Invoke(listener, null));
+            }
+        }
+
+        public void OnDeviceStateChanged(string deviceId, DeviceState newState)
+        {
+        }
+
+        public void OnDeviceAdded(string pwstrDeviceId)
+        {
+        }
+
+        public void OnDeviceRemoved(string deviceId)
+        {
+        }
+
+        public void OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key)
+        {
+        }
     }
 
     /// <summary>The name of the output being listened to, for the menu's tooltip.</summary>
@@ -184,11 +259,9 @@ public sealed class SystemAudio : IDisposable
             var reader = client.AudioCaptureClient;
             while (!_stopping)
             {
-                if (!ready.WaitOne(200))
-                {
-                    continue;
-                }
-
+                // Asked even when no sound has come for a while: a client Windows has dropped (its audio service
+                // restarted, say) only says so when asked, and otherwise waits here hearing nothing, for good.
+                ready.WaitOne(200);
                 for (var packet = reader.GetNextPacketSize(); packet > 0 && !_stopping; packet = reader.GetNextPacketSize())
                 {
                     var data = reader.GetBuffer(out var frames, out var flags);
@@ -297,6 +370,7 @@ public sealed class SystemAudio : IDisposable
             return;
         }
 
+        StopWatchingOutput();
         var loopback = _loopback;
         _loopback = null;
         if (loopback is null)

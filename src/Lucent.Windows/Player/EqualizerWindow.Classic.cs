@@ -81,14 +81,15 @@ public partial class EqualizerWindow
         Height = ClassicSprites.WindowHeight * _classicView.Scale;
     }
 
-    private void SetCaptionHeight(double height) => WindowChrome.SetWindowChrome(this, new WindowChrome
+    // A new chrome changes the window's frame, so it goes through CaptionRepaint like any frame change.
+    private void SetCaptionHeight(double height) => CaptionRepaint.Change(this, () => WindowChrome.SetWindowChrome(this, new WindowChrome
     {
         CaptionHeight = height,
         ResizeBorderThickness = new Thickness(0),
         GlassFrameThickness = new Thickness(0),
         CornerRadius = new CornerRadius(0),
         UseAeroCaptionButtons = false,
-    });
+    }));
 
     /// <summary>Draws the classic equalizer again with the settings as they are now.</summary>
     private void RefreshClassic()

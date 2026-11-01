@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Lucent.Mac.Windows;
 using Lucent.ClassicSkins;
 using Lucent.Settings;
@@ -267,7 +268,7 @@ public partial class MainWindow
         _settings.Save();
         if (_classicView is not null)
         {
-            SetClassicZoom();
+            KeepWindowsDocked(SetClassicZoom);
         }
     }
 
@@ -276,8 +277,49 @@ public partial class MainWindow
     {
         _settings.ClassicSkin = name;
         _settings.Save();
-        ApplyClassicSkin();
+        KeepWindowsDocked(ApplyClassicSkin);
         BuildClassicSkinSwatches();
+    }
+
+    /// <summary>
+    /// Makes a change that resizes the player and the equalizer (a skin on or off, double size), then stacks the
+    /// windows that were under the player against its new bottom again, so none ends up over Lucent's button strip
+    /// or leaves a gap. In Lucent's full screen every window is laid out again instead.
+    /// </summary>
+    private void KeepWindowsDocked(Action change)
+    {
+        if (_settings.LucentFullScreen || WindowState != WindowState.Normal)
+        {
+            change();
+            TileSoon();
+            return;
+        }
+
+        var column = ColumnUnderPlayer(Top + ActualHeight);
+        var bottom = column.Count > 0 ? column[^1].Top() + Placement.SizeOf(column[^1]).Height : 0;
+        change();
+        // Once the player and the equalizer have their new sizes.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (IsShuttingDown || WindowState != WindowState.Normal)
+            {
+                return;
+            }
+
+            var edge = Top + ActualHeight;
+            for (var i = 0; i < column.Count; i++)
+            {
+                var window = column[i];
+                window.SetTop(edge);
+                if (i == column.Count - 1 && window.CanResize)
+                {
+                    // The last one keeps its bottom edge, in line with the windows beside it.
+                    window.Height = Math.Max(window.MinHeight, bottom - edge);
+                }
+
+                edge += Placement.SizeOf(window).Height;
+            }
+        }, DispatcherPriority.Background);
     }
 
     /// <summary>The classic player's right-click menu (and its O button's).</summary>

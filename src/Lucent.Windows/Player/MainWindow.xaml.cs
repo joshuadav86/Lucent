@@ -115,6 +115,7 @@ public partial class MainWindow : Window
             UpdateStationStatus();
             ObserveForScrobbling();
             FollowComputerVolume();
+            WatchListening();
         };
         _positionTimer.Start();
         StartScrobbling();
@@ -353,23 +354,7 @@ public partial class MainWindow : Window
         }
 
         var delta = e.NewSize.Height - e.PreviousSize.Height;
-        var candidates = new List<Window> { _queue, _libraryWindow, _visuals };
-        if (EqualizerWindow.Current is { } equalizer)
-        {
-            candidates.Add(equalizer);
-        }
-
-        var column = new List<Window>();
-        var edge = Top + e.PreviousSize.Height;
-        // A locked window stays put, and so do the ones under it.
-        while (candidates.FirstOrDefault(window => !column.Contains(window) && window.WindowState == WindowState.Normal
-                   && !WindowLocks.IsLocked(window) && Math.Abs(window.Top - edge) < 2
-                   && window.Left < Left + ActualWidth - 2 && window.Left + SizeOf(window).Width > Left + 2) is { } next)
-        {
-            column.Add(next);
-            edge = next.Top + SizeOf(next).Height;
-        }
-
+        var column = ColumnUnderPlayer(Top + e.PreviousSize.Height);
         for (var i = 0; i < column.Count; i++)
         {
             var window = column[i];
@@ -382,6 +367,30 @@ public partial class MainWindow : Window
         }
 
         AlignBesidePlayer();
+    }
+
+    /// <summary>
+    /// The windows stacked under the player, top to bottom: the one whose top is at <paramref name="edge"/>
+    /// (the player's bottom), the one under that, and so on. A locked window stays put, and so do the ones under it.
+    /// </summary>
+    private List<Window> ColumnUnderPlayer(double edge)
+    {
+        var candidates = new List<Window> { _queue, _libraryWindow, _visuals };
+        if (EqualizerWindow.Current is { } equalizer)
+        {
+            candidates.Add(equalizer);
+        }
+
+        var column = new List<Window>();
+        while (candidates.FirstOrDefault(window => !column.Contains(window) && window.WindowState == WindowState.Normal
+                   && !WindowLocks.IsLocked(window) && Math.Abs(window.Top - edge) < 2
+                   && window.Left < Left + ActualWidth - 2 && window.Left + SizeOf(window).Width > Left + 2) is { } next)
+        {
+            column.Add(next);
+            edge = next.Top + SizeOf(next).Height;
+        }
+
+        return column;
     }
 
     /// <summary>

@@ -26,6 +26,10 @@ public sealed class PlayingRowScroll
     private ScrollGlide _glideNow;
     private bool _gliding;
     private bool _holdingCovers;
+    // The frame clock (WPF's time for the frame being drawn) when the glide set off, once its first frame has come,
+    // and the last frame moved, as WPF can raise Rendering more than once for the same frame.
+    private TimeSpan? _frameZero;
+    private TimeSpan _lastFrame;
 
     public PlayingRowScroll(ListBox list)
     {
@@ -145,6 +149,7 @@ public sealed class PlayingRowScroll
         }
 
         _clock.Restart();
+        _frameZero = null;
         _gliding = true;
         CompositionTarget.Rendering += OnFrame;
         return true;
@@ -158,8 +163,23 @@ public sealed class PlayingRowScroll
             return;
         }
 
-        scroller.ScrollToVerticalOffset(_glideNow.At(_clock.Elapsed));
-        if (_glideNow.IsDone(_clock.Elapsed))
+        // Timed by the frame being drawn rather than by when this handler happens to run, so each frame moves the list
+        // by the same step at the screen's refresh rate (144 Hz, say) however busy the frame before it was.
+        var elapsed = _clock.Elapsed;
+        if (e is RenderingEventArgs { RenderingTime: var frame })
+        {
+            if (_frameZero is not null && frame == _lastFrame)
+            {
+                return;
+            }
+
+            _frameZero ??= frame - elapsed;
+            _lastFrame = frame;
+            elapsed = frame - _frameZero.Value;
+        }
+
+        scroller.ScrollToVerticalOffset(_glideNow.At(elapsed));
+        if (_glideNow.IsDone(elapsed))
         {
             StopGlide();
         }

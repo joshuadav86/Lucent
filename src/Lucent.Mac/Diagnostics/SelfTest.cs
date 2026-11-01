@@ -101,6 +101,7 @@ public static partial class SelfTest
         failures += Lucent.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.LoudnessSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.EqualizerSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.ListeningWatchdogSelfTest.Run(Console.WriteLine);
         // Before the visuals: their timing pass keeps CI's virtual GPU busy for minutes, and a
         // recording straight after it has stalled.
         failures += TestRecording();
@@ -117,6 +118,7 @@ public static partial class SelfTest
         failures += Lucent.Library.LibraryGroupsSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.CoverSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.SpotifyLimitSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Streaming.SpotifyVolume.SelfTest(Console.WriteLine);
         failures += Lucent.Library.PlaylistColumnsSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;

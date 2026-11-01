@@ -682,6 +682,7 @@ public partial class MainWindow
                 }
             });
             _systemAudio = listening;
+            _listeningWatchdog.Started();
             _listeningTo = target;
         }
         catch (Exception ex)
@@ -750,6 +751,48 @@ public partial class MainWindow
         {
             throw new RemoteProblem("Lucent couldn't open a web browser to sign in with.", ex);
         }
+    }
+
+    // Notices listening that has quietly stopped hearing anything (see Lucent.Core's Audio/ListeningWatchdog.cs).
+    private readonly ListeningWatchdog _listeningWatchdog = new();
+    private int _listeningWatchTicks;
+
+    /// <summary>
+    /// Called by the position timer: about once a second, starts listening again when it has failed to start (the output
+    /// was busy a moment, say), or when the controlled app plays on this PC while nothing has been heard for a few seconds.
+    /// Windows can leave the listening running but deaf (the app's sound moved, or the audio service restarted) without
+    /// saying so, which used to leave the visuals dark until the app was switched off and on.
+    /// </summary>
+    private void WatchListening()
+    {
+        if (++_listeningWatchTicks % 5 != 0)
+        {
+            return;
+        }
+
+        if (_systemAudio is null)
+        {
+            // Does nothing when nothing is wanted, or while an input feeds the visuals.
+            UpdateListening();
+            return;
+        }
+
+        var expectSound = _remote is { State: { IsPlaying: true, IsElsewhere: false } state } && state.Volume is not <= 0.01;
+        if (!_listeningWatchdog.ShouldRestart(expectSound, _player.Capture.HeardNothingFor(ListeningWatchdog.FirstWait)))
+        {
+            return;
+        }
+
+        // Once a stall, so an app left at a silent stretch doesn't fill the log.
+        if (_listeningWatchdog.RestartsSinceSound == 1)
+        {
+            ErrorLog.Write("Visuals listening", $"Heard nothing from {_remote?.Player.Name} while it played, so listening started again.");
+        }
+
+        _systemAudio.Dispose();
+        _systemAudio = null;
+        _listeningTo = null;
+        UpdateListening();
     }
 
     private void StopStreaming()

@@ -26,23 +26,21 @@ float hbTurn()
     return Time * 0.06 + (BeatCount - Beat) * 0.03;
 }
 
-// Projects a point on the figure (y up) to the screen (y down), keeping how near it is in z.
-float3 hbProject(float3 w)
+// The camera: how far it tilts down onto the figure (as sin, cos) and how far it zooms in.
+float3 hbCamera()
 {
-    float tilt = 0.32 + sin(Time * 0.031) * 0.14;
     float s, c;
-    sincos(tilt, s, c);
-    float3 v = float3(w.x, w.y * c - w.z * s, w.y * s + w.z * c);
-    float distance = 4.2;
-    float zoom = 2.35 * (1.0 + DropPulse * 0.05);
-    return float3(float2(v.x, -v.y) * zoom / (distance - v.z) - float2(0.0, 0.09), v.z);
+    sincos(0.32 + sin(Time * 0.031) * 0.14, s, c);
+    return float3(s, c, 2.35 * (1.0 + DropPulse * 0.05));
 }
 
-float3 hbRing(float angle, float y)
+// Projects the ring point at this angle and height (y up) to the screen (y down), keeping how near it is in z.
+float3 hbRing(float angle, float y, float3 camera)
 {
     float s, c;
     sincos(angle, s, c);
-    return hbProject(float3(c, y, s));
+    float3 v = float3(c, y * camera.y - s * camera.x, y * camera.x + s * camera.y);
+    return float3(float2(v.x, -v.y) * camera.z / (4.2 - v.z) - float2(0.0, 0.09), v.z);
 }
 
 // Distance from p to the segment a..b, and how far along it the closest point is.
@@ -67,42 +65,47 @@ float3 Render(float2 uv, float2 p)
     float other = saturate(0.18 + Mid * 0.5 + BuildUp * 0.6 + DropPulse * 0.5);
     float height = Height * (1.0 + Bass * 0.04);
 
+    float3 camera = hbCamera();
     float3 colour = 0.0;
-    [loop]
-    for (int i = 0; i < Strings; i++)
+    // The figure stays within about 0.9 of the middle across, so pixels well outside it skip the strings.
+    if (abs(p.x) < 1.05)
     {
-        float a = turn + i * (2.0 * PI / Strings);
-        // Bands mirror round the ring, so the music keeps the figure's symmetry.
-        float band = spectrum(0.03 + abs(frac(i / (float)Strings * 2.0) * 2.0 - 1.0) * 0.6);
-        [unroll]
-        for (int family = 0; family < 2; family++)
+        [loop]
+        for (int i = 0; i < Strings; i++)
         {
-            float lean = family == 0 ? twist : -twist;
-            float3 top = hbRing(a + lean, height);
-            float3 bottom = hbRing(a - lean, -height);
-            float2 hit = hbSegment(p, top.xy, bottom.xy);
-            float d = hit.x;
-            if (d > px * 40.0)
+            float a = turn + i * (2.0 * PI / Strings);
+            // Bands mirror round the ring, so the music keeps the figure's symmetry.
+            float band = spectrum(0.03 + abs(frac(i / (float)Strings * 2.0) * 2.0 - 1.0) * 0.6);
+            // Each string's ends; the first family's ends are also where the beads sit.
+            float3 ends[4] = { hbRing(a + twist, height, camera), hbRing(a - twist, -height, camera),
+                               hbRing(a - twist, height, camera), hbRing(a + twist, -height, camera) };
+            [unroll]
+            for (int family = 0; family < 2; family++)
             {
-                continue;
+                float3 top = ends[family * 2];
+                float3 bottom = ends[family * 2 + 1];
+                float2 hit = hbSegment(p, top.xy, bottom.xy);
+                float d = hit.x;
+                if (d > px * 40.0)
+                {
+                    continue;
+                }
+                float along = hit.y;
+                // Strings at the back of the figure are dimmer, so it reads as solid.
+                float near = lerp(top.z, bottom.z, along);
+                float depth = 0.35 + 0.65 * smoothstep(-1.0, 1.0, near);
+                float stroke = exp(-pow(d / (px * 1.2), 2.0)) + exp(-d / (px * 7.0)) * 0.1;
+                float at = (along - sinceBeat * 1.6) * 7.0;
+                float pulse = exp(-at * at) * Beat;
+                float strength = (0.22 + band * 1.1 + pulse * 1.6) * depth * (family == 0 ? 1.0 : other);
+                float3 tint = hbNeon(along * 0.85 + family * 0.18);
+                colour += lerp(tint, float3(1.0, 0.95, 0.9), saturate(pulse * 0.5)) * stroke * strength;
             }
-            float along = hit.y;
-            // Strings at the back of the figure are dimmer, so it reads as solid.
-            float near = lerp(top.z, bottom.z, along);
-            float depth = 0.35 + 0.65 * smoothstep(-1.0, 1.0, near);
-            float stroke = exp(-pow(d / (px * 1.2), 2.0)) + exp(-d / (px * 7.0)) * 0.1;
-            float at = (along - sinceBeat * 1.6) * 7.0;
-            float pulse = exp(-at * at) * Beat;
-            float strength = (0.22 + band * 1.1 + pulse * 1.6) * depth * (family == 0 ? 1.0 : other);
-            float3 tint = hbNeon(along * 0.85 + family * 0.18);
-            colour += lerp(tint, float3(1.0, 0.95, 0.9), saturate(pulse * 0.5)) * stroke * strength;
+            // A bead of light where each string meets a ring.
+            float beads = exp(-pow(length(p - ends[0].xy) / (px * 2.4), 2.0)) * (0.5 + 0.5 * smoothstep(-1.0, 1.0, ends[0].z))
+                + exp(-pow(length(p - ends[1].xy) / (px * 2.4), 2.0)) * (0.5 + 0.5 * smoothstep(-1.0, 1.0, ends[1].z));
+            colour += float3(0.9, 0.95, 1.0) * beads * (0.5 + band + Beat * 0.6);
         }
-        // A bead of light where each string meets a ring.
-        float3 topBead = hbRing(a + twist, height);
-        float3 bottomBead = hbRing(a - twist, -height);
-        float beads = exp(-pow(length(p - topBead.xy) / (px * 2.4), 2.0)) * (0.5 + 0.5 * smoothstep(-1.0, 1.0, topBead.z))
-            + exp(-pow(length(p - bottomBead.xy) / (px * 2.4), 2.0)) * (0.5 + 0.5 * smoothstep(-1.0, 1.0, bottomBead.z));
-        colour += float3(0.9, 0.95, 1.0) * beads * (0.5 + band + Beat * 0.6);
     }
 
     // Where the strings bunch together at the waist they would burn out, so ease the brightest parts down.
