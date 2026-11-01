@@ -265,6 +265,7 @@ section.band { padding-block: clamp(80px, 9vw, 132px); overflow-x: clip; border-
 .seg button { border: 0; background: transparent; padding: 7px 11px; font: 500 14px/1 var(--font); font-variant-numeric: tabular-nums; color: var(--muted); cursor: pointer; }
 .seg button:hover { color: var(--fg); }
 .seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.seg button[aria-pressed="true"] kbd { color: var(--bg); border-color: rgba(0,0,0,.35); }
 select { font: 500 14px var(--font); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 0; padding: 6px 10px; }
 #eq { display: block; width: 100%; height: 300px; touch-action: none; cursor: ns-resize; }
 .eq-foot { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); font: 400 13px/1.4 var(--font); color: var(--muted); flex-wrap: wrap; }
@@ -1576,7 +1577,7 @@ footer .credits a { text-decoration: underline; }
   const EQ = [.3, .26, .36, .5, .58, .55, .45, .34, .28, .24];
   const eqWin = () => `<div class="lw">${title("Equalizer", "10 bands")}<div class="lw-eq">${EQ.map((v, i) =>
       `<div class="lw-f" style="--v:${v}"><i></i><span>${["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"][i]}</span></div>`).join("")}</div></div>`;
-  const visWin = (tools = "") => `<div class="lw lw-vis-win">${title("Visuals", "60 fps", "", tools)}<div class="lw-vis">${clip("clips/polyhedra-waltz-square", "img/clips/polyhedra-waltz-square.jpg", "")}<span>Polyhedra Waltz</span></div></div>`;
+  const visWin = (tools = "") => `<div class="lw lw-vis-win">${title("Visuals", "60 fps", "", tools)}<div class="lw-vis">${clip("clips/sonic-dandelion-square", "img/clips/sonic-dandelion-square.jpg", "")}<span>Sonic Dandelion</span></div></div>`;
   layoutDemo();
   function drawSkinsDesk() {
     deskSkins.classList.toggle("wsz", isWsz());
