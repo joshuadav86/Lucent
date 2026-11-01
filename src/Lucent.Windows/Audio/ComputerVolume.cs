@@ -45,4 +45,25 @@ public static class ComputerVolume
             // The output went away between reads: the next read shows whatever's there now.
         }
     }
+
+    /// <summary>
+    /// Turns the volume down by <paramref name="decibels"/> (as far as the output goes). False when there's no output
+    /// or Windows wouldn't change it.
+    /// </summary>
+    public static bool TurnDown(double decibels)
+    {
+        try
+        {
+            using var devices = new MMDeviceEnumerator();
+            using var device = devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            var volume = device.AudioEndpointVolume;
+            var range = volume.VolumeRange;
+            volume.MasterVolumeLevel = (float)Math.Clamp(volume.MasterVolumeLevel - decibels, range.MinDecibels, range.MaxDecibels);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 }

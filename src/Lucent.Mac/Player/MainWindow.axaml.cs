@@ -2524,7 +2524,16 @@ public partial class MainWindow : Window
             return;
         }
 
-        // While Lucent controls another app, the bar is that app's volume (or does nothing, when it can't be changed).
+        // With every app's sound heard, or while the controlled app plays on this Mac, the bar is the Mac's volume,
+        // applied after the analyzer hears the music (see MainWindow.ComputerVolume.cs).
+        if (_barShowsComputerVolume || (_remote is null && BarIsComputerVolume))
+        {
+            ComputerVolume.Set(e.NewValue);
+            VolumeText.Text = $"{e.NewValue * 100:0}%";
+            return;
+        }
+
+        // While Lucent controls an app playing elsewhere, the bar is that app's volume (or does nothing, when it can't be changed).
         if (_remote is { } remote)
         {
             if (remote.HasVolume)
@@ -2537,14 +2546,6 @@ public partial class MainWindow : Window
                 ShowVolume();
             }
 
-            return;
-        }
-
-        // With the visuals listening to every app, the bar is the Mac's volume (see MainWindow.ComputerVolume.cs).
-        if (BarIsComputerVolume)
-        {
-            ComputerVolume.Set(e.NewValue);
-            VolumeText.Text = $"{e.NewValue * 100:0}%";
             return;
         }
 
