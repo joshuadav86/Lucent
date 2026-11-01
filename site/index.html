@@ -21,8 +21,7 @@
 html, body { margin: 0; }
 [hidden] { display: none !important; }
 /* Linework: true black, warm white type, and one thin line. Only Lucent's visuals glow; everything around
-   them stays quiet, so the visuals sit in the page without frames. The hero's line is the starter song's
-   loudness from start to finish, the shape Lucent reads to find build-ups and drops.
+   them stays quiet, so the visuals sit in the page without frames.
    The theme swatches under Skins and themes recolor only the mock windows (.desk), the way Lucent's themes recolor the app. */
 :root {
   --bg: #000000;
@@ -139,12 +138,6 @@ kbd {
   .hero-art { grid-area: 1 / 1; justify-self: stretch; width: auto; margin-inline: calc(50% - 50vw); -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent); mask-image: linear-gradient(180deg, #000 70%, transparent); }
   .hero .wrap { padding-top: 4px; }
 }
-/* The song line: Self Actualize's loudness from start to finish, with a playhead that follows the tour below. */
-.song { display: grid; gap: 10px; padding-top: clamp(44px, 6vw, 72px); }
-.song canvas { display: block; width: 100%; height: 76px; }
-.song-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 20px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.song-meta b { color: var(--fg); font-weight: 500; }
-@media (max-width: 640px) { .song canvas { height: 56px; } }
 .hero-shot { margin: clamp(48px, 6vw, 80px) 0 0; min-width: 0; }
 /* The window tour: Lucent full screen, built up a window at a time; each chip adds or takes away its window.
    Layers sit where FullScreenLayout put them on a 2560 × 1440 screen, so they're placed in percentages of that. */
@@ -630,10 +623,6 @@ footer .credits a { text-decoration: underline; }
         <p class="fine">Windows 10 and 11 · macOS 12 or later · Updates itself</p>
       </div>
       </div>
-      <div class="song">
-        <canvas id="songLine" aria-label="The loudness of Kepler North's Self Actualize from start to finish, drawn as one line, with the playhead at the part playing in the tour below"></canvas>
-        <div class="song-meta"><span><b>Kepler North - Self Actualize.</b> Lucent finds build-ups and drops in real time.</span><span id="songTime">1:03 / 6:08</span></div>
-      </div>
       <figure class="hero-shot tour" aria-label="A tour of Lucent's windows">
         <div class="tour-bar" id="tourBar" role="group" aria-label="Show or hide each of Lucent's windows">
           <span class="tour-act"><button type="button" id="tourReplay">Build it again</button></span>
@@ -1009,7 +998,6 @@ footer .credits a { text-decoration: underline; }
   document.addEventListener("visibilitychange", nudgeClips);
 
   /* ---------- the window tour at the top: Lucent full screen, a window at a time ---------- */
-  let tourClock = null; // the tour's video, which the song line's playhead follows
   // [name, file, place on a 2560 × 1440 screen (x, y, width, height, from FullScreenLayout), what it is, alt text, floats over the rest]
   const WINDOWS = [
     ["Library", "tour/full/library.png", [0, 0, 380, 1027.5], "Your music folders, newest first, with genre, year, and any other tag in columns.", "The library, with album covers, genres, and years beside each song in folders for Bicep's Isles, Boards of Canada's Inferno, Massive Attack's Mezzanine, and Zero 7's When It Falls"],
@@ -1114,7 +1102,7 @@ footer .credits a { text-decoration: underline; }
       const want = live.inView || !box.hidden;
       if (!want) { if (live.video) keepPlaying(live.video, false); return; }
       if (!live.video) {
-        const v = live.video = tourClock = document.createElement("video");
+        const v = live.video = document.createElement("video");
         v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto"; v.offPage = true;
         v.innerHTML = '<source src="img/tour/live.mp4" type="video/mp4"><source src="img/tour/live.webm" type="video/webm">';
         v.addEventListener("playing", () => { if (!live.shown) { live.shown = true; show(); } if (!live.drawing) { live.drawing = true; drawLive(); } });
@@ -1186,36 +1174,6 @@ footer .credits a { text-decoration: underline; }
     const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; return true; }
     return false;
-  }
-
-  /* ---------- the song line: Self Actualize's loudness from start to finish ---------- */
-  // Short-term loudness of the starter song (720 points over its 6:08, 0 = 40 dB down, 1 = loudest), measured
-  // from the WAV. The playhead follows the tour's video, which plays 1:03 to 1:11 on a loop, or keeps that time alone.
-  const SONG = { dur: 368.59, pts: [0.894,0.919,0.944,0.956,0.942,0.911,0.911,0.929,0.93,0.913,0.917,0.942,0.92,0.914,0.914,0.946,0.915,0.917,0.931,0.932,0.931,0.943,0.967,0.971,0.933,0.917,0.934,0.933,0.915,0.916,0.935,0.932,0.919,0.931,0.935,0.915,0.916,0.934,0.94,0.918,0.922,0.952,0.963,0.948,0.937,0.937,0.935,0.921,0.925,0.953,0.946,0.925,0.936,0.961,0.928,0.934,0.942,0.95,0.927,0.927,0.948,0.697,0.585,0.59,0.569,0.531,0.502,0.391,0.496,0.43,0.385,0.367,0.528,0.466,0.436,0.441,0.494,0.472,0.456,0.464,0.49,0.509,0.516,0.557,0.541,0.487,0.487,0.487,0.537,0.551,0.617,0.618,0.583,0.547,0.549,0.588,0.513,0.532,0.481,0.527,0.462,0.561,0.457,0.469,0.442,0.57,0.534,0.434,0.408,0.566,0.535,0.444,0.498,0.596,0.413,0.433,0.558,0.592,0.584,0.61,0.721,0.763,0.947,0.954,0.968,0.966,0.96,0.948,0.959,0.957,0.954,0.943,0.953,0.967,0.944,0.946,0.953,0.966,0.953,0.956,0.963,0.959,0.965,0.985,0.993,0.985,0.957,0.959,0.963,0.973,0.969,0.966,0.976,0.975,0.973,0.981,0.971,0.951,0.964,0.971,0.978,0.971,0.981,0.987,0.994,0.983,0.973,0.971,0.951,0.946,0.945,0.963,0.953,0.945,0.942,0.972,0.937,0.951,0.957,0.956,0.952,0.957,0.989,0.972,0.979,0.981,0.962,0.963,0.953,0.963,0.96,0.963,0.954,0.968,0.96,0.955,0.958,0.969,0.976,0.954,0.957,0.958,0.959,0.964,0.988,0.983,0.979,0.949,0.948,0.958,0.969,0.959,0.948,0.969,0.957,0.959,0.974,0.956,0.945,0.949,0.963,0.964,0.951,0.963,0.985,0.983,0.963,0.951,0.952,0.948,0.941,0.94,0.949,0.948,0.934,0.933,0.96,0.935,0.939,0.946,0.945,0.937,0.94,0.937,0.859,0.841,0.809,0.76,0.724,0.696,0.682,0.648,0.617,0.592,0.565,0.517,0.513,0.502,0.474,0.455,0.428,0.434,0.473,0.493,0.6,0.553,0.484,0.405,0.346,0.335,0.325,0.398,0.455,0.529,0.574,0.509,0.525,0.525,0.595,0.549,0.41,0.435,0.365,0.401,0.399,0.437,0.405,0.407,0.423,0.374,0.342,0.237,0.251,0.253,0.183,0.16,0.204,0.213,0.208,0.206,0.139,0.256,0.186,0.114,0.189,0.321,0.189,0.163,0.259,0.151,0.254,0.167,0.188,0.231,0.212,0.354,0.429,0.321,0.284,0.317,0.553,0.466,0.391,0.393,0.532,0.433,0.43,0.381,0.335,0.36,0.398,0.523,0.488,0.496,0.453,0.479,0.38,0.398,0.44,0.387,0.437,0.435,0.44,0.426,0.453,0.419,0.515,0.487,0.407,0.408,0.483,0.443,0.39,0.457,0.47,0.478,0.504,0.487,0.487,0.465,0.574,0.561,0.615,0.544,0.541,0.588,0.626,0.538,0.502,0.462,0.486,0.483,0.489,0.513,0.5,0.502,0.525,0.605,0.559,0.523,0.452,0.517,0.418,0.437,0.507,0.543,0.507,0.576,0.543,0.483,0.491,0.545,0.604,0.538,0.576,0.665,0.693,0.564,0.594,0.653,0.637,0.593,0.624,0.649,0.666,0.632,0.629,0.677,0.656,0.609,0.604,0.674,0.608,0.576,0.638,0.643,0.598,0.55,0.584,0.596,0.565,0.537,0.566,0.581,0.507,0.524,0.558,0.543,0.493,0.585,0.566,0.501,0.439,0.541,0.556,0.453,0.469,0.538,0.513,0.437,0.523,0.56,0.5,0.441,0.523,0.535,0.536,0.498,0.549,0.531,0.495,0.574,0.653,0.596,0.66,0.735,0.769,0.896,0.908,0.922,0.946,0.945,0.926,0.926,0.944,0.953,0.954,0.965,0.971,0.959,0.929,0.919,0.943,0.945,0.945,0.936,0.961,0.937,0.928,0.932,0.96,0.938,0.929,0.949,0.96,0.946,0.95,0.982,0.975,0.954,0.935,0.939,0.948,0.927,0.943,0.944,0.953,0.937,0.954,0.956,0.951,0.936,0.953,0.946,0.938,0.943,0.96,0.966,0.963,0.957,0.96,0.954,0.932,0.929,0.955,0.965,0.95,0.949,0.97,0.948,0.939,0.958,0.962,0.944,0.941,0.956,0.974,0.975,0.963,0.975,0.966,0.952,0.935,0.953,0.961,0.955,0.943,0.969,0.948,0.951,0.943,0.964,0.963,0.942,0.948,0.964,0.962,0.957,0.995,0.985,0.956,0.954,0.972,0.981,0.953,0.953,0.95,0.96,0.943,0.971,0.97,0.956,0.945,0.974,0.947,0.954,0.96,0.98,0.993,0.965,0.957,0.979,0.981,0.946,0.944,0.972,0.977,0.964,0.95,0.98,0.963,0.952,0.97,0.98,0.957,0.949,0.965,0.982,0.99,0.974,1,0.974,0.951,0.952,0.964,0.975,0.969,0.95,0.993,0.951,0.939,0.948,0.977,0.954,0.948,0.958,0.979,0.988,0.977,0.947,0.817,0.788,0.782,0.743,0.736,0.715,0.699,0.706,0.706,0.692,0.689,0.67,0.655,0.65,0.664,0.473,0.435,0.396,0.629,0.678,0.644,0.648,0.583,0.509,0.397,0.349,0.449,0.675,0.682,0.696,0.648,0.534,0.558,0.428,0.231,0.134,0.066,0.047,0.002,0,0.003,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] };
-  const songC = document.getElementById("songLine"), songX = songC.getContext("2d"), songT = document.getElementById("songTime");
-  io.observe(songC);
-  const songPts = SONG.pts.map((v, i, a) => { let s = 0, n = 0; for (let k = -2; k <= 2; k++) if (a[i + k] !== undefined) { s += a[i + k]; n++; } return s / n; });
-  const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-  let songShown = -1;
-  function drawSong(t) {
-    const pos = 63 + (tourClock && !tourClock.paused ? tourClock.currentTime : t % 8);
-    if (!fit(songC) && Math.abs(pos - songShown) < .04) return;
-    songShown = pos;
-    const W = songC.width, H = songC.height, d = W / songC.clientWidth || 1, n = songPts.length, fg = css("--fg");
-    const px = i => i / (n - 1) * W, py = v => H - 3 * d - v * (H - 10 * d);
-    const cut = pos / SONG.dur * (n - 1), c = Math.floor(cut);
-    const trace = (from, to, style, w) => {
-      songX.beginPath();
-      for (let i = from; i <= to; i++) i === from ? songX.moveTo(px(i), py(songPts[i])) : songX.lineTo(px(i), py(songPts[i]));
-      songX.strokeStyle = style; songX.lineWidth = w * d; songX.lineJoin = "round"; songX.stroke();
-    };
-    songX.clearRect(0, 0, W, H);
-    trace(c, n - 1, "rgba(238,234,226,.34)", 1);
-    trace(0, Math.min(n - 1, c + 1), fg, 1.5);
-    const x = px(cut), y = py(songPts[c] + ((songPts[c + 1] ?? songPts[c]) - songPts[c]) * (cut - c));
-    songX.fillStyle = fg; songX.fillRect(Math.round(x), 0, d, H);
-    songX.beginPath(); songX.arc(x, y, 3.5 * d, 0, Math.PI * 2); songX.fill();
-    songT.textContent = `${mmss(pos)} / ${mmss(SONG.dur)}`;
   }
 
   /* ---------- moving clips: muted loops that play only while on screen ---------- */
@@ -1768,7 +1726,6 @@ footer .credits a { text-decoration: underline; }
   drawBars(102);
   function frame(now) {
     const t = (now - t0) / 1000, dt = Math.min(.1, (now - (last || now)) / 1000); last = now;
-    if (visible.get(songC) !== false) drawSong(t);
     if (visible.get(eqc) !== false) drawEq(t);
     if (!anPaused) {
       anT += dt;
@@ -1779,10 +1736,10 @@ footer .credits a { text-decoration: underline; }
     }
     if (!reduce) requestAnimationFrame(frame);
   }
-  if (reduce) { drawSong(102); drawEq(102); }
+  if (reduce) { drawEq(102); }
   else requestAnimationFrame(frame);
   addEventListener("resize", () => {
-    if (reduce) { drawSong(102); drawEq(102); prefillAn(anT); drawScope(anT); drawBars(anT); }
+    if (reduce) { drawEq(102); prefillAn(anT); drawScope(anT); drawBars(anT); }
     else prefillAn(anT);
   });
 })();
