@@ -106,23 +106,35 @@ kbd {
 
 /* ---------- hero ---------- */
 .hero { position: relative; isolation: isolate; overflow: hidden; }
-/* A Lucent original, frameless: its black is the page's black, and its left edge fades under the headline. */
+/* A Lucent original, frameless: its black is the page's black, it runs to the window's right edge,
+   and it sits centred on the headline and copy, its left edge fading under the text. */
+.hero-top { display: grid; grid-template-columns: minmax(0, 620px) minmax(0, 1fr); align-items: center; }
+.hero-top > .hero-copy { grid-area: 1 / 1; position: relative; z-index: 1; }
 .hero-art {
-  position: absolute; z-index: -1; top: 0; right: 0; width: min(66%, 1180px); aspect-ratio: 16 / 9;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%), linear-gradient(180deg, #000 72%, transparent);
+  grid-area: 1 / 1 / 2 / 3; justify-self: end; width: min(66vw, 1180px); aspect-ratio: 16 / 9; margin-right: calc(50% - 50vw);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%), linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
   -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(90deg, transparent, #000 40%), linear-gradient(180deg, #000 72%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 40%), linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
   mask-composite: intersect;
 }
 .hero-art video, .hero-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hero .wrap { padding-block: clamp(80px, 11vw, 168px) 0; display: grid; gap: 30px; }
+.hero .wrap { padding-block: clamp(40px, 5vw, 80px) 0; display: grid; gap: 30px; }
 .hero h1 { max-width: 6.4em; }
 .hero-copy { display: grid; gap: 30px; max-width: 620px; }
 .hero-copy .lede { max-width: 40ch; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .fine { font: 400 14px/1.5 var(--font); color: var(--muted); }
+/* On narrower screens the clip sits further under the copy, so its left half fades out sooner. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .hero-art {
+    -webkit-mask-image: linear-gradient(90deg, transparent 25%, #000 75%), linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
+    mask-image: linear-gradient(90deg, transparent 25%, #000 75%), linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
+  }
+}
 @media (max-width: 760px) {
-  .hero-art { position: relative; width: 100%; -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent); mask-image: linear-gradient(180deg, #000 70%, transparent); }
+  .hero-top { grid-template-columns: minmax(0, 1fr); }
+  .hero-top > .hero-copy { grid-area: 2 / 1; }
+  .hero-art { grid-area: 1 / 1; justify-self: stretch; width: auto; margin-inline: calc(50% - 50vw); -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent); mask-image: linear-gradient(180deg, #000 70%, transparent); }
   .hero .wrap { padding-top: 4px; }
 }
 /* The song line: Self Actualize's loudness from start to finish, with a playhead that follows the tour below. */
@@ -586,8 +598,9 @@ footer .credits a { text-decoration: underline; }
 
 <main id="top">
   <section class="hero" aria-labelledby="hero-title">
-    <div class="hero-art" id="heroArt" aria-hidden="true"><video muted loop playsinline preload="auto" poster="img/hero/polyhedra-waltz.jpg"><source src="img/hero/polyhedra-waltz.mp4" type="video/mp4"><source src="img/hero/polyhedra-waltz.webm" type="video/webm"></video></div>
     <div class="wrap">
+      <div class="hero-top">
+      <div class="hero-art" id="heroArt" aria-hidden="true"><video muted loop playsinline preload="auto" poster="img/hero/polyhedra-waltz.jpg"><source src="img/hero/polyhedra-waltz.mp4" type="video/mp4"><source src="img/hero/polyhedra-waltz.webm" type="video/webm"></video></div>
       <div class="hero-copy">
         <h1 id="hero-title">See what you’re hearing.</h1>
         <p class="lede">Lucent is a free music and video player for Windows and Mac. Built for audio nerds, made for everyone. It plays your library, streaming apps, and internet radio, with a video and audio editor, studio analyzer, and 32-band EQ built in. Every song comes alive with 448 visuals drawn live on your graphics card.</p>
@@ -602,6 +615,7 @@ footer .credits a { text-decoration: underline; }
           </a>
         </div>
         <p class="fine">Windows 10 and 11 · macOS 12 or later · Updates itself</p>
+      </div>
       </div>
       <div class="song">
         <canvas id="songLine" aria-label="The loudness of Kepler North's Self Actualize from start to finish, drawn as one line, with the playhead at the part playing in the tour below"></canvas>
