@@ -118,7 +118,7 @@ public partial class MainWindow
 
         _settings.PlayerScale = scale;
         _scaleAtResizeEnd = scale;
-        Dispatcher.UIThread.Post(KeepPlayerWidth, DispatcherPriority.Background);
+        KeepPlayerWidthSoon();
     }
 
     /// <summary>
@@ -138,25 +138,56 @@ public partial class MainWindow
     }
 
     /// <summary>Once the windows have settled, makes sure the player's window is as wide as its scale says.</summary>
+    private void KeepPlayerWidthSoon() => Dispatcher.UIThread.Post(KeepPlayerWidth, DispatcherPriority.Background);
+
+    /// <summary>
+    /// Makes the player's window as wide as its scale says, with its height following what's in it, and fits
+    /// the equalizer docked under it to that width. Only the player's own edges, dragged by hand, change its
+    /// scale; anything else that changes its width (a layout putting windows back, a limit squeezing it) is
+    /// undone here, so the window can't be left stretched round a player at its usual size.
+    /// </summary>
     private void KeepPlayerWidth()
     {
-        if (IsClassic || InSingleWindow || WindowState != WindowState.Normal || Bounds.Width <= 0)
+        if (IsClassic || InSingleWindow || WindowState != WindowState.Normal || Bounds.Width <= 0 || _snapper.IsBusy || AppKit.IsMouseDown)
         {
             return;
         }
 
         var width = PlayerWidth * PlayerScale;
-        if (Math.Abs(Bounds.Width - width) > 1)
+        if (Math.Abs(Bounds.Width - width) <= 1 && SizeToContent == SizeToContent.Height)
         {
-            _applyingPlayerSize = true;
-            try
-            {
-                SetPlayerWidth(width);
-            }
-            finally
-            {
-                _applyingPlayerSize = false;
-            }
+            return;
+        }
+
+        _applyingPlayerSize = true;
+        try
+        {
+            SetPlayerWidth(width);
+            SizeToContent = SizeToContent.Height;
+        }
+        finally
+        {
+            _applyingPlayerSize = false;
+        }
+
+        Dispatcher.UIThread.Post(FitDockedEqualizer, DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// The equalizer, docked under the player, lays itself out to the player's width, as it does when it first
+    /// opens, rather than leaving a gap beside it or hanging past it.
+    /// </summary>
+    private void FitDockedEqualizer()
+    {
+        if (IsClassic || InSingleWindow || WindowState != WindowState.Normal || ActualWidth <= 0)
+        {
+            return;
+        }
+
+        if (ColumnUnderPlayer(Top + ActualHeight).FirstOrDefault(window => window is EqualizerWindow) is EqualizerWindow equalizer
+            && Math.Abs(equalizer.Left() - Left) < 2)
+        {
+            equalizer.FitTo(ActualWidth);
         }
     }
 
@@ -175,12 +206,21 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Scales the player to fill its new width, and remembers how big it is.</summary>
+    /// <summary>
+    /// Scales the player to fill its new width when one of its edges is being dragged, and remembers how big it
+    /// is. Any other change to its width is put back to what its scale says.
+    /// </summary>
     private void OnPlayerWidthChanged(object? sender, SizeChangedEventArgs e)
     {
-        if (!e.WidthChanged || Bounds.Width <= 0 || IsClassic || WindowState != WindowState.Normal || !CanResize || InSingleWindow
-            || _applyingPlayerSize || _sizeFromSingleWindow)
+        if (!e.WidthChanged || Bounds.Width <= 0 || IsClassic || WindowState != WindowState.Normal || InSingleWindow
+            || _applyingPlayerSize)
         {
+            return;
+        }
+
+        if (!CanResize || _sizeFromSingleWindow || !_snapper.IsResizing(this) && !AppKit.IsMouseDown)
+        {
+            KeepPlayerWidthSoon();
             return;
         }
 
@@ -225,20 +265,9 @@ public partial class MainWindow
         }
 
         Dispatcher.UIThread.Post(TipNormalSize, DispatcherPriority.Background);
-        if (SizeToContent == SizeToContent.Height)
-        {
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!IsClassic && !InSingleWindow && WindowState == WindowState.Normal)
-            {
-                // The width it was dragged to, first: going back to following its content sizes the window
-                // from its Width, which a drag doesn't change, so the player sprang back to its old size.
-                SetPlayerWidth(PlayerWidth * PlayerScale);
-                SizeToContent = SizeToContent.Height;
-            }
-        }, DispatcherPriority.Background);
+        // The width it was dragged to, with its height following what's in it again (resizing by hand stops
+        // that), and the equalizer under it fitted to it, so there's no gap beside it.
+        KeepPlayerWidthSoon();
+        Dispatcher.UIThread.Post(FitDockedEqualizer, DispatcherPriority.Background);
     }
 }

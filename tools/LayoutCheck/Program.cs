@@ -799,4 +799,31 @@ void CheckSavedLayouts()
     {
         problems.Add("Saved layouts: moving a layout onto a screen changed the saved layout itself.");
     }
+
+    // Kept while the player was stretched to 1300 wide; it's back to 520: the visuals close up beside it, the queue under it narrows.
+    var kept = new Dictionary<string, Lucent.Settings.WindowBounds>
+    {
+        ["Player"] = At(100, 100, 1300, 160), ["Queue"] = At(100, 260, 1300, 300), ["Visuals"] = At(1400, 100, 860, 460), ["Library"] = At(0, 0, 100, 560),
+    };
+    var fitted = SavedLayouts.FittedToPlayer(kept, 520);
+    if (fitted["Visuals"].Left != 620 || fitted["Queue"].Width != 520 || fitted["Library"].Left != 0 || fitted["Player"].Width != 520 || kept["Visuals"].Left != 1400)
+    {
+        problems.Add("Full screen: going back should close the windows up round the player at its width now, without changing what was kept.");
+    }
+
+    // A layout saved with the player on the right-hand screen opens on the screen the player is on now.
+    var leftScreen = new TileRect(0, 25, 1440, 805);
+    var rightScreen = new TileRect(1440, 0, 2560, 1415);
+    if (SavedLayouts.PlayerOn(places, leftScreen) || !SavedLayouts.PlayerOn(places, rightScreen))
+    {
+        problems.Add("Saved layouts: a layout's player should count as on the screen its middle is on, and only that one.");
+    }
+
+    var onLeft = SavedLayouts.MovedOnto(places, leftScreen);
+    var single = SavedLayouts.MovedLike(new Lucent.Settings.WindowBounds { Left = 2100, Top = 90, Width = 900, Height = 600 }, places, onLeft);
+    if (single is null || Math.Abs(single.Left - (2100 + onLeft["Player"].Left - places["Player"].Left)) > 0.01
+        || Math.Abs(single.Top - (90 + onLeft["Player"].Top - places["Player"].Top)) > 0.01 || single.Width != 900)
+    {
+        problems.Add("Saved layouts: the single window's place should move with the layout's player onto the other screen.");
+    }
 }
