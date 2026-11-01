@@ -31,6 +31,8 @@ public partial class MainWindow
         LucentFullScreen.Toggle = ToggleLucentFullScreen;
         LucentFullScreen.Tidy = TidyLayout;
         LucentFullScreen.Reset = ResetLayout;
+        LucentFullScreen.PlayerEnlarged = () => PlayerIsEnlarged;
+        LucentFullScreen.NormalPlayerSize = NormalPlayerSize;
         LucentFullScreen.Covers = window => TileKindOf(window) is not null;
         _snapper.Swapped += RememberSwap;
         if (WindowToggles.ContextMenu is { } menu)

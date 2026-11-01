@@ -2222,6 +2222,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Ctrl+0, as in a browser: the player back to its usual size.
+        if (e.Key is Key.D0 or Key.NumPad0 && Keyboard.Modifiers == ModifierKeys.Control && PlayerIsEnlarged)
+        {
+            NormalPlayerSize();
+            e.Handled = true;
+            return;
+        }
+
         // Media keys work everywhere, even while typing.
         if (MediaCommandFor(e.Key) is { } media)
         {

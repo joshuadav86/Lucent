@@ -1370,14 +1370,16 @@ public sealed class WindowSnapper
         }
 
         // An edge pulled a little way into a window it started outside of stops at that window's edge. A locked
-        // window stops it however far it's pulled, and says it's locked once the mouse pushes on past.
+        // window stops it however far it's pulled, and says it's locked once the mouse pushes on past. So does
+        // the player, which only its own edges resize: another window's edge never slides over it.
         const int flush = 2;
         var resist = (int)Math.Round(OverlapDistance * Scale(hwnd));
         var nudge = (int)Math.Round(LockedNudge * Scale(hwnd));
+        var player = Handle(_main);
         foreach (var (handle, other) in OtherWindows(hwnd))
         {
             var locked = IsLocked(handle);
-            var limit = locked ? int.MaxValue : resist;
+            var limit = locked || handle == player ? int.MaxValue : resist;
             var besideY = rect.Top < other.Bottom - flush && other.Top < rect.Bottom - flush;
             var besideX = rect.Left < other.Right - flush && other.Left < rect.Right - flush;
             var pushed = 0;

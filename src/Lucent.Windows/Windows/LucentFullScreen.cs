@@ -25,6 +25,8 @@ public static class LucentFullScreen
 
     private static readonly object LayoutsMarker = new();
 
+    private static readonly object NormalSizeMarker = new();
+
     /// <summary>Menus that tick the item as they open (a menu built again each time it opens gets the item again, but this only once).</summary>
     private static readonly ConditionalWeakTable<ContextMenu, object> Ticking = new();
 
@@ -39,6 +41,12 @@ public static class LucentFullScreen
 
     /// <summary>Reset to default layout: the windows as Lucent first opens them.</summary>
     public static Action? Reset { get; set; }
+
+    /// <summary>Whether the player's been made bigger than its usual size (by dragging one of its edges).</summary>
+    public static Func<bool>? PlayerEnlarged { get; set; }
+
+    /// <summary>Puts the player back to its usual size.</summary>
+    public static Action? NormalPlayerSize { get; set; }
 
     /// <summary>Whether a window is one that Lucent full screen lays out, whose title bar gets the menu.</summary>
     public static Func<Window, bool>? Covers { get; set; }
@@ -67,6 +75,14 @@ public static class LucentFullScreen
         var layouts = SavedLayoutsMenu.Item(window);
         layouts.Tag = LayoutsMarker;
         menu.Items.Add(layouts);
+        // Only while the player's bigger than usual, so the way back is there when it's needed.
+        var normalSize = new MenuItem
+        {
+            Header = "Normal player size", InputGestureText = "Ctrl+0", Tag = NormalSizeMarker, ToolTip = MenuTips.NormalPlayerSize,
+            Visibility = PlayerEnlarged?.Invoke() == true ? Visibility.Visible : Visibility.Collapsed,
+        };
+        normalSize.Click += (_, _) => NormalPlayerSize?.Invoke();
+        menu.Items.Add(normalSize);
         var reset = new MenuItem { Header = "Reset to default layout", ToolTip = MenuTips.ResetLayout };
         reset.Click += (_, _) => Reset?.Invoke();
         menu.Items.Add(reset);
@@ -82,6 +98,11 @@ public static class LucentFullScreen
                 }
 
                 SingleWindow.Tick(menu.Items);
+
+                foreach (var shown in menu.Items.OfType<MenuItem>().Where(entry => entry.Tag == NormalSizeMarker))
+                {
+                    shown.Visibility = PlayerEnlarged?.Invoke() == true ? Visibility.Visible : Visibility.Collapsed;
+                }
 
                 // Layouts saved, renamed or deleted since it last opened.
                 foreach (var shown in menu.Items.OfType<MenuItem>().Where(entry => entry.Tag == LayoutsMarker))

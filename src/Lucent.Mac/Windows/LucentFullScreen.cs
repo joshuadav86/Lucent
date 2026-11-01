@@ -24,6 +24,8 @@ public static class LucentFullScreen
 
     private static readonly object LayoutsMarker = new();
 
+    private static readonly object NormalSizeMarker = new();
+
     /// <summary>Menus that tick the item as they open (a menu built again each time it opens gets the item again, but this only once).</summary>
     private static readonly ConditionalWeakTable<ContextMenu, object> Ticking = new();
 
@@ -38,6 +40,12 @@ public static class LucentFullScreen
 
     /// <summary>Reset to default layout: the windows as Lucent first opens them.</summary>
     public static Action? Reset { get; set; }
+
+    /// <summary>Whether the player's been made bigger than its usual size (by dragging one of its edges).</summary>
+    public static Func<bool>? PlayerEnlarged { get; set; }
+
+    /// <summary>Puts the player back to its usual size.</summary>
+    public static Action? NormalPlayerSize { get; set; }
 
     /// <summary>Whether a window is one that Lucent full screen lays out, whose title bar gets the menu.</summary>
     public static Func<Window, bool>? Covers { get; set; }
@@ -68,6 +76,7 @@ public static class LucentFullScreen
         var layouts = SavedLayoutsMenu.Item(window);
         layouts.Tag = LayoutsMarker;
         menu.Items.Add(layouts);
+        menu.Items.Add(NormalSizeItem());
         menu.Items.Add(ResetItem());
         menu.Items.Add(CloseItem.For(window));
         if (!Ticking.TryGetValue(menu, out _))
@@ -81,6 +90,11 @@ public static class LucentFullScreen
                 }
 
                 SingleWindow.Tick(menu.Items);
+
+                foreach (var shown in menu.Items.OfType<MenuItem>().Where(entry => entry.Tag == NormalSizeMarker))
+                {
+                    shown.IsVisible = PlayerEnlarged?.Invoke() == true;
+                }
 
                 // Layouts saved, renamed or deleted since it last opened.
                 foreach (var shown in menu.Items.OfType<MenuItem>().Where(entry => entry.Tag == LayoutsMarker))
@@ -120,6 +134,22 @@ public static class LucentFullScreen
         ToolTip.SetTip(tidy, MenuTips.Tidy);
         tidy.Click += (_, _) => Tidy?.Invoke();
         return tidy;
+    }
+
+    /// <summary>
+    /// "Normal player size", which puts the player back to its usual size. It's only there while the player's
+    /// bigger than usual, so the way back is there when it's needed.
+    /// </summary>
+    private static MenuItem NormalSizeItem()
+    {
+        var normalSize = new MenuItem
+        {
+            Header = "Normal player size", InputGesture = new KeyGesture(Key.D0, KeyModifiers.Meta), Tag = NormalSizeMarker,
+            IsVisible = PlayerEnlarged?.Invoke() == true,
+        };
+        ToolTip.SetTip(normalSize, MenuTips.NormalPlayerSize);
+        normalSize.Click += (_, _) => NormalPlayerSize?.Invoke();
+        return normalSize;
     }
 
     /// <summary>"Reset to default layout", which puts the windows back as Lucent first opens them.</summary>

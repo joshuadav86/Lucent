@@ -63,4 +63,7 @@ public static class MenuTips
     public const string Layouts = "Save the way your windows are arranged, and switch back to it later.";
 
     public const string ResetLayout = "Put the windows back where Lucent first opens them.";
+
+    /// <summary>Normal player size.</summary>
+    public const string NormalPlayerSize = "Shrink the player back to its usual size. Dragging any edge of the player makes it bigger.";
 }
