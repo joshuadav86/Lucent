@@ -20,6 +20,7 @@ public static class SingleWindow
     public const string GestureText = "U";
 
     private const int WM_WINDOWPOSCHANGING = 0x0046;
+    private const int WM_WINDOWPOSCHANGED = 0x0047;
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint SWP_SHOWWINDOW = 0x0040;
     private const int SW_HIDE = 0;
@@ -89,6 +90,20 @@ public static class SingleWindow
                         position.Flags = (position.Flags & ~SWP_SHOWWINDOW) | SWP_NOACTIVATE;
                         Marshal.StructureToPtr(position, lParam, false);
                     }
+                }
+                else if (msg == WM_WINDOWPOSCHANGED && lParam != IntPtr.Zero && Holds(window)
+                         && (Marshal.PtrToStructure<WindowPos>(lParam).Flags & SWP_SHOWWINDOW) != 0)
+                {
+                    // Shown anyway while its insides are in a panel (a way of showing that skips the check
+                    // above): an empty window over the single window, which once hid the radio's panel. It's
+                    // put away again as soon as the showing's done.
+                    window.Dispatcher.InvokeAsync(() =>
+                    {
+                        if (Holds(window))
+                        {
+                            PutAway(window);
+                        }
+                    });
                 }
 
                 return IntPtr.Zero;
