@@ -67,6 +67,8 @@
   <ItemGroup>
     <Resource Include="Assets\Lucent.ico" />
     <Resource Include="Assets\Lucent-64.png" />
+    <!-- Jost, the Linework skin's type (SIL Open Font License, assets/licenses/LICENSE-Jost.txt). -->
+    <Resource Include="..\..\assets\fonts\Jost\*.ttf" Link="Assets\Fonts\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -90,6 +92,9 @@
     <None Include="..\..\assets\licenses\LICENSE-WavPack.txt" Link="Licenses\LICENSE-WavPack.txt"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <None Include="..\..\assets\licenses\LICENSE-MonkeysAudio.txt" Link="Licenses\LICENSE-MonkeysAudio.txt"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <!-- Jost, the Linework skin's type (SIL Open Font License). -->
+    <None Include="..\..\assets\licenses\LICENSE-Jost.txt" Link="Licenses\LICENSE-Jost.txt"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 

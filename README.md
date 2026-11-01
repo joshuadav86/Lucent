@@ -6,7 +6,7 @@
 </p>
 
 <p align="center"><b>See what you're hearing.</b><br>
-A free, open-source music and video player for Windows and Mac, with 449 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ. Made for everyone, deep enough for audio nerds.</p>
+A free, open-source music and video player for Windows and Mac, with 450 live GPU visuals, a video and audio editor, a studio analyzer, and a 32-band EQ. Made for everyone, deep enough for audio nerds.</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-EEEAE2?style=flat-square&labelColor=000000" alt="License: MIT"></a>
@@ -21,14 +21,14 @@ A free, open-source music and video player for Windows and Mac, with 449 live GP
 
 ## What's inside
 
-- **449 visuals**, drawn live on your graphics card: 201 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio.
+- **450 visuals**, drawn live on your graphics card: 202 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio.
 - **Windows that work together.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
 - **Video player.** MP4, MOV, MKV, WebM, and more play in a window of their own, with the sound through the EQ and visuals.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
 - **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
 - **A real library.** Show any tag as a column, sort by it, find duplicates, and scrobble to Last.fm. Your queue is still there next time.
 - **Studio equalizer.** 4 to 32 faders over the live spectrum, with 15 presets.
-- **Skins and themes.** Five skins, eight themes, and Lucent Classic, a pixel skin in the spirit of classic desktop players. Any .wsz skin works too.
+- **Skins and themes.** Six skins, nine themes, and Lucent Classic, a pixel skin in the spirit of classic desktop players. Any .wsz skin works too.
 - **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.
 - **Your streaming apps, too.** Spotify, Apple Music, TIDAL, Pandora, SoundCloud, and YouTube play with Lucent's visuals and controls.
 - **Sounds right.** Gapless, crossfades, bit-perfect exclusive mode, and 15 formats from MP3 and FLAC to WavPack and APE.
@@ -36,7 +36,7 @@ A free, open-source music and video player for Windows and Mac, with 449 live GP
 <table>
 <tr>
 <td width="33%"><img src="site/img/black-hole.jpg" alt="Black Hole"><br><sub><b>Black Hole</b></sub></td>
-<td width="33%"><img src="site/img/diamond-fire.jpg" alt="Diamond Fire"><br><sub><b>Diamond Fire</b></sub></td>
+<td width="33%"><img src="site/img/riemann-sphere.jpg" alt="Riemann Sphere"><br><sub><b>Riemann Sphere</b></sub></td>
 <td width="33%"><img src="site/img/galaxy-collision.jpg" alt="Galaxy Collision"><br><sub><b>Galaxy Collision</b></sub></td>
 </tr>
 <tr>

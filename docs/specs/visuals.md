@@ -2,7 +2,7 @@
 
 ## What it does
 
-- **449 visuals**, drawn live on the GPU: 201 Lucent originals (HLSL), 214 MilkDrop presets, and 34 AVS presets (Nullsoft's stock set, credited in `content/Presets/AVS/CREDITS.md`). Switches for each group (Lucent originals, MilkDrop, AVS) hide them from the picker and Auto.
+- **450 visuals**, drawn live on the GPU: 202 Lucent originals (HLSL), 214 MilkDrop presets, and 34 AVS presets (Nullsoft's stock set, credited in `content/Presets/AVS/CREDITS.md`). Switches for each group (Lucent originals, MilkDrop, AVS) hide them from the picker and Auto.
 - **Lucent originals:** one `.hlsl` file each in the shared `Presets` folder, with `// Name:`, `// Family:`, and `// Tags:` headers. Families: Cosmic, Cyberpunk, Fly-through, Fractal, Geometric, Kaleidoscope, Minimal, Music-shaped, Organic, Particles, Ray traced. Users can drop their own `.hlsl`, `.milk`, and `.avs` files in the `Presets` folder next to the app.
 - **MilkDrop:** `.milk` presets run by Lucent's own engine, at most 60 steps a second. "Modern" look (default on) brings them into Lucent's lighting.
 - **AVS:** a C# port of AVS 2.81d plus common APEs, drawn on the CPU and shown through a shader. Modern or classic look.

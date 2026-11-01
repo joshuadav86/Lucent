@@ -331,19 +331,21 @@ float3 Render(float2 uv, float2 p)
         float3 tint = hsv2rgb(hue, 0.85, 1.0);
         float3 tint2 = hsv2rgb(hue + 0.09, 0.75, 1.0);
 
-        // The mark: a lens with a wave through its middle, the wave following the song's waveform.
+        // The mark: the Lucent logo's slim lens (a vesica, two equal circles each through the other's centre) with a
+        // wave through its middle that leaves each tip level, the wave following the song's waveform.
         const float markWidth = 0.2;
-        const float lens = 0.1475;
+        const float lens = markWidth / sqrt(3.0);
         float2 m = q - float2(0.0, -0.065);
+        m.y /= 1.0 + 0.08 * Bass;
         float t = saturate((m.x + markWidth) / (2.0 * markWidth));
-        float swell = lens * (1.0 + 0.08 * Bass);
+        float dUpper = arcDistance(m, float2(0.0, lens), 2.0 * lens, -0.5 * PI, PI / 3.0);
+        float dLower = arcDistance(m, float2(0.0, -lens), 2.0 * lens, 0.5 * PI, PI / 3.0);
         float arc = sin(PI * t);
-        float arcSlope = swell * PI / (2.0 * markWidth) * cos(PI * t);
-        float dUpper = curveDistance(m, -swell * arc, -arcSlope, markWidth);
-        float dLower = curveDistance(m, swell * arc, arcSlope, markWidth);
-        float amp = 0.069 * (0.85 + 0.4 * Mid);
-        float waveY = -amp * sin(2.0 * PI * t) + 0.025 * waveform(t) * arc;
-        float waveSlope = -amp * 2.0 * PI / (2.0 * markWidth) * cos(2.0 * PI * t);
+        float ease = pow(max(arc, 1e-4), 0.6) / 0.84113;
+        float amp = 0.43 * lens * (0.85 + 0.4 * Mid);
+        float waveY = -amp * sin(2.0 * PI * t) * ease + 0.025 * waveform(t) * arc;
+        float waveSlope = -amp * PI / (2.0 * markWidth) / 0.84113
+            * (2.0 * cos(2.0 * PI * t) * pow(max(arc, 1e-4), 0.6) + 0.6 * sin(2.0 * PI * t) * cos(PI * t) * pow(max(arc, 1e-4), -0.4));
         float dWave = curveDistance(m, waveY, waveSlope, markWidth);
 
         float3 markColour = lerp(tint, tint2, t);
