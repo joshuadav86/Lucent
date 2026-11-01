@@ -23,6 +23,12 @@ public partial class MainWindow
     /// <summary>The player's scale when a resize last ended, so the tip shows only when a drag changed it.</summary>
     private double _scaleAtResizeEnd = double.NaN;
 
+    /// <summary>
+    /// True while <see cref="ApplyPlayerSize"/> sets the player's limits and width, so the sizes the window
+    /// passes through on the way (squeezed to its new largest width, say) aren't taken for a resize.
+    /// </summary>
+    private bool _applyingPlayerSize;
+
     /// <summary>The key that puts the player back to its usual size, as menus and the tip show it.</summary>
     internal const string NormalSizeGesture = "Ctrl+0";
 
@@ -91,13 +97,27 @@ public partial class MainWindow
             return;
         }
 
-        CaptionRepaint.SetResizeMode(this, ResizeMode.CanResize);
-        MinWidth = PlayerWidth;
-        MaxWidth = PlayerWidth * LargestPlayerScale;
-        SizeToContent = SizeToContent.Height;
-        Width = PlayerWidth * PlayerScale;
-        ScalePlayer(PlayerScale);
-        _scaleAtResizeEnd = PlayerScale;
+        // The scale is read before the limits change: a window wider than the player's largest size (the
+        // single window it just was, say) is squeezed to that size as they're set, which once read as the
+        // player being dragged to 2.5 times its size.
+        var scale = PlayerScale;
+        _applyingPlayerSize = true;
+        try
+        {
+            CaptionRepaint.SetResizeMode(this, ResizeMode.CanResize);
+            MinWidth = PlayerWidth;
+            MaxWidth = PlayerWidth * LargestPlayerScale;
+            SizeToContent = SizeToContent.Height;
+            Width = PlayerWidth * scale;
+            ScalePlayer(scale);
+        }
+        finally
+        {
+            _applyingPlayerSize = false;
+        }
+
+        _settings.PlayerScale = scale;
+        _scaleAtResizeEnd = scale;
     }
 
     /// <summary>
@@ -129,7 +149,7 @@ public partial class MainWindow
     {
         // A drag only moves the player; any width change then is rounding as it changes scale on another screen.
         if (!e.WidthChanged || ActualWidth <= 0 || IsClassic || WindowState != WindowState.Normal || ResizeMode != ResizeMode.CanResize
-            || _snapper.IsDragging || InSingleWindow)
+            || _snapper.IsDragging || InSingleWindow || _applyingPlayerSize || _sizeFromSingleWindow)
         {
             return;
         }
@@ -163,6 +183,9 @@ public partial class MainWindow
         {
             if (!IsClassic && !InSingleWindow && WindowState == WindowState.Normal)
             {
+                // The width it was dragged to, first: going back to following its content sizes the window
+                // from its Width, which a drag doesn't change, so the player sprang back to its old size.
+                Width = PlayerWidth * PlayerScale;
                 SizeToContent = SizeToContent.Height;
             }
         }, DispatcherPriority.Background);
