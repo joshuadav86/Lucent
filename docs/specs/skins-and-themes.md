@@ -2,7 +2,7 @@
 
 ## What it does
 
-- **Five skins** (shape and finish): Lucent, Retro, Glass, Neon, Studio.
+- **Five skins** (shape and finish): Lucent, Verdes (called Retro, and Classic before that; saved settings with either name still find it), Glass, Neon, Studio.
 - **Eight themes** (colours): Midnight, Deep Ocean, Glacier, Ultraviolet, Emerald, Ember, Graphite, Rosé. Each skin has a default theme; any theme works with any skin.
 - **Classic skins:** `.wsz` skins (the Winamp 2 format) draw the player, equalizer, and queue in skin pixels, optionally at double size. "Lucent Classic" is built in. Leave classic with right-click on the player > "Lucent's own player".
 - While classic, the EQ uses the format's 10 bands, Lucent's own buttons sit in a strip under the player, and song rows have no covers.
