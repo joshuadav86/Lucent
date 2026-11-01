@@ -27,6 +27,8 @@ public sealed class PlayingRowScroll
     private ScrollGlide _glideNow;
     private int _glideNumber;
     private bool _holdingCovers;
+    // The frame clock (Avalonia's time for the frame being drawn) when the glide set off, once its first frame has come.
+    private TimeSpan? _frameZero;
 
     public PlayingRowScroll(ListBox list)
     {
@@ -147,12 +149,13 @@ public sealed class PlayingRowScroll
         }
 
         _clock.Restart();
+        _frameZero = null;
         var number = _glideNumber;
-        topLevel.RequestAnimationFrame(_ => OnFrame(topLevel, number));
+        topLevel.RequestAnimationFrame(frame => OnFrame(topLevel, number, frame));
         return true;
     }
 
-    private void OnFrame(TopLevel topLevel, int number)
+    private void OnFrame(TopLevel topLevel, int number, TimeSpan frame)
     {
         // A newer glide, or the user, has taken over.
         if (number != _glideNumber || _scroller is not { } scroller)
@@ -160,10 +163,14 @@ public sealed class PlayingRowScroll
             return;
         }
 
-        scroller.Offset = new Vector(scroller.Offset.X, _glideNow.At(_clock.Elapsed));
-        if (!_glideNow.IsDone(_clock.Elapsed))
+        // Timed by the frame being drawn rather than by when this callback happens to run, so each frame moves the list
+        // by an even step at the screen's refresh rate (120 Hz on a ProMotion screen, say).
+        _frameZero ??= frame - _clock.Elapsed;
+        var elapsed = frame - _frameZero.Value;
+        scroller.Offset = new Vector(scroller.Offset.X, _glideNow.At(elapsed));
+        if (!_glideNow.IsDone(elapsed))
         {
-            topLevel.RequestAnimationFrame(_ => OnFrame(topLevel, number));
+            topLevel.RequestAnimationFrame(next => OnFrame(topLevel, number, next));
         }
         else
         {
