@@ -4,6 +4,7 @@
 
 - Velopack checks 20 s after start, then every 4 hours, downloads in the background, and installs when Lucent closes.
 - **Install updates automatically** (Options > Updates, default on). On: no title-bar UPDATE button, the update just installs when Lucent closes (a busy day of merges used to bring the button back after every build); Options > Updates still shows "ready", what's new and "Restart and install". Off: it downloads, shows the UPDATE button and "ready", and installs only on "Restart and install".
+- Windows: before handing over an install, Lucent closes File Explorer windows showing a folder inside its program folder (`ExplorerWindows.CloseInside`). One open there (Show shader on a built-in visual opens one in `current\Presets`) made every install fail with Access denied and reopen the old build. Mac doesn't need it: Finder doesn't stop the app bundle being replaced.
 - **Channels:** stable (default) or every build. Until the first stable release exists, everyone follows the "latest" build.
 - What's new lists every change to that platform between the installed build and the ready one, so it repeats older items only while an update waits uninstalled.
 - Settings persist between updates (`FreshStart.Generation` is 0). Raise it only if Joshua asks for a fresh start.
