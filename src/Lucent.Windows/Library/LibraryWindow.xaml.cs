@@ -10,6 +10,7 @@ using Microsoft.Win32;
 using Lucent.Audio;
 using Lucent.Library;
 using SavedPlaylists = Lucent.Playlist.SavedPlaylists;
+using SavedSong = Lucent.Playlist.SavedSong;
 using Track = Lucent.Playlist.Track;
 using Lucent.Settings;
 using Lucent.Streaming;
@@ -293,12 +294,13 @@ public partial class LibraryWindow : ToolWindow
             known[item.Path] = item;
         }
 
-        List<(string Name, List<(string Path, DateTime Added)> Files)> playlists;
+        List<(string Name, List<(SavedSong Song, DateTime Added)> Files)> playlists;
         try
         {
             playlists = await Task.Run(() => SavedPlaylists.Names()
                 .Select(name => (name, SavedPlaylists.Read(name)
-                    .Select(path => (path, known.TryGetValue(path, out var song) ? song.Added : AddedTime(path)))
+                    .Select(song => (song, known.TryGetValue(song.Path, out var item) ? item.Added
+                        : song.Streamed is null ? AddedTime(song.Path) : DateTime.MinValue))
                     .ToList()))
                 .ToList());
         }
@@ -324,10 +326,16 @@ public partial class LibraryWindow : ToolWindow
                 continue;
             }
 
-            foreach (var (path, added) in files)
+            foreach (var (saved, added) in files)
             {
-                var item = new LibraryItem(path, name, Path.GetDirectoryName(path) ?? string.Empty, added);
-                if (known.TryGetValue(path, out var song) && song.Track is { } track)
+                var path = saved.Path;
+                // A Spotify song comes with what the playlist says of it.
+                var item = new LibraryItem(path, name, saved.Streamed is null ? Path.GetDirectoryName(path) ?? string.Empty : string.Empty, added);
+                if (saved.Streamed is { } streamed)
+                {
+                    item.ApplyTags(streamed);
+                }
+                else if (known.TryGetValue(path, out var song) && song.Track is { } track)
                 {
                     item.ApplyTags(track);
                 }
@@ -1572,7 +1580,12 @@ public partial class LibraryWindow : ToolWindow
         // "Edit video…" when the first one picked is a video, as the Video window's menu says.
         var (editHeader, canEdit) = Editor.VideoEdit.EditorMenuItem(items[0].Path);
         OpenInEditorItem.Header = editHeader;
-        OpenInEditorItem.IsEnabled = canEdit;
+        // A playlist's Spotify songs have no file to edit, convert or show.
+        var files = items.Any(item => !Track.IsStreamedPath(item.Path));
+        OpenInEditorItem.IsEnabled = canEdit && !Track.IsStreamedPath(items[0].Path);
+        EditInfoItem.IsEnabled = files;
+        ConvertItem.IsEnabled = files;
+        ShowFileItem.IsEnabled = !Track.IsStreamedPath(items[0].Path);
         _songMenuItems.Add(Player.FavoriteMenuItem(items.Select(item => item.Path).ToList()));
         _songMenuItems.Add(RatingMenu(items));
         _songMenuItems.Add(Player.AddToPlaylistMenu(this, () => Task.Run(() => items.Select(item => item.ToTrack()).ToList())));

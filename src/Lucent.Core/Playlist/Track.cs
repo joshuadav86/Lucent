@@ -42,7 +42,31 @@ public sealed class Track
 
     /// <summary>The same track with these tags.</summary>
     public Track WithTags(TrackTagValues tags) =>
-        new(Path, Title, Artist, Duration, Bitrate, SampleRate, Channels, Album) { Tags = tags };
+        new(Path, Title, Artist, Duration, Bitrate, SampleRate, Channels, Album) { Tags = tags, CoverUrl = CoverUrl };
+
+    /// <summary>
+    /// True for a Spotify song in a playlist or the queue (see <see cref="ForSpotify"/>): it plays in Spotify, and its
+    /// <see cref="Path"/> is its spotify:track: address rather than a file.
+    /// </summary>
+    public bool IsStreamed => IsStreamedPath(Path);
+
+    /// <summary>True when <paramref name="path"/> is a Spotify song's address rather than a file.</summary>
+    public static bool IsStreamedPath(string? path) => path is not null && path.StartsWith(SpotifySong, StringComparison.Ordinal);
+
+    /// <summary>The files among <paramref name="paths"/>, leaving out Spotify songs, for what only a file can have done to it.</summary>
+    public static List<string> FilesOnly(IEnumerable<string> paths) => paths.Where(path => !IsStreamedPath(path)).ToList();
+
+    private const string SpotifySong = "spotify:track:";
+
+    /// <summary>Where a streamed song's small cover can be downloaded, to show beside it in a list, or null.</summary>
+    public string? CoverUrl { get; private init; }
+
+    /// <summary>
+    /// A Spotify song, to go in a playlist or the queue beside files. <paramref name="uri"/> (spotify:track:…) stands in for
+    /// the path, and the rest is what Spotify said of it when it was added.
+    /// </summary>
+    public static Track ForSpotify(string uri, string title, string artist, string album, TimeSpan duration, string? coverUrl) =>
+        new(uri, title, artist, duration, album: album) { CoverUrl = coverUrl };
 
     /// <summary>"320 kbps · 44.1 kHz · Stereo", leaving out whatever isn't known.</summary>
     public string AudioDetails

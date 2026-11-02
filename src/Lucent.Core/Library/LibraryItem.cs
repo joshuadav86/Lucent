@@ -85,6 +85,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
     /// <summary>Whether its row has a little cover beside it: every song does, a playlist's stand-in row doesn't.</summary>
     public bool ShowsCover => !IsPlaceholder;
 
+    /// <summary>Where a Spotify song's cover is downloaded from, for a playlist's Spotify songs (a file's is read from it).</summary>
+    public string? CoverUrl => Track?.CoverUrl;
+
     public string Path { get; }
 
     public string FileName { get; }
@@ -154,7 +157,9 @@ public sealed class LibraryItem : INotifyPropertyChanged
 
     public string DurationText => _durationText;
 
-    public string Details => RemotePlaylist is not null ? _remoteDetails : IsPlaceholder ? string.Empty : string.IsNullOrEmpty(_artist)
+    public string Details => RemotePlaylist is not null ? _remoteDetails : IsPlaceholder ? string.Empty
+        : Track is { IsStreamed: true } ? string.IsNullOrEmpty(_artist) ? "Spotify" : $"{_artist}  ·  Spotify"
+        : string.IsNullOrEmpty(_artist)
         ? $"{Added:d}{StatsText}"
         : $"{_artist}  ·  {Added:d}{StatsText}";
 
@@ -227,6 +232,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
         Raise(nameof(DurationText));
         Raise(nameof(Details));
         Raise(nameof(Cells));
+        Raise(nameof(CoverUrl));
     }
 
     /// <summary>Whether it's the song playing, marked in the library with a bar beside it.</summary>

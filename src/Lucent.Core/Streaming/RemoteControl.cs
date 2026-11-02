@@ -111,6 +111,12 @@ public sealed class RemoteControl : IDisposable
     public bool IsPlaying => State is { IsPlaying: true };
 
     /// <summary>
+    /// Whether the list the song plays from is read, for the queue window. Off while a Spotify song plays from Lucent's own
+    /// queue (see <see cref="StreamedSong"/>), where the queue window shows Lucent's queue, so Spotify is asked less.
+    /// </summary>
+    public bool ReadsList { get; set; } = true;
+
+    /// <summary>
     /// True when the app isn't open on this computer and nothing is playing anywhere, so the player offers to open it
     /// (<see cref="OpenAppAsync"/>) rather than leaving the user to.
     /// </summary>
@@ -773,7 +779,7 @@ public sealed class RemoteControl : IDisposable
     // next). It runs beside the once-a-second reads, as a long playlist takes a few requests.
     private async void ReadListIfChanged(RemoteState? state)
     {
-        if (Player is not IRemoteLists lists || state?.Track is null)
+        if (!ReadsList || Player is not IRemoteLists lists || state?.Track is null)
         {
             return;
         }

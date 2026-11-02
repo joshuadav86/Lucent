@@ -20,8 +20,8 @@ public static class SavedQueue
         var text = new StringBuilder("#EXTM3U\n");
         for (var i = 0; i < tracks.Count; i++)
         {
-            // Only files come back; a stream address has nothing to reopen.
-            if (!Path.IsPathRooted(tracks[i].Path))
+            // Files and Spotify songs come back; a radio station's address has nothing to reopen.
+            if (!Path.IsPathRooted(tracks[i].Path) && !tracks[i].IsStreamed)
             {
                 continue;
             }
@@ -31,7 +31,7 @@ public static class SavedQueue
                 text.Append(CurrentMark).Append('\n');
             }
 
-            text.Append(tracks[i].Path).Append('\n');
+            SavedPlaylists.AppendEntry(text, tracks[i]);
         }
 
         try
@@ -48,12 +48,12 @@ public static class SavedQueue
     }
 
     /// <summary>
-    /// The saved queue's files that still exist, and which of them was playing (-1 if none, or it's gone).
-    /// Empty if nothing was saved.
+    /// The saved queue's songs (its files that still exist, and its Spotify songs), and which of them was playing (-1 if
+    /// none, or it's gone). Empty if nothing was saved.
     /// </summary>
-    public static (List<string> Files, int Current) Read()
+    public static (List<SavedSong> Songs, int Current) Read()
     {
-        var files = new List<string>();
+        var files = new List<SavedSong>();
         var current = -1;
         try
         {
@@ -63,6 +63,7 @@ public static class SavedQueue
             }
 
             var marked = false;
+            var notes = new EntryNotes();
             foreach (var raw in File.ReadAllLines(FilePath, Encoding.UTF8))
             {
                 var line = raw.Trim();
@@ -74,20 +75,23 @@ public static class SavedQueue
 
                 if (line.Length == 0 || line.StartsWith('#'))
                 {
+                    notes.Take(line);
                     continue;
                 }
 
-                if (Path.IsPathRooted(line) && File.Exists(line))
+                var streamed = notes.Song(line);
+                if (streamed is not null || (Path.IsPathRooted(line) && File.Exists(line)))
                 {
                     if (marked)
                     {
                         current = files.Count;
                     }
 
-                    files.Add(line);
+                    files.Add(new SavedSong(line, streamed));
                 }
 
                 marked = false;
+                notes = new EntryNotes();
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

@@ -121,10 +121,10 @@
                         <MenuItem Header="Play" Click="OnPlaySelected" />
                         <MenuItem Header="Remove from the queue" InputGesture="Back" Click="OnRemoveSelected" />
                         <Separator x:Name="SongMenuItemsStart" />
-                        <MenuItem Header="Edit info…" InputGesture="Cmd+I" Click="OnEditInfo" />
+                        <MenuItem x:Name="EditInfoItem" Header="Edit info…" InputGesture="Cmd+I" Click="OnEditInfo" />
                         <MenuItem x:Name="OpenInEditorItem" Header="Open in editor…" Click="OnOpenInEditor" />
-                        <MenuItem Header="Convert to…" Click="OnConvert" />
-                        <MenuItem Header="Show in Finder" Click="OnShowInExplorer" />
+                        <MenuItem x:Name="ConvertItem" Header="Convert to…" Click="OnConvert" />
+                        <MenuItem x:Name="ShowFileItem" Header="Show in Finder" Click="OnShowInExplorer" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
@@ -133,7 +133,7 @@
                             <Border Grid.Column="0" CornerRadius="1.5" Margin="0,2,0,2"
                                     Background="{DynamicResource AccentGradientBrush}"
                                     IsVisible="{Binding IsCurrent}" />
-                            <w:TrackThumb Grid.Column="1" Margin="8,0,0,0" Path="{Binding Track.Path}" />
+                            <w:TrackThumb Grid.Column="1" Margin="8,0,0,0" Path="{Binding Track.Path}" Url="{Binding Track.CoverUrl}" />
                             <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Track.Title}" FontSize="13" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextBrush}" />

@@ -118,6 +118,17 @@ public partial class MainWindow
     /// </summary>
     public async void FillAddToPlaylistMenu(MenuItem menu, RemoteTrack track, Action<string> notice, RemoteApp? app = null)
     {
+        // A Spotify song can go in Lucent's own playlists too, beside files: that comes first, and stays while Spotify's load.
+        var lucent = LucentPlaylistsMenu(track, notice, app);
+        void AddLucent()
+        {
+            if (lucent is not null)
+            {
+                menu.Items.Insert(0, lucent);
+                menu.Items.Insert(1, new Separator());
+            }
+        }
+
         menu.Items.Clear();
         if (Controls(app) ? !CanAddToRemotePlaylists : app is null)
         {
@@ -126,6 +137,7 @@ public partial class MainWindow
         }
 
         menu.Items.Add(new MenuItem { Header = "Loading your playlists…", IsEnabled = false });
+        AddLucent();
         IReadOnlyList<RemotePlaylist> playlists;
         var canMake = false;
         try
@@ -144,6 +156,7 @@ public partial class MainWindow
                 var signIn = new MenuItem { Header = "Sign in to Spotify again to add songs…" };
                 signIn.Click += (_, _) => SignInToSpotifyAgain();
                 menu.Items.Add(signIn);
+                AddLucent();
                 return;
             }
 
@@ -157,6 +170,7 @@ public partial class MainWindow
                 Header = ex is RemoteProblem ? ex.Message : $"Lucent couldn't reach {NameOf(app)} to list your playlists.",
                 IsEnabled = false,
             });
+            AddLucent();
             return;
         }
 
@@ -187,10 +201,12 @@ public partial class MainWindow
                 menu.Items.Add(new Separator());
             }
 
-            var create = new MenuItem { Header = "New playlist…" };
+            var create = new MenuItem { Header = $"New {NameOf(app)} playlist…" };
             create.Click += (_, _) => MakeRemotePlaylist(track, notice, app);
             menu.Items.Add(create);
         }
+
+        AddLucent();
     }
 
     /// <summary>
