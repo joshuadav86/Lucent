@@ -28,7 +28,8 @@ public partial class AddStationWindow : Window
     {
         var window = new AddStationWindow();
         window.Opened += (_, _) => window.Address.Focus();
-        return await window.ShowDialog<bool>(owner)
+        // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
+        return await window.ShowDialog<bool>(SingleWindow.FrameOf(owner))
             ? (RadioGuide.FromAddress(window.Address.Text ?? string.Empty, window.StationName.Text), window._favorite)
             : null;
     }

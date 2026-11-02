@@ -329,7 +329,7 @@ public partial class MainWindow
 
     public async void DeletePlaylist(Window owner, string name)
     {
-        if (await MessageWindow.ShowAsync(owner, $"Delete the playlist \"{name}\"? The sounds themselves aren't touched.", "Lucent",
+        if (await MessageWindow.ShowAsync(owner, $"Delete the playlist \"{name}\"? The songs themselves aren't touched.", "Lucent",
                 MessageButtons.OkCancel) == MessageResult.Ok)
         {
             SavePlaylist(() => SavedPlaylists.Delete(name));

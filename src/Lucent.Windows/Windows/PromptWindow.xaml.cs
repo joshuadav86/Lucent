@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using Lucent.Windows;
 
 namespace Lucent;
 
@@ -19,7 +20,8 @@ public partial class PromptWindow : Window
     /// </summary>
     public static string? Ask(Window owner, string heading, string hint, string action, string initial = "", Func<string, string?>? check = null)
     {
-        var prompt = new PromptWindow { Owner = owner, _check = check };
+        // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
+        var prompt = new PromptWindow { Owner = SingleWindow.FrameOf(owner), _check = check };
         prompt.Heading.Text = heading;
         prompt.Hint.Text = hint;
         prompt.OkButton.Content = action;

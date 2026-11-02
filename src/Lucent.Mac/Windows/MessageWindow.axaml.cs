@@ -85,6 +85,12 @@ public partial class MessageWindow : Window
             box.Buttons.Children.Add(button);
         }
 
+        // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
+        if (owner is not null)
+        {
+            owner = SingleWindow.FrameOf(owner);
+        }
+
         if (owner is { IsVisible: true })
         {
             await box.ShowDialog(owner);

@@ -1,6 +1,7 @@
 using System.Windows;
 using Lucent.Library;
 using Lucent.Settings;
+using Lucent.Windows;
 
 namespace Lucent;
 
@@ -23,7 +24,8 @@ public partial class SubfolderWindow : Window
     /// </summary>
     public static (LibrarySubfolders Choice, bool Remember) Ask(Window owner, IReadOnlyList<string> folders)
     {
-        var box = new SubfolderWindow { Owner = owner };
+        // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
+        var box = new SubfolderWindow { Owner = SingleWindow.FrameOf(owner) };
         box.Heading.Text = folders.Count == 1
             ? $"“{LibraryFolderList.Name(folders[0])}” has folders inside it"
             : $"These {folders.Count} folders have folders inside them";

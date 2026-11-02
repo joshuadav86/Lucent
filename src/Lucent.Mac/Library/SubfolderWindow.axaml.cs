@@ -37,7 +37,8 @@ public partial class SubfolderWindow : Window
         box.Heading.Text = folders.Count == 1
             ? $"“{LibraryFolderList.Name(folders[0])}” has folders inside it"
             : $"These {folders.Count} folders have folders inside them";
-        var choice = await box.ShowDialog<LibrarySubfolders?>(owner);
+        // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
+        var choice = await box.ShowDialog<LibrarySubfolders?>(SingleWindow.FrameOf(owner));
         return choice is { } answer
             ? (answer, box.RememberSwitch.IsChecked == true)
             : (LibrarySubfolders.Separate, false);
