@@ -74,10 +74,10 @@ float reefCaustics(float2 p, float t)
 float3 Render(float2 uv, float2 p)
 {
     float shape = 1.17 + 0.1 * sin(Time * 0.043);
-    float z = Time * 0.32 + (BeatCount - Beat) * 0.06;
+    float z = Time * 0.32 + BeatGlide * 0.06;
     float3 eye = reefPath(z);
     float3 ahead = reefPath(z + 1.2);
-    float3 dir = cameraRay(eye, ahead, p, 0.9 - Beat * 0.06, sin(Time * 0.09) * 0.35);
+    float3 dir = cameraRay(eye, ahead, p, 0.9 - BeatSwell * 0.06, sin(Time * 0.09) * 0.35);
 
     const float farPlane = 7.0;
     int maxSteps = qualitySteps(64);

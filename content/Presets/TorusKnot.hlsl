@@ -143,9 +143,9 @@ float knotDE(float3 pos, float widen, out float4 surface)
 
 float3 Render(float2 uv, float2 p)
 {
-    float ride = Time * 0.05 + (BeatCount - Beat) * 0.008;
+    float ride = Time * 0.05 + BeatGlide * 0.008;
     float3 eye = knotPoint(ride);
-    float3 dir = cameraRay(eye, knotPoint(ride + 0.06), p, 0.85 - Beat * 0.07, sin(Time * 0.11) * 0.6);
+    float3 dir = cameraRay(eye, knotPoint(ride + 0.06), p, 0.85 - BeatSwell * 0.07, sin(Time * 0.11) * 0.6);
 
     const float farPlane = 14.0;
     int maxSteps = qualitySteps(90);

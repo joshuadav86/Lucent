@@ -581,10 +581,10 @@ jobs:
       - name: Check no visual multiplies Time by a music level
         # Time counts up from when the visuals opened, so Time * (0.4 + Bass * 0.6) moves the picture by
         # Time times every small wobble in the bass: a few minutes in, it jumps a long way each frame and
-        # flickers (Chrome Blobs did). Add a beat clock instead: Time * 0.4 + (BeatCount - Beat) * 0.25.
+        # flickers (Chrome Blobs did). Add a beat clock instead: Time * 0.4 + BeatGlide * 0.25.
         run: |
           if grep -rnE '\bTime \* \([^()]*\b(Bass|Mid|Treble|Level|Beat|Intensity|BuildUp|DropPulse)\b' --include='*.hlsl' --include='*.hlsli' content; then
-            echo "::error::A visual multiplies Time by a music level, so it flickers more the longer it runs. Use Time * speed + (BeatCount - Beat) * push instead."
+            echo "::error::A visual multiplies Time by a music level, so it flickers more the longer it runs. Use Time * speed + BeatGlide * push instead."
             exit 1
           fi
 

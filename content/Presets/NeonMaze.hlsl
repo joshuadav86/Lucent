@@ -363,7 +363,7 @@ float3x3 mzRotation(float3 angles)
 float3 Render(float2 uv, float2 p)
 {
     // The walk: a steady stroll, and each beat adds a surge (the beat clock only ever moves forward).
-    float beats = BeatCount - saturate(Beat);
+    float beats = BeatGlide;
     float s = 40.0 + Time * 0.55 + beats * 0.16;
     int here = (int)floor(s);
     mzBuildPath(here - MZ_KEPT / 2);

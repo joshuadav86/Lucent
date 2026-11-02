@@ -48,9 +48,9 @@ float2 wormThreads(float angle, float z, float spin, float count, float halfWidt
 
 float3 Render(float2 uv, float2 p)
 {
-    float zCam = Time * 1.1 + (BeatCount - Beat) * 0.25;
+    float zCam = Time * 1.1 + BeatGlide * 0.25;
     float3 eye = float3(wormPath(zCam), zCam);
-    float3 dir = cameraRay(eye, float3(wormPath(zCam + 2.5), zCam + 2.5), p, 0.8 - Beat * 0.08, Time * 0.07);
+    float3 dir = cameraRay(eye, float3(wormPath(zCam + 2.5), zCam + 2.5), p, 0.8 - BeatSwell * 0.08, Time * 0.07);
 
     float flow = Time * 0.05;
     // A blinding light hangs in the heart of each throat; the next two ahead light the veils.

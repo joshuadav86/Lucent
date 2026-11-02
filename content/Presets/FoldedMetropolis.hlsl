@@ -72,9 +72,9 @@ float cityDE(float3 pos, out float3 info, out float3 local)
 
 float3 Render(float2 uv, float2 p)
 {
-    float z = Time * 0.8 + (BeatCount - Beat) * 0.2;
+    float z = Time * 0.8 + BeatGlide * 0.2;
     float3 eye = float3(sin(Time * 0.21) * 0.3, cos(Time * 0.17) * 0.3, z);
-    float3 dir = cameraRay(eye, float3(sin(Time * 0.21 + 0.5) * 0.2, cos(Time * 0.17 + 0.5) * 0.2, z + 3.0), p, 0.8 - Beat * 0.07, Time * 0.02);
+    float3 dir = cameraRay(eye, float3(sin(Time * 0.21 + 0.5) * 0.2, cos(Time * 0.17 + 0.5) * 0.2, z + 3.0), p, 0.8 - BeatSwell * 0.07, Time * 0.02);
 
     const float farPlane = 18.0;
     int maxSteps = qualitySteps(72);

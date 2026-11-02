@@ -92,7 +92,7 @@ float3 Render(float2 uv, float2 p)
 {
     float z = Time * 0.9;
     float3 eye = float3(divePath(z), z);
-    float3 direction = cameraRay(eye, float3(divePath(z + 2.0) + float2(sin(Time * 0.1) * 0.6, cos(Time * 0.08) * 0.4), z + 2.0), p, 0.95 - Beat * 0.05, sin(Time * 0.13) * 0.6);
+    float3 direction = cameraRay(eye, float3(divePath(z + 2.0) + float2(sin(Time * 0.1) * 0.6, cos(Time * 0.08) * 0.4), z + 2.0), p, 0.95 - BeatSwell * 0.05, sin(Time * 0.13) * 0.6);
 
     // Detail allows more steps and a closer approach to the crystal; shading stays scaled to Normal's 100.
     const float normalSteps = 100.0;

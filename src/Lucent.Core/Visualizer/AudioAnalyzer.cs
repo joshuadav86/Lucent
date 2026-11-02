@@ -37,6 +37,9 @@ public sealed class AudioAnalyzer
     private int _bandSampleRate;
     private float _bassAverage;
     private double _sinceBeat = 10;
+    private float _glideFirst;
+    private float _swellFirst;
+    private float _swellSecond;
 
     public AudioAnalyzer(AudioCapture capture)
         : this()
@@ -69,6 +72,18 @@ public sealed class AudioAnalyzer
     public float Level { get; private set; }
 
     public int BeatCount { get; private set; }
+
+    /// <summary>
+    /// <see cref="BeatCount"/>, eased: it glides forward by 1 over each beat, starting and finishing gently, and never
+    /// jumps or goes back. Drives movement on the beat (a camera surging ahead) without a jolt on the beat itself.
+    /// </summary>
+    public float BeatGlide { get; private set; }
+
+    /// <summary>
+    /// <see cref="Beat"/>, eased: it swells up over about a fifth of a second after each beat and fades back, about 0 to 1,
+    /// with no sudden step. For things that would look like a stutter if they snapped, such as a camera's field of view.
+    /// </summary>
+    public float BeatSwell { get; private set; }
 
     /// <summary>The bass this frame, unsmoothed, 0 to 1 (a 60 dB range): what <see cref="LiveBeatTracker"/> listens to.</summary>
     public float BassNow { get; private set; }
@@ -222,6 +237,20 @@ public sealed class AudioAnalyzer
 
         _bassAverage += (bassNow - _bassAverage) * (1f - MathF.Exp(-deltaTime * 1.5f));
         Beat *= MathF.Exp(-deltaTime * 5f);
+        EaseBeat(deltaTime);
+    }
+
+    /// <summary>Follows the beat through two gentle smoothing steps each, so both start and finish easing.</summary>
+    private void EaseBeat(float deltaTime)
+    {
+        var glide = 1f - MathF.Exp(-deltaTime * 9f);
+        _glideFirst += (BeatCount - _glideFirst) * glide;
+        BeatGlide += (_glideFirst - BeatGlide) * glide;
+
+        var swell = 1f - MathF.Exp(-deltaTime * 12f);
+        _swellFirst += (Beat - _swellFirst) * swell;
+        _swellSecond += (_swellFirst - _swellSecond) * swell;
+        BeatSwell = Math.Min(_swellSecond * 1.9f, 1f);
     }
 
     private void FillTexture()

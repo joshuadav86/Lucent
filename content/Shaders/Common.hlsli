@@ -57,6 +57,10 @@ cbuffer Params : register(b0)
     float2 BallFrom;           // where the button went down, in p units (dots are called in from round here)
     float BallHeld;            // 1 while held, easing to 0 after it's thrown
     float BallAge;             // seconds since the button went down
+
+    // The beat, eased, for movement that shouldn't jolt on the beat (fly-throughs use these for the camera).
+    float BeatGlide;           // BeatCount, gliding forward by 1 over each beat: starts and finishes gently, never jumps
+    float BeatSwell;           // about 0..1, swelling up over a fifth of a second after each beat and fading: Beat without the snap
 };
 
 Texture2D PreviousFrame : register(t0);
