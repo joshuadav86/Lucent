@@ -27,6 +27,9 @@ internal static class LayoutCheck
         (820, 560), (700, 900), (1000, 420), (500, 1000), (860, 480),
     };
 
+    /// <summary>True when Lucent was opened to run this check.</summary>
+    public static bool IsAsked => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LUCENT_LAYOUT_CHECK"));
+
     public static void RunIfAsked(Window main, Window visuals)
     {
         var file = Environment.GetEnvironmentVariable("LUCENT_LAYOUT_CHECK");

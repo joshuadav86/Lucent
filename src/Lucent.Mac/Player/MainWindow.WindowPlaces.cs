@@ -149,7 +149,7 @@ public partial class MainWindow
 
     /// <summary>
     /// Reset to default layout: the windows as Lucent opens them the very first time. The player at its usual
-    /// size, the equalizer and the visuals, laid out together in the middle of the player's screen, with the
+    /// size, the equalizer and the visuals, laid out together in the middle of the player's screen and then put in a single window, with the
     /// queue, the library, the analyzer and the artwork closed, every window unlocked, and Lucent out of full
     /// screen. The video, the radio and any editors stay open (closing them would stop what's in them) and
     /// dock back on beside the rest.
@@ -171,6 +171,12 @@ public partial class MainWindow
 
         _settings.LockedWindows.Clear();
         _settings.FullScreenStyle = TileStyle.AsTheyAre;
+        // The single window laid out afresh too, round the windows as they're arranged below.
+        _settings.SingleWindowPlace = null;
+        _settings.SingleWindowStyle = TileStyle.AsTheyAre;
+        _settings.SingleWindowSwaps.Clear();
+        _settings.SingleWindowDividers.Clear();
+        _settings.SingleWindowSizes.Clear();
         if (!IsClassic)
         {
             _settings.PlayerScale = 1;
@@ -203,7 +209,15 @@ public partial class MainWindow
         {
             ArrangeFirstTime();
             SavePlacements();
-            Dispatcher.UIThread.Post(RedockSmallWindows, DispatcherPriority.Background);
+            Dispatcher.UIThread.Post(() =>
+            {
+                RedockSmallWindows();
+                // As on the first run, they go into a single window; U takes them out as separate windows, as arranged.
+                if (!IsClassic)
+                {
+                    EnterSingleWindow();
+                }
+            }, DispatcherPriority.Background);
             // Said once the windows have settled: shown while the player was still changing size, it could open
             // in the corner of the screen and stay there.
             Toast.Show(this, "Default layout");

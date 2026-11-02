@@ -109,8 +109,12 @@ public static partial class Screenshots
         ("SingleWindow-Rearranged", () => PreviewSingleWindow(Lucent.Layout.TileStyle.AsTheyAre, rearrange: true)),
     };
 
+    /// <summary>True while the screenshots are being taken.</summary>
+    public static bool IsTaking { get; private set; }
+
     public static int Run(string[] args)
     {
+        IsTaking = true;
         if (args.Length == 0)
         {
             Console.WriteLine("Usage: Lucent --screenshots <folder> [window names...]");

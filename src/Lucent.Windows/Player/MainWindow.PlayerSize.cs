@@ -35,6 +35,9 @@ public partial class MainWindow
 
     private double PlayerScale => Math.Clamp(_settings.PlayerScale, 1, LargestPlayerScale);
 
+    /// <summary>How wide the player is: Lucent's own at the width its scale gives it, a classic skin as it is.</summary>
+    private double PlayerWidthNow => IsClassic ? SizeOf(this).Width : PlayerWidth * PlayerScale;
+
     /// <summary>Whether Lucent's own player is bigger than its usual size.</summary>
     internal bool PlayerIsEnlarged => !IsClassic && PlayerScale > 1.005;
 
@@ -322,6 +325,11 @@ public partial class MainWindow
         if (WindowState == WindowState.Maximized)
         {
             WindowState = WindowState.Normal;
+        }
+        else if (WindowState == WindowState.Normal)
+        {
+            // Back from minimized: a size it was given meanwhile isn't taken for its own.
+            KeepPlayerWidthSoon();
         }
     }
 
