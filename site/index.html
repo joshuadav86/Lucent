@@ -586,7 +586,7 @@ ul.ticks li::before { content: ""; position: absolute; left: 0; top: .8em; width
 .download { position: relative; text-align: left; }
 .dl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: start; }
 @media (max-width: 860px) { .dl-grid { grid-template-columns: 1fr; } }
-.dl-icon { width: 88px; height: 88px; margin-bottom: 8px; }
+.dl-icon { width: 88px; height: 64px; margin-bottom: 16px; stroke-width: 2.6; }
 ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 0; }
 ol.steps li { counter-increment: s; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 12px; padding: 20px 0; border-bottom: 1px solid var(--line); }
 ol.steps li:first-child { border-top: 1px solid var(--line); }
@@ -954,7 +954,7 @@ footer .credits a { text-decoration: underline; }
   <section class="band download" id="download" aria-labelledby="dl-title">
     <div class="wrap dl-grid">
       <div class="stack">
-        <img class="dl-icon" src="img/icon.png" width="96" height="96" alt="Lucent icon">
+        <svg class="mark dl-icon" role="img" aria-label="Lucent logo"><use href="#mk"/></svg>
         <h2 id="dl-title">Get Lucent. <span class="dim">Now in Beta</span></h2>
         <p class="lede">Free and open source under the MIT license, for Windows and Mac. Expect a few rough edges while it's in beta.</p>
         <div class="hero-cta">
