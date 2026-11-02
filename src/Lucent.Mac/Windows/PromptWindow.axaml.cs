@@ -33,7 +33,8 @@ public partial class PromptWindow : Window
             prompt.Answer.Focus();
             prompt.Answer.SelectAll();
         };
-        var answered = await prompt.ShowDialog<bool>(owner);
+        // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
+        var answered = await prompt.ShowDialog<bool>(SingleWindow.FrameOf(owner));
         return answered ? (prompt.Answer.Text ?? string.Empty).Trim() : null;
     }
 

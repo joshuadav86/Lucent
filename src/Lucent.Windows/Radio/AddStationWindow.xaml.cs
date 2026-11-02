@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using Lucent.Radio;
 using Microsoft.Win32;
+using Lucent.Windows;
 
 namespace Lucent;
 
@@ -23,7 +24,8 @@ public partial class AddStationWindow : Window
     /// <summary>The station asked for and whether to keep it in the favorites, or null if cancelled.</summary>
     public static (RadioStation Station, bool Favorite)? Ask(Window owner)
     {
-        var window = new AddStationWindow { Owner = owner };
+        // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
+        var window = new AddStationWindow { Owner = SingleWindow.FrameOf(owner) };
         window.Loaded += (_, _) => window.Address.Focus();
         return window.ShowDialog() == true
             ? (RadioGuide.FromAddress(window.Address.Text, window.StationName.Text), window._favorite)
