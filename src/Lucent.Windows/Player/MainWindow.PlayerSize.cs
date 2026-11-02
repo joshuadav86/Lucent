@@ -111,9 +111,8 @@ public partial class MainWindow
             CaptionRepaint.SetResizeMode(this, ResizeMode.CanResize);
             MinWidth = PlayerWidth;
             MaxWidth = PlayerWidth * LargestPlayerScale;
-            SizeToContent = SizeToContent.Height;
-            SetPlayerWidth(PlayerWidth * scale);
             ScalePlayer(scale);
+            SizeToWidth(PlayerWidth * scale);
         }
         finally
         {
@@ -167,15 +166,7 @@ public partial class MainWindow
         _applyingPlayerSize = true;
         try
         {
-            SetPlayerWidth(width);
-            SizeToContent = SizeToContent.Height;
-            UpdateLayout();
-            if (Math.Abs(ActualWidth - width) > 1)
-            {
-                // The window didn't take its Width: size it directly, in pixels.
-                SetNativeWidth(width);
-                UpdateLayout();
-            }
+            SizeToWidth(width);
         }
         finally
         {
@@ -183,6 +174,28 @@ public partial class MainWindow
         }
 
         FitDockedEqualizer();
+    }
+
+    /// <summary>
+    /// Makes the window <paramref name="width"/> wide, with its height following what's in it. The width is set
+    /// while the height is still sized by hand: while WPF sizes a window's height to what's in it, it keeps
+    /// the window at the width it already has, whatever Width and Windows are told, which left the player as
+    /// wide as the single window it had just been, and the equalizer docked under it stretched to match.
+    /// </summary>
+    private void SizeToWidth(double width)
+    {
+        SizeToContent = SizeToContent.Manual;
+        SetPlayerWidth(width);
+        UpdateLayout();
+        if (Math.Abs(ActualWidth - width) > 1)
+        {
+            // The window didn't take its Width: size it directly, in pixels.
+            SetNativeWidth(width);
+            UpdateLayout();
+        }
+
+        SizeToContent = SizeToContent.Height;
+        UpdateLayout();
     }
 
     /// <summary>Sizes the player's window to <paramref name="width"/> (in pixels at 100% scaling) straight through Windows.</summary>
