@@ -121,7 +121,7 @@ public sealed partial class AppUpdater
 
     /// <summary>
     /// Checks for a newer build now, as the regular check does, and downloads it if there is one. A
-    /// download raises <see cref="UpdateReady"/> as usual, so the title bar's UPDATE button shows too.
+    /// download raises <see cref="UpdateReady"/> as usual.
     /// </summary>
     public async Task<UpdateCheckResult> CheckNowAsync()
     {

@@ -3,9 +3,9 @@
 ## Updates
 
 - Velopack checks 20 s after start, then every 4 hours, downloads in the background, and installs when Lucent closes.
-- **Install updates automatically** (Options > Updates, default on). Off: it downloads and shows "ready", and installs only on "Restart and install".
+- **Install updates automatically** (Options > Updates, default on). On: no title-bar UPDATE button, the update just installs when Lucent closes (a busy day of merges used to bring the button back after every build); Options > Updates still shows "ready", what's new and "Restart and install". Off: it downloads, shows the UPDATE button and "ready", and installs only on "Restart and install".
 - **Channels:** stable (default) or every build. Until the first stable release exists, everyone follows the "latest" build.
-- What's new shows only changes to that platform.
+- What's new lists every change to that platform between the installed build and the ready one, so it repeats older items only while an update waits uninstalled.
 - Settings persist between updates (`FreshStart.Generation` is 0). Raise it only if Joshua asks for a fresh start.
 
 ## Crash reports

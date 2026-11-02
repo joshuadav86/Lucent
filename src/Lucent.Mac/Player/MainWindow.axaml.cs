@@ -382,8 +382,7 @@ public partial class MainWindow : Window
 
         _updater.UpdateReady += version => Dispatcher.UIThread.Post(() =>
         {
-            ToolTip.SetTip(UpdateButton, UpdateButtonTip(version));
-            UpdateButton.IsVisible = true;
+            ShowUpdateButton(version);
             ShowUpdateStatus(ReadyStatus(version), readyToInstall: true);
         });
         _updater.Downloading += version => Dispatcher.UIThread.Post(() => ShowUpdateStatus($"Downloading Lucent {version}…", readyToInstall: false));
@@ -1657,7 +1656,7 @@ public partial class MainWindow : Window
             _settings.Save();
             if (_updater.ReadyVersion is { } ready)
             {
-                ToolTip.SetTip(UpdateButton, UpdateButtonTip(ready));
+                ShowUpdateButton(ready);
                 ShowUpdateStatus(ReadyStatus(ready), readyToInstall: true);
             }
 

@@ -49,10 +49,16 @@ public partial class MainWindow
         ? $"Lucent {version} is ready. Restart to install it now, or it installs when you close Lucent."
         : $"Lucent {version} is ready. It installs only when you choose Restart and install.";
 
-    /// <summary>The title bar's UPDATE button's tip, for the update that's ready.</summary>
-    private string UpdateButtonTip(string version) => _settings.InstallUpdatesAutomatically
-        ? $"Lucent {version} is ready. Click to see what's new and restart into it, or it installs when you close Lucent."
-        : $"Lucent {version} is ready. Click to see what's new and restart into it when you choose.";
+    /// <summary>
+    /// The title bar's UPDATE button, for the update that's ready. It shows only when updates wait to be
+    /// asked for: installing automatically, an update just goes in when Lucent closes, so a day of
+    /// merges doesn't bring the button back after every build. Options › Updates still says what's ready.
+    /// </summary>
+    private void ShowUpdateButton(string version)
+    {
+        ToolTip.SetTip(UpdateButton, $"Lucent {version} is ready. Click to see what's new and restart into it when you choose.");
+        UpdateButton.IsVisible = !_settings.InstallUpdatesAutomatically;
+    }
 
     /// <summary>Shows what a check found under the Updates tab, or clears it when <paramref name="status"/> is null.</summary>
     private void ShowUpdateStatus(string? status, bool readyToInstall)
