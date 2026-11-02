@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Threading;
@@ -171,7 +172,7 @@ internal static class LayoutCheck
     /// <summary>
     /// Single window on: the visuals become a panel in the player's window, their own window out of sight but
     /// still open, and the Metal view (moved from one window to the other) still fills its space as the
-    /// window's resized. Then off again: the visuals are a window of their own again, back where they were.
+    /// window's resized. Then off again: the visuals are a window of their own again, just where their panel was.
     /// </summary>
     private static async Task<List<string>> CheckSingleWindowAsync(Window main, Window visuals)
     {
@@ -204,13 +205,32 @@ internal static class LayoutCheck
             lines.Add((await SettleAsync(main, $"single window {width} x {height}")).Line);
         }
 
+        // Where the visuals' panel is on the screen as it ends: their window goes just there. A panel along the top
+        // reaches up over the title bar, where the window's own goes, so its top is anywhere from there to the window's top.
+        var panel = PanelOnScreen(main, visuals);
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var back = !SingleWindow.IsOn() && visuals.GetVisualDescendants().OfType<MetalView>().Any() && IsOnScreen(visuals);
         lines.Add($"{(back ? "ok" : "MISMATCH")} single window off: the visuals {(back ? "are a window again" : "didn't come back as a window")}");
         lines.Add((await SettleAsync(visuals, "single window off")).Line);
-        lines.Add($"{(Near(Describe(visuals), before) ? "ok" : "MISMATCH")} single window off: the visuals are at {Describe(visuals)}, were at {before}");
+        var (x, y, w, h) = (visuals.Left(), visuals.Top(), visuals.ActualWidth(), visuals.ActualHeight());
+        var where = panel is { } p
+            && Math.Abs(x - p.X) <= 4 && Math.Abs(w - p.Width) <= 4 && Math.Abs(y + h - p.Bottom) <= 4
+            && y >= main.Top() - 4 && y <= p.Y + 4;
+        var panelText = panel is { } r ? $"{r.X:0},{r.Y:0} {r.Width:0} x {r.Height:0}" : "(not found)";
+        lines.Add($"{(where ? "ok" : "MISMATCH")} single window off: the visuals are at {Describe(visuals)}, their panel was at {panelText}");
         return lines;
+    }
+
+    /// <summary>A window's panel in the single window, where it is on the screen, or null if it isn't one.</summary>
+    private static Rect? PanelOnScreen(Window main, Window window)
+    {
+        if (SingleWindow.PaneOf(window) is not { Bounds.Width: > 0 } pane || pane.TranslatePoint(new Point(0, 0), main) is not { } at)
+        {
+            return null;
+        }
+
+        return new Rect(main.Left() + at.X, main.Top() + at.Y, pane.Bounds.Width, pane.Bounds.Height);
     }
 
     private static async Task<List<string>> CheckMinimizeAsync(Window main)

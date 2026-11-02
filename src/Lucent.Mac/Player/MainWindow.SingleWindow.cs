@@ -196,6 +196,8 @@ public partial class MainWindow
         _sizeFromSingleWindow = true;
         _ = ForgetSizeFromSingleWindowSoon();
         _settings.SingleWindow = false;
+        // Where each panel is now, so each window opens just there and the windows look as the single window did.
+        var places = PanelPlaces();
         var giveBack = _panes.Keys.ToList();
         foreach (var window in giveBack)
         {
@@ -222,17 +224,35 @@ public partial class MainWindow
 
         MinHeight = 0;
         ApplyPlayerSize();
-        if (Saved("Player") is { } player)
+        if (places.TryGetValue(this, out var playerPlace))
+        {
+            this.MoveTo(playerPlace.X, playerPlace.Y);
+        }
+        else if (Saved("Player") is { } player)
         {
             this.MoveTo(player.Left, player.Top);
         }
 
-        // Each window where it was left, or docked to the player if it's never been placed, then back in sight.
+        // Each window where its panel was, docked together just as they looked. One that wasn't a panel goes where
+        // it was left, or docked to the player if it's never been placed. Then back in sight.
         var placed = new List<(Window, PixelPoint)>();
         foreach (var window in giveBack.Where(window => window.IsVisible))
         {
-            // Docked ones too: the player's back where it was, so the group fits together as it did.
-            if (!OpenWhereLeft(window, evenDocked: true))
+            if (places.TryGetValue(window, out var place))
+            {
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                if (window is EqualizerWindow)
+                {
+                    // It sizes itself: it only moves.
+                    window.MoveTo(place.X, place.Y);
+                }
+                else
+                {
+                    window.SizeToContent = SizeToContent.Manual;
+                    Placement.Place(window, place.X, place.Y, place.Width, place.Height);
+                }
+            }
+            else if (!OpenWhereLeft(window, evenDocked: true))
             {
                 if (window is ToolWindow tool && tool != _visuals)
                 {
@@ -254,11 +274,54 @@ public partial class MainWindow
             KeepPlayerShape();
             if (!InSingleWindow && !IsShuttingDown)
             {
-                RedockSmallWindows();
+                // Laid out from the panels, they're docked already.
+                if (places.Count == 0)
+                {
+                    RedockSmallWindows();
+                }
+
                 SavePlacements();
             }
         }, DispatcherPriority.Background);
         _settings.Save();
+    }
+
+    /// <summary>
+    /// Where each panel is on the screen now, as its window's place, for the windows to go to as the single window
+    /// ends, so they look just as it did. Panels along the top reach up over the title bar, where the windows' own
+    /// title bars go; the player's place is its panel with its title bar on top. Empty unless the window's on screen as usual.
+    /// </summary>
+    private Dictionary<Window, Rect> PanelPlaces()
+    {
+        var places = new Dictionary<Window, Rect>();
+        if (_paneArea is not { Bounds.Width: > 0 } area || WindowState != WindowState.Normal)
+        {
+            return places;
+        }
+
+        var areaTop = Top + (area.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0)).Y;
+        foreach (var (window, pane) in _panes)
+        {
+            if (pane.Box.Bounds.Width <= 0 || pane.Box.Bounds.Height <= 0)
+            {
+                continue;
+            }
+
+            var at = pane.Box.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0);
+            var place = new Rect(Left + at.X, Top + at.Y, pane.Box.Bounds.Width, pane.Box.Bounds.Height);
+            if (window is not EqualizerWindow && Math.Abs(place.Y - areaTop) < 2)
+            {
+                place = new Rect(place.X, Top, place.Width, place.Height + place.Y - Top);
+            }
+
+            places[window] = place;
+        }
+
+        var player = PlayerRoot.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0);
+        var playerTop = Top + player.Y;
+        places[this] = new Rect(Left + player.X, Math.Abs(playerTop - areaTop) < 2 ? Top : playerTop - HeaderHeight,
+            PlayerRoot.Bounds.Width, PlayerRoot.Bounds.Height + HeaderHeight);
+        return places;
     }
 
     private async Task ForgetSizeFromSingleWindowSoon()
