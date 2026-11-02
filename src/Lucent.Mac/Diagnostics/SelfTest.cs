@@ -120,6 +120,7 @@ public static partial class SelfTest
         failures += Lucent.Streaming.SpotifyLimitSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.SpotifyVolume.SelfTest(Console.WriteLine);
         failures += Lucent.Library.PlaylistColumnsSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Streaming.StreamedSongSelfTest.Run(Console.WriteLine);
         Console.WriteLine(failures == 0 ? "Self-test passed." : $"Self-test failed: {failures} problem(s).");
         return failures == 0 ? 0 : 1;
     }

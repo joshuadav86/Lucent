@@ -34,9 +34,10 @@ public partial class MainWindow
     private TimeSpan ShownDuration => _remote is not null ? _remote.State?.Track?.Duration ?? TimeSpan.Zero : _player.Duration;
 
     // Shuffle and repeat as the player shows them: the other app's own while one is being controlled.
-    private bool ShownShuffle => _remote is not null ? _remote.State?.Shuffle == true : _settings.Shuffle;
+    // While the queue plays one of its Spotify songs, they're the queue's.
+    private bool ShownShuffle => _remote is not null && _streamed is null ? _remote.State?.Shuffle == true : _settings.Shuffle;
 
-    private RepeatMode ShownRepeat => _remote is not null ? _remote.State?.Repeat ?? RepeatMode.Off : _settings.Repeat;
+    private RepeatMode ShownRepeat => _remote is not null && _streamed is null ? _remote.State?.Repeat ?? RepeatMode.Off : _settings.Repeat;
 
     /// <summary>Picks up where the last run left off: listening to other apps, and the app being controlled.</summary>
     private void StartStreaming()
@@ -62,7 +63,8 @@ public partial class MainWindow
     }
 
     /// <summary>Starts showing and controlling <paramref name="app"/>, signing in first when it needs it and <paramref name="signIn"/> allows.</summary>
-    private async void ControlRemote(RemoteApp app, bool signIn)
+    /// <param name="streamed">The queue's Spotify song it's for, when it's for one (see MainWindow.StreamedSongs.cs).</param>
+    private async void ControlRemote(RemoteApp app, bool signIn, StreamedSong? streamed = null)
     {
         // A playlist (or one of its songs) chosen in the library while its app wasn't being controlled plays once it is.
         var pending = _playWhenConnected;
@@ -128,6 +130,13 @@ public partial class MainWindow
             return;
         }
 
+        // The queue moved on from its Spotify song while Lucent was signing in.
+        if (streamed is not null && _current != streamed.Entry)
+        {
+            player.Dispose();
+            return;
+        }
+
         StopControllingRemote(pause: false);
         // Two songs at once helps nobody: Lucent's own music pauses while another app's plays.
         if (_player.IsPlaying)
@@ -135,9 +144,15 @@ public partial class MainWindow
             _player.Pause();
         }
 
-        _settings.RemoteApp = app;
-        _settings.Save();
-        _remote = new RemoteControl(player, _sharperCover ??= new SharperCover(StreamingHttp));
+        // For the queue's Spotify song, the queue stays in charge, and is what comes back on the next start.
+        _streamed = streamed;
+        if (streamed is null)
+        {
+            _settings.RemoteApp = app;
+            _settings.Save();
+        }
+
+        _remote = new RemoteControl(player, _sharperCover ??= new SharperCover(StreamingHttp)) { ReadsList = streamed is null };
         _remote.Changed += OnRemoteChanged;
         _libraryWindow.RemoteAppChanged();
         if (pending is { } wanted && wanted.App == app)
@@ -154,6 +169,7 @@ public partial class MainWindow
     /// <summary>Goes back to Lucent's own music, pausing the other app first when <paramref name="pause"/> says to.</summary>
     private void StopControllingRemote(bool pause)
     {
+        _streamed = null;
         if (_remote is not { } remote)
         {
             return;
@@ -234,7 +250,8 @@ public partial class MainWindow
     private void ShowRemoteList()
     {
         var showing = _queue.ShowingRemoteList;
-        _queue.ShowRemoteList(_remote?.Player.Name ?? string.Empty, _remote?.List, _remote?.State?.Track);
+        // While the queue plays one of its Spotify songs, the queue window shows the queue.
+        _queue.ShowRemoteList(_remote?.Player.Name ?? string.Empty, _streamed is null ? _remote?.List : null, _remote?.State?.Track);
         if (showing && !_queue.ShowingRemoteList)
         {
             ShowQueueSize();
@@ -397,6 +414,7 @@ public partial class MainWindow
         UpdatePlayPauseButton();
         UpdateShuffleRepeatButtons();
         UpdatePosition();
+        FollowStreamedSong();
     }
 
     /// <summary>Shows the other app's song in the title, details, window title and artwork window.</summary>

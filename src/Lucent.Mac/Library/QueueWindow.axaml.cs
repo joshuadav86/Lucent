@@ -67,6 +67,11 @@ public partial class QueueWindow : ToolWindow
 
         var tracks = entries.Select(entry => entry.Track).ToList();
         ShowEditorItem(tracks[0].Path);
+        // A playlist's Spotify songs have no file to edit, convert or show.
+        var files = tracks.Any(track => !track.IsStreamed);
+        EditInfoItem.IsEnabled = files;
+        ConvertItem.IsEnabled = files;
+        ShowFileItem.IsEnabled = !tracks[0].IsStreamed;
         _songMenuItems.Add(Player.FavoriteMenuItem(tracks.Select(track => track.Path).ToList()));
         _songMenuItems.Add(Player.AddToPlaylistMenu(this, () => Task.FromResult(tracks)));
         _songMenuItems.Add(new Separator());
@@ -110,7 +115,7 @@ public partial class QueueWindow : ToolWindow
     {
         var (header, canOpen) = Lucent.Editor.VideoEdit.EditorMenuItem(path);
         OpenInEditorItem.Header = header;
-        OpenInEditorItem.IsEnabled = canOpen;
+        OpenInEditorItem.IsEnabled = canOpen && !Track.IsStreamedPath(path);
     }
 
     private void OnOpenInEditor(object? sender, RoutedEventArgs e)

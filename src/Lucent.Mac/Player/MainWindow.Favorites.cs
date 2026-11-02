@@ -26,7 +26,8 @@ public partial class MainWindow
     /// <summary>Marks songs as favourites, or takes them off.</summary>
     public void SetFavoriteTracks(IEnumerable<string> paths, bool favorite)
     {
-        foreach (var path in paths)
+        // Favorites are files; a Spotify song is liked in Spotify.
+        foreach (var path in Track.FilesOnly(paths))
         {
             if (favorite)
             {
@@ -128,7 +129,7 @@ public partial class MainWindow
         List<Track> tracks;
         try
         {
-            tracks = await Task.Run(() => SavedPlaylists.Read(name).Select(Track.FromFile).ToList());
+            tracks = await Task.Run(() => SavedPlaylists.Read(name).Select(song => song.ToTrack()).ToList());
         }
         catch (Exception ex)
         {
@@ -212,6 +213,7 @@ public partial class MainWindow
     /// <summary>The favourite-or-not menu item for songs in the queue or library.</summary>
     public MenuItem FavoriteMenuItem(IReadOnlyList<string> paths)
     {
+        paths = Track.FilesOnly(paths);
         // With a mix selected, the item adds the ones that aren't favourites yet.
         var allFavorite = paths.Count > 0 && paths.All(IsFavoriteTrack);
         var item = new MenuItem
@@ -334,12 +336,12 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Takes these files out of a playlist, wherever they appear in it. The files themselves stay.</summary>
+    /// <summary>Takes these songs out of a playlist, wherever they appear in it. The files themselves stay.</summary>
     public void RemoveFromPlaylist(string name, IReadOnlyCollection<string> paths)
     {
         var remove = new HashSet<string>(paths, StringComparer.OrdinalIgnoreCase);
         SavePlaylist(() => SavedPlaylists.Write(name,
-            SavedPlaylists.Read(name).Where(path => !remove.Contains(path)).Select(Track.FromFile).ToList()));
+            SavedPlaylists.Read(name).Where(song => !remove.Contains(song.Path)).Select(song => song.ToTrack()).ToList()));
     }
 
     private static void AddPlayItems(MenuItem parent, Action<bool> play)

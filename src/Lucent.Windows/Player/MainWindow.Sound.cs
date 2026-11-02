@@ -97,6 +97,12 @@ public partial class MainWindow
             _upNextChosen = true;
         }
 
+        // A Spotify song can't follow seamlessly: it starts in Spotify once this track ends.
+        if (_upNext is { Entry.Track.IsStreamed: true })
+        {
+            _upNextRejected = true;
+        }
+
         // Lined up again if the player let go of it (its file was released to save tags, say).
         if (_upNext is not null && !_upNextRejected && _player.QueuedPath is null)
         {

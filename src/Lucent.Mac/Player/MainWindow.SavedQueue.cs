@@ -21,8 +21,8 @@ public partial class MainWindow
             return;
         }
 
-        var (files, current) = await Task.Run(SavedQueue.Read);
-        var tracks = await Task.Run(() => files.Select(Track.FromFile).ToList());
+        var (songs, current) = await Task.Run(SavedQueue.Read);
+        var tracks = await Task.Run(() => songs.Select(song => song.ToTrack()).ToList());
         _queueRestored = true;
         if (IsShuttingDown || tracks.Count == 0)
         {

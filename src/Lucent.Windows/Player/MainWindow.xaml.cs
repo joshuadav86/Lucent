@@ -113,6 +113,7 @@ public partial class MainWindow : Window
             UpdatePosition();
             UpdateSongClock();
             LineUpNext();
+            FollowStreamedSong();
             UpdateStationStatus();
             ObserveForScrobbling();
             FollowComputerVolume();
@@ -1815,6 +1816,11 @@ public partial class MainWindow : Window
 
     public void ShowInExplorer(string path)
     {
+        if (Track.IsStreamedPath(path))
+        {
+            return;
+        }
+
         try
         {
             Process.Start("explorer.exe", $"/select,\"{path}\"");
@@ -1863,6 +1869,12 @@ public partial class MainWindow : Window
         {
             if (entry == _current)
             {
+                // The queue's Spotify song stops in Spotify too.
+                if (_streamed?.Entry == entry)
+                {
+                    StopControllingRemote(pause: true);
+                }
+
                 _player.Close();
                 _current = null;
                 _libraryWindow.ShowLocalPlaying(null);
@@ -1877,6 +1889,13 @@ public partial class MainWindow : Window
 
     public void PlayEntry(PlaylistEntry entry)
     {
+        // A playlist's Spotify song plays in Spotify, and the queue carries on after it (see MainWindow.StreamedSongs.cs).
+        if (entry.Track.IsStreamed)
+        {
+            PlayInSpotify(entry);
+            return;
+        }
+
         // Playing Lucent's own music: the other app being controlled pauses, and the player is Lucent's again.
         StopControllingRemote(pause: true);
         LeaveRadio();
@@ -1920,8 +1939,11 @@ public partial class MainWindow : Window
         UpdatePlayPauseButton();
         UpdatePosition();
         UpdateSongClock();
-        FindBeats(entry.Track.Path);
-        _tempoKey?.Played(entry.Track.Path);
+        if (!entry.Track.IsStreamed)
+        {
+            FindBeats(entry.Track.Path);
+            _tempoKey?.Played(entry.Track.Path);
+        }
     }
 
     private void OnTrackEnded()
@@ -1948,7 +1970,8 @@ public partial class MainWindow : Window
 
     private void PlayNext(bool wrap)
     {
-        if (RemoteTakes(remote => remote.NextAsync()))
+        // While the queue's Spotify song plays, Next is the queue's.
+        if (_streamed is null && RemoteTakes(remote => remote.NextAsync()))
         {
             return;
         }
@@ -1995,7 +2018,13 @@ public partial class MainWindow : Window
 
     private void PlayPrevious()
     {
-        if (RemoteTakes(remote => remote.PreviousAsync()))
+        if (_streamed is null && RemoteTakes(remote => remote.PreviousAsync()))
+        {
+            return;
+        }
+
+        // The queue's Spotify song starts again, unless it's only just started.
+        if (_streamed is not null && ShownPosition > TimeSpan.FromSeconds(3) && RemoteTakes(remote => remote.SeekAsync(TimeSpan.Zero)))
         {
             return;
         }
@@ -2043,8 +2072,8 @@ public partial class MainWindow : Window
 
     private void ToggleShuffle()
     {
-        // While another app is controlled, it's that app's shuffle.
-        if (RemoteTakes(remote => remote.ToggleShuffleAsync()))
+        // While another app is controlled, it's that app's shuffle (the queue's own while it plays a Spotify song).
+        if (_streamed is null && RemoteTakes(remote => remote.ToggleShuffleAsync()))
         {
             return;
         }
@@ -2065,7 +2094,7 @@ public partial class MainWindow : Window
 
     private void CycleRepeat()
     {
-        if (RemoteTakes(remote => remote.CycleRepeatAsync()))
+        if (_streamed is null && RemoteTakes(remote => remote.CycleRepeatAsync()))
         {
             return;
         }
@@ -2125,7 +2154,7 @@ public partial class MainWindow : Window
         ShuffleButton.IsChecked = ShownShuffle;
         RepeatButton.IsChecked = ShownRepeat != RepeatMode.Off;
         RepeatOneBadge.Visibility = ShownRepeat == RepeatMode.One ? Visibility.Visible : Visibility.Collapsed;
-        if (_remote is { } remote)
+        if (_remote is { } remote && _streamed is null)
         {
             ShuffleButton.ToolTip = remote.ShuffleTip;
             RepeatButton.ToolTip = remote.RepeatTip;
@@ -2534,7 +2563,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        ArtworkWindow.ShowTrack(track);
+        ArtworkWindow.ShowTrack(track is { IsStreamed: true } ? null : track);
         UpdateMediaControls();
         UpdateTrackFavoriteButton();
         if (track is null)
@@ -2549,7 +2578,7 @@ public partial class MainWindow : Window
         var number = _current is null ? 0 : _playlist.IndexOf(_current) + 1;
         SetMarquee(number > 0 ? $"{number}. {name}" + (track.Duration > TimeSpan.Zero ? $" ({track.DurationText})" : string.Empty) : name);
         var details = track.AudioDetails;
-        TrackDetails.Text = string.IsNullOrEmpty(details) ? Path.GetFileName(track.Path) : details;
+        TrackDetails.Text = track.IsStreamed ? "Plays in Spotify" : string.IsNullOrEmpty(details) ? Path.GetFileName(track.Path) : details;
         TrackDetails.ToolTip = track.Path;
         Title = $"{name} - Lucent";
     }

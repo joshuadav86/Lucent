@@ -36,28 +36,41 @@ public static class SavedPlaylists
 
     public static bool Exists(string name) => File.Exists(PathOf(name));
 
-    /// <summary>The files in a playlist, in order, leaving out any that no longer exist.</summary>
-    public static List<string> Read(string name)
+    /// <summary>
+    /// The songs in a playlist, in order: its files that still exist, and its Spotify songs (see <see cref="Track.ForSpotify"/>).
+    /// </summary>
+    public static List<SavedSong> Read(string name)
     {
         var path = PathOf(name);
         var folder = Path.GetDirectoryName(path)!;
-        var files = new List<string>();
+        var songs = new List<SavedSong>();
+        var notes = new EntryNotes();
         foreach (var raw in File.ReadAllLines(path, Encoding.UTF8))
         {
             var line = raw.Trim();
             if (line.Length == 0 || line.StartsWith('#'))
             {
+                notes.Take(line);
                 continue;
             }
 
-            var file = Path.IsPathRooted(line) ? line : Path.GetFullPath(Path.Combine(folder, line));
-            if (File.Exists(file))
+            if (notes.Song(line) is { } streamed)
             {
-                files.Add(file);
+                songs.Add(new SavedSong(line, streamed));
             }
+            else
+            {
+                var file = Path.IsPathRooted(line) ? line : Path.GetFullPath(Path.Combine(folder, line));
+                if (File.Exists(file))
+                {
+                    songs.Add(new SavedSong(file, null));
+                }
+            }
+
+            notes = new EntryNotes();
         }
 
-        return files;
+        return songs;
     }
 
     /// <summary>Saves (or replaces) a playlist.</summary>
@@ -67,10 +80,7 @@ public static class SavedPlaylists
         var text = new StringBuilder("#EXTM3U\n");
         foreach (var track in tracks)
         {
-            var seconds = track.Duration > TimeSpan.Zero ? (int)Math.Round(track.Duration.TotalSeconds) : -1;
-            var title = string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Artist} - {track.Title}";
-            text.Append("#EXTINF:").Append(seconds).Append(',').Append(title).Append('\n');
-            text.Append(track.Path).Append('\n');
+            AppendEntry(text, track);
         }
 
         var path = PathOf(name);
@@ -79,10 +89,40 @@ public static class SavedPlaylists
         File.Move(temporary, path, overwrite: true);
     }
 
+    /// <summary>
+    /// A song's lines in a .m3u8: its #EXTINF (length and "Artist - Title"), then the file. A Spotify song gets its
+    /// artist, album and cover on lines of their own first (#EXTART, #EXTALB, #EXTIMG), so Lucent can show it again
+    /// without asking Spotify; other players skip those lines, and the spotify: address they can't play.
+    /// </summary>
+    internal static void AppendEntry(StringBuilder text, Track track)
+    {
+        var seconds = track.Duration > TimeSpan.Zero ? (int)Math.Round(track.Duration.TotalSeconds) : -1;
+        var title = string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Artist} - {track.Title}";
+        text.Append("#EXTINF:").Append(seconds).Append(',').Append(OneLine(title)).Append('\n');
+        if (track.IsStreamed)
+        {
+            AppendNote(text, "#EXTART:", track.Artist);
+            AppendNote(text, "#EXTALB:", track.Album);
+            AppendNote(text, "#EXTIMG:", track.CoverUrl);
+        }
+
+        text.Append(track.Path).Append('\n');
+    }
+
+    private static void AppendNote(StringBuilder text, string tag, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            text.Append(tag).Append(OneLine(value)).Append('\n');
+        }
+    }
+
+    private static string OneLine(string text) => text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+
     /// <summary>Adds songs to the end of a playlist, creating it if it's new.</summary>
     public static void Append(string name, IReadOnlyList<Track> tracks)
     {
-        var existing = Exists(name) ? Read(name).Select(Track.FromFile).ToList() : new List<Track>();
+        var existing = Exists(name) ? Read(name).Select(song => song.ToTrack()).ToList() : new List<Track>();
         existing.AddRange(tracks);
         Write(name, existing);
     }
@@ -149,4 +189,69 @@ public static class SavedPlaylists
     }
 
     private static string PathOf(string name) => Path.Combine(Folder, CleanName(name) + ".m3u8");
+}
+
+/// <summary>
+/// A song in a saved playlist or the saved queue: a file's path, or a Spotify song's address with what the playlist says
+/// of it (<paramref name="Streamed"/>).
+/// </summary>
+public readonly record struct SavedSong(string Path, Track? Streamed)
+{
+    /// <summary>The song as a track: the Spotify song as saved, or the file with its tags read (which takes a moment).</summary>
+    public Track ToTrack() => Streamed ?? Track.FromFile(Path);
+}
+
+/// <summary>What the # lines before a song in a .m3u8 say of it (see <see cref="SavedPlaylists.AppendEntry"/>).</summary>
+internal sealed class EntryNotes
+{
+    private int _seconds = -1;
+    private string _info = string.Empty;
+    private string _artist = string.Empty;
+    private string _album = string.Empty;
+    private string? _cover;
+
+    /// <summary>Notes a # line, leaving out any Lucent doesn't read.</summary>
+    public void Take(string line)
+    {
+        if (line.StartsWith("#EXTINF:", StringComparison.OrdinalIgnoreCase))
+        {
+            var info = line[8..];
+            var comma = info.IndexOf(',');
+            _seconds = comma > 0 && int.TryParse(info[..comma].Trim(), out var seconds) ? seconds : -1;
+            _info = comma >= 0 ? info[(comma + 1)..].Trim() : string.Empty;
+        }
+        else if (line.StartsWith("#EXTART:", StringComparison.OrdinalIgnoreCase))
+        {
+            _artist = line[8..].Trim();
+        }
+        else if (line.StartsWith("#EXTALB:", StringComparison.OrdinalIgnoreCase))
+        {
+            _album = line[8..].Trim();
+        }
+        else if (line.StartsWith("#EXTIMG:", StringComparison.OrdinalIgnoreCase))
+        {
+            // Only a web address: the list downloads it.
+            var cover = line[8..].Trim();
+            _cover = cover.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? cover : null;
+        }
+    }
+
+    /// <summary>The Spotify song at <paramref name="path"/>, as the notes describe it, or null when it's a file.</summary>
+    public Track? Song(string path)
+    {
+        if (!Track.IsStreamedPath(path))
+        {
+            return null;
+        }
+
+        // #EXTINF has "Artist - Title"; the artist on its own line says where the title starts.
+        var title = _artist.Length > 0 && _info.StartsWith(_artist + " - ", StringComparison.Ordinal) ? _info[(_artist.Length + 3)..] : _info;
+        if (title.Length == 0)
+        {
+            title = "Spotify song";
+        }
+
+        var duration = _seconds > 0 ? TimeSpan.FromSeconds(_seconds) : TimeSpan.Zero;
+        return Track.ForSpotify(path, title, _artist, _album, duration, _cover);
+    }
 }

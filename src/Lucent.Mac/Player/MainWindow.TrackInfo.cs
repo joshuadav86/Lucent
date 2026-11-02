@@ -64,7 +64,7 @@ public partial class MainWindow
     /// <summary>Opens the info editor for these songs.</summary>
     public void EditInfo(IEnumerable<string> paths)
     {
-        var list = paths.ToList();
+        var list = Track.FilesOnly(paths);
         if (list.Count > 0)
         {
             TrackInfoWindow.Open(this, _player, _settings, list);
