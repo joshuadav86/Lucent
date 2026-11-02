@@ -2511,8 +2511,9 @@ public partial class MainWindow : Window
 
     private void OnPreviewMouseWheel(object? sender, PointerWheelEventArgs e)
     {
-        // Scrolling anywhere over the player changes the volume, like Winamp's mouse wheel.
-        if (OptionsPopup.IsOpen)
+        // Scrolling anywhere over the player changes the volume, like Winamp's mouse wheel. Over a panel of the single
+        // window, the wheel is the panel's: it scrolls the library or queue, as it does in the window on its own.
+        if (OptionsPopup.IsOpen || PaneAt(e.Source) is not null)
         {
             return;
         }
