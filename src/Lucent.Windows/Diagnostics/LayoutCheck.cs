@@ -219,9 +219,7 @@ public partial class MainWindow
 
             if (EqualizerWindow.Current is { IsVisible: true } equalizer)
             {
-                // What its sliders and buttons need, as it sizes itself to them.
-                equalizer.Root.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                var needs = Math.Ceiling(equalizer.Root.DesiredSize.Height) + equalizer.BorderThickness.Top + equalizer.BorderThickness.Bottom;
+                var needs = equalizer.HeightNeeded;
                 lines.Add($"{(needs <= equalizer.Height + 2 ? "ok" : "MISMATCH")} {name}: the equalizer is {equalizer.Height:0} tall, its sliders need {needs:0}");
             }
         }

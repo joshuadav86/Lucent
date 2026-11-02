@@ -328,6 +328,12 @@ internal static class LayoutCheck
                     }
                 }
             }
+
+            if (EqualizerWindow.Current is { IsVisible: true } equalizer)
+            {
+                var needs = equalizer.HeightNeeded;
+                lines.Add($"{(needs <= equalizer.Height + 2 ? "ok" : "MISMATCH")} {name}: the equalizer is {equalizer.Height:0} tall, its sliders need {needs:0}");
+            }
         }
 
         return lines;

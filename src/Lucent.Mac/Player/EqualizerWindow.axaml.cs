@@ -412,6 +412,23 @@ public partial class EqualizerWindow : Window
 
         FinishGlide();
         _fitWidth = width;
+        LayOutAgain();
+    }
+
+    /// <summary>Lays the sliders out again after the skin changed, as its type can need a little more or less room.</summary>
+    public void FitToSkin()
+    {
+        if (ClassicSkin is not null || _classic is not null)
+        {
+            return;
+        }
+
+        FinishGlide();
+        LayOutAgain();
+    }
+
+    private void LayOutAgain()
+    {
         // Start the top row from its full look: FitHeader takes away only what this width needs.
         BandsLabel.IsVisible = true;
         BandsGroup.Margin = new Thickness(16, 0, 16, 0);
@@ -421,6 +438,16 @@ public partial class EqualizerWindow : Window
     }
 
     // Sized by hand rather than with SizeToContent, so the width can glide when the band count changes.
+    /// <summary>How tall its sliders and buttons need it to be, as it sizes itself to them (for the layout check).</summary>
+    internal double HeightNeeded
+    {
+        get
+        {
+            Frame.Measure(Size.Infinity);
+            return Math.Ceiling(Frame.DesiredSize.Height);
+        }
+    }
+
     private void FitToContent()
     {
         Frame.Measure(Size.Infinity);

@@ -370,8 +370,17 @@ public partial class MainWindow : Window
             return;
         }
 
-        var delta = e.NewSize.Height - e.PreviousSize.Height;
-        var column = ColumnUnderPlayer(Top + e.PreviousSize.Height);
+        ShiftColumnUnder(Top + e.PreviousSize.Height, e.NewSize.Height - e.PreviousSize.Height);
+        AlignBesidePlayer();
+    }
+
+    /// <summary>
+    /// The windows stacked under <paramref name="edge"/> in the player's column move down by <paramref name="delta"/>
+    /// (up, if it's less than nothing), and the last one keeps its bottom edge where it was.
+    /// </summary>
+    private void ShiftColumnUnder(double edge, double delta)
+    {
+        var column = ColumnUnderPlayer(edge);
         for (var i = 0; i < column.Count; i++)
         {
             var window = column[i];
@@ -382,8 +391,6 @@ public partial class MainWindow : Window
                 window.Height = Math.Max(window.MinHeight, height - delta);
             }
         }
-
-        AlignBesidePlayer();
     }
 
     /// <summary>
@@ -1115,12 +1122,20 @@ public partial class MainWindow : Window
 
             var width = SizeOf(window).Width;
             var beside = Math.Abs(window.Left - (Left + ActualWidth)) < 2 || Math.Abs(window.Left + width - Left) < 2;
-            if (beside && Math.Abs(window.Top - Top) < 2)
+            // Not over a window under it, though (the artwork under the library, as single window can leave them).
+            var stretched = new Rect(window.Left, window.Top, width, Math.Max(window.MinHeight, height));
+            if (beside && Math.Abs(window.Top - Top) < 2 && !CoversAnother(window, stretched))
             {
-                window.Height = Math.Max(window.MinHeight, height);
+                window.Height = stretched.Height;
             }
         }
     }
+
+    /// <summary>Whether <paramref name="window"/> at <paramref name="place"/> would be over another of the windows that are shown.</summary>
+    private bool CoversAnother(Window window, Rect place) => TiledWindows().Any(entry =>
+        entry.Window != window && entry.Window != this
+        && Rect.Intersect(place, new Rect(entry.Window.Left, entry.Window.Top, SizeOf(entry.Window).Width, SizeOf(entry.Window).Height)) is { IsEmpty: false } overlap
+        && overlap.Width > 2 && overlap.Height > 2);
 
     // Once the windows that just opened or closed have settled their sizes.
     private void AlignBesidePlayerSoon() =>
@@ -1572,7 +1587,33 @@ public partial class MainWindow : Window
         BuildClassicSkinSwatches();
         _settings.Theme = SkinManager.Find(name).Theme;
         ApplyLook();
+        FitEqualizerToSkin();
         ShowOptionValues();
+    }
+
+    /// <summary>
+    /// The equalizer lays its sliders out again in the skin's type, which can make it a little taller or shorter
+    /// (Linework's is), so none of it's cut off; the windows docked under it follow its bottom edge.
+    /// </summary>
+    private void FitEqualizerToSkin()
+    {
+        if (EqualizerWindow.Current is not { } equalizer)
+        {
+            return;
+        }
+
+        var height = SizeOf(equalizer).Height;
+        var bottom = equalizer.Top + height;
+        equalizer.FitToSkin();
+        if (InSingleWindow)
+        {
+            RetileSoon();
+        }
+        else if (equalizer.IsVisible && equalizer.WindowState == WindowState.Normal && !double.IsNaN(equalizer.Height)
+            && Math.Abs(equalizer.Height - height) >= 0.5)
+        {
+            ShiftColumnUnder(bottom, equalizer.Height - height);
+        }
     }
 
     /// <summary>Applies the chosen theme and skin to every window.</summary>

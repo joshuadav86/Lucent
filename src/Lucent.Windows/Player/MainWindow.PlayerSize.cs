@@ -54,17 +54,7 @@ public partial class MainWindow
 
         _settings.PlayerScale = 1;
         _scaleAtResizeEnd = 1;
-        if (InSingleWindow)
-        {
-            ScalePlayer(1);
-            PlayerRoot.Width = PlayerPaneWidth;
-            RetileSoon();
-        }
-        else
-        {
-            ApplyPlayerSize();
-        }
-
+        ApplyPlayerSize();
         _settings.Save();
     }
 
@@ -98,6 +88,17 @@ public partial class MainWindow
             MinWidth = 0;
             MaxWidth = double.PositiveInfinity;
             LucentPlayer.LayoutTransform = Transform.Identity;
+            return;
+        }
+
+        if (InSingleWindow)
+        {
+            // The player's a panel in the single window: its scale sets the panel's width, and the window keeps its own
+            // size. (A skin picked as a single window once put the player's limits on the whole window, squeezing it,
+            // hiding panels, and keeping it from filling the screen.)
+            ScalePlayer(PlayerScale);
+            PlayerRoot.Width = PlayerPaneWidth;
+            RetileSoon();
             return;
         }
 
