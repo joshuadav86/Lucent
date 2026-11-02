@@ -103,7 +103,7 @@ float3 Render(float2 uv, float2 p)
 }
 ```
 
-Inputs like `Bass`, `Mid`, `Treble`, `Beat`, `spectrum(x)`, and `waveform(x)`, and helpers like `kaleidoscope`, `glow`, `fbm`, and `cameraRay`, are in [`Shaders/Common.hlsli`](content/Shaders/Common.hlsli). Your own `.milk` and `.avs` presets import too. MilkDrop and AVS credits are in each preset folder's `CREDITS.md`.
+Inputs like `Bass`, `Mid`, `Treble`, `Beat`, `spectrum(x)`, and `waveform(x)`, and helpers like `kaleidoscope`, `glow`, `fbm`, and `cameraRay`, are in [`Shaders/Common.hlsli`](content/Shaders/Common.hlsli). Right-click the visuals › Advanced to show, edit, or recompile the shader that's on screen. Your own `.milk` and `.avs` presets import too. MilkDrop and AVS credits are in each preset folder's `CREDITS.md`.
 
 ## Build from source
 

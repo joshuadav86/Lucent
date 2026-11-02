@@ -88,6 +88,7 @@ public partial class VisualizerWindow : ToolWindow
         {
             VisualizerStatus.Text = message;
             ToolTip.SetTip(VisualizerStatus, message);
+            OnRecompileProblem(message);
         };
         host.DoubleClicked += (_, _) => OnVisualsDoubleClicked();
         host.RightClicked += (_, _) => ShowVisualsMenu();

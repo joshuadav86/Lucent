@@ -103,6 +103,18 @@ public sealed class VisualizerHost : HwndHost
     /// <summary>Every visual (with its family and tags), in the order <see cref="PresetIndex"/> counts them; empty until they load.</summary>
     public IReadOnlyList<PresetSource> Presets => _renderer?.Presets ?? Array.Empty<PresetSource>();
 
+    /// <summary>Whether the visual of this name didn't compile (or a MilkDrop preset went wrong drawing), so it's being skipped.</summary>
+    public bool HasFailed(string name)
+    {
+        if (_renderer is not { } renderer)
+        {
+            return false;
+        }
+
+        var index = IndexOfName(renderer.PresetNames, name);
+        return index >= 0 && renderer.HasFailed(index);
+    }
+
     /// <summary>The visual to start with (by name), usually the one showing when the app last closed.</summary>
     public string? StartPresetName { get; set; }
 
