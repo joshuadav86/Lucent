@@ -87,11 +87,11 @@ float boxTunnelDE(float3 pos, float4 shape, out float trap)
 float3 Render(float2 uv, float2 p)
 {
     // Steady cruise plus a smooth surge after every beat.
-    float z = Time * 0.55 + (BeatCount - Beat) * 0.12;
+    float z = Time * 0.55 + BeatGlide * 0.12;
     float3 eye = float3(boxTunnelPath(z), z);
     float3 ahead = float3(boxTunnelPath(z + 1.6), z + 1.6);
     float roll = sin(Time * 0.11) * 0.6 + (boxTunnelPath(z + 1.0).x - eye.x) * 0.8;
-    float3 dir = cameraRay(eye, ahead, p, 0.95 - Beat * 0.08, roll);
+    float3 dir = cameraRay(eye, ahead, p, 0.95 - BeatSwell * 0.08, roll);
 
     // Slowly morph the fold scale and strength so the architecture keeps reshaping itself.
     float4 shape = float4(2.2 + sin(Time * 0.071) * 0.12, 1.0 / (0.32 + sin(Time * 0.053 + 1.0) * 0.08),

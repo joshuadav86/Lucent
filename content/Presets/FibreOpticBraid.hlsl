@@ -93,9 +93,9 @@ float braidDE(float3 pos, float widen, out float3 ids)
 
 float3 Render(float2 uv, float2 p)
 {
-    float z = Time * 0.9 + (BeatCount - Beat) * 0.25;
+    float z = Time * 0.9 + BeatGlide * 0.25;
     float3 eye = float3(braidPath(z), z);
-    float3 dir = cameraRay(eye, float3(braidPath(z + 3.0), z + 3.0), p, 0.8 - Beat * 0.07, sin(Time * 0.06) * 2.0);
+    float3 dir = cameraRay(eye, float3(braidPath(z + 3.0), z + 3.0), p, 0.8 - BeatSwell * 0.07, sin(Time * 0.06) * 2.0);
 
     const float farPlane = 14.0;
     int maxSteps = qualitySteps(64);

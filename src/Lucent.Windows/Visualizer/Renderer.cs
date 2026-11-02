@@ -28,7 +28,7 @@ public sealed partial class Renderer : IDisposable
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
     private const Format HdrBackBufferFormat = Format.R16G16B16A16_Float;
-    private const int ConstantCount = 44;
+    private const int ConstantCount = 48;
     private const int ParticleStride = 64;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const double MaxRenderScale = 4.0;
@@ -698,6 +698,8 @@ public sealed partial class Renderer : IDisposable
         _constants[29] = drop;
         _constants[30] = moment.SectionPhase;
         _constants[31] = _songFollower.Mapped ? 1f : _songFollower.Live ? 0.5f : 0f;
+        _constants[44] = _analyzer.BeatGlide;
+        _constants[45] = _analyzer.BeatSwell;
         if (Pointer is { } pointer)
         {
             pointer.Update((float)_renderWidth / _renderHeight);

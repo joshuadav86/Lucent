@@ -113,11 +113,11 @@ float crystalDE(float3 pos, out float4 info)
 
 float3 Render(float2 uv, float2 p)
 {
-    float z = Time * 0.5 + (BeatCount - Beat) * 0.1;
+    float z = Time * 0.5 + BeatGlide * 0.1;
     float2 drift = float2(sin(Time * 0.13), cos(Time * 0.11)) * 0.18;
     float3 eye = float3(crystalCave(z).xy + drift, z);
     float3 ahead = float3(crystalCave(z + 2.0).xy + drift * 0.3, z + 2.0);
-    float3 dir = cameraRay(eye, ahead, p, 0.9 - Beat * 0.07, sin(Time * 0.1) * 0.5);
+    float3 dir = cameraRay(eye, ahead, p, 0.9 - BeatSwell * 0.07, sin(Time * 0.1) * 0.5);
 
     const float farPlane = 12.0;
     int maxSteps = qualitySteps(80);

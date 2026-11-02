@@ -108,10 +108,10 @@ float3 templePath(float x)
 
 float3 Render(float2 uv, float2 p)
 {
-    float x = Time * 0.45 + (BeatCount - Beat) * 0.08;
+    float x = Time * 0.45 + BeatGlide * 0.08;
     float3 eye = templePath(x);
     float3 ahead = templePath(x + 2.0) + float3(0.0, sin(Time * 0.09) * 0.4, sin(Time * 0.11) * 0.6);
-    float3 dir = cameraRay(eye, ahead, p, 0.85 - Beat * 0.06, sin(Time * 0.07) * 0.25);
+    float3 dir = cameraRay(eye, ahead, p, 0.85 - BeatSwell * 0.06, sin(Time * 0.07) * 0.25);
 
     const float farPlane = 18.0;
     int maxSteps = qualitySteps(90);

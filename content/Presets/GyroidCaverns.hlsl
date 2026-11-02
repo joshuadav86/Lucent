@@ -30,7 +30,7 @@ float3 Render(float2 uv, float2 p)
     float z = Time * 1.1;
     float3 eye = float3(cavePath(z), z);
     float3 target = float3(cavePath(z + 2.0), z + 2.0);
-    float3 direction = cameraRay(eye, target, p, 1.0 - Beat * 0.12, sin(Time * 0.17) * 0.5);
+    float3 direction = cameraRay(eye, target, p, 1.0 - BeatSwell * 0.12, sin(Time * 0.17) * 0.5);
 
     const float farPlane = 16.0;
     float travelled = 0.0;

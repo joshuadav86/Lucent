@@ -74,7 +74,7 @@ float cubesDE(float3 q, float zoomWhole, float zoomFrac, float3 motion, float4 s
 float3 Render(float2 uv, float2 p)
 {
     // Endless inward fall: the frames grow continuously; each beat adds a quick surge.
-    float zoom = Time * 0.22 + (BeatCount - Beat) * 0.08;
+    float zoom = Time * 0.22 + BeatGlide * 0.08;
     float zoomWhole = floor(zoom);
     float zoomFrac = zoom - zoomWhole;
 
@@ -87,7 +87,7 @@ float3 Render(float2 uv, float2 p)
     // The camera hangs off the axis, slowly circling, always looking at the vanishing centre.
     float orbit = Time * 0.05;
     float3 eye = float3(sin(orbit) * 0.32, cos(orbit) * 0.32, -1.0) * 1.6;
-    float3 dir = cameraRay(eye, float3(0.0, 0.0, 0.0), p, 1.1 - Beat * 0.08, Time * 0.03);
+    float3 dir = cameraRay(eye, float3(0.0, 0.0, 0.0), p, 1.1 - BeatSwell * 0.08, Time * 0.03);
 
     const float farPlane = 12.0;
     int maxSteps = qualitySteps(90);

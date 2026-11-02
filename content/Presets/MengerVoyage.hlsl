@@ -41,8 +41,9 @@ float3 spongeNormal(float3 p)
 
 float3 Render(float2 uv, float2 p)
 {
-    float3 origin = float3(0.0, 0.0, Time * 0.45);
-    float3 direction = normalize(float3(p * (0.75 + Beat * 0.12), 1.0));
+    // Each beat eases the camera further down the corridor and gently widens the view, with no jolt on the beat.
+    float3 origin = float3(0.0, 0.0, Time * 0.45 + BeatGlide * 0.14);
+    float3 direction = normalize(float3(p * (0.75 + BeatSwell * 0.08), 1.0));
     direction.xy = rotate(direction.xy, sin(Time * 0.1) * 0.4);
 
     // Detail allows more steps and a closer approach to the walls; shading stays scaled to Normal's 96.
