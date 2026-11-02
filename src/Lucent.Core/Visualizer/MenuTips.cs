@@ -54,6 +54,16 @@ public static class MenuTips
 
     public const string Power = "Auto picks for your computer: Smoothest on a desktop, Balanced on a laptop, Power saver on battery, in low power mode, or when it runs hot. Smoothest matches your screen's refresh rate, Balanced draws up to 60 frames a second, and Power saver up to 30 at fewer pixels.";
 
+    public const string Advanced = "For shader writers: find, edit, and recompile the visual's shader file.";
+
+    public const string ShowShaderFile = "Open the folder the visual's file is in, with the file selected.";
+
+    public const string EditShader = "Open the visual's file in your text editor. A built-in visual is copied to your own Presets folder first, so updates never overwrite your changes; delete the copy to go back.";
+
+    public const string RecompileShader = "Read the visual's file again and compile it, to see your changes.";
+
+    public const string AvsNotEditable = "AVS presets are binary files made in Winamp's AVS editor, so they can't be edited as text.";
+
     public const string FullScreenLucent = "Spread every open Lucent window across the screen, side by side.";
 
     public const string SingleWindow = "Show every open Lucent window as a panel inside one window, with one title bar.";

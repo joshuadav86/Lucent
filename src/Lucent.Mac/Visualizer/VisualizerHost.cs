@@ -110,6 +110,26 @@ public sealed class VisualizerHost : Border, IDisposable
     /// <summary>Every visual (with its family and tags), in the order <see cref="PresetIndex"/> counts them; empty until they load.</summary>
     public IReadOnlyList<PresetSource> Presets => _presets;
 
+    /// <summary>Whether the visual of this name didn't compile (or a MilkDrop preset went wrong drawing), so it's being skipped.</summary>
+    public bool HasFailed(string name)
+    {
+        if (_engine is not { } engine)
+        {
+            return false;
+        }
+
+        var presets = engine.Presets;
+        for (var i = 0; i < presets.Count; i++)
+        {
+            if (string.Equals(presets[i].Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return engine.HasFailed(i);
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>The visual to start with (by name), usually the one showing when the app last closed.</summary>
     public string? StartPresetName { get; set; }
 

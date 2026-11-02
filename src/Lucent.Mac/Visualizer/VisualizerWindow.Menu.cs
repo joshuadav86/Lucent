@@ -114,6 +114,9 @@ public partial class VisualizerWindow
             player.AddGraphicsItems(menu);
         }
 
+        // Tucked away at the end, for people writing shaders.
+        menu.Items.Add(new Separator());
+        menu.Items.Add(AdvancedMenu());
         Windows.LucentFullScreen.AddTo(menu, this);
         menu.Open(VisualizerFrame);
     }
