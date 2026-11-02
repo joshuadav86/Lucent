@@ -111,6 +111,12 @@ public partial class MainWindow
         var places = PanelPlaces();
         lines.Add($"{label}: single window at {Describe(frame)}, panels: " +
             string.Join(", ", places.Select(entry => $"{NameFor(entry.Key)} {Describe(entry.Value)}")));
+        // A single window hanging off the screen brings the windows onto it together: sideways by just what that takes,
+        // and up or down by no more than the whole of it would need (the ones along the bottom can end higher).
+        var screen = ScreenArea.Of(this);
+        var block = places.Count == 0 ? frame : places.Values.Aggregate((all, place) => Rect.Union(all, place));
+        var dx = OntoScreen(block.Left, block.Right, screen.Left, screen.Right);
+        var dyMost = OntoScreen(block.Top, block.Bottom, screen.Top, screen.Bottom);
         LeaveSingleWindow();
         var windows = places.Keys.ToList();
         foreach (var wait in new[] { 0, 300, 1500, 4000 })
@@ -123,12 +129,19 @@ public partial class MainWindow
         // shortest column stopped short of the bottom), to end flush with it, and the ones above them make room.
         var room = places.Values.Where(place => !places.Values.Any(other => other != place && Touch(place.Bottom, other.Top) && Across(place, other)))
             .Select(place => frame.Bottom - place.Bottom).DefaultIfEmpty(0).Max();
+        var dy = places.TryGetValue(this, out var playerPanel) ? OnScreen(this).Top - playerPanel.Top : 0;
+        var moved = dy >= Math.Min(0, dyMost) - 4 && dy <= Math.Max(0, dyMost) + 4;
+        lines.Add($"{(moved ? "ok" : "MISMATCH")} {label}: the windows moved {dx:0} across and {dy:0} down, the single window " +
+            $"needed {dx:0} and up to {dyMost:0} to be on the screen, {Describe(screen)}");
         foreach (var (window, place) in places)
         {
             var now = OnScreen(window);
-            bool Between(double value, double was) => value <= was + 4 && value >= was - room - 4;
-            var near = Math.Abs(now.Left - place.Left) <= 4 && Math.Abs(now.Width - place.Width) <= 4
-                && Between(now.Top, place.Top) && Between(now.Bottom, place.Bottom);
+            var to = new Rect(place.Left + dx, place.Top + dy, place.Width, place.Height);
+            // As wide as its panel, unless that's past the screen's edge once moved, where it gives up the room.
+            var wide = window == this || window is EqualizerWindow ? to.Width : Math.Min(to.Width, Math.Max(window.MinWidth, screen.Right - to.Left));
+            bool Between(double value, double was) => value <= was + 4 && value >= Math.Min(was, screen.Bottom) - room - 4;
+            var near = Math.Abs(now.Left - to.Left) <= 4 && Math.Abs(now.Width - wide) <= 4
+                && Between(now.Top, to.Top) && Between(now.Bottom, to.Bottom);
             lines.Add($"{(near ? "ok" : "MISMATCH")} {label}: the {NameFor(window)} is at {Describe(now)}, its panel was at {Describe(place)}");
         }
 
@@ -140,10 +153,15 @@ public partial class MainWindow
         foreach (var window in windows)
         {
             var at = OnScreen(window);
-            var inside = at.Left >= frame.Left - 4 && at.Top >= frame.Top - 4 && at.Right <= frame.Right + 4 && at.Bottom <= frame.Bottom + 4;
+            var inside = at.Left >= frame.Left + dx - 4 && at.Top >= frame.Top + dy - 4 && at.Right <= frame.Right + dx + 4 && at.Bottom <= frame.Bottom + dy + 4;
             if (!inside)
             {
                 lines.Add($"MISMATCH {label}: the {NameFor(window)} at {Describe(at)} is outside where the single window was");
+            }
+
+            if (at.Left < screen.Left - 4 || at.Top < screen.Top - 4 || at.Right > screen.Right + 4 || at.Bottom > screen.Bottom + 4)
+            {
+                lines.Add($"MISMATCH {label}: the {NameFor(window)} at {Describe(at)} isn't wholly on the screen, {Describe(screen)}");
             }
 
             foreach (var other in windows.Where(other => windows.IndexOf(other) > windows.IndexOf(window)))
@@ -350,6 +368,10 @@ public partial class MainWindow
         ArtworkWindow => "artwork",
         _ => window.Title.Replace("Lucent ", string.Empty, StringComparison.Ordinal),
     };
+
+    /// <summary>How far a span moves to be on the screen: to its near edge if it's too long for it, else just enough.</summary>
+    private static double OntoScreen(double start, double end, double low, double high) =>
+        end - start > high - low ? low - start : Math.Clamp(0, low - start, high - end);
 
     private static string Describe(Rect rect) => $"{rect.Left:0},{rect.Top:0} {rect.Width:0} x {rect.Height:0}";
 

@@ -224,15 +224,30 @@ internal static class LayoutCheck
         // How far short of the single window's bottom the player's column (the player and equalizer, which keep their
         // own sizes) stops: the windows beside it end that much higher as windows, flush with it.
         var room = equalizerPanel is { } under ? Math.Max(0, Placement.BoundsOf(main).Bottom - under.Bottom) : 0;
+        // A single window hanging off the screen (on the Apple silicon runners' 1024-wide one, it does) brings the windows
+        // onto it together: sideways by just what that takes, and up or down by no more than the whole of it would need.
+        var screen = Placement.WorkArea(main);
+        var frame = Placement.BoundsOf(main);
+        var (blockLeft, blockRight) = (frame.X, new[] { panel, equalizerPanel }.Max(r => r?.Right ?? frame.X));
+        var blockBottom = new[] { panel, equalizerPanel }.Max(r => r?.Bottom ?? frame.Y);
+        var dx = OntoScreen(blockLeft, blockRight, screen.X, screen.Right);
+        var dyMost = OntoScreen(frame.Y, blockBottom, screen.Y, screen.Bottom);
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var back = !SingleWindow.IsOn() && visuals.GetVisualDescendants().OfType<MetalView>().Any() && IsOnScreen(visuals);
         lines.Add($"{(back ? "ok" : "MISMATCH")} single window off: the visuals {(back ? "are a window again" : "didn't come back as a window")}");
         lines.Add((await SettleAsync(visuals, "single window off")).Line);
+        var dy = main.Top() - frame.Y;
+        var moved = Math.Abs(main.Left() - frame.X - dx) <= 4 && dy >= Math.Min(0, dyMost) - 4 && dy <= Math.Max(0, dyMost) + 4;
+        lines.Add($"{(moved ? "ok" : "MISMATCH")} single window off: the player is at {Describe(main)}, the single window was at " +
+            $"{Describe(frame)} on a screen of {Describe(screen)}, so it moves {dx:0} across and up to {dyMost:0} down");
         var (x, y, w, h) = (visuals.Left(), visuals.Top(), visuals.ActualWidth(), visuals.ActualHeight());
+        // As wide as its panel, unless that's past the screen's edge once moved, where it gives up the room.
+        var wide = panel is { } o ? Math.Min(o.Width, Math.Max(visuals.MinWidth, screen.Right - (o.X + dx))) : 0;
         var where = panel is { } p
-            && Math.Abs(x - p.X) <= 4 && Math.Abs(w - p.Width) <= 4 && y + h <= p.Bottom + 4 && y + h >= p.Bottom - room - 4
-            && y >= main.Top() - 4 && y <= p.Y + 4;
+            && Math.Abs(x - (p.X + dx)) <= 4 && Math.Abs(w - wide) <= 4
+            && y + h <= p.Bottom + dy + 4 && y + h >= Math.Min(p.Bottom + dy, screen.Bottom) - room - 4
+            && y >= main.Top() - 4 && y <= p.Y + dy + 4;
         var panelText = panel is { } r ? $"{r.X:0},{r.Y:0} {r.Width:0} x {r.Height:0}" : "(not found)";
         lines.Add($"{(where ? "ok" : "MISMATCH")} single window off: the visuals are at {Describe(visuals)}, their panel was at {panelText}");
 
@@ -243,7 +258,7 @@ internal static class LayoutCheck
         if (equalizer is not null)
         {
             var eq = new Rect(equalizer.Left(), equalizer.Top(), equalizer.ActualWidth(), equalizer.ActualHeight());
-            var fits = equalizerPanel is { } e && Math.Abs(eq.X - e.X) <= 4 && Math.Abs(eq.Y - e.Y) <= 4 && Math.Abs(eq.Width - e.Width) <= 4;
+            var fits = equalizerPanel is { } e && Math.Abs(eq.X - (e.X + dx)) <= 4 && Math.Abs(eq.Y - (e.Y + dy)) <= 4 && Math.Abs(eq.Width - e.Width) <= 4;
             var equalizerText = equalizerPanel is { } q ? $"{q.X:0},{q.Y:0} {q.Width:0} x {q.Height:0}" : "(not found)";
             lines.Add($"{(fits ? "ok" : "MISMATCH")} single window off: the equalizer is at {Describe(equalizer)}, its panel was at {equalizerText}");
         }
@@ -252,6 +267,12 @@ internal static class LayoutCheck
             .Where(entry => entry.Item2 is not null)
             .Select(entry => (Name: entry.Item1, At: new Rect(entry.Item2!.Left(), entry.Item2.Top(), entry.Item2.ActualWidth(), entry.Item2.ActualHeight())))
             .ToList();
+        foreach (var (name, at) in shown.Where(entry => entry.At.X < screen.X - 4 || entry.At.Y < screen.Y - 4
+            || entry.At.Right > screen.Right + 4 || entry.At.Bottom > screen.Bottom + 4))
+        {
+            lines.Add($"MISMATCH single window off: the {name} at {Describe(at)} isn't wholly on the screen, {Describe(screen)}");
+        }
+
         for (var i = 0; i < shown.Count; i++)
         {
             for (var j = i + 1; j < shown.Count; j++)
@@ -469,6 +490,10 @@ internal static class LayoutCheck
 
     private static string DescribeAll(Dictionary<string, Rect> places) =>
         string.Join(", ", places.Select(entry => $"{entry.Key} {Describe(entry.Value)}"));
+
+    /// <summary>How far a span moves to be on the screen: to its near edge if it's too long for it, else just enough.</summary>
+    private static double OntoScreen(double start, double end, double low, double high) =>
+        end - start > high - low ? low - start : Math.Clamp(0, low - start, high - end);
 
     private static string Describe(Rect rect) => $"{rect.X:0},{rect.Y:0} {rect.Width:0} x {rect.Height:0}";
 

@@ -217,6 +217,7 @@ public partial class MainWindow
         // ending flush along the bottom.
         var places = PanelPlaces();
         LineUpBottoms(places);
+        KeepOnScreen(places, ScreenArea.Of(this));
         var giveBack = _panes.Keys.ToList();
         foreach (var window in giveBack)
         {
@@ -405,6 +406,37 @@ public partial class MainWindow
                 var above = places[stack[i + 1]];
                 places[stack[i]] = new Rect(place.Left, above.Bottom, place.Width, place.Height);
             }
+        }
+    }
+
+    /// <summary>
+    /// If the single window hung off the edge of its screen, the windows move onto it together, keeping their places
+    /// against each other (on their own, each would be pulled back on separately and land over the others). Too wide or
+    /// tall for the screen even then, the ones past its far edge give up the room, down to their smallest.
+    /// </summary>
+    private void KeepOnScreen(Dictionary<Window, Rect> places, Rect work)
+    {
+        if (places.Count == 0)
+        {
+            return;
+        }
+
+        var block = places.Values.Aggregate((a, b) => Rect.Union(a, b));
+        static double Shift(double start, double end, double low, double high) =>
+            end - start > high - low ? low - start : Math.Clamp(0, low - start, high - end);
+        var dx = Shift(block.Left, block.Right, work.Left, work.Right);
+        var dy = Shift(block.Top, block.Bottom, work.Top, work.Bottom);
+        foreach (var window in places.Keys.ToList())
+        {
+            var place = places[window];
+            var (left, top, width, height) = (place.Left + dx, place.Top + dy, place.Width, place.Height);
+            if (window != this && window is not EqualizerWindow)
+            {
+                width = Math.Min(width, Math.Max(window.MinWidth, work.Right - left));
+                height = Math.Min(height, Math.Max(window.MinHeight, work.Bottom - top));
+            }
+
+            places[window] = new Rect(left, top, width, height);
         }
     }
 
