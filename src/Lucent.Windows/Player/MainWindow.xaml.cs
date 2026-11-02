@@ -1637,19 +1637,25 @@ public partial class MainWindow : Window
 
     public async void AddFilesFromDialog(Window owner)
     {
+        if (PickMusicFiles(owner, "Add music and videos") is { } files)
+        {
+            await AddPathsAsync(files, owner);
+        }
+    }
+
+    /// <summary>Music and video files picked in a file dialog, or null when it's cancelled.</summary>
+    private static string[]? PickMusicFiles(Window owner, string title)
+    {
         var music = string.Join(";", AudioReaderFactory.SupportedExtensions.Select(ext => "*" + ext));
         var videos = string.Join(";", VideoFiles.Extensions.Select(ext => "*" + ext));
         var dialog = new OpenFileDialog
         {
-            Title = "Add music and videos",
+            Title = title,
             Multiselect = true,
             Filter = $"Music and videos|{music};{videos}|Music files|{music}|Videos|{videos}|All files|*.*",
         };
 
-        if (dialog.ShowDialog(owner) == true)
-        {
-            await AddPathsAsync(dialog.FileNames, owner);
-        }
+        return dialog.ShowDialog(owner) == true && dialog.FileNames.Length > 0 ? dialog.FileNames : null;
     }
 
     public async void AddFolderFromDialog(Window owner)

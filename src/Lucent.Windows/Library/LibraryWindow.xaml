@@ -151,9 +151,19 @@
                                                               Collapsed="OnFolderGroupCollapsed">
                                                         <Expander.Header>
                                                             <DockPanel>
-                                                                <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
+                                                                <TextBlock DockPanel.Dock="Right" FontSize="11"
                                                                            Margin="8,0,2,0" VerticalAlignment="Center"
-                                                                           Foreground="{DynamicResource FaintTextBrush}" />
+                                                                           Foreground="{DynamicResource FaintTextBrush}">
+                                                                    <TextBlock.Text>
+                                                                        <MultiBinding>
+                                                                            <MultiBinding.Converter>
+                                                                                <local:HeadingCountConverter />
+                                                                            </MultiBinding.Converter>
+                                                                            <Binding Path="ItemCount" />
+                                                                            <Binding />
+                                                                        </MultiBinding>
+                                                                    </TextBlock.Text>
+                                                                </TextBlock>
                                                                 <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
                                                                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                                                            Foreground="{DynamicResource MutedTextBrush}" />
@@ -179,9 +189,19 @@
                                                               Collapsed="OnFolderGroupCollapsed">
                                                         <Expander.Header>
                                                             <DockPanel>
-                                                                <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" FontSize="11"
+                                                                <TextBlock DockPanel.Dock="Right" FontSize="11"
                                                                            Margin="8,0,2,0" VerticalAlignment="Center"
-                                                                           Foreground="{DynamicResource FaintTextBrush}" />
+                                                                           Foreground="{DynamicResource FaintTextBrush}">
+                                                                    <TextBlock.Text>
+                                                                        <MultiBinding>
+                                                                            <MultiBinding.Converter>
+                                                                                <local:HeadingCountConverter />
+                                                                            </MultiBinding.Converter>
+                                                                            <Binding Path="ItemCount" />
+                                                                            <Binding />
+                                                                        </MultiBinding>
+                                                                    </TextBlock.Text>
+                                                                </TextBlock>
                                                                 <TextBlock Text="{Binding Items[0].SubheadingLabel}" FontSize="12"
                                                                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                                                            Foreground="{DynamicResource MutedTextBrush}" />

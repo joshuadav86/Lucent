@@ -62,7 +62,8 @@ public sealed class FolderHeading : INotifyPropertyChanged
         ? string.Equals(Name, first.Section, StringComparison.Ordinal) ? first.SectionDirectory : first.Directory
         : null;
 
-    public int ItemCount => Items.Count;
+    /// <summary>The songs under it, leaving out the stand-in row an empty playlist shows, so an empty one says 0.</summary>
+    public int ItemCount => Items.Count(item => !item.IsPlaceholder);
 
     public bool IsExpanded
     {

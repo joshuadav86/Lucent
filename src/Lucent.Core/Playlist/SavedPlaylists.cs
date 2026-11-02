@@ -87,6 +87,16 @@ public static class SavedPlaylists
         Write(name, existing);
     }
 
+    /// <summary>The row an empty playlist shows under PLAYLISTS, saying how it gets its songs.</summary>
+    public const string EmptyHint = "Empty. Right-click here and choose Add songs, or drop music files here.";
+
+    /// <summary>What the New playlist box says about filling it.</summary>
+    public const string NewHint = "It starts empty. Right-click it and choose Add songs, drop music files on it, or right-click songs anywhere and choose Add to playlist.";
+
+    /// <summary>What's said once songs have gone into a playlist, "Added 3 songs to Road trip".</summary>
+    public static string AddedNote(int count, string name) =>
+        count == 1 ? $"Added 1 song to {name}" : $"Added {count:N0} songs to {name}";
+
     /// <summary>
     /// Points every saved playlist's songs at new files (a duplicate that was removed, to the copy that was
     /// kept), leaving the rest of each playlist as it was.
