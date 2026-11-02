@@ -19,6 +19,8 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private GlobalSystemMediaTransportControlsSession? _watched;
     private (string Id, IRandomAccessStreamReference Thumbnail)? _cover;
+    private readonly SemaphoreSlim _sessionGate = new(1, 1);
+    private volatile bool _disposed;
 
     // The cover last handed over and its song, and the song last asked about and since when: an app can name a new song
     // while Windows still holds the last one's cover (Spotify does), which isn't handed over as the new song's at first.
@@ -61,7 +63,14 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
     /// <summary>The app's player among everything Windows' media controls know about, or null.</summary>
     protected abstract GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions);
 
-    public virtual async Task<RemoteState?> ReadAsync(CancellationToken cancel)
+    /// <summary>
+    /// Reads what's playing away from the UI thread. Windows' media controls answer from another process, and finding
+    /// the app's player and its position and play state waits for that; done on the UI thread with a read every second,
+    /// it froze the meter, analyzer and equalizer for a moment each time.
+    /// </summary>
+    public virtual Task<RemoteState?> ReadAsync(CancellationToken cancel) => Task.Run(() => ReadMediaAsync(cancel), cancel);
+
+    private async Task<RemoteState?> ReadMediaAsync(CancellationToken cancel)
     {
         var session = await SessionAsync()
             ?? throw new RemoteProblem($"{NotOpen}, then Lucent can show and control it.");
@@ -101,7 +110,7 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
 
         var track = new RemoteTrack(id, properties.Title, properties.Artist ?? string.Empty, properties.AlbumTitle ?? string.Empty,
             duration > TimeSpan.Zero ? duration : TimeSpan.Zero);
-        var volume = await Task.Run(() => AppVolume(null), cancel);
+        var volume = AppVolume(null);
         return new RemoteState(track, playing, timeline.Position - timeline.StartTime, readAt, Volume: volume, Shuffle: shuffle, Repeat: repeat);
     }
 
@@ -221,7 +230,8 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
         return picture;
     }
 
-    private async Task PressAsync(Func<GlobalSystemMediaTransportControlsSession, Task<bool>> press)
+    // Away from the UI thread too, like a read.
+    private Task PressAsync(Func<GlobalSystemMediaTransportControlsSession, Task<bool>> press) => Task.Run(async () =>
     {
         var session = await SessionAsync()
             ?? throw new RemoteProblem($"{NotOpen}, then Lucent can control it.");
@@ -229,24 +239,38 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
         {
             throw new RemoteProblem($"{Name} didn't take that button just now.");
         }
-    }
+    });
 
+    // One at a time, as a read and a button press can now overlap on different threads.
     private async Task<GlobalSystemMediaTransportControlsSession?> SessionAsync()
     {
-        if (_manager is null)
+        await _sessionGate.WaitAsync();
+        try
         {
-            _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            _manager.SessionsChanged += OnSessionsChanged;
-        }
+            if (_disposed)
+            {
+                return null;
+            }
 
-        var session = Pick(_manager.GetSessions());
-        if (session is not null)
+            if (_manager is null)
+            {
+                _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+                _manager.SessionsChanged += OnSessionsChanged;
+            }
+
+            var session = Pick(_manager.GetSessions());
+            if (session is not null)
+            {
+                SourceAppId = session.SourceAppUserModelId;
+            }
+
+            Watch(session);
+            return session;
+        }
+        finally
         {
-            SourceAppId = session.SourceAppUserModelId;
+            _sessionGate.Release();
         }
-
-        Watch(session);
-        return session;
     }
 
     // Listens to the app's player (the one just picked), and no longer to one picked before.
@@ -283,6 +307,7 @@ public abstract class MediaControlsRemote : IRemotePlayer, IRemoteVolume, IRemot
 
     public void Dispose()
     {
+        _disposed = true;
         Watch(null);
         if (_manager is { } manager)
         {

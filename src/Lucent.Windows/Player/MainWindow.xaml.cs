@@ -2393,7 +2393,7 @@ public partial class MainWindow : Window
         // after the analyzer hears the music (see MainWindow.ComputerVolume.cs).
         if (_barShowsComputerVolume || (_remote is null && BarIsComputerVolume))
         {
-            ComputerVolume.Set(e.NewValue);
+            SetComputerVolume(e.NewValue);
             VolumeText.Text = $"{e.NewValue * 100:0}%";
             return;
         }

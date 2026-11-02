@@ -35,19 +35,89 @@ public partial class MainWindow
     /// <summary>Gives Lucent's music its own volume, or full level while Windows' volume is in charge.</summary>
     private void ApplyOwnVolume() => _player.Volume = UsesComputerVolume ? 1f : (float)Math.Clamp(_settings.Volume, 0, 1);
 
+    // Windows' volume and output as last read. Reading them asks Windows' audio service, which can take several frames'
+    // time, so they're read away from the UI thread. Read on it once a second, they froze the meter, analyzer and
+    // equalizer each time.
+    private (double Level, bool Muted, string? Output)? _computerVolume;
+    private bool _computerVolumeRead;
+    private DateTime _computerVolumeReadAt;
+    private int _computerVolumeSets;
+    private bool _readingComputerVolume;
+
     /// <summary>Called by the position timer: follows Windows' volume about once a second, when it's changed elsewhere.</summary>
     private void FollowComputerVolume()
     {
         if (BarIsComputerVolume && ++_computerVolumeTicks % 5 == 0)
         {
-            ShowVolume();
+            ReadComputerVolume();
+        }
+    }
+
+    /// <summary>Reads Windows' volume away from the UI thread, and shows it when it has changed.</summary>
+    private async void ReadComputerVolume()
+    {
+        if (_readingComputerVolume)
+        {
+            return;
+        }
+
+        _readingComputerVolume = true;
+        try
+        {
+            var sets = _computerVolumeSets;
+            var read = await Task.Run(() => ReadComputerVolumeNow());
+            // A drag of the bar meanwhile is newer than this read.
+            if (sets != _computerVolumeSets)
+            {
+                return;
+            }
+
+            var changed = !_computerVolumeRead || read != _computerVolume;
+            _computerVolume = read;
+            _computerVolumeRead = true;
+            _computerVolumeReadAt = DateTime.UtcNow;
+            if (changed && BarIsComputerVolume)
+            {
+                ShowVolume();
+            }
+        }
+        finally
+        {
+            _readingComputerVolume = false;
+        }
+    }
+
+    private static (double Level, bool Muted, string? Output)? ReadComputerVolumeNow() =>
+        ComputerVolume.Read() is { } volume ? (volume.Level, volume.Muted, SystemAudio.DefaultOutputName()) : null;
+
+    /// <summary>Sets Windows' volume from the bar, kept as the last read so the bar isn't moved back.</summary>
+    private void SetComputerVolume(double level)
+    {
+        ComputerVolume.Set(level);
+        _computerVolumeSets++;
+        if (_computerVolume is { } last)
+        {
+            _computerVolume = (Math.Clamp(level, 0, 1), last.Muted && level <= 0, last.Output);
         }
     }
 
     /// <summary>Shows Windows' volume on the bar; false when there's no output to show it for.</summary>
     private bool ShowComputerVolume()
     {
-        if (ComputerVolume.Read() is not { } volume)
+        // Read here only the first time; after that the once-a-second read away from the UI thread keeps it current.
+        if (!_computerVolumeRead)
+        {
+            _computerVolume = ReadComputerVolumeNow();
+            _computerVolumeRead = true;
+            _computerVolumeReadAt = DateTime.UtcNow;
+        }
+        else if (DateTime.UtcNow - _computerVolumeReadAt > TimeSpan.FromSeconds(2))
+        {
+            // Not followed for a while (the app played elsewhere, say): shown as last read, then again once read.
+            ReadComputerVolume();
+        }
+
+        if (_computerVolume is not { } volume)
         {
             return false;
         }
@@ -59,7 +129,7 @@ public partial class MainWindow
         }
 
         VolumeText.Text = volume.Muted ? "Muted" : $"{volume.Level * 100:0}%";
-        var output = SystemAudio.DefaultOutputName() ?? "this PC";
+        var output = volume.Output ?? "this PC";
         VolumeSlider.ToolTip = _remote is { } remote
             ? $"Windows' volume for {output}. {remote.Player.Name} plays at its full volume, and the analyzer reads it before Windows' volume. "
                 + "(Mouse wheel over the player changes it too.)"
@@ -91,6 +161,7 @@ public partial class MainWindow
         if (ComputerVolume.TurnDown(down))
         {
             remote.SetVolume(1);
+            ReadComputerVolume();
         }
     }
 }
