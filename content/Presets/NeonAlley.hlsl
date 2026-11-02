@@ -237,7 +237,7 @@ float alleyMarch(float3 origin, float3 dir, int steps, float far, out float3 inf
 float3 Render(float2 uv, float2 p)
 {
     float2 q = float2(p.x, -p.y);
-    float z = Time * 0.75 + (BeatCount - Beat) * 0.12;
+    float z = Time * 0.75 + BeatGlide * 0.12;
     float3 eye = float3(sin(Time * 0.15) * 0.35, 1.65 + sin(Time * 1.6) * 0.02, z);
     float3 forward = normalize(float3(sin(Time * 0.11) * 0.15, 0.16 + sin(Time * 0.07) * 0.06, 1.0));
     float3 right = normalize(cross(float3(0.0, 1.0, 0.0), forward));

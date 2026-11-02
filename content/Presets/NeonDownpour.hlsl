@@ -149,7 +149,7 @@ float3 downpourSky(float3 dir)
 float3 Render(float2 uv, float2 p)
 {
     float2 q = float2(p.x, -p.y);
-    float z = Time * 3.2 + (BeatCount - Beat) * 0.9;
+    float z = Time * 3.2 + BeatGlide * 0.9;
     float3 eye = float3(sin(Time * 0.23) * 0.9, 2.3 + sin(Time * 0.31) * 0.5, z);
     float3 forward = normalize(float3(sin(Time * 0.17) * 0.12, 0.06 + sin(Time * 0.13) * 0.05, 1.0));
     float3 right = normalize(cross(float3(0.0, 1.0, 0.0), forward));

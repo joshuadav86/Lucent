@@ -13,14 +13,14 @@ float4 blobAt(int i)
 {
     if (i == 0)
     {
-        return float4(0.0, 0.0, 0.0, 0.5 + Bass * 0.12 + Beat * 0.04);
+        return float4(0.0, 0.0, 0.0, 0.5 + Bass * 0.12 + BeatSwell * 0.04);
     }
     int corner = i - 1;
     float3 c = float3((corner & 1) ? 1.0 : -1.0, (corner & 2) ? 1.0 : -1.0, (corner & 4) ? 1.0 : -1.0);
     float pair = (float)min(corner, 7 - corner);
     float level = spectrum(0.05 + pair * 0.18);
     float breathe = 0.5 + 0.5 * sin(Time * 0.35);
-    float reach = 0.45 + 0.55 * breathe + level * 0.35 + Beat * 0.08;
+    float reach = 0.45 + 0.55 * breathe + level * 0.35 + BeatSwell * 0.08;
     c.xz = rotate(c.xz, Time * 0.21);
     c.xy = rotate(c.xy, Time * 0.13);
     return float4(normalize(c) * reach, 0.26 + level * 0.14);
@@ -57,7 +57,7 @@ float3 blobNormal(float3 p, float4 blobs[BlobCount], float merge)
 // a long way between frames and make it flicker.)
 float blobWave(float3 direction)
 {
-    float drift = Time * 0.4 + (BeatCount - Beat) * 0.25;
+    float drift = Time * 0.4 + BeatGlide * 0.25;
     float2 u = direction.xz / (1.2 + abs(direction.y)) * 9.0;
     float total = 0.0;
     [unroll]

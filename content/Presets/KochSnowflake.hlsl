@@ -53,7 +53,7 @@ float3 Render(float2 uv, float2 p)
 
     float pixel = 2.0 / min(Resolution.y, 540.0);    // how much detail to draw: 1/540ths of the screen at high resolutions
     float linePixel = 2.0 * pixelSize();             // line widths: two screen pixels, so they stay crisp at 4K
-    float hue = Time * 0.01 + (BeatCount - Beat) * 0.025;
+    float hue = Time * 0.01 + BeatGlide * 0.025;
     float3 colour = 0.0;
     float generation = -3.0 - u;               // continuous generation index relative to the screen
     float pulse = (1.0 - Beat) * 7.0 - 3.0;    // a beat ripples inward through the generations

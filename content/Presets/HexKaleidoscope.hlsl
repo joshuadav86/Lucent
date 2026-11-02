@@ -44,7 +44,7 @@ float3 hkJewel(float n)
 float3 Render(float2 uv, float2 p)
 {
     float px = pixelSize();
-    float beatPhase = BeatCount - Beat;
+    float beatPhase = BeatGlide;
 
     // Turn the tube slowly; the hexagonal mirror cells repeat across the screen.
     float spacing = 1.2 + 0.18 * sin(Time * 0.043);
@@ -92,7 +92,7 @@ float3 Render(float2 uv, float2 p)
         float orbit = Time * piece.y + piece.x;
         float2 centre = float2(sin(orbit), cos(orbit * 1.37 + fi)) * float2(0.42, 0.36);
         float band = spectrum(piece.w);
-        float size = piece.z * (0.7 + band * 0.22 + Beat * 0.04);
+        float size = piece.z * (0.7 + band * 0.22 + BeatSwell * 0.04);
         float2 d = rotate(q - centre, orbit * 2.3 + fi);
         float r = length(d);
         float kind = wrap(fi, 3.0);

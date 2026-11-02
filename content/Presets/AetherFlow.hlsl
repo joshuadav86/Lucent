@@ -213,8 +213,8 @@ float3 icosahedronCorner(int i)
 // A glowing crystal icosahedron turning inside the glass: the glow along one ray through it.
 float3 crystal(float3 origin, float3 direction, float reach)
 {
-    float size = 0.5 + Bass * 0.06 + Beat * 0.03;
-    float spin = Time * 0.25 + (BeatCount - Beat) * 0.06;
+    float size = 0.5 + Bass * 0.06 + BeatSwell * 0.03;
+    float spin = Time * 0.25 + BeatGlide * 0.06;
     float nearest = 1e3;
     [loop]
     for (int i = 0; i < 12; i++)

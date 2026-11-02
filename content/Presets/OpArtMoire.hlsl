@@ -31,7 +31,7 @@ float omFlower(float2 p, float2 c, float f, float n, float a, float turn, out fl
 float3 Render(float2 uv, float2 p)
 {
     float px = 2.0 / Resolution.y;
-    float beatPhase = BeatCount - Beat;
+    float beatPhase = BeatGlide;
 
     // Fold the screen into twelve mirror images so the interference forms a turning mandala.
     float2 k = kaleidoscope(rotate(p, Time * 0.025), 6.0);
@@ -41,8 +41,8 @@ float3 Render(float2 uv, float2 p)
     float2 c2 = float2(0.45 + 0.3 * sin(Time * 0.09 + 2.0), 0.12 + 0.12 * cos(Time * 0.15 + 1.0));
     float f1 = 18.0 + Bass * 1.5;
     float f2 = 18.0 + 1.4 * sin(Time * 0.05) + Bass * 1.5;
-    float a1 = 0.07 + 0.05 * sin(Time * 0.07) + Beat * 0.03;
-    float a2 = 0.06 + 0.05 * sin(Time * 0.083 + 1.0) + Beat * 0.03;
+    float a1 = 0.07 + 0.05 * sin(Time * 0.07) + BeatSwell * 0.03;
+    float a2 = 0.06 + 0.05 * sin(Time * 0.083 + 1.0) + BeatSwell * 0.03;
 
     float g1 = 0.0;
     float g2 = 0.0;

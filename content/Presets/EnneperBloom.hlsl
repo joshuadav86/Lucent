@@ -20,10 +20,10 @@ static const float RingShare = 0.62;    // the share of particles on rings
 static const float Rim = 1.0;
 
 // The order: the slow clock steps it 1, 2, 3, 4 and round again, blending into the next over the last
-// part of each step. (The beat clock BeatCount - Beat only moves forward, so the music can push it.)
+// part of each step. (The beat clock BeatGlide eases forward on each beat and never goes back, so the music can push it.)
 float2 ebOrder()
 {
-    float clock = Time * 0.022 + (BeatCount - Beat) * 0.008;
+    float clock = Time * 0.022 + BeatGlide * 0.008;
     float stage = floor(clock);
     float blend = smoothstep(0.8, 1.0, clock - stage);
     return float2(1.0 + wrap(stage, 4.0), blend);

@@ -253,7 +253,7 @@ Sprite Show(Particle particle, uint id)
         q.xz = rotate(q.xz, 0.45 * sin(spin * 0.6 + meteorRandom(seed, 14.0) * 6.0));
         q.yz = rotate(q.yz, 0.55 + 0.3 * sin(spin * 0.45));
         q.xy = rotate(q.xy, spin);
-        float radius = lerp(0.11, 0.16, meteorRandom(seed, 15.0)) * (1.0 - exp(-since * 2.5)) * (1.0 + Beat * 0.1);
+        float radius = lerp(0.11, 0.16, meteorRandom(seed, 15.0)) * (1.0 - exp(-since * 2.5)) * (1.0 + BeatSwell * 0.1);
         float angle = atan2(path.w, path.z);
         float2 centre = path.xy + path.zw * shape.x + float2(0.004, 0.03 * since) * since;
         sprite.position = centre + rotate(q.xy, angle) * radius;

@@ -23,7 +23,7 @@ float2 channel(float z)
 // How far the camera has flown: steady drift, plus a surge forward on every beat.
 float flight()
 {
-    return Time * 0.55 + max(BeatCount - Beat, 0.0) * 0.32;
+    return Time * 0.55 + BeatGlide * 0.32;
 }
 
 float gyroid(float3 p)

@@ -32,7 +32,7 @@ float3 knot(float s)
 // Where along the knot the particle is: it keeps flowing, surging a little on each beat.
 float alongKnot(uint id)
 {
-    float flow = Time * 0.022 + (BeatCount - Beat) * 0.004;
+    float flow = Time * 0.022 + BeatGlide * 0.004;
     return frac(fixedRandom(id, 1.0) + flow * (0.8 + 0.4 * fixedRandom(id, 2.0)));
 }
 
@@ -50,7 +50,7 @@ float3 placeOf(uint id)
     float3 up = cross(side, tangent);
 
     // The tube swells where its slice of the spectrum is loud.
-    float swell = 0.03 + spectrum(abs(frac(s * 2.0) * 2.0 - 1.0) * 0.8 + 0.02) * 0.09 + Beat * 0.015;
+    float swell = 0.03 + spectrum(abs(frac(s * 2.0) * 2.0 - 1.0) * 0.8 + 0.02) * 0.09 + BeatSwell * 0.015;
     float radius = swell * (0.8 + 0.2 * fixedRandom(id, 4.0));
     return centre + (side * cos(around) + up * sin(around)) * radius;
 }

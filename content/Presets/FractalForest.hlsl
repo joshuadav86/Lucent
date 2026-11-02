@@ -73,7 +73,7 @@ float3 Render(float2 uv, float2 p)
         rippleShade = 0.6 * exp(-depth * 2.0);
     }
 
-    float hueShift = Time * 0.012 + (BeatCount - Beat) * 0.03;
+    float hueShift = Time * 0.012 + BeatGlide * 0.03;
     float pulse = (1.0 - Beat) * 11.0 - 1.5;                  // the beat's light, travelling up the levels
     float travel = Time * 0.22;
 

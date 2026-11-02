@@ -38,7 +38,7 @@ float3 Render(float2 uv, float2 p)
     float pxX = px * zoom;
 
     // Which wave count we are on, and the glide (over one beat) into the next every eight beats.
-    float beatPhase = BeatCount - saturate(Beat);
+    float beatPhase = BeatGlide;
     float section = floor(beatPhase / 8.0);
     float within = beatPhase - section * 8.0;
     float glide = smoothstep(7.0, 8.0, within);

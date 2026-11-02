@@ -31,7 +31,7 @@ void blobShape(int index, out float2 centre, out float2 radius)
 
     float size = 0.1 + frac(salt * 11.7) * 0.07;
     // Hot wax at the bottom is fatter; the bass swells every blob.
-    size *= (0.85 + 0.25 * saturate(centre.y + 0.4)) * (1.0 + Bass * 0.16 + Beat * 0.05);
+    size *= (0.85 + 0.25 * saturate(centre.y + 0.4)) * (1.0 + Bass * 0.16 + BeatSwell * 0.05);
     // Moving blobs stretch out into teardrops.
     radius = size * float2(1.0 / (1.0 + moving * 0.22), 1.0 + moving * 0.5);
 }

@@ -84,7 +84,7 @@ float3 Render(float2 uv, float2 p)
     float2 drift = rotate(g, -Time * 0.06);
     float cloud = fbm(drift * 3.5 + 3.0);
     // Each beat twists the arms a little tighter; they relax as it fades.
-    float pattern = angle - Time * 0.06 + log(r) * (2.6 + Beat * 0.35);
+    float pattern = angle - Time * 0.06 + log(r) * (2.6 + BeatSwell * 0.35);
     float arms = 0.5 + 0.5 * cos(2.0 * pattern + (cloud - 0.5) * 2.5);
     float armLight = arms * arms * arms;
 

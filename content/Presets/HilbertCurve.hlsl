@@ -128,7 +128,7 @@ float2 hcCurve(float2 g, float n)
 float3 Render(float2 uv, float2 p)
 {
     float px = pixelSize();
-    float clock = max(BeatCount - Beat, 0.0);
+    float clock = BeatGlide;
 
     // One order per bar: 2, 3 ... 6, then back to 2. Each new order draws itself in along the curve.
     float bar = clock / 4.0;
@@ -136,7 +136,7 @@ float3 Render(float2 uv, float2 p)
     float reveal = smoothstep(0.0, 0.75, frac(bar));
 
     // The square slowly turns and zooms with the music.
-    float size = 1.55 * (1.0 + Bass * 0.06 + Beat * 0.015);
+    float size = 1.55 * (1.0 + Bass * 0.06 + BeatSwell * 0.015);
     float2 q = rotate(p, 0.08 * sin(Time * 0.09)) / size + 0.5;
     float3 colour = float3(0.004, 0.006, 0.012) + float3(0.01, 0.015, 0.03) * (1.0 - length(p) * 0.5);
 

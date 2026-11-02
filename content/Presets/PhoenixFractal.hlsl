@@ -54,7 +54,7 @@ float3 Render(float2 uv, float2 p)
         n += 1.0;
     }
 
-    float hueShift = (BeatCount - Beat) * 0.03 + Time * 0.012;
+    float hueShift = BeatGlide * 0.03 + Time * 0.012;
     float plume = exp(-stalk * (75.0 - Bass * 25.0));
     float3 colour = 0.0;
     if (escaped)

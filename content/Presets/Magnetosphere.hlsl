@@ -23,7 +23,7 @@ float shareOf(uint id)
 // How far upwind the bow shock's nose sits; a gust pushes it closer.
 float shockNose()
 {
-    return 3.4 - Bass * 0.45 - Beat * 0.3;
+    return 3.4 - Bass * 0.45 - BeatSwell * 0.3;
 }
 
 // The radius of the bow shock round the Sun-Earth line at distance x along it (a paraboloid).

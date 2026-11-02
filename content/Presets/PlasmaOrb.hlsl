@@ -25,7 +25,7 @@ float3 Render(float2 uv, float2 p)
     float angle = atan2(p.y, p.x);
 
     float3 colour = 0.0;
-    float coreSize = 0.07 + Bass * 0.025 + Beat * 0.02;
+    float coreSize = 0.07 + Bass * 0.025 + BeatSwell * 0.02;
 
     if (r < GlobeRadius * 1.02)
     {

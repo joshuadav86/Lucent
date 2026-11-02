@@ -31,17 +31,17 @@ static const float ShareSparks = 0.84;
 static const float ShareCore = 0.88;
 static const float ShareFrame = 0.9;
 
-// The flight: steady, plus a surge on every beat. (BeatCount - Beat only moves forward, so the music can push it
+// The flight: steady, plus a surge on every beat. (BeatGlide eases forward on each beat, so the music can push it
 // without ever pulling it back.)
 float tvTravel()
 {
-    return Time * 0.55 + (BeatCount - Beat) * 0.22;
+    return Time * 0.55 + BeatGlide * 0.22;
 }
 
 // The core and triangle turn; the triangle's tip points up the screen.
 float tvSpin()
 {
-    return Time * 0.12 + (BeatCount - Beat) * 0.05;
+    return Time * 0.12 + BeatGlide * 0.05;
 }
 
 // Where the tunnel's axis is at depth z: bent well aside near the camera, straight at the core.
@@ -138,7 +138,7 @@ float3 tvFrame(float side, float t)
 {
     float a0 = -PI * 0.5 + side * 2.0 * PI / 3.0 + tvSpin() * 0.5;
     float a1 = a0 + 2.0 * PI / 3.0;
-    float r = TunnelRadius * 0.8 * (1.0 + Beat * 0.04);
+    float r = TunnelRadius * 0.8 * (1.0 + BeatSwell * 0.04);
     float2 p = lerp(float2(cos(a0), sin(a0)), float2(cos(a1), sin(a1)), t) * r;
     return tvCoreCentre() + float3(p, 0.0);
 }

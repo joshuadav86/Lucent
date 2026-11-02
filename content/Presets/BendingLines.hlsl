@@ -18,7 +18,7 @@ float2 blMass(float i, float t)
 // The radius of each weight's invisible core, which grows with the bass.
 float blRadius(float i)
 {
-    return (0.07 + 0.025 * i) * (0.75 + 0.45 * Bass + 0.2 * Beat);
+    return (0.07 + 0.025 * i) * (0.75 + 0.45 * Bass + 0.2 * BeatSwell);
 }
 
 // Lines flow round each weight the way water streams round a stone (potential flow past a cylinder).

@@ -58,12 +58,12 @@ float3 trapColour(int trap, float hueShift)
 float3 shade(float2 c, float scale)
 {
     // The traps, moving with the music.
-    float pointTurn = Time * 0.21 + (BeatCount - Beat) * 0.35;
+    float pointTurn = Time * 0.21 + BeatGlide * 0.35;
     float2 trapPoint = float2(cos(pointTurn), sin(pointTurn)) * (0.32 + 0.06 * sin(Time * 0.37));
     float lineTurn = Time * 0.09 + Mid * 0.6;
     float2 lineNormal = float2(cos(lineTurn), sin(lineTurn));
     float lineOffset = 0.15 * sin(Time * 0.13);
-    float ring = 0.62 + Bass * 0.22 + Beat * 0.06;
+    float ring = 0.62 + Bass * 0.22 + BeatSwell * 0.06;
 
     float3 best = 1e3;          // closest pass to each trap
     float3 when = 0.0;          // and on which hop it happened

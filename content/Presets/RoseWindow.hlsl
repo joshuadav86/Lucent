@@ -40,7 +40,7 @@ float3 Render(float2 uv, float2 p)
 {
     float px = pixelSize();
     // A slow zoom cycle: sometimes the whole window, sometimes close in on its heart.
-    float scale = 1.0 + 0.45 * smoothstep(-0.3, 1.0, sin(Time * 0.045)) + Beat * 0.006;
+    float scale = 1.0 + 0.45 * smoothstep(-0.3, 1.0, sin(Time * 0.045)) + BeatSwell * 0.006;
     float2 w = rotate(p, Time * 0.01) / scale;
     float pxw = px / scale;
     float r = length(w);

@@ -24,7 +24,7 @@ float3 Render(float2 uv, float2 p)
     float power = lerp(fromPower, toPower, ease);
 
     // Turn a little with each beat (the beat count rises smoothly as the beat fades), and breathe in and out.
-    float turn = (BeatCount - Beat) * 0.035 + Time * 0.01;
+    float turn = BeatGlide * 0.035 + Time * 0.01;
     float scale = 1.22 - 0.1 * power / 7.0 + 0.08 * sin(Time * 0.07);
     float2 c = rotate(float2(p.x, -p.y), turn) * scale;
     // Low powers sit off-centre; nudge so the body stays in view.

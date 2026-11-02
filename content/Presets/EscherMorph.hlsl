@@ -12,7 +12,7 @@
 // One stage every two bars; the morph itself takes the first two beats of each stage.
 float emStage()
 {
-    float clock = max(BeatCount - Beat, 0.0) + 1.0;
+    float clock = BeatGlide + 1.0;
     float block = clock / 8.0;
     float within = frac(block) * 8.0;
     return floor(block) + smoothstep(0.0, 2.0, within);

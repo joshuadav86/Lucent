@@ -123,7 +123,7 @@ float3 Render(float2 uv, float2 p)
     float pulse = exp(-pulseAt * pulseAt) * (SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat);
 
     float de = 1.0 / max(cellsPerPixel, 1.0e-12);           // in pixels: one cell, roughly the distance to the border
-    float hueShift = (BeatCount - Beat) * 0.03 + Time * 0.01;
+    float hueShift = BeatGlide * 0.03 + Time * 0.01;
     float3 basin = nbHue(rootIndex / 5.0 + hueShift + grid.x * 0.015);
 
     float depthToBorder = saturate(1.0 - log2(max(de, 1.0)) / 9.0);   // 1 at the border, 0 deep in the basin

@@ -22,7 +22,7 @@ float4 foamBubble(float3 cell, float3 lineOrigin, out float seed)
     float3 more = frac(seed * float3(13.71, 57.23, 91.37));
     float life = frac(Time * (0.03 + seed * 0.04) + more.x);
     float alive = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.9, life);
-    float radius = (0.18 + 0.27 * more.y) * alive * (1.0 + Beat * 0.12);
+    float radius = (0.18 + 0.27 * more.y) * alive * (1.0 + BeatSwell * 0.12);
     float3 centre = cell + 0.5;
     float3 fromLine = centre - lineOrigin;
     float offLine = length(fromLine - FoamHeading * dot(fromLine, FoamHeading));
@@ -52,12 +52,12 @@ float3 foamFilm(float thickness, float cosine)
 
 float3 Render(float2 uv, float2 p)
 {
-    float travel = Time * 0.55 + (BeatCount - Beat) * 0.1;
+    float travel = Time * 0.55 + BeatGlide * 0.1;
     float3 lineOrigin = float3(0.37, 0.61, 0.0);
     float3 sway = float3(sin(Time * 0.31), cos(Time * 0.23), 0.0) * 0.12;
     float3 eye = lineOrigin + FoamHeading * travel + sway;
     float3 dir = cameraRay(eye, eye + FoamHeading * 2.0 + float3(sin(Time * 0.13), cos(Time * 0.17), 0.0) * 0.3,
-                           p, 1.0 - Beat * 0.08, Time * 0.04);
+                           p, 1.0 - BeatSwell * 0.08, Time * 0.04);
 
     // Walk the lattice cell by cell along the ray (exact grid traversal).
     float3 cell = floor(eye);

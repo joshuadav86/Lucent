@@ -55,8 +55,8 @@ float3 bsPoint(float u, float v)
     float swell = 1.0 + band * 0.22 + bsRing(toPole) * 0.07 + Bass * 0.05 + DropPulse * 0.25 + BuildUp * 0.04;
 
     // The bass twists the shape round its axis of symmetry, more the further down.
-    // (The beat clock BeatCount - Beat only moves forward, so the music can push it without jitter.)
-    float clock = Time * 0.06 + (BeatCount - Beat) * 0.02;
+    // (The beat clock BeatGlide eases forward on each beat and never goes back, so the music can push it without jitter.)
+    float clock = Time * 0.06 + BeatGlide * 0.02;
     float twist = sin(clock) * 0.35 + Bass * 0.3 + DropPulse * 0.35;
     float spin = Time * 0.07 + position.y * twist;
     position.xz = rotate(position.xz, spin);

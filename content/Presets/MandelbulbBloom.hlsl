@@ -46,7 +46,7 @@ float3 Render(float2 uv, float2 p)
     float distanceToBulb = 1.5 + 0.26 * sin(Time * 0.05);
     float3 eye = float3(sin(orbit), 0.45 * sin(Time * 0.07), cos(orbit)) * distanceToBulb;
     float3 target = float3(0.25 * sin(Time * 0.043), 0.15 * cos(Time * 0.037), 0.0);
-    float3 direction = cameraRay(eye, target, p, 1.1 - Beat * 0.04, 0.2 * sin(Time * 0.05));
+    float3 direction = cameraRay(eye, target, p, 1.1 - BeatSwell * 0.04, 0.2 * sin(Time * 0.05));
 
     // March, keeping the closest approach for a halo around the silhouette.
     float travelled = 0.0;
@@ -84,7 +84,7 @@ float3 Render(float2 uv, float2 p)
         hit = hit || (steps >= (float)maxSteps && travelled < exitDistance);
     }
 
-    float hue = (BeatCount - Beat) * 0.02 + Time * 0.01;
+    float hue = BeatGlide * 0.02 + Time * 0.01;
     float3 colour = 0.0;
     if (hit)
     {

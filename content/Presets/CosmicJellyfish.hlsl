@@ -222,7 +222,7 @@ float3 Render(float2 uv, float2 p)
         float depth = 0.3 + 0.7 * frac(k * 0.618 + 0.11);        // 1 = nearest
         float size = 0.09 + 0.36 * depth * depth;
         // Each beat is a stroke of the bell that lifts it a little faster.
-        float climb = Time * (0.022 + 0.03 * depth) + (BeatCount + 1.0 - Beat) * 0.004 + k / JellyCount;
+        float climb = Time * (0.022 + 0.03 * depth) + (BeatGlide + 1.0) * 0.004 + k / JellyCount;
         float cycle = floor(climb);
         float span = 2.0 + size * 7.0;
         float2 centre = float2((hash(float2(cycle, k + 0.5)) - 0.5) * 1.6 * Aspect + sin(Time * 0.17 + k * 2.0) * 0.1,

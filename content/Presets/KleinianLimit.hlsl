@@ -73,7 +73,7 @@ float3 Render(float2 uv, float2 p)
     float aura = exp(-tilePx * 0.012);
     float halo = exp(-tilePx * (0.16 - Bass * 0.06));
 
-    float hue = (BeatCount - Beat) * 0.025 + Time * 0.01;
+    float hue = BeatGlide * 0.025 + Time * 0.01;
     float3 jewel = kleinianJewel(n * 0.075 + hue);
     float3 colour = jewel * (0.025 + 0.3 * exp(-tilePx * 0.045))
                   + lerp(jewel, float3(0.85, 0.92, 1.0), 0.7) * lace * (0.9 + Bass * 0.4 + Beat * 0.25)

@@ -92,7 +92,7 @@ void Simulate(inout Particle particle, uint id)
     }
 
     // Each beat stretches the jump a touch, so the fractal breathes in and out.
-    float stretch = jump + Beat * 0.025 + Bass * 0.012;
+    float stretch = jump + BeatSwell * 0.025 + Bass * 0.012;
     float2 target = cornerAt(pick, corners, midpoints);
     particle.position.xy = lerp(particle.position.xy, target, stretch);
     particle.data.x = pick;

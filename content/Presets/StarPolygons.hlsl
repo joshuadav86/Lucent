@@ -44,7 +44,7 @@ float3 Render(float2 uv, float2 p)
     float px = pixelSize();
     float2 q = p * (1.0 - Bass * 0.03);
 
-    float beatPhase = BeatCount - saturate(Beat);
+    float beatPhase = BeatGlide;
     float3 colour = float3(0.004, 0.004, 0.012) + float3(0.012, 0.01, 0.03) * exp(-dot(p, p) * 2.5);
 
     [loop]

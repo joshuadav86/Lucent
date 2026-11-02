@@ -48,7 +48,7 @@ void placeObjects()
         float t = Time * (0.06 + i * 0.008);
         float radius = i == 2 ? 0.0 : 1.75 + 0.25 * sin(t * 1.3 + i);
         Centres[i] = float3(cos(k + t) * radius, 1.15 + 0.3 * sin(t * 2.0 + i * 2.0) + (i == 2 ? 0.2 : 0.0), sin(k + t) * radius);
-        float tip = Beat * 0.35 * (i % 2 == 0 ? 1.0 : -1.0) + Bass * 0.15;
+        float tip = BeatSwell * 0.35 * (i % 2 == 0 ? 1.0 : -1.0) + Bass * 0.15;
         float3 angles = float3(sin(Time * 0.21 + i) * 0.5 + tip + (kindOf(i) == Lens ? 0.45 : PI * 0.5), Time * 0.13 * (i % 2 == 0 ? 1.0 : -1.0) + i, cos(Time * 0.17 + i * 2.0) * 0.4 + tip * 0.6);
         Frames[i] = rotationFrom(angles);
     }

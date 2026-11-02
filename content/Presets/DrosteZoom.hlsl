@@ -21,7 +21,7 @@ float3 Render(float2 uv, float2 p)
     const float N = 10.0;
     float cellSize = 2.0 * PI / N;
     float shear = 1.0 / N;
-    float zoom = Time * 0.15 + (BeatCount - Beat) * 0.02;
+    float zoom = Time * 0.15 + BeatGlide * 0.02;
     float u = log(r) - zoom;
     float v = theta + Time * 0.025;
     float2 w = float2(u + shear * v, v - shear * u) / cellSize;

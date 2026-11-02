@@ -30,7 +30,7 @@ float3 Render(float2 uv, float2 p)
     float size = 1.3 * 81.0 * exp2(-u * 1.5849625);   // half-width of the outermost square, in screen units
     float2 x = view / size;
     float px = pixelSize();
-    float hue = Time * 0.01 + (BeatCount - Beat) * 0.02;
+    float hue = Time * 0.01 + BeatGlide * 0.02;
 
     float3 colour = 0.0;
     float generation = -4.0 - u;               // continuous level index relative to the screen

@@ -46,7 +46,7 @@ float3 Render(float2 uv, float2 p)
 {
     float z = Time * 0.9;
     float3 eye = float3(sin(Time * 0.3) * 0.15, cos(Time * 0.23) * 0.15, z);
-    float3 direction = cameraRay(eye, float3(0.0, 0.0, z + 3.0), p, 0.9 - Beat * 0.1, Time * 0.07);
+    float3 direction = cameraRay(eye, float3(0.0, 0.0, z + 3.0), p, 0.9 - BeatSwell * 0.1, Time * 0.07);
 
     const float farPlane = 18.0;
     float travelled = 0.0;

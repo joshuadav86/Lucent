@@ -90,7 +90,7 @@ float holoContent(float2 c, float aspect, float kind, float seed, float pixel)
     if (kind < 2.5)
     {
         // A wireframe cube turning in space, swelling with the bass.
-        float spin = Time * (0.5 + seed) + Beat * 0.3;
+        float spin = Time * (0.5 + seed) + BeatSwell * 0.3;
         float size = 0.5 + Bass * 0.15;
         float d = 1e3;
         float2 corners[8];
@@ -233,7 +233,7 @@ float3 Render(float2 uv, float2 p)
     float tear = step(0.88, holoHash(float2(strip, tick))) * (holoHash(float2(strip + 3.0, tick)) - 0.5) * smoothstep(0.6, 1.0, Beat) * 0.1;
     q.x += tear;
 
-    float z = Time * 2.2 + (BeatCount - Beat) * 0.7;
+    float z = Time * 2.2 + BeatGlide * 0.7;
     float3 eye = float3(sin(Time * 0.19) * 0.6, 0.9 + sin(Time * 0.27) * 0.3, z);
     float3 forward = normalize(float3(sin(Time * 0.13) * 0.1, 0.05, 1.0));
     float3 right = normalize(cross(float3(0.0, 1.0, 0.0), forward));

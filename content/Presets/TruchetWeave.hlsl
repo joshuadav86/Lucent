@@ -44,7 +44,7 @@ float4 twLayer(float2 q, float pxc, float seed, float hue, float flowPhase)
     // per tile). Both tile types look the same after half a turn, so counting quarter turns modulo two
     // keeps the motion seamless.
     float h = twHash(cell + seed * 17.31);
-    float clock = (BeatCount - Beat + Time * 0.3) / 32.0 + h * 7.0;
+    float clock = (BeatGlide + Time * 0.3) / 32.0 + h * 7.0;
     float quarter = wrap(floor(clock), 2.0) + smoothstep(0.9375, 1.0, frac(clock));
     float2 g = rotate(f - 0.5, quarter * PI * 0.5) + 0.5;
     float kind = twHash(cell * 1.31 + seed * 5.3);
@@ -87,7 +87,7 @@ float3 Render(float2 uv, float2 p)
     // Three layers at doubling sizes; the zoom carries each one forward into the next.
     float clock = Time * 0.05 + Bass * 0.02;
     float phase = frac(clock);
-    float flowPhase = Time * 0.5 + (BeatCount - Beat) * 0.25;
+    float flowPhase = Time * 0.5 + BeatGlide * 0.25;
     float3 colour = float3(0.006, 0.004, 0.012);
 
     [loop]

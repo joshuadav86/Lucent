@@ -7,7 +7,7 @@
 float3 Render(float2 uv, float2 p)
 {
     // Read the last frame from slightly further out and rotated, so it zooms inward.
-    float2 source = rotate(p, 0.012 + Bass * 0.03) * (1.035 + Beat * 0.04);
+    float2 source = rotate(p, 0.012 + Bass * 0.03) * (1.035 + BeatSwell * 0.04);
     float3 trail = previous(toUv(source)) * 0.93;
 
     float radius = length(p);

@@ -63,7 +63,7 @@ Sprite Show(Particle particle, uint id)
 {
     float speed = length(particle.velocity.xy);
     // The veil turns slowly and swells a touch on each beat.
-    float2 seen = rotate(particle.position.xy, PI * 0.5 + sin(Time * 0.021) * 0.35) * (0.42 + Beat * 0.006);
+    float2 seen = rotate(particle.position.xy, PI * 0.5 + sin(Time * 0.021) * 0.35) * (0.42 + BeatSwell * 0.006);
 
     float level = spectrum(0.04 + saturate(speed / 3.6) * 0.6);
     Sprite sprite = (Sprite)0;

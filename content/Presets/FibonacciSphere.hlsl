@@ -66,7 +66,7 @@ float3 spherePosition(uint id)
 
     // The bands drift apart along the axis when the music is loud, leaving thin dark gaps.
     float gap = (band - (Bands - 1.0) * 0.5) * (0.004 + Level * 0.02);
-    float spine = spineOf(id) * (level * level * 0.45 + Beat * 0.04);
+    float spine = spineOf(id) * (level * level * 0.45 + BeatSwell * 0.04);
     float3 position = onSphere * (radius + spine);
     position.y += gap;
     return position;

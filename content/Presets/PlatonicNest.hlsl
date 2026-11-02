@@ -162,7 +162,7 @@ float3 placeOf(uint id, float flow, out int solid, out float along)
 
     // Each solid breathes with its own band; the bass also pushes them all outward on a beat.
     float level = spectrum(0.04 + solid * 0.17);
-    float size = radiusOf(solid) * (1.0 + level * 0.12 + Beat * 0.04 * (5 - solid) / 5.0);
+    float size = radiusOf(solid) * (1.0 + level * 0.12 + BeatSwell * 0.04 * (5 - solid) / 5.0);
     return turn(spot, solid) * size;
 }
 

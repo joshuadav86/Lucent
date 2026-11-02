@@ -53,7 +53,7 @@ float3 Render(float2 uv, float2 p)
         n += 1.0;
     }
 
-    float colourPhase = (BeatCount - Beat) * 0.035 + Time * 0.01;
+    float colourPhase = BeatGlide * 0.035 + Time * 0.01;
     float3 colour = 0.0;
     float dzLength = length(dz);
     if (escaped)

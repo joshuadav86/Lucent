@@ -23,7 +23,7 @@ float hbTwist()
 // The whole figure turns slowly, and each beat gives it a small push.
 float hbTurn()
 {
-    return Time * 0.06 + (BeatCount - Beat) * 0.03;
+    return Time * 0.06 + BeatGlide * 0.03;
 }
 
 // The camera: how far it tilts down onto the figure (as sin, cos) and how far it zooms in.
