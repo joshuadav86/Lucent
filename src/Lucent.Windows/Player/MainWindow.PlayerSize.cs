@@ -121,7 +121,6 @@ public partial class MainWindow
 
         _settings.PlayerScale = scale;
         _scaleAtResizeEnd = scale;
-        TraceLayout("ApplyPlayerSize");
         KeepPlayerWidthSoon();
     }
 
@@ -153,7 +152,6 @@ public partial class MainWindow
     /// </summary>
     private void KeepPlayerWidth()
     {
-        TraceLayout($"KeepPlayerWidth busy {_snapper.IsBusy}");
         if (IsClassic || InSingleWindow || WindowState != WindowState.Normal || ActualWidth <= 0 || _snapper.IsBusy)
         {
             return;
@@ -169,7 +167,6 @@ public partial class MainWindow
         try
         {
             SizeToWidth(width);
-            TraceLayout("KeepPlayerWidth sized");
         }
         finally
         {
@@ -197,7 +194,6 @@ public partial class MainWindow
             UpdateLayout();
         }
 
-        TraceLayout("SizeToWidth by hand");
         SizeToContent = SizeToContent.Height;
         UpdateLayout();
     }
@@ -229,7 +225,6 @@ public partial class MainWindow
         if (ColumnUnderPlayer(Top + ActualHeight).FirstOrDefault(window => window is EqualizerWindow) is EqualizerWindow equalizer
             && Math.Abs(equalizer.Left - Left) < 2)
         {
-            TraceLayout("FitDockedEqualizer");
             equalizer.FitTo(ActualWidth);
         }
     }

@@ -190,6 +190,7 @@ internal static class LayoutCheck
         }
 
         var before = Describe(visuals);
+        var playerWidth = main.ActualWidth();
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var inMain = main.GetVisualDescendants().OfType<MetalView>().Any();
@@ -208,6 +209,8 @@ internal static class LayoutCheck
         // Where the visuals' panel is on the screen as it ends: their window goes just there. A panel along the top
         // reaches up over the title bar, where the window's own goes, so its top is anywhere from there to the window's top.
         var panel = PanelOnScreen(main, visuals);
+        var equalizer = EqualizerWindow.Current is { IsVisible: true } open ? open : null;
+        var equalizerPanel = equalizer is null ? null : PanelOnScreen(main, equalizer);
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var back = !SingleWindow.IsOn() && visuals.GetVisualDescendants().OfType<MetalView>().Any() && IsOnScreen(visuals);
@@ -219,6 +222,35 @@ internal static class LayoutCheck
             && y >= main.Top() - 4 && y <= p.Y + 4;
         var panelText = panel is { } r ? $"{r.X:0},{r.Y:0} {r.Width:0} x {r.Height:0}" : "(not found)";
         lines.Add($"{(where ? "ok" : "MISMATCH")} single window off: the visuals are at {Describe(visuals)}, their panel was at {panelText}");
+
+        // The player back at its own width (not the single window's), the equalizer just where its panel was and
+        // as wide (not stretched to a wide player), and nothing over anything else.
+        var playerNow = main.ActualWidth();
+        lines.Add($"{(Math.Abs(playerNow - playerWidth) <= 4 ? "ok" : "MISMATCH")} single window off: the player is {playerNow:0} wide, was {playerWidth:0}");
+        if (equalizer is not null)
+        {
+            var eq = new Rect(equalizer.Left(), equalizer.Top(), equalizer.ActualWidth(), equalizer.ActualHeight());
+            var fits = equalizerPanel is { } e && Math.Abs(eq.X - e.X) <= 4 && Math.Abs(eq.Y - e.Y) <= 4 && Math.Abs(eq.Width - e.Width) <= 4;
+            var equalizerText = equalizerPanel is { } q ? $"{q.X:0},{q.Y:0} {q.Width:0} x {q.Height:0}" : "(not found)";
+            lines.Add($"{(fits ? "ok" : "MISMATCH")} single window off: the equalizer is at {Describe(equalizer)}, its panel was at {equalizerText}");
+        }
+
+        var shown = new[] { ("player", (Window?)main), ("visuals", visuals), ("equalizer", equalizer) }
+            .Where(entry => entry.Item2 is not null)
+            .Select(entry => (Name: entry.Item1, At: new Rect(entry.Item2!.Left(), entry.Item2.Top(), entry.Item2.ActualWidth(), entry.Item2.ActualHeight())))
+            .ToList();
+        for (var i = 0; i < shown.Count; i++)
+        {
+            for (var j = i + 1; j < shown.Count; j++)
+            {
+                var overlap = shown[i].At.Intersect(shown[j].At);
+                if (overlap.Width > 4 && overlap.Height > 4)
+                {
+                    lines.Add($"MISMATCH single window off: the {shown[i].Name} and the {shown[j].Name} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                }
+            }
+        }
+
         return lines;
     }
 
