@@ -434,7 +434,7 @@ public partial class LibraryWindow : ToolWindow
             if (files.Count == 0)
             {
                 // An empty playlist still gets its heading, so it can be found, renamed and filled.
-                items.Add(LibraryItem.Placeholder(name, "Empty. Right-click sounds and choose Add to playlist."));
+                items.Add(LibraryItem.Placeholder(name, SavedPlaylists.EmptyHint));
                 continue;
             }
 
@@ -537,6 +537,16 @@ public partial class LibraryWindow : ToolWindow
 
     /// <summary>Called by the player when it starts or stops controlling an app, as a note may say why its playlists can't show.</summary>
     public void RemoteAppChanged() => ShowRemoteRows();
+
+    /// <summary>Called by the player when it has made a playlist in an app, so the app's list is read again to show it.</summary>
+    public void RemotePlaylistsChanged()
+    {
+        _remoteReadAt = DateTime.MinValue;
+        if (ShowingPlaylists)
+        {
+            LoadRemotePlaylists(force: true);
+        }
+    }
 
     /// <summary>Called by the player when Lucent signs in to or out of Spotify.</summary>
     public void SpotifyChanged()
@@ -973,7 +983,7 @@ public partial class LibraryWindow : ToolWindow
             : IsSearching ? "No sounds match your search"
             : "No favorites in your playlists";
         EmptyLibraryText.Text = lists == 0
-            ? "Right-click here and choose New playlist, or right-click sounds and choose Add to playlist."
+            ? "Right-click here and choose New playlist, or right-click songs and choose Add to playlist."
             : IsSearching
                 ? "Search looks in titles, artists, albums, and file names. Try other words, or press Esc to clear the search."
                 : "Turn FAVORITES off to see every sound in your playlists.";
@@ -1023,6 +1033,18 @@ public partial class LibraryWindow : ToolWindow
         if (names.Count == 1 && Player is { } player)
         {
             var name = names[0];
+            if (menu.Items.Count > 0)
+            {
+                menu.Items.Add(new Separator());
+            }
+
+            // Filling the playlist from here, so an empty one shows how it gets its songs.
+            var addSongs = new MenuItem { Header = "Add songs…" };
+            addSongs.Click += (_, _) => player.AddFilesToPlaylistFromDialog(this, name);
+            var addQueue = new MenuItem { Header = "Add the queue's songs", IsEnabled = player.QueueHasSongs };
+            addQueue.Click += (_, _) => player.AddQueueToPlaylist(this, name);
+            menu.Items.Add(addSongs);
+            menu.Items.Add(addQueue);
             menu.Items.Add(new Separator());
             var rename = new MenuItem { Header = "Rename…" };
             rename.Click += (_, _) => player.RenamePlaylist(this, name);
@@ -1205,10 +1227,16 @@ public partial class LibraryWindow : ToolWindow
 
     /// <summary>
     /// Music dropped on the library goes into it: folders become library folders, and single files are
-    /// added on their own. Nothing is played or queued.
+    /// added on their own. Nothing is played or queued. Dropped on a playlist under PLAYLISTS, it goes into that playlist.
     /// </summary>
-    protected override async void OnMusicDropped(IReadOnlyList<string> paths)
+    protected override async void OnMusicDropped(IReadOnlyList<string> paths, object? over)
     {
+        if (Player is { } player && SavedPlaylistAt(over) is { } playlist)
+        {
+            await player.AddPathsToPlaylistAsync(playlist, paths, this);
+            return;
+        }
+
         var changed = false;
         var folders = paths.Where(Directory.Exists).ToList();
         foreach (var path in paths)
@@ -1234,6 +1262,23 @@ public partial class LibraryWindow : ToolWindow
         {
             ApplyLibraryFolders();
         }
+    }
+
+    /// <summary>The saved playlist under PLAYLISTS that <paramref name="over"/> is part of (its heading or a row), or null.</summary>
+    private string? SavedPlaylistAt(object? over)
+    {
+        if (!ShowingPlaylists || ShowingRemotePlaylist || over is not Visual source)
+        {
+            return null;
+        }
+
+        var name = source.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext switch
+        {
+            LibraryItem { RemotePlaylist: null } row => row.Folder,
+            FolderHeading heading => heading.Name,
+            _ => null,
+        };
+        return name is not null && _savedPlaylistItems.Any(item => item.Folder == name) ? name : null;
     }
 
     /// <summary>Takes folders out of the library. Only the library forgets them; the files stay on disk.</summary>
@@ -1597,11 +1642,17 @@ public partial class LibraryWindow : ToolWindow
         {
             // A folder heading, or the empty space below the songs, gets the folder menu instead.
             e.Handled = true;
-            if (source?.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: FolderHeading heading }
-                && !_highlightedFolders.Contains(heading.Name))
+            // An empty playlist's stand-in row counts as its heading, so its menu is that playlist's.
+            var headingName = source?.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext switch
+            {
+                FolderHeading heading => heading.Name,
+                LibraryItem { IsPlaceholder: true } standIn => standIn.Folder,
+                _ => null,
+            };
+            if (headingName is not null && !_highlightedFolders.Contains(headingName))
             {
                 // Right-clicking a heading outside the highlight highlights just that one.
-                HighlightFolders(new[] { heading.Name });
+                HighlightFolders(new[] { headingName });
             }
 
             if (ShowingPlaylists)

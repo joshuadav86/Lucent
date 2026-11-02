@@ -16,7 +16,7 @@ namespace Lucent.Mac.Streaming;
 /// than controlling the Music app, so Lucent talks to the Music app the way Mac apps always have. Windows
 /// uses Windows' media controls to reach the Apple Music app (see Windows' Streaming/AppleMusicRemote.cs).
 /// </remarks>
-public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteVolume, IRemoteModes, IRemoteDevices, IRemoteOpener, IRemoteNotifier
+public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemotePlaylistMaker, IRemoteVolume, IRemoteModes, IRemoteDevices, IRemoteOpener, IRemoteNotifier
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -268,6 +268,28 @@ public sealed class AppleMusicRemote : IRemotePlayer, IRemoteLists, IRemotePlayl
 
     // Text inside an AppleScript string's quotes.
     private static string Quoted(string text) => text.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    /// <summary>Makes an empty playlist in the Music app, as File › New › Playlist does.</summary>
+    public async Task<RemotePlaylist> MakePlaylistAsync(string name, CancellationToken cancel)
+    {
+        var result = await RunAsync($$"""
+            if application "Music" is not running then return "closed"
+            tell application "Music"
+                try
+                    set p to make new user playlist with properties {name:"{{Quoted(name)}}"}
+                    return persistent ID of p
+                on error
+                    return "refused"
+                end try
+            end tell
+            """, cancel);
+        return result switch
+        {
+            "closed" => throw new RemoteProblem("Open the Music app, then Lucent can make playlists in it."),
+            _ when Hex(result) is { Length: > 0 } id && result != "refused" => new RemotePlaylist($"music:playlist:{id}", name, 0, CanAdd: true),
+            _ => throw new RemoteProblem("Music wouldn't make that playlist. Make it in the Music app, and it shows here to add songs to."),
+        };
+    }
 
     /// <summary>
     /// Adds the song to the playlist (Music's duplicate, as dragging it there does), or makes it a favorite. The song is

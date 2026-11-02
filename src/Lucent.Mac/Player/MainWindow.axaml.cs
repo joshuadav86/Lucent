@@ -1775,9 +1775,18 @@ public partial class MainWindow : Window
 
     public async void AddFilesFromDialog(Window owner)
     {
+        if (await PickMusicFiles(owner, "Add music and videos") is { Count: > 0 } files)
+        {
+            await AddPathsAsync(files, owner);
+        }
+    }
+
+    /// <summary>Music and video files picked in a file dialog; empty when it's cancelled.</summary>
+    private static async Task<List<string>> PickMusicFiles(Window owner, string title)
+    {
         var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Add music and videos",
+            Title = title,
             AllowMultiple = true,
             FileTypeFilter = new[]
             {
@@ -1791,10 +1800,7 @@ public partial class MainWindow : Window
             },
         });
 
-        if (files.Count > 0)
-        {
-            await AddPathsAsync(files.Select(file => file.TryGetLocalPath()).OfType<string>(), owner);
-        }
+        return files.Select(file => file.TryGetLocalPath()).OfType<string>().ToList();
     }
 
     public async void AddFolderFromDialog(Window owner)

@@ -15,7 +15,7 @@ namespace Lucent.Streaming;
 /// It also reads the playlist, album or Liked Songs the song is playing from, for the queue window, its shuffle and
 /// repeat, which the player's own buttons change, and lists the account's playlists for the library.
 /// </summary>
-public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes, IRemoteOpener, IRemoteNotifier
+public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylists, IRemotePlaylistMaker, IRemoteLinks, IRemoteVolume, IRemoteDevices, IRemoteModes, IRemoteOpener, IRemoteNotifier
 {
     private const string Root = "https://api.spotify.com/v1";
     private const string Api = Root + "/me/player";
@@ -704,6 +704,35 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         }
 
         await ThrowIfFailedAsync(response, cancel);
+    }
+
+    /// <summary>
+    /// Makes a private playlist in the account (POST /me/playlists, which replaced POST /users/{id}/playlists in February
+    /// 2026). It starts empty; <see cref="AddToPlaylistAsync"/> puts the song in.
+    /// </summary>
+    public async Task<RemotePlaylist> MakePlaylistAsync(string name, CancellationToken cancel)
+    {
+        try
+        {
+            await RequireScopeAsync("playlist-modify-private", AddSignInNote, cancel);
+        }
+        catch (Refused refused)
+        {
+            throw new RemoteProblem(refused.Note);
+        }
+
+        using var response = await SendAsync(HttpMethod.Post, $"{Root}/me/playlists", cancel,
+            JsonSerializer.Serialize(new Dictionary<string, object> { ["name"] = name, ["public"] = false }));
+        if (response.StatusCode == HttpStatusCode.Forbidden)
+        {
+            throw new RemoteProblem("Spotify wouldn't let Lucent make a playlist. Make it in Spotify, and it shows here to add songs to.");
+        }
+
+        await ThrowIfFailedAsync(response, cancel);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancel));
+        return Text(json.RootElement, "uri") is { Length: > 0 } uri
+            ? new RemotePlaylist(uri, Text(json.RootElement, "name") is { Length: > 0 } made ? made : name, 0, CanAdd: true)
+            : throw new RemoteProblem("Spotify didn't say which playlist it made. Look for it in Spotify.");
     }
 
     /// <summary>

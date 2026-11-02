@@ -5,6 +5,7 @@ using Avalonia.Media;
 using Lucent.Playlist;
 using Track = Lucent.Playlist.Track;
 using Lucent.Radio;
+using Lucent.Mac.Windows;
 
 namespace Lucent.Mac;
 
@@ -182,8 +183,7 @@ public partial class MainWindow
             var item = new MenuItem { Header = name };
             item.Click += async (_, _) =>
             {
-                var tracks = await songs();
-                SavePlaylist(() => SavedPlaylists.Append(name, tracks));
+                AddToSavedPlaylist(name, await songs(), owner);
             };
             menu.Items.Add(item);
         }
@@ -196,10 +196,13 @@ public partial class MainWindow
         var create = new MenuItem { Header = "New playlist…" };
         create.Click += async (_, _) =>
         {
-            if (await AskForPlaylistName(owner, "New playlist", "The sounds you chose go in it first.", "Create") is { } name)
+            if (await AskForPlaylistName(owner, "New playlist", "The songs you chose go in it first.", "Create") is { } name)
             {
                 var tracks = await songs();
-                SavePlaylist(() => SavedPlaylists.Write(name, tracks));
+                if (SavePlaylist(() => SavedPlaylists.Write(name, tracks)))
+                {
+                    Toast.Show(owner, SavedPlaylists.AddedNote(tracks.Count, name));
+                }
             }
         };
         menu.Items.Add(create);
@@ -265,12 +268,52 @@ public partial class MainWindow
         menu.Items.Add(open);
     }
 
-    /// <summary>Makes a new, empty playlist, to fill later with Add to playlist.</summary>
+    /// <summary>Makes a new, empty playlist, to fill later with Add to playlist, Add songs…, or by dropping music on it.</summary>
     public async void CreatePlaylist(Window owner)
     {
-        if (await AskForPlaylistName(owner, "New playlist", "It starts empty. Right-click sounds and choose Add to playlist to fill it.", "Create") is { } name)
+        if (await AskForPlaylistName(owner, "New playlist", SavedPlaylists.NewHint, "Create") is { } name)
         {
             SavePlaylist(() => SavedPlaylists.Write(name, Array.Empty<Track>()));
+        }
+    }
+
+    /// <summary>Songs put at the end of a saved playlist, then a toast over <paramref name="over"/> saying so.</summary>
+    private void AddToSavedPlaylist(string name, IReadOnlyList<Track> tracks, Control over)
+    {
+        if (tracks.Count > 0 && SavePlaylist(() => SavedPlaylists.Append(name, tracks)))
+        {
+            Toast.Show(over, SavedPlaylists.AddedNote(tracks.Count, name));
+        }
+    }
+
+    /// <summary>Add songs… on a playlist: music files picked in a file dialog go at its end.</summary>
+    public async void AddFilesToPlaylistFromDialog(Window owner, string name)
+    {
+        if (await PickMusicFiles(owner, $"Add songs to {name}") is { Count: > 0 } files)
+        {
+            await AddPathsToPlaylistAsync(name, files, owner);
+        }
+    }
+
+    /// <summary>Add the queue on a playlist: the queue's songs go at its end.</summary>
+    public void AddQueueToPlaylist(Window owner, string name) =>
+        AddToSavedPlaylist(name, _playlist.Select(entry => entry.Track).ToList(), owner);
+
+    /// <summary>True when the queue has songs of its own to add to a playlist.</summary>
+    public bool QueueHasSongs => _playlist.Count > 0;
+
+    /// <summary>Music files and folders (dropped on a playlist, or picked) go at the playlist's end, folders' songs and all.</summary>
+    public async Task AddPathsToPlaylistAsync(string name, IReadOnlyList<string> paths, Control over)
+    {
+        if (await LoadPathsAsync(paths, over, "Read") is { } tracks)
+        {
+            if (tracks.Count == 0)
+            {
+                Toast.Show(over, "No music found there");
+                return;
+            }
+
+            AddToSavedPlaylist(name, tracks, over);
         }
     }
 
@@ -328,8 +371,10 @@ public partial class MainWindow
         return name is null ? null : SavedPlaylists.CleanName(name);
     }
 
-    private void SavePlaylist(Action save)
+    /// <summary>Saves a change to the playlists, saying so if it couldn't be. False when it couldn't.</summary>
+    private bool SavePlaylist(Action save)
     {
+        var saved = true;
         try
         {
             save();
@@ -337,8 +382,10 @@ public partial class MainWindow
         catch (Exception ex)
         {
             ShowError("Couldn't save the playlist.", ex);
+            saved = false;
         }
 
         _libraryWindow.PlaylistsChanged();
+        return saved;
     }
 }

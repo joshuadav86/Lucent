@@ -89,7 +89,7 @@ public class ToolWindow : Window
         base.OnPreviewDrop(e);
         if (Player is not null && DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
-            OnMusicDropped(paths);
+            OnMusicDropped(paths, e.OriginalSource);
         }
     }
 
@@ -98,12 +98,15 @@ public class ToolWindow : Window
     {
         if (Player is not null && DroppedMusic.Paths(e) is { Count: > 0 } paths)
         {
-            OnMusicDropped(paths);
+            OnMusicDropped(paths, e.OriginalSource);
         }
     }
 
-    /// <summary>Files or folders dropped on this window. They play now, replacing the queue.</summary>
-    protected virtual void OnMusicDropped(IReadOnlyList<string> paths) => Player?.PlayDroppedPaths(paths, this);
+    /// <summary>
+    /// Files or folders dropped on this window. They play now, replacing the queue. <paramref name="over"/> is what
+    /// they were dropped on, for a window where that matters (a playlist in the library).
+    /// </summary>
+    protected virtual void OnMusicDropped(IReadOnlyList<string> paths, object? over) => Player?.PlayDroppedPaths(paths, this);
 
     /// <summary>For the close button in the window's title bar.</summary>
     protected void OnHideWindow(object sender, RoutedEventArgs e) => Hide();

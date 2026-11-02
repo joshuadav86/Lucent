@@ -265,6 +265,17 @@ public interface IRemoteLinks
 }
 
 /// <summary>An <see cref="IRemotePlayer"/> that can list the playlists in the user's account, play one, and add songs to them.</summary>
+/// <summary>
+/// An app Lucent can make playlists in (Spotify, and Music on a Mac), for New playlist… in a song's Add to playlist, so a
+/// streaming song can start a playlist of its own in the app it's from.
+/// </summary>
+public interface IRemotePlaylistMaker
+{
+    /// <summary>Makes an empty playlist called <paramref name="name"/> in the account (private, where the app has a say).</summary>
+    /// <exception cref="RemoteProblem">When the app won't make it, worded for the user.</exception>
+    Task<RemotePlaylist> MakePlaylistAsync(string name, CancellationToken cancel);
+}
+
 public interface IRemotePlaylists
 {
     /// <summary>The account's playlists, in the order the app lists them.</summary>

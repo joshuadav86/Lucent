@@ -118,13 +118,17 @@ public partial class MainWindow
 
         menu.Items.Add(new MenuItem { Header = "Loading your playlists…", IsEnabled = false });
         IReadOnlyList<RemotePlaylist> playlists;
+        var canMake = false;
         try
         {
             // A Spotify sign-in from before Lucent added songs can't, so the menu offers to sign in again instead of
             // listing playlists that would only refuse.
             var canAdd = true;
             await WithPlaylistsAsync(app, async playlists =>
-                canAdd = playlists is not SpotifyRemote spotify || await spotify.CanAddSongsAsync(CancellationToken.None));
+            {
+                canAdd = playlists is not SpotifyRemote spotify || await spotify.CanAddSongsAsync(CancellationToken.None);
+                canMake = playlists is IRemotePlaylistMaker;
+            });
             if (!canAdd)
             {
                 menu.Items.Clear();
@@ -161,9 +165,67 @@ public partial class MainWindow
             }
         }
 
-        if (playlists.Count == 0)
+        if (playlists.Count == 0 && !canMake)
         {
             menu.Items.Add(new MenuItem { Header = "No playlists you can add to", IsEnabled = false });
+        }
+
+        // A playlist of its own, made in the app the song is from, as the app's own Add to playlist offers.
+        if (canMake)
+        {
+            if (menu.Items.Count > 0)
+            {
+                menu.Items.Add(new Separator());
+            }
+
+            var create = new MenuItem { Header = "New playlist…" };
+            create.Click += (_, _) => MakeRemotePlaylist(track, notice, app);
+            menu.Items.Add(create);
+        }
+    }
+
+    /// <summary>
+    /// New playlist… in a streaming song's Add to playlist: asks for a name, makes the playlist in the app the song is from
+    /// (Spotify, or Music on a Mac), and puts the song in it.
+    /// </summary>
+    private async void MakeRemotePlaylist(RemoteTrack track, Action<string> notice, RemoteApp? app)
+    {
+        var name = NameOf(app);
+        var title = PromptWindow.Ask(this, "New playlist", $"Lucent makes it in {name}, with {track.Title} in it.", "Create", string.Empty,
+            answer => answer.Trim().Length == 0 ? "Type a name for the playlist." : null)?.Trim();
+        if (string.IsNullOrEmpty(title))
+        {
+            return;
+        }
+
+        try
+        {
+            RemotePlaylist? made = null;
+            var reached = await WithPlaylistsAsync(app, async playlists =>
+            {
+                if (playlists is IRemotePlaylistMaker maker)
+                {
+                    made = await maker.MakePlaylistAsync(title, CancellationToken.None);
+                    await playlists.AddToPlaylistAsync(made, track, CancellationToken.None);
+                }
+            });
+            if (!reached)
+            {
+                notice($"Sign in to {name} from the Add music menu to make playlists there.");
+                return;
+            }
+
+            if (made is not null)
+            {
+                notice($"Added {track.Title} to {made.Name}.");
+                // The new playlist shows under PLAYLISTS and in the next Add to playlist straight away.
+                _spotifyPlaylists = null;
+                _libraryWindow.RemotePlaylistsChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            notice(ex is RemoteProblem ? ex.Message : $"Lucent couldn't make the playlist in {name}.");
         }
     }
 
