@@ -20,11 +20,11 @@ static const float FloorReach = 5.5;       // the floor's circles fade out from 
 static const float ShareGlobe = 0.4;
 static const float ShareFloor = 0.9;       // the rest are the rays from the pole
 
-// The globe's tumble: steady, plus a push on every beat and a spin on a drop. (BeatCount - Beat only moves
-// forward, so the music can push it without ever pulling it back.)
+// The globe's tumble: steady, plus a push on every beat and a spin on a drop. (BeatGlide eases forward on each beat
+// and never goes back, so the music can push it without ever pulling it back.)
 float rsClock()
 {
-    return Time * 0.09 + (BeatCount - Beat) * 0.04;
+    return Time * 0.09 + BeatGlide * 0.04;
 }
 
 // How high the globe floats off the floor: the bass and a drop lift it, which spreads its circles wider.

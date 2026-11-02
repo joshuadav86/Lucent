@@ -11,7 +11,7 @@ float brRadius(float angle)
     float folded = abs(angle) / PI;
     float band = spectrum(0.03 + folded * 0.55);
     float breath = 0.03 * sin(Time * 0.4);
-    return 0.38 + breath + Bass * 0.07 + Beat * 0.012 + band * 0.035;
+    return 0.38 + breath + Bass * 0.07 + BeatSwell * 0.012 + band * 0.035;
 }
 
 // The ring's light at point q: a glowing tube with a bright core and a soft halo.

@@ -16,7 +16,7 @@ float3 Render(float2 uv, float2 p)
         float sides = 3.0 + wrap(index, 4.0);
         float level = spectrum(index / 8.0);
         float direction = (layer % 2 == 0) ? 1.0 : -1.0;
-        float2 q = rotate(p, direction * Time * (0.08 + index * 0.025) + Beat * 0.1 * direction);
+        float2 q = rotate(p, direction * Time * (0.08 + index * 0.025) + BeatSwell * 0.1 * direction);
         float radius = 0.12 + index * 0.11 + level * 0.08;
         float outline = glow(polygon(q, sides, radius), 420.0);
         colour += palette(index * 0.12 + Time * 0.04) * outline * (0.35 + level * 1.2);

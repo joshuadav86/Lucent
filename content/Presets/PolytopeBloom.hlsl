@@ -162,7 +162,7 @@ float4 pbMultiply(float4 a, float4 b)
 // planes at once. It drifts slowly, and each beat adds a push that eases in over the beat.
 float4 pbTurnLeft()
 {
-    float beats = BeatCount + 1.0 - Beat;
+    float beats = BeatGlide + 1.0;
     float a = Time * 0.045 + beats * 0.035;
     return float4(normalize(float3(0.3, 1.0, 0.2)) * sin(a), cos(a));
 }

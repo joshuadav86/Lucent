@@ -57,7 +57,7 @@ float3 Render(float2 uv, float2 p)
 {
     // The sphere wanders slowly and breathes with the bass.
     float2 centre = float2(0.32 * sin(Time * 0.071), 0.1 * sin(Time * 0.053 + 1.0));
-    float radius = 0.6 + Bass * 0.07 + Beat * 0.02 + 0.03 * sin(Time * 0.2);
+    float radius = 0.6 + Bass * 0.07 + BeatSwell * 0.02 + 0.03 * sin(Time * 0.2);
     float2 d = p - centre;
     float r = length(d);
     float2 outward = r > 1e-4 ? d / r : float2(1.0, 0.0);
@@ -104,7 +104,7 @@ float3 Render(float2 uv, float2 p)
         // Turn the globe: a tilted axis, nudged on by every beat.
         float3 n = normal;
         n.yz = rotate(n.yz, 0.45 + 0.15 * sin(Time * 0.13));
-        n.xz = rotate(n.xz, Time * 0.18 + (BeatCount - Beat) * 0.05);
+        n.xz = rotate(n.xz, Time * 0.18 + BeatGlide * 0.05);
         n.xy = rotate(n.xy, 0.25 * sin(Time * 0.07));
         float around = 20.0;
         float up = 10.0;

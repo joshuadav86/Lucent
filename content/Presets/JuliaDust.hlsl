@@ -17,7 +17,7 @@ float2 juliaNumber()
 {
     float angle = Time * 2.0 * PI / Period + 1.3;
     float2 edge = float2(0.5 * cos(angle) - 0.25 * cos(2.0 * angle), 0.5 * sin(angle) - 0.25 * sin(2.0 * angle));
-    float reach = 1.0 + 0.06 * sin(Time * 2.0 * PI / 37.0) + Bass * 0.03 + Beat * 0.015;
+    float reach = 1.0 + 0.06 * sin(Time * 2.0 * PI / 37.0) + Bass * 0.03 + BeatSwell * 0.015;
     return edge * reach;
 }
 
@@ -59,7 +59,7 @@ void Simulate(inout Particle particle, uint id)
 Sprite Show(Particle particle, uint id)
 {
     float along = particle.data.x;
-    float2 seen = rotate(particle.position.xy, Time * 0.015 + sin(Time * 0.05) * 0.4) * Scale * (1.0 + Beat * 0.012);
+    float2 seen = rotate(particle.position.xy, Time * 0.015 + sin(Time * 0.05) * 0.4) * Scale * (1.0 + BeatSwell * 0.012);
 
     // Ice blue round to violet, drifting slowly round the colour wheel, and a little paler where it's loud.
     float level = spectrum(0.03 + along * 0.55);

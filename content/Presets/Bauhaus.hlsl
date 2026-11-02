@@ -54,7 +54,7 @@ float bhShapeDistance(float2 q, float4 shape, float px)
 float3 Render(float2 uv, float2 p)
 {
     float px = pixelSize();
-    float clock = max(BeatCount - Beat, 0.0);
+    float clock = BeatGlide;
 
     // The poster recomposes every two beats; each change eases in over the first half beat.
     float beatTime = clock / 2.0;

@@ -29,7 +29,7 @@ static const float LetterStarts[6] = { 0.0, 1.04, 2.18, 3.52, 4.56, 5.7 };
 // and drifts at a steady pace in silence.
 float bounceClock()
 {
-    return Time + (BeatCount - Beat) * 0.25;
+    return Time + BeatGlide * 0.25;
 }
 
 float rand(float n)
@@ -322,7 +322,7 @@ float3 Render(float2 uv, float2 p)
     float2 q = p - centre;
     float2 squash = 0.12 * exp(-hitAge * 9.0) * abs(cos(hitAge * 24.0));
     q /= float2(1.0 - squash.x, 1.0 - squash.y);
-    q /= 1.0 + 0.03 * Beat + 0.04 * party * (0.5 + 0.5 * sin(Time * 8.0));
+    q /= 1.0 + 0.03 * BeatSwell + 0.04 * party * (0.5 + 0.5 * sin(Time * 8.0));
 
     if (all(abs(q) < Half + 0.08))
     {

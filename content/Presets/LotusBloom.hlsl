@@ -35,7 +35,7 @@ float3 Render(float2 uv, float2 p)
         float spin = (wrap(generation, 2.0) < 0.5 ? 1.0 : -1.0) * Time * 0.03 + generation * 1.94;
 
         // Petals tilt from upright to flat as they age; the beat flares them open.
-        float opening = lerp(1.25, 0.15, smoothstep(0.0, 0.9, age)) - Beat * 0.12;
+        float opening = lerp(1.25, 0.15, smoothstep(0.0, 0.9, age)) - BeatSwell * 0.12;
         float baseRadius = 0.03 + age * 0.55;
         float petalLength = (0.12 + age * 0.75) * cos(max(opening, 0.0));
 

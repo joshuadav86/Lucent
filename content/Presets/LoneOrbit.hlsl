@@ -12,7 +12,7 @@ static const float LoAxis = 0.5;
 // the beat clock only ever moves forwards, so the star never jumps back.
 float loPhase()
 {
-    return Time * 1.4 + max(BeatCount - Beat, 0.0) * 0.45;
+    return Time * 1.4 + BeatGlide * 0.45;
 }
 
 // The star's position for an orbital phase: an ellipse with the centre at one focus, swept faster close in and

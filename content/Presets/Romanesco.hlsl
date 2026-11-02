@@ -85,7 +85,7 @@ float3 floretFrame(float3 p, float2 place, out float size, out float valid, out 
 {
     // The bass makes every floret swell a little.
     float s = exp(place.x);
-    float swell = 1.0 + Bass * 0.06 + Beat * 0.02;
+    float swell = 1.0 + Bass * 0.06 + BeatSwell * 0.02;
     size = FloretSize * s * swell;
     float limit = 1.0 / cos(ConeAngle);
     valid = step(s, limit * 0.97) * step(0.035, s);

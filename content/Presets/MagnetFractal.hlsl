@@ -73,7 +73,7 @@ float3 Render(float2 uv, float2 p)
         n += 1.0;
     }
 
-    float hue = Time * 0.01 + (BeatCount - Beat) * 0.01;
+    float hue = Time * 0.01 + BeatGlide * 0.01;
     float3 colour = 0.0;
     if (outcome == 1)
     {

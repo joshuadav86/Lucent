@@ -49,7 +49,7 @@ float3 Render(float2 uv, float2 p)
     float3 gold = float3(1.0, 0.78, 0.45);
     float3 ivory = float3(0.85, 0.88, 1.0);
     float3 colour = float3(0.008, 0.009, 0.02) + float3(0.02, 0.018, 0.04) * exp(-dot(p - eyeOnScreen, p - eyeOnScreen) * 2.0);
-    float beatPhase = BeatCount - saturate(Beat);
+    float beatPhase = BeatGlide;
 
     [loop]
     for (int k = centreLevel - 3; k <= centreLevel + 3; k++)

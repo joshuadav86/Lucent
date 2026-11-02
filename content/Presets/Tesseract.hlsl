@@ -22,7 +22,7 @@ static float CornerW[16];
 // difference glides smoothly forward instead of jumping.
 float turnPhase()
 {
-    return Time * 0.11 + (BeatCount - Beat) * 0.12;
+    return Time * 0.11 + BeatGlide * 0.12;
 }
 
 void placeCorners()

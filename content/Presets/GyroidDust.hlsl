@@ -16,7 +16,7 @@ static const float Frequency = 3.3;
 // The surface's level, which beats nudge up and down so the whole surface shifts and thickens.
 float surfaceLevel()
 {
-    return sin(Time * 0.17) * 0.25 + Beat * 0.18;
+    return sin(Time * 0.17) * 0.25 + BeatSwell * 0.18;
 }
 
 float gyroid(float3 q)

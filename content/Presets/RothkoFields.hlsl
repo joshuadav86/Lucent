@@ -64,7 +64,7 @@ float3 Render(float2 uv, float2 p)
     rfMood(Time * 0.006 + Mid * 0.03, ground, upper, lower);
 
     // The canvas: a tall frame of fields, centred, with a margin of ground all round.
-    float breathe = Bass * 0.018 + Beat * 0.006;
+    float breathe = Bass * 0.018 + BeatSwell * 0.006;
     float sway = sin(Time * 0.11) * 0.01;
     float2 halfUpper = float2(min(Aspect * 0.62, 0.95) + breathe, 0.40 + breathe);
     float2 halfLower = float2(min(Aspect * 0.62, 0.95) + breathe, 0.27 + breathe * 0.8);

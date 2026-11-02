@@ -161,7 +161,7 @@ float3 circuitBuilding(float3 hit, float pixel, float2 waveCentre)
 float3 Render(float2 uv, float2 p)
 {
     float2 q = float2(p.x, -p.y);
-    float travel = Time * 0.6 + (BeatCount - Beat) * 0.25;
+    float travel = Time * 0.6 + BeatGlide * 0.25;
     float heading = Time * 0.03;
     float2 forward2 = float2(sin(heading), cos(heading));
     float2 position = float2(0.37, 0.61) + forward2 * travel * 2.0;
@@ -171,7 +171,7 @@ float3 Render(float2 uv, float2 p)
     float3 right = normalize(cross(float3(0.0, 1.0, 0.0), forward));
     float3 up = cross(forward, right);
     q = rotate(q, sin(Time * 0.09) * 0.08);
-    float3 dir = normalize(forward * (1.1 - Beat * 0.04) + q.x * right + q.y * up);
+    float3 dir = normalize(forward * (1.1 - BeatSwell * 0.04) + q.x * right + q.y * up);
     float2 waveCentre = target.xz;
 
     // March down to the city.

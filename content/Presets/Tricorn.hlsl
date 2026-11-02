@@ -105,7 +105,7 @@ float3 shade(float2 c, float scale)
     float distance = r * log(r) / max(dr, 1e-20) / scale;
 
     // Colour flows outward from the set with time, and each beat nudges it on.
-    float flow = Time * 0.03 + (BeatCount - Beat) * 0.02 + Beat * 0.03;
+    float flow = Time * 0.03 + BeatGlide * 0.02 + Beat * 0.03;
     float t = log2(smoothN + 1.0) * 0.55 - flow;
     float3 colour = nightColour(t);
 

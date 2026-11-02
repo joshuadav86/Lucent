@@ -17,7 +17,7 @@ float3 Render(float2 uv, float2 p)
     int maxIterations = qualitySteps(110);
     float iterations = 0.0;
     float trap = 1000.0;
-    float ringRadius = 0.5 + Beat * 0.25;
+    float ringRadius = 0.5 + BeatSwell * 0.25;
     [loop]
     for (int i = 0; i < maxIterations; i++)
     {

@@ -32,10 +32,10 @@ float erSize(int j, float layer)
 }
 
 // The symmetry: the slow clock steps n through 3..7 and round again, blending into the next over the
-// last part of each step. (The beat clock BeatCount - Beat only moves forward, so the music can push it.)
+// last part of each step. (The beat clock BeatGlide eases forward on each beat and never goes back, so the music can push it.)
 float2 erOrder()
 {
-    float clock = Time * 0.02 + (BeatCount - Beat) * 0.007;
+    float clock = Time * 0.02 + BeatGlide * 0.007;
     float stage = floor(clock);
     float blend = smoothstep(0.8, 1.0, clock - stage);
     return float2(3.0 + wrap(stage, 5.0), blend);
@@ -44,12 +44,12 @@ float2 erOrder()
 // The whole figure turns slowly; the pen runs round the curve once every two bars or so.
 float erTurn()
 {
-    return Time * 0.05 + (BeatCount - Beat) * 0.01;
+    return Time * 0.05 + BeatGlide * 0.01;
 }
 
 float erPen()
 {
-    return Time * 0.15 + (BeatCount - Beat) * 0.35;
+    return Time * 0.15 + BeatGlide * 0.35;
 }
 
 float3 erCurveAt(float t, float n, float layer)

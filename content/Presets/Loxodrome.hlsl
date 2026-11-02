@@ -18,10 +18,10 @@ static const float InnerShare = 0.22;      // the share of particles on the inne
 static const float MostLatitude = 1.46;    // just short of the poles, where the strands would all pile up
 
 // The lattice's twist breathes slowly by itself and winds tighter with the bass and on a drop.
-// (The beat clock BeatCount - Beat only moves forward, so the music can push it without jitter.)
+// (The beat clock BeatGlide eases forward on each beat and never goes back, so the music can push it without jitter.)
 float lxTwist(bool inner)
 {
-    float clock = Time * 0.05 + (BeatCount - Beat) * 0.015;
+    float clock = Time * 0.05 + BeatGlide * 0.015;
     float twist = 0.9 + sin(clock) * 0.35 + Bass * 0.35 + DropPulse * 0.6;
     return inner ? -twist * 1.4 : twist;
 }

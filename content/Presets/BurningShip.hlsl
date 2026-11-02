@@ -64,7 +64,7 @@ float3 shipColour(float2 c, float2 world, float pixel, int maxIterations, float 
         // burns white-hot, its windows and arches glow deep red, and heat contours ripple outward into the night.
         float logD = log2(max(dpx, 1.0e-6));
         float lace = saturate(-logD / 6.5);
-        float ripple = 0.5 + 0.5 * cos(2.0 * PI * (logD * 0.55 + Time * 0.45 + (BeatCount - Beat) * 0.15));
+        float ripple = 0.5 + 0.5 * cos(2.0 * PI * (logD * 0.55 + Time * 0.45 + BeatGlide * 0.15));
         float outer = exp2(-max(logD, 0.0) * (0.9 - Bass * 0.3));       // glow falling off with distance
 
         // A gentle flicker drifting up through the lace.
@@ -138,7 +138,7 @@ float3 Render(float2 uv, float2 p)
     colour += rose * saturate(1.0 - dot(colour, float3(0.3, 0.5, 0.2)) * 3.0);
 
     // The flames swing slowly through chemical colours, nudged on every beat.
-    colour = shipHueTurn(colour, -0.75 + 0.75 * sin(Time * 0.041 + (BeatCount - Beat) * 0.08));
+    colour = shipHueTurn(colour, -0.75 + 0.75 * sin(Time * 0.041 + BeatGlide * 0.08));
 
     if (sea)
     {

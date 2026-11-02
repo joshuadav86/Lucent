@@ -96,7 +96,7 @@ float3 Render(float2 uv, float2 p)
 
     // ---- The moon: three discs of cream card cut like a paper mandala, stacked, each turning its own
     // way, with the moon's light shining through the cuts. Each ring's cuts open with its band ----
-    float2 moonCentre = float2(Aspect * 0.42 + sin(Time * 0.02) * 0.04, -0.5 + Beat * 0.004);
+    float2 moonCentre = float2(Aspect * 0.42 + sin(Time * 0.02) * 0.04, -0.5 + BeatSwell * 0.004);
     float2 m = p - moonCentre;
     float glowing = exp(-max(length(m) - 0.12, 0.0) * 9.0);
     colour += float3(1.0, 0.85, 0.6) * 0.1 * (0.6 + Level) * glowing;
@@ -136,7 +136,7 @@ float3 Render(float2 uv, float2 p)
         float sway = sin(Time * (0.5 + depth * 0.3) + i * 1.3) * (0.004 + 0.02 * band);
         // Parallax: nearer layers slide further as the view drifts.
         float slide = Time * (0.01 + 0.035 * depth) + sin(Time * 0.04) * 0.3 * depth;
-        float bob = Beat * 0.004 * depth;
+        float bob = BeatSwell * 0.004 * depth;
         float x = p.x + slide + sway;
         float ridge = pcRidge(i, x, p.x + sway) + bob;
 

@@ -9,7 +9,7 @@ float3 Render(float2 uv, float2 p)
 {
     // About one screen pixel, so lines stay razor sharp at any window size and resolution setting.
     float px = max(pixelSize(), 0.0019);
-    float zoom = 1.25 - Beat * 0.05;
+    float zoom = 1.25 - BeatSwell * 0.05;
     float2 z = kaleidoscope(rotate(p, Time * 0.03), 6.0) * zoom;
     float2 c = float2(0.78 + 0.08 * sin(Time * 0.071), 0.52 + 0.08 * cos(Time * 0.053)) + Bass * 0.04;
     float ringRadius = 0.6 + Mid * 0.08;

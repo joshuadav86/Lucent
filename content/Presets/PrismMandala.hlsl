@@ -112,8 +112,8 @@ float3 Render(float2 uv, float2 p)
                           0.35 + 0.2 * sin(Time * 0.041 + 2.0), 0.08 + 0.03 * sin(Time * 0.067 + 3.0));
 
     // Dispersion: lines split into a spectrum on each beat and settle back to white.
-    float dispersion = 0.012 + Beat * 0.07 + Treble * 0.015;
-    float twist = 0.006 + Beat * 0.035;
+    float dispersion = 0.012 + BeatSwell * 0.07 + Treble * 0.015;
+    float twist = 0.006 + BeatSwell * 0.035;
 
     // Ring radii breathe with their parts of the spectrum.
     float4 rings = float4(0.16 + spectrum(0.1) * 0.02, 0.34 + spectrum(0.25) * 0.025,

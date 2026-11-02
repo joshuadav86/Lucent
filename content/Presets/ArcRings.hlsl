@@ -59,7 +59,7 @@ float3 Render(float2 uv, float2 p)
 
         // The arc itself: a fine line, a touch thicker on loud bands, with a faint glow.
         float d = arDistance(q, radius, facing, halfAngle);
-        float width = px * (0.6 + level * 0.9) + Beat * px * 0.4;
+        float width = px * (0.6 + level * 0.9) + BeatSwell * px * 0.4;
         float lineCover = saturate(0.5 - (d - width) / px);
         // Warm white inside, cooler towards the outside, with a single amber accent on the beat.
         float3 tone = lerp(float3(1.0, 0.86, 0.66), float3(0.70, 0.84, 1.0), i / (RingCount - 1.0));
@@ -73,7 +73,7 @@ float3 Render(float2 uv, float2 p)
     }
 
     // The centre: a small still disc that swells slightly on the beat.
-    float hub = length(q) - (0.03 + Beat * 0.008 + Bass * 0.01);
+    float hub = length(q) - (0.03 + BeatSwell * 0.008 + Bass * 0.01);
     colour = lerp(colour, float3(1.0, 0.72, 0.42) * (0.75 + Level * 0.4), saturate(0.5 - hub / px));
     colour += float3(1.0, 0.6, 0.3) * 0.08 * exp(-max(hub, 0.0) * 30.0);
     return colour;

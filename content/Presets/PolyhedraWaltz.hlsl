@@ -101,7 +101,7 @@ float3x3 pwRotation(float3 angles)
 // eight. Each nest takes its turn at a different beat.
 float pwMorph(float layer)
 {
-    float beatPhase = BeatCount - saturate(Beat);
+    float beatPhase = BeatGlide;
     float g = beatPhase - layer * 2.7 + 8.0;
     float n = floor(g / 4.0);
     float r = g - n * 4.0;

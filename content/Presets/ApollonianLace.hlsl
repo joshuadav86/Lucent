@@ -11,7 +11,7 @@ float gasket(float2 p, out float trap)
 {
     float scale = 1.0;
     trap = 1000.0;
-    float strength = 1.12 + Bass * 0.12 + Beat * 0.05;
+    float strength = 1.12 + Bass * 0.12 + BeatSwell * 0.05;
     [unroll]
     for (int i = 0; i < 9; i++)
     {

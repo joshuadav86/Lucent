@@ -78,7 +78,7 @@ float3 Render(float2 uv, float2 p)
     float2 view = rotate(float2(p.x, -p.y), spin);
     float2 w = CarpetAnchor + view * viewScale;
     float pixelWorld = pixelSize() * viewScale;
-    float hue = Time * 0.008 + (BeatCount - Beat) * 0.012;
+    float hue = Time * 0.008 + BeatGlide * 0.012;
 
     float windowPx;
     float2 windowLocal;

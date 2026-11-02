@@ -31,7 +31,7 @@ float3 restingPlace(uint id)
     // Bass at the equator, treble at the poles, so a kick swells a ring around the middle.
     float band = abs(direction.y);
     float level = spectrum(band * 0.85 + 0.02);
-    float reach = 0.12 + level * level * 0.9 + Beat * 0.12;
+    float reach = 0.12 + level * level * 0.9 + BeatSwell * 0.12;
     float radius = 0.42 + Bass * 0.06;
 
     // Filaments sway in a slow breeze, more towards their tips.

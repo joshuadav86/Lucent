@@ -66,7 +66,7 @@ float3 Render(float2 uv, float2 p)
                 + kaliFire(heat) * heat * heat * 0.03;
 
     // The fire is iridescent: its hue shifts across the flames and drifts on, a step further on every beat.
-    float hueAngle = 2.0 * PI * (0.45 * tongues + 0.08 * p.x + Time * 0.012 + (BeatCount - Beat) * 0.02);
+    float hueAngle = 2.0 * PI * (0.45 * tongues + 0.08 * p.x + Time * 0.012 + BeatGlide * 0.02);
     float3 colour = cold * lace * 0.3
                   + kaliHueTurn(fire, hueAngle)
                   + float3(1.0, 0.92, 0.8) * fine * heat * heat * heat * heat * (0.25 + Treble * 0.6);
