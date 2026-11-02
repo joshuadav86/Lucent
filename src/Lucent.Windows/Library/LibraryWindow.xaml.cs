@@ -432,6 +432,16 @@ public partial class LibraryWindow : ToolWindow
     /// <summary>Called by the player when it starts or stops controlling an app, as a note may say why its playlists can't show.</summary>
     public void RemoteAppChanged() => ShowRemoteRows();
 
+    /// <summary>Called by the player when it has made a playlist in an app, so the app's list is read again to show it.</summary>
+    public void RemotePlaylistsChanged()
+    {
+        _remoteReadAt = DateTime.MinValue;
+        if (ShowingPlaylists)
+        {
+            LoadRemotePlaylists(force: true);
+        }
+    }
+
     /// <summary>Called by the player when Lucent signs in to or out of Spotify.</summary>
     public void SpotifyChanged()
     {
