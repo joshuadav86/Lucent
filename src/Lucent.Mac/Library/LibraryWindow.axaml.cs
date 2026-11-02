@@ -120,7 +120,7 @@ public partial class LibraryWindow : ToolWindow
             item.StatsChanged();
         }
 
-        if (!ShowingPlaylists && LibraryItemComparer.NeedsStats(_settings))
+        if (ShowingPlaylists ? SavedPlaylistOrder.NeedsStats(_settings.SavedPlaylistSortColumn) : LibraryItemComparer.NeedsStats(_settings))
         {
             RefreshView();
         }
@@ -175,7 +175,7 @@ public partial class LibraryWindow : ToolWindow
         var scroller = LibraryView.FindDescendantOfType<ScrollViewer>();
         var offset = scroller?.Offset;
 
-        // Playlists keep their own order, under a heading each.
+        // Playlists keep their own order, under a heading each, unless a column heading sorts the songs inside them.
         var items = (ShowingPlaylists ? _playlistItems : _library.Items).ToList();
         if (LibraryFilter() is { } filter)
         {
@@ -185,6 +185,11 @@ public partial class LibraryWindow : ToolWindow
         if (!ShowingPlaylists)
         {
             var comparer = LibraryOrder();
+            items.Sort(comparer.Compare);
+        }
+        else if (_settings.SavedPlaylistSortColumn is { } column)
+        {
+            var comparer = SavedPlaylistOrder.Comparer(_playlistItems, column, _settings.SavedPlaylistSortDescending);
             items.Sort(comparer.Compare);
         }
 
@@ -466,6 +471,7 @@ public partial class LibraryWindow : ToolWindow
         _playlistItems = items.Concat(_remoteItems).ToList();
         if (ShowingPlaylists)
         {
+            UpdateColumnHeadings();
             RebuildLibraryView();
         }
         else
@@ -487,11 +493,35 @@ public partial class LibraryWindow : ToolWindow
                 untagged[i].ApplyTags(tracks[i]);
             }
 
-            if (ShowingPlaylists && IsSearching)
+            if (ShowingPlaylists && (IsSearching || _settings.SavedPlaylistSortColumn is not null))
             {
                 RefreshView();
                 UpdateLibraryStatus();
             }
+        }
+    }
+
+    /// <summary>
+    /// Called by the player when songs' tags are saved (Edit info, or BPM and key filled in), so their rows in the saved
+    /// playlists show the new tags too. The library's own rows are read again by the library.
+    /// </summary>
+    public async void SongTagsSaved(IReadOnlySet<string> paths)
+    {
+        var rows = _savedPlaylistItems.Where(item => !item.IsPlaceholder && paths.Contains(item.Path)).ToList();
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        var tracks = await Task.Run(() => rows.Select(item => Track.FromFile(item.Path)).ToList());
+        for (var i = 0; i < rows.Count; i++)
+        {
+            rows[i].ApplyTags(tracks[i]);
+        }
+
+        if (ShowingPlaylists && (IsSearching || _settings.SavedPlaylistSortColumn is not null))
+        {
+            RefreshView();
         }
     }
 
@@ -706,6 +736,7 @@ public partial class LibraryWindow : ToolWindow
         RemoteSortButton.IsVisible = PlaylistColumnHeader.IsVisible = false;
         ShowRemotePlaylistNote(null);
         SearchRow.IsVisible = FilterRow.IsVisible = LibraryView.IsVisible = EmptyLibraryHint.IsVisible = false;
+        ColumnHeader.IsVisible = false;
         RemotePlaylistPanel.IsVisible = true;
         RemotePlaylistView.Focus();
 
@@ -831,6 +862,7 @@ public partial class LibraryWindow : ToolWindow
         RemotePlaylistView.ItemsSource = null;
         RemotePlaylistPanel.IsVisible = false;
         SearchRow.IsVisible = FilterRow.IsVisible = LibraryView.IsVisible = true;
+        UpdateColumnHeadings();
         UpdateLibraryStatus();
         LibraryView.Focus();
     }

@@ -21,14 +21,12 @@ public partial class LibraryWindow
     private bool _draggingHeading;
 
     /// <summary>
-    /// Shows the settings' columns: their headings, and the cells in every row. Saved playlists, listed under
-    /// PLAYLISTS without the headings, have none.
+    /// Shows the settings' columns: their headings, and the cells in every row. The saved playlists' songs under
+    /// PLAYLISTS show the same columns, sorted inside each playlist (SortPlaylistsByColumn).
     /// </summary>
     private void ApplyColumns()
     {
-        var shown = ShowingPlaylists
-            ? new List<LibraryColumn>()
-            : _settings.LibraryColumnsShown.Where(LibraryColumns.Choosable.Contains).Distinct().ToList();
+        var shown = _settings.LibraryColumnsShown.Where(LibraryColumns.Choosable.Contains).Distinct().ToList();
         if (!shown.SequenceEqual(LibraryColumns.Shown))
         {
             LibraryColumns.Shown = shown;
@@ -43,7 +41,10 @@ public partial class LibraryWindow
 
     private void UpdateColumnHeadings()
     {
-        ColumnHeader.Visibility = LibraryColumns.Shown.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        // Under PLAYLISTS, only over saved playlists' songs; an opened streaming playlist has its own headings.
+        var shows = LibraryColumns.Shown.Count > 0 && !ShowingRemotePlaylist
+            && (!ShowingPlaylists || _savedPlaylistItems.Any(item => !item.IsPlaceholder));
+        ColumnHeader.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;
         ColumnHeadings.Children.Clear();
         foreach (var column in LibraryColumns.Shown)
         {
@@ -63,7 +64,9 @@ public partial class LibraryWindow
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Tag = column,
-                ToolTip = $"Sort by {LibraryColumns.Label(column).ToLowerInvariant()}. Drag to move it.",
+                ToolTip = ShowingPlaylists
+                    ? $"Sort each playlist by {LibraryColumns.Label(column).ToLowerInvariant()}. A third click puts it back in order. Drag to move it."
+                    : $"Sort by {LibraryColumns.Label(column).ToLowerInvariant()}. Drag to move it.",
             };
             text.SetResourceReference(TextBlock.ForegroundProperty, HeadingBrush(column));
             heading.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
@@ -80,22 +83,46 @@ public partial class LibraryWindow
         LengthHeading.SetResourceReference(TextBlock.ForegroundProperty, HeadingBrush(LibraryColumn.Length));
     }
 
+    /// <summary>What the headings show as sorted: the library's sort, or under PLAYLISTS the playlists' own.</summary>
+    private (LibraryColumn? Column, bool Descending) HeadingSort => ShowingPlaylists
+        ? (_settings.SavedPlaylistSortColumn, _settings.SavedPlaylistSortDescending)
+        : (_settings.LibrarySortColumn, _settings.LibrarySortDescending);
+
     /// <summary>The sorted column's heading has an arrow and stands out.</summary>
-    private string HeadingText(LibraryColumn column) => _settings.LibrarySortColumn == column
-        ? $"{LibraryColumns.Heading(column)} {(_settings.LibrarySortDescending ? "▼" : "▲")}"
+    private string HeadingText(LibraryColumn column) => HeadingSort.Column == column
+        ? $"{LibraryColumns.Heading(column)} {(HeadingSort.Descending ? "▼" : "▲")}"
         : LibraryColumns.Heading(column);
 
-    private string HeadingBrush(LibraryColumn column) => _settings.LibrarySortColumn == column ? "AccentBrush" : "FaintTextBrush";
+    private string HeadingBrush(LibraryColumn column) => HeadingSort.Column == column ? "AccentBrush" : "FaintTextBrush";
 
     /// <summary>Sorts by a column: a second time on the same one flips it.</summary>
     private void SortByColumn(LibraryColumn column, bool flipIfSorted = true)
     {
+        if (ShowingPlaylists)
+        {
+            SortPlaylistsByColumn(column);
+            return;
+        }
+
         _settings.LibrarySortDescending = _settings.LibrarySortColumn == column && flipIfSorted
             ? !_settings.LibrarySortDescending
             : LibraryColumns.DescendingFirst(column);
         _settings.LibrarySortColumn = column;
         _settings.Save();
         SortLabel.Text = LibraryItemComparer.LabelFor(_settings);
+        UpdateColumnHeadings();
+        RebuildLibraryView();
+    }
+
+    /// <summary>
+    /// Sorts the songs inside each saved playlist by a column: a second click flips it, and a third puts them back in
+    /// the playlist's order. Only the list changes, never the playlist.
+    /// </summary>
+    private void SortPlaylistsByColumn(LibraryColumn column)
+    {
+        (_settings.SavedPlaylistSortColumn, _settings.SavedPlaylistSortDescending) =
+            SavedPlaylistOrder.Next(_settings.SavedPlaylistSortColumn, _settings.SavedPlaylistSortDescending, column);
+        _settings.Save();
         UpdateColumnHeadings();
         RebuildLibraryView();
     }

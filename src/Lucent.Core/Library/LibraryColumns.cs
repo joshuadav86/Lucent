@@ -137,7 +137,8 @@ public static class LibraryColumns
             LibraryColumn.Rating => TrackStats.Stars(item.Rating),
             LibraryColumn.Plays => item.Plays > 0 ? item.Plays.ToString("N0", CultureInfo.CurrentCulture) : string.Empty,
             LibraryColumn.LastPlayed => item.LastPlayed is { } played ? played.ToLocalTime().ToString("d", CultureInfo.CurrentCulture) : string.Empty,
-            LibraryColumn.Added => item.Added.ToString("d", CultureInfo.CurrentCulture),
+            // A Spotify song in a saved playlist was never added to the library.
+            LibraryColumn.Added => item.Added == DateTime.MinValue ? string.Empty : item.Added.ToString("d", CultureInfo.CurrentCulture),
             LibraryColumn.FileName => item.FileName,
             _ => tags.Comment,
         };
@@ -185,7 +186,7 @@ public static class LibraryColumns
             LibraryColumn.Rating => item.Rating > 0 ? item.Rating : null,
             LibraryColumn.Plays => item.Plays > 0 ? item.Plays : null,
             LibraryColumn.LastPlayed => item.LastPlayed,
-            LibraryColumn.Added => item.Added,
+            LibraryColumn.Added => item.Added == DateTime.MinValue ? null : (object)item.Added,
             _ => Text(column, item) is { Length: > 0 } text ? text : null,
         };
     }
