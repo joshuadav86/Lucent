@@ -396,7 +396,10 @@ public partial class MainWindow
             return;
         }
 
-        var size = SizeOf(window);
+        // The equalizer lays its sliders out to the player's width, as it does under the player as a window, so
+        // its panel (in the player's column) shows all of them, and it's that width again when single window ends.
+        (window as EqualizerWindow)?.FitTo(PlayerPaneWidth);
+                var size = SizeOf(window);
         var wanted = new Size(
             size.Width > 0 && !double.IsNaN(size.Width) ? size.Width : Math.Max(window.MinWidth, 400),
             size.Height > 0 && !double.IsNaN(size.Height) ? size.Height : Math.Max(window.MinHeight, 300));

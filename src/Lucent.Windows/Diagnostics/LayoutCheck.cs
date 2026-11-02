@@ -20,6 +20,13 @@ public partial class MainWindow
     /// <summary>True when Lucent was opened to run the layout check.</summary>
     internal static bool LayoutCheckIsAsked => Environment.GetEnvironmentVariable("LUCENT_LAYOUT_CHECK") is { Length: > 0 };
 
+    /// <summary>What the player's sizing did while the check ran, written down with its results.</summary>
+    private static List<string>? _layoutTrace;
+
+    private void TraceLayout(string what) =>
+        _layoutTrace?.Add($"  {DateTime.Now:ss.fff} {what}: player Width {Width:0} actual {ActualWidth:0} native {OnScreen(this).Width:0} " +
+            $"min {MinWidth:0} max {MaxWidth:0} {SizeToContent} scale {PlayerScale:0.00} single {InSingleWindow}");
+
     private void RunLayoutCheckIfAsked()
     {
         if (Environment.GetEnvironmentVariable("LUCENT_LAYOUT_CHECK") is { Length: > 0 } file)
@@ -98,13 +105,19 @@ public partial class MainWindow
         var places = PanelPlaces();
         lines.Add($"{label}: single window at {Describe(frame)}, panels: " +
             string.Join(", ", places.Select(entry => $"{NameFor(entry.Key)} {Describe(entry.Value)}")));
+        _layoutTrace = new List<string>();
         LeaveSingleWindow();
+        TraceLayout("left single window");
         var windows = places.Keys.ToList();
         foreach (var wait in new[] { 0, 300, 1500, 4000 })
         {
             await Task.Delay(wait);
             lines.Add($"{label}: after {wait} ms: " + string.Join(", ", windows.Select(window => $"{NameFor(window)} {Describe(OnScreen(window))}")));
         }
+
+        TraceLayout("settled");
+        lines.AddRange(_layoutTrace);
+        _layoutTrace = null;
 
         foreach (var (window, place) in places)
         {
