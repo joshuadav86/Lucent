@@ -291,6 +291,7 @@ public partial class MainWindow : Window
         ReopenSingleWindow();
         ReopenEditor();
         Activate();
+        RunLayoutCheckIfAsked();
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
         {

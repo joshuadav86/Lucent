@@ -401,6 +401,10 @@ jobs:
           publish/Lucent.exe --self-test --sheet windows-visuals.png --video tools/test-media/sync-test.mp4 --video tools/test-media/sync-test.mov --video tools/test-media/sync-test.mkv --video tools/test-media/sync-test-pcm.mp4 --formats tools/test-media/formats test.wav test.aiff test.mp3 | Out-Host
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Layout check (single window off leaves each window where its panel was)
+        shell: pwsh
+        run: tools/windows/layout-check.ps1 publish/Lucent.exe
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
