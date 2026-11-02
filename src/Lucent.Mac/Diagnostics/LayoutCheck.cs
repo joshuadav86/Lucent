@@ -276,7 +276,8 @@ internal static class LayoutCheck
     /// <summary>
     /// Picks each skin in turn and checks nothing moved or shrank: the player's window where it was, and the visuals and
     /// equalizer (their panels in a single window) where they were, give or take what a skin's type does to a height,
-    /// still shown, and not over each other. Back on Lucent's skin, everything's just where it started.
+    /// still shown, and not over each other, and the equalizer just tall enough for its sliders in the skin's type. Back
+    /// on Lucent's skin, everything's just where it started.
     /// </summary>
     private static async Task<List<string>> CheckSkinsAsync(MainWindow main, Window visuals, string label)
     {
@@ -332,7 +333,7 @@ internal static class LayoutCheck
             if (EqualizerWindow.Current is { IsVisible: true } equalizer)
             {
                 var needs = equalizer.HeightNeeded;
-                lines.Add($"{(needs <= equalizer.Height + 2 ? "ok" : "MISMATCH")} {name}: the equalizer is {equalizer.Height:0} tall, its sliders need {needs:0}");
+                lines.Add($"{(Math.Abs(needs - equalizer.Height) <= 2 ? "ok" : "MISMATCH")} {name}: the equalizer is {equalizer.Height:0} tall, its sliders need {needs:0}");
             }
         }
 

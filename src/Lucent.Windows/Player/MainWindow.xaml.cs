@@ -1587,7 +1587,8 @@ public partial class MainWindow : Window
         BuildClassicSkinSwatches();
         _settings.Theme = SkinManager.Find(name).Theme;
         ApplyLook();
-        FitEqualizerToSkin();
+        // Once the skin's type has reached the equalizer's labels, or it'd be measured in the last skin's.
+        Dispatcher.BeginInvoke(FitEqualizerToSkin, DispatcherPriority.Loaded);
         ShowOptionValues();
     }
 
