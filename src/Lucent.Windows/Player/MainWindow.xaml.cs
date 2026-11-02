@@ -376,11 +376,14 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// The windows stacked under <paramref name="edge"/> in the player's column move down by <paramref name="delta"/>
-    /// (up, if it's less than nothing), and the last one keeps its bottom edge where it was.
+    /// (up, if it's less than nothing), and the last one keeps its bottom edge where it was. If it can't (the
+    /// equalizer sizes itself), the column's bottom moves, and the windows beside it that ended there follow it.
     /// </summary>
     private void ShiftColumnUnder(double edge, double delta)
     {
         var column = ColumnUnderPlayer(edge);
+        var bottom = column.Count == 0 ? edge : column[^1].Top + SizeOf(column[^1]).Height;
+        var moved = delta;
         for (var i = 0; i < column.Count; i++)
         {
             var window = column[i];
@@ -389,6 +392,36 @@ public partial class MainWindow : Window
             if (i == column.Count - 1 && window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip)
             {
                 window.Height = Math.Max(window.MinHeight, height - delta);
+                moved = window.Top + window.Height - bottom;
+            }
+        }
+
+        FollowColumnBottom(bottom, bottom + moved, column);
+    }
+
+    /// <summary>
+    /// The windows that ended flush with the bottom of the player's column (at <paramref name="was"/>), beside it, end
+    /// where it does <paramref name="now"/>, so nothing's left hanging below it or stopping short of it (a skin's type
+    /// making the player a little taller, say).
+    /// </summary>
+    private void FollowColumnBottom(double was, double now, List<Window> column)
+    {
+        if (Math.Abs(now - was) < 0.5 || _settings.LucentFullScreen)
+        {
+            return;
+        }
+
+        foreach (var (_, window) in TiledWindows())
+        {
+            if (window == this || column.Contains(window) || window.WindowState != WindowState.Normal || WindowLocks.IsLocked(window)
+                || window == _visuals && _visuals.IsFullscreen || window.ResizeMode is not (ResizeMode.CanResize or ResizeMode.CanResizeWithGrip))
+            {
+                continue;
+            }
+
+            if (Math.Abs(window.Top + SizeOf(window).Height - was) < 2 && now - window.Top >= window.MinHeight)
+            {
+                window.Height = now - window.Top;
             }
         }
     }
