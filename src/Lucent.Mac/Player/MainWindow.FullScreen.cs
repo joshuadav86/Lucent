@@ -16,7 +16,7 @@ namespace Lucent.Mac;
 // over another. It's apart from the visuals' own fullscreen (F11). The layout is FullScreenLayout in
 // Lucent.Core, shared with the Windows app and checked on many screens and scalings by tools/LayoutCheck.
 // While it's on, opening or closing a window lays the others out again around it. Switching it off puts
-// every window back where it was; D, G and K switch it off and lay the windows out their own way. Locked
+// the player back where it was and the others in a tight block round it, docked; D, G and K switch it off and lay the windows out their own way. Locked
 // windows stay where they are, and the rest fill the screen beside them. Lucent opens full screen again
 // if it was closed that way. Tidy layout (Shift+D, or on the same right-click) lays them out again in one
 // of a few balanced layouts, the next each time it's pressed; outside full screen it tidies them in the
@@ -110,6 +110,7 @@ public partial class MainWindow
     private void EnterLucentFullScreen()
     {
         RestoreAllWindows();
+        KeepPlayerWidth();
         // Where everything is now, to go back to.
         _settings.WindowsBeforeFullScreen.Clear();
         foreach (var (name, window) in TiledWindows())
@@ -137,30 +138,17 @@ public partial class MainWindow
         _settings.LucentFullScreen = false;
         if (putBack)
         {
+            // The player back where it was, at its own size, and the other windows in a tight block round it,
+            // docked together in the same arrangement they had full screen (so dragging the player takes them
+            // all along), rather than each wherever it happened to be before.
             RestoreAllWindows();
-            // Closed up round the player at its width now, in case it's changed since they were kept.
-            var back = SavedLayouts.FittedToPlayer(_settings.WindowsBeforeFullScreen, IsClassic ? Placement.SizeOf(this).Width : PlayerWidth * PlayerScale);
-            // The player first: macOS moves the windows that belong to it along with it.
-            foreach (var (name, window) in TiledWindows())
+            KeepPlayerWidth();
+            if (_settings.WindowsBeforeFullScreen.TryGetValue("Player", out var before) && !WindowLocks.Holds(this))
             {
-                if (!back.TryGetValue(name, out var before) || WindowLocks.Holds(window))
-                {
-                    continue;
-                }
-
-                if (window == this)
-                {
-                    MovePlayer(before.Left, before.Top);
-                }
-                else if (SizesItself(window))
-                {
-                    window.MoveTo(before.Left, before.Top);
-                }
-                else
-                {
-                    Place(window, before.Left, before.Top, before.Width, before.Height);
-                }
+                MovePlayer(before.Left, before.Top);
             }
+
+            ArrangeAroundPlayer(_settings.FullScreenStyle);
         }
 
         _settings.WindowsBeforeFullScreen.Clear();
@@ -191,6 +179,7 @@ public partial class MainWindow
     /// <summary>Tiles every open window across the player's screen (FullScreenLayout), and remembers where they went.</summary>
     private void TileWindows()
     {
+        KeepPlayerWidth();
         var area = Placement.WorkArea(this);
         FitEqualizerToPlayer();
         var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
@@ -215,6 +204,7 @@ public partial class MainWindow
         }
 
         RestoreAllWindows();
+        KeepPlayerWidth();
         FitEqualizerToPlayer();
         var screen = Placement.WorkArea(this);
         var screenArea = new TileRect(screen.X, screen.Y, screen.Width, screen.Height);
@@ -234,6 +224,24 @@ public partial class MainWindow
         var locked = FullScreenLayout.LockedNote(tiles.Where(tile => tile.LockedAt is not null).Select(tile => tile.Key).ToList());
         var name = layout.Places.Count == 0 ? "No room to tidy beside the locked windows" : FullScreenLayout.NameOf(style);
         Toast.Show(this, locked is null ? name : $"{name}. {locked}.");
+    }
+
+    /// <summary>
+    /// Lays the windows out in a tight block round the player in <paramref name="style"/>, docked together, the
+    /// player staying where it is (FullScreenLayout.ArrangeAround). Locked windows stay put.
+    /// </summary>
+    private void ArrangeAroundPlayer(TileStyle style)
+    {
+        FitEqualizerToPlayer();
+        var screen = Placement.WorkArea(this);
+        var screenArea = new TileRect(screen.X, screen.Y, screen.Width, screen.Height);
+        var windows = TiledWindows().Select(entry => (Window: entry.Window, Tile: TileOf(entry.Name, entry.Window))).ToList();
+        var now = windows.ToDictionary(entry => entry.Tile.Key, entry =>
+        {
+            var bounds = Placement.BoundsOf(entry.Window);
+            return new TileRect(bounds.X, bounds.Y, entry.Tile.Width, entry.Tile.Height);
+        });
+        PlaceTiles(windows, FullScreenLayout.ArrangeAround(screenArea, windows.Select(entry => entry.Tile).ToList(), now, style));
     }
 
     /// <summary>Puts each window where the layout says, and remembers where they went.</summary>
@@ -318,7 +326,7 @@ public partial class MainWindow
     {
         if (!InSingleWindow && EqualizerWindow.Current is { IsVisible: true } equalizer && !WindowLocks.Holds(equalizer))
         {
-            equalizer.FitTo(Placement.SizeOf(this).Width);
+            equalizer.FitTo(PlayerWidthNow);
         }
     }
 
@@ -331,6 +339,12 @@ public partial class MainWindow
             // window's bounds catch up with only once macOS has resized it.
             bounds = bounds.WithWidth(window.Width).WithHeight(window.Height);
         }
+        else if (window == this)
+        {
+            // The player at the size its scale gives it, even if its window hasn't caught up yet.
+            bounds = bounds.WithWidth(PlayerWidthNow);
+        }
+
         var kind = TileKindOf(window)!.Value;
         var locked = WindowLocks.Holds(window) ? new TileRect(bounds.X, bounds.Y, bounds.Width, bounds.Height) : (TileRect?)null;
         return SizesItself(window)

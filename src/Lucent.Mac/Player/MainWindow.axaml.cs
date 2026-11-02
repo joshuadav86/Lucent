@@ -190,6 +190,11 @@ public partial class MainWindow : Window
             if (e.Property == WindowStateProperty)
             {
                 OnPlayerWindowStateChanged(e.GetOldValue<WindowState>());
+                if (WindowState == WindowState.Normal)
+                {
+                    // Back from minimized or full screen: a size it was given meanwhile isn't taken for its own.
+                    KeepPlayerWidthSoon();
+                }
             }
         };
 
@@ -211,6 +216,13 @@ public partial class MainWindow : Window
         SetUpWindowPlaces();
         SetUpSavedLayouts();
         SetUpLucentFullScreen();
+        // The first time, Lucent opens as a single window; separate windows are a press of U away. (Not for the
+        // layout check and screenshots, which start from the separate windows.)
+        if (Saved("Player") is null && _settings.ClassicSkin is null && !LayoutCheck.IsAsked && !Screenshots.IsTaking)
+        {
+            _settings.SingleWindow = true;
+        }
+
         SetUpSingleWindow();
         SubmenuTips.Install();
         if (Saved("Player") is { } placement)

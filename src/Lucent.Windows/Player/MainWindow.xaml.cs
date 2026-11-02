@@ -160,6 +160,12 @@ public partial class MainWindow : Window
         SetUpWindowPlaces();
         SetUpSavedLayouts();
         SetUpLucentFullScreen();
+        // The first time, Lucent opens as a single window; separate windows are a press of U away.
+        if (Saved("Player") is null && _settings.ClassicSkin is null)
+        {
+            _settings.SingleWindow = true;
+        }
+
         SetUpSingleWindow();
         SubmenuTips.Install();
         if (Saved("Player") is { } placement)

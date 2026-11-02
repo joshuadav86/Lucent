@@ -34,6 +34,9 @@ public partial class MainWindow
 
     private double PlayerScale => Math.Clamp(_settings.PlayerScale, 1, LargestPlayerScale);
 
+    /// <summary>How wide the player is: Lucent's own at the width its scale gives it, a classic skin as it is.</summary>
+    private double PlayerWidthNow => IsClassic ? Placement.SizeOf(this).Width : PlayerWidth * PlayerScale;
+
     /// <summary>Whether Lucent's own player is bigger than its usual size.</summary>
     internal bool PlayerIsEnlarged => !IsClassic && PlayerScale > 1.005;
 
