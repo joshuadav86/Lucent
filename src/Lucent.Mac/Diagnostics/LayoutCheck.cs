@@ -17,7 +17,8 @@ namespace Lucent.Mac;
 /// the player and checks the windows around it went to the Dock too, and came back with it, and quits
 /// the way people do. On the way it checks the app menu has Lucent's items, Quit among them. Run again on the same settings with LUCENT_LAYOUT_CHECK_REOPENED=1, it first
 /// checks the windows came back as they were left: the visuals open, the equalizer under the player. Before minimizing it
-/// switches single window on and off (CheckSingleWindowAsync).
+/// switches single window on and off (CheckSingleWindowAsync), picking every skin and going full screen and back while
+/// it's on, and every skin again once it's off.
 /// </summary>
 internal static class LayoutCheck
 {
@@ -206,6 +207,15 @@ internal static class LayoutCheck
             lines.Add((await SettleAsync(main, $"single window {width} x {height}")).Line);
         }
 
+        // Every skin picked in the single window (where picking Linework once squeezed it, hiding panels and keeping it
+        // from filling the screen), and full screen and back before and after.
+        if (main is MainWindow lucent)
+        {
+            lines.AddRange(await CheckFillAsync(lucent, "before changing skins"));
+            lines.AddRange(await CheckSkinsAsync(lucent, visuals, "in a single window"));
+            lines.AddRange(await CheckFillAsync(lucent, "after changing skins"));
+        }
+
         // Where the visuals' panel is on the screen as it ends: their window goes just there. A panel along the top
         // reaches up over the title bar, where the window's own goes, so its top is anywhere from there to the window's top.
         var panel = PanelOnScreen(main, visuals);
@@ -251,8 +261,140 @@ internal static class LayoutCheck
             }
         }
 
+        // Then every skin again with the windows apart.
+        if (main is MainWindow apart)
+        {
+            lines.AddRange(await CheckSkinsAsync(apart, visuals, "as separate windows"));
+        }
+
         return lines;
     }
+
+    /// <summary>Each of Lucent's own skins, ending on Lucent's, which a fresh start has.</summary>
+    private static readonly string[] SkinsToCheck = { "Linework", "Verdes", "Glass", "Neon", "Studio", "Lucent" };
+
+    /// <summary>
+    /// Picks each skin in turn and checks nothing moved or shrank: the player's window where it was, and the visuals and
+    /// equalizer (their panels in a single window) where they were, give or take what a skin's type does to a height,
+    /// still shown, and not over each other. Back on Lucent's skin, everything's just where it started.
+    /// </summary>
+    private static async Task<List<string>> CheckSkinsAsync(MainWindow main, Window visuals, string label)
+    {
+        var lines = new List<string>();
+        var single = SingleWindow.IsOn();
+        var before = PlacesNow(main, visuals);
+        lines.Add($"skins {label}: before, " + DescribeAll(before));
+        foreach (var skin in SkinsToCheck)
+        {
+            main.ChooseSkin(skin);
+            await Task.Delay(TimeSpan.FromSeconds(1.5));
+            var now = PlacesNow(main, visuals);
+            var name = $"skins {label}: {skin}";
+            lines.Add($"{name}: " + DescribeAll(now));
+            // A skin's type can make the player a little taller or shorter, and what's under it moves with it. The
+            // single window itself stays put.
+            var heights = skin == "Lucent" ? 4 : 30;
+            foreach (var (what, was) in before)
+            {
+                if (!now.TryGetValue(what, out var place))
+                {
+                    lines.Add($"MISMATCH {name}: the {what} isn't shown any more");
+                }
+                else if (!Near(place, was, 4, what == "player" && single ? 4 : heights))
+                {
+                    lines.Add($"MISMATCH {name}: the {what} is at {Describe(place)}, was at {Describe(was)}");
+                }
+            }
+
+            if (!single && now.TryGetValue("player", out var player))
+            {
+                lines.Add($"{(Math.Abs(player.Width - before["player"].Width) <= 4 ? "ok" : "MISMATCH")} {name}: the player is {player.Width:0} wide, was {before["player"].Width:0}");
+            }
+
+            var keys = now.Keys.Where(key => !(single && key == "player")).ToList();
+            for (var i = 0; i < keys.Count; i++)
+            {
+                if (single && now.TryGetValue("player", out var frame) && !Near(frame.Intersect(now[keys[i]]), now[keys[i]], 4, 4))
+                {
+                    lines.Add($"MISMATCH {name}: the {keys[i]} at {Describe(now[keys[i]])} is outside the single window");
+                }
+
+                for (var j = i + 1; j < keys.Count; j++)
+                {
+                    var overlap = now[keys[i]].Intersect(now[keys[j]]);
+                    if (overlap.Width > 4 && overlap.Height > 4)
+                    {
+                        lines.Add($"MISMATCH {name}: the {keys[i]} and the {keys[j]} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                    }
+                }
+            }
+        }
+
+        return lines;
+    }
+
+    /// <summary>
+    /// The player's window, and the visuals and equalizer: their panels in a single window (the player's window being
+    /// the single window then), their windows otherwise. One that isn't shown is left out.
+    /// </summary>
+    private static Dictionary<string, Rect> PlacesNow(MainWindow main, Window visuals)
+    {
+        var places = new Dictionary<string, Rect> { ["player"] = Placement.BoundsOf(main) };
+        var equalizer = EqualizerWindow.Current is { IsVisible: true } open ? open : null;
+        foreach (var (name, window) in new[] { ("visuals", (Window?)visuals), ("equalizer", equalizer) })
+        {
+            if (window is null)
+            {
+                continue;
+            }
+
+            if (SingleWindow.IsOn())
+            {
+                if (PanelOnScreen(main, window) is { } panel && SingleWindow.PaneOf(window) is { IsVisible: true })
+                {
+                    places[name] = panel;
+                }
+            }
+            else if (IsOnScreen(window))
+            {
+                places[name] = Placement.BoundsOf(window);
+            }
+        }
+
+        return places;
+    }
+
+    /// <summary>
+    /// Full screen in a single window: the window fills the usable part of its screen (give or take its title bar),
+    /// then goes back to just where it was.
+    /// </summary>
+    private static async Task<List<string>> CheckFillAsync(MainWindow main, string label)
+    {
+        var before = Placement.BoundsOf(main);
+        var screen = Placement.WorkArea(main);
+        main.ToggleLucentFullScreen();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var filled = Placement.BoundsOf(main);
+        var lines = new List<string>
+        {
+            $"{(Near(filled, screen, 4, 32) ? "ok" : "MISMATCH")} full screen {label}: the single window is at {Describe(filled)}, the screen at {Describe(screen)}",
+        };
+        main.ToggleLucentFullScreen();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var back = Placement.BoundsOf(main);
+        lines.Add($"{(Near(back, before, 4, 4) ? "ok" : "MISMATCH")} full screen {label} off: the single window is at {Describe(back)}, was at {Describe(before)}");
+        return lines;
+    }
+
+    private static string DescribeAll(Dictionary<string, Rect> places) =>
+        string.Join(", ", places.Select(entry => $"{entry.Key} {Describe(entry.Value)}"));
+
+    private static string Describe(Rect rect) => $"{rect.X:0},{rect.Y:0} {rect.Width:0} x {rect.Height:0}";
+
+    /// <summary>Two places within <paramref name="across"/> in left and width, and <paramref name="down"/> in top and height.</summary>
+    private static bool Near(Rect a, Rect b, double across, double down) =>
+        a.Width > 0 && b.Width > 0 && Math.Abs(a.X - b.X) <= across && Math.Abs(a.Width - b.Width) <= across
+        && Math.Abs(a.Y - b.Y) <= down && Math.Abs(a.Height - b.Height) <= down;
 
     /// <summary>A window's panel in the single window, where it is on the screen, or null if it isn't one.</summary>
     private static Rect? PanelOnScreen(Window main, Window window)

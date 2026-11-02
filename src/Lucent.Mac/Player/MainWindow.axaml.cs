@@ -1580,15 +1580,7 @@ public partial class MainWindow : Window
                 ApplyLook();
                 break;
             case "Skin":
-                // A skin brings the theme it was made for; another theme can be picked after it. Picking one
-                // also brings back Lucent's own player if a classic skin was drawing it.
-                _settings.Skin = value;
-                _settings.ClassicSkin = null;
-                ApplyClassicSkin();
-                BuildClassicSkinSwatches();
-                _settings.Theme = SkinManager.Find(value).Theme;
-                ApplyLook();
-                ShowOptionValues();
+                ChooseSkin(value);
                 break;
             case "Updates":
                 _settings.EveryBuild = value == "EveryBuild";
@@ -1725,6 +1717,21 @@ public partial class MainWindow : Window
         ShowSoundValues();
         ShowTempoKeyState();
         ShowLastfmState();
+    }
+
+    /// <summary>
+    /// One of Lucent's own skins, as picked in Options › Look. A skin brings the theme it was made for; another theme
+    /// can be picked after it. Picking one also brings back Lucent's own player if a classic skin was drawing it.
+    /// </summary>
+    internal void ChooseSkin(string name)
+    {
+        _settings.Skin = name;
+        _settings.ClassicSkin = null;
+        ApplyClassicSkin();
+        BuildClassicSkinSwatches();
+        _settings.Theme = SkinManager.Find(name).Theme;
+        ApplyLook();
+        ShowOptionValues();
     }
 
     /// <summary>Applies the chosen theme and skin to every window.</summary>
