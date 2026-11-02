@@ -201,6 +201,8 @@ public sealed partial class AppUpdater
             return;
         }
 
+        // An Explorer window open inside Lucent's folder stops the update swapping it, every time.
+        ExplorerWindows.CloseInside(AppContext.BaseDirectory);
         try
         {
             _downloadedWith.WaitExitThenApplyUpdates(_downloaded, silent: true, restart: restart);
