@@ -293,6 +293,84 @@ internal static class LayoutCheck
             lines.AddRange(await CheckSkinsAsync(apart, visuals, "as separate windows"));
         }
 
+        // Then with every window out, as people have them, single window off while it fills the screen.
+        if (main is MainWindow every)
+        {
+            lines.AddRange(await CheckLeavingFilledAsync(every));
+        }
+
+        return lines;
+    }
+
+    /// <summary>
+    /// With every window out (the player, equalizer, queue, visuals, analyzer, library, and artwork), a single window
+    /// full screen, then single window off while it fills the screen, where the queue, analyzer, and art once came back
+    /// tucked under the windows above them. Each window goes where its panel was (the ones along the bottom can end
+    /// higher, flush with the player's column), the windows end flush as one block, nothing's over anything else, and
+    /// everything's on the screen. Then the windows it opened close again, for the rest of the check.
+    /// </summary>
+    private static async Task<List<string>> CheckLeavingFilledAsync(MainWindow main)
+    {
+        const string label = "single window off while full screen";
+        var lines = new List<string>();
+        var closeAgain = main.OpenEveryWindow();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        SingleWindow.Toggle?.Invoke();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        main.ToggleLucentFullScreen();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var frame = Placement.BoundsOf(main);
+        var screen = Placement.WorkArea(main);
+        var panels = main.OwnedWindows.Select(window => (Window: window, Panel: PanelOnScreen(main, window)))
+            .Where(entry => entry.Panel is not null)
+            .ToDictionary(entry => entry.Window, entry => entry.Panel!.Value);
+        lines.Add($"{label}: the single window at {Describe(frame)} on a screen of {Describe(screen)}, panels: " +
+            string.Join(", ", panels.Select(entry => $"{entry.Key.Title} {Describe(entry.Value)}")));
+        SingleWindow.Toggle?.Invoke();
+        foreach (var wait in new[] { 0, 300, 1500, 4000 })
+        {
+            await Task.Delay(wait);
+            lines.Add($"{label}: after {wait} ms: player {Describe(main)}, " +
+                string.Join(", ", panels.Keys.Select(window => $"{window.Title} {Describe(window)}")));
+        }
+
+        // How far short of the single window's bottom a column stops: the windows along the bottom can end that much
+        // higher, flush with it. A panel along the top reaches up over the title bar, where the window's own goes.
+        var room = panels.Values.Where(place => !panels.Values.Any(other => other != place && Touch(place.Bottom, other.Y) && Across(place, other)))
+            .Select(place => frame.Bottom - place.Bottom).DefaultIfEmpty(0).Max();
+        foreach (var (window, panel) in panels)
+        {
+            var at = Placement.BoundsOf(window);
+            var highest = panel.Y - frame.Y < 60 ? frame.Y : panel.Y - room;
+            var near = Math.Abs(at.X - panel.X) <= 4 && Math.Abs(at.Width - panel.Width) <= 4
+                && at.Y >= highest - 4 && at.Y <= panel.Y + 4 && at.Bottom <= panel.Bottom + 4 && at.Bottom >= panel.Bottom - room - 4;
+            lines.Add($"{(near ? "ok" : "MISMATCH")} {label}: the {window.Title} is at {Describe(at)}, its panel was at {Describe(panel)}");
+        }
+
+        var shown = new[] { (Name: "player", At: Placement.BoundsOf(main)) }
+            .Concat(panels.Keys.Where(IsOnScreen).Select(window => (Name: window.Title ?? "window", At: Placement.BoundsOf(window))))
+            .ToList();
+        foreach (var (name, at) in shown.Where(entry => entry.At.X < screen.X - 4 || entry.At.Y < screen.Y - 4
+            || entry.At.Right > screen.Right + 4 || entry.At.Bottom > screen.Bottom + 4))
+        {
+            lines.Add($"MISMATCH {label}: the {name} at {Describe(at)} isn't wholly on the screen, {Describe(screen)}");
+        }
+
+        for (var i = 0; i < shown.Count; i++)
+        {
+            for (var j = i + 1; j < shown.Count; j++)
+            {
+                var overlap = shown[i].At.Intersect(shown[j].At);
+                if (overlap.Width > 4 && overlap.Height > 4)
+                {
+                    lines.Add($"MISMATCH {label}: the {shown[i].Name} and the {shown[j].Name} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                }
+            }
+        }
+
+        lines.AddRange(CheckFlush(main, label));
+        closeAgain();
+        await Task.Delay(TimeSpan.FromSeconds(1));
         return lines;
     }
 
@@ -380,7 +458,7 @@ internal static class LayoutCheck
     {
         var lines = new List<string>();
         var shown = new[] { main }.Concat(main.OwnedWindows.Where(IsOnScreen))
-            .Select(window => (Name: window == main ? "player" : window.Title ?? "window", At: Placement.BoundsOf(window)))
+            .Select(window => (Window: window, Name: window == main ? "player" : window.Title ?? "window", At: Placement.BoundsOf(window)))
             .Where(entry => entry.At.Width > 0 && entry.At.Height > 0)
             .ToList();
         var player = shown[0].At;
@@ -391,11 +469,48 @@ internal static class LayoutCheck
         }
 
         var block = shown.Select(entry => entry.At).Aggregate((a, b) => a.Union(b));
-        foreach (var (name, place) in shown)
+
+        // The player's column (the player and what's stacked under it) keeps its own size. When a stack beside it can't
+        // get as short as it, every window in it at its smallest (a small screen with every window out), the stacks end
+        // level with that one below it, and it's let off stopping short of them.
+        var column = new List<Rect> { player };
+        while (shown.Select(entry => entry.At).FirstOrDefault(at => !column.Contains(at) && Touch(at.Y, column[^1].Bottom)
+                   && at.X > player.X - 4 && at.Right < player.Right + 4) is { Width: > 0 } under)
+        {
+            column.Add(under);
+        }
+
+        bool AtSmallest((Window Window, string Name, Rect At) entry)
+        {
+            for (var current = entry; current.Window is not null;)
+            {
+                if (current.At.Height > current.Window.MinHeight + 2)
+                {
+                    return false;
+                }
+
+                var below = current.At;
+                current = shown.FirstOrDefault(other => other.At != below && !column.Contains(other.At) && Touch(other.At.Bottom, below.Y)
+                    && Math.Abs(other.At.X - below.X) <= 4 && Math.Abs(other.At.Width - below.Width) <= 4);
+            }
+
+            return true;
+        }
+
+        var lowest = shown.Where(entry => !column.Contains(entry.At) && Touch(entry.At.Bottom, block.Bottom)).ToList();
+        var columnShort = column[^1].Bottom < block.Bottom - 4 && lowest.Any(AtSmallest);
+        if (columnShort)
+        {
+            lines.Add($"ok {label}: the windows beside the player's column are as short as they go, so they end level " +
+                $"{block.Bottom - column[^1].Bottom:0} below it");
+        }
+
+        foreach (var (_, name, place) in shown)
         {
             var others = shown.Where(entry => entry.At != place).Select(entry => entry.At).ToList();
             var off = new List<string>();
-            if (!others.Any(other => Touch(place.Bottom, other.Y) && Across(place, other)) && Math.Abs(place.Bottom - block.Bottom) > 4)
+            if (!others.Any(other => Touch(place.Bottom, other.Y) && Across(place, other)) && Math.Abs(place.Bottom - block.Bottom) > 4
+                && !(columnShort && column.Contains(place)))
             {
                 off.Add($"its bottom is at {place.Bottom:0}, the others' at {block.Bottom:0}");
             }

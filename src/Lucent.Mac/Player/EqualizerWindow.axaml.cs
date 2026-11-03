@@ -450,6 +450,9 @@ public partial class EqualizerWindow : Window
 
     private void FitToContent()
     {
+        // Lays out what's waiting first. Measured again at the same size, it gives back its last answer when only
+        // something inside it has changed since (a skin's type reaching the labels), and keeps the last skin's height.
+        UpdateLayout();
         Frame.Measure(Size.Infinity);
         Width = _fitWidth ?? Math.Ceiling(Frame.DesiredSize.Width);
         Height = Math.Ceiling(Frame.DesiredSize.Height);

@@ -300,7 +300,9 @@ public partial class MainWindow
     private Dictionary<Window, Rect> PanelPlaces()
     {
         var places = new Dictionary<Window, Rect>();
-        if (_paneArea is not { Bounds.Width: > 0 } area || WindowState != WindowState.Normal)
+        // macOS counts a window filling its screen (the single window full screen) as zoomed, which is still on the
+        // screen as usual: only minimized or in a full-screen space of its own does it have no places to give.
+        if (_paneArea is not { Bounds.Width: > 0 } area || WindowState is not (WindowState.Normal or WindowState.Maximized))
         {
             return places;
         }
@@ -334,7 +336,8 @@ public partial class MainWindow
     /// The player and the panels under it keep their own sizes, so their column can end above the single window's
     /// bottom, where the panels beside it run on to. As windows, those end where the column does instead, so nothing
     /// hangs below the rest: the bottom one in each stack gives up the height (down to its smallest, then the one above
-    /// it). With nothing under the player there's no column to line up with, and the windows beside it keep their size.
+    /// it). A stack that can't get that short sets where they all end instead. With nothing under the player there's no
+    /// column to line up with, and the windows beside it keep their size.
     /// </summary>
     private void LineUpBottoms(Dictionary<Window, Rect> places)
     {
@@ -360,9 +363,10 @@ public partial class MainWindow
             return;
         }
 
+        // Each stack along the bottom, listed from the bottom up.
+        var stacks = new List<List<Window>>();
         foreach (var window in places.Keys.Where(window => !column.Contains(window) && Math.Abs(places[window].Bottom - lowest) < 2).ToList())
         {
-            // Up the stack from the bottom: each window gives up what it can, and the ones under it move up by as much.
             var stack = new List<Window> { window };
             while (places.FirstOrDefault(entry => !column.Contains(entry.Key) && !stack.Contains(entry.Key)
                        && Math.Abs(entry.Value.Bottom - places[stack[^1]].Y) < 2
@@ -371,7 +375,18 @@ public partial class MainWindow
                 stack.Add(above);
             }
 
-            var spare = lowest - bottom;
+            stacks.Add(stack);
+        }
+
+        // They all end together: where the column does, or, if one of them can't get that short even with every window in
+        // it at its smallest (a small screen with every window out), where that one can, so the stacks still end level
+        // with each other and only the column, which keeps its own size, stops short.
+        var end = stacks.Select(stack => lowest - stack.Sum(window => Math.Max(0, places[window].Height - Math.Max(window.MinHeight, 1))))
+            .Append(bottom).Max();
+        foreach (var stack in stacks)
+        {
+            // Up the stack from the bottom: each window gives up what it can, and the ones under it move up by as much.
+            var spare = lowest - end;
             foreach (var shrinking in stack)
             {
                 var place = places[shrinking];
@@ -874,7 +889,7 @@ public partial class MainWindow
     /// <summary>Remembers where the single window is and its size (not while it fills the screen).</summary>
     private void SaveSingleWindowPlace()
     {
-        if (!InSingleWindow || WindowState != WindowState.Normal)
+        if (!InSingleWindow || WindowState is not (WindowState.Normal or WindowState.Maximized))
         {
             return;
         }
@@ -944,4 +959,50 @@ public partial class MainWindow
     }
 
     private static TileRect ToTileRect(Rect rect) => new(rect.X, rect.Y, rect.Width, rect.Height);
+
+    /// <summary>
+    /// For the layout check: opens the queue, library, artwork, and analyzer, the way someone with every window out has
+    /// them, and gives back a way to close again the ones it opened.
+    /// </summary>
+    internal Action OpenEveryWindow()
+    {
+        var close = new List<Action>();
+        foreach (var window in new ToolWindow[] { _queue, _libraryWindow }.Where(window => !window.IsVisible))
+        {
+            ToggleWindow(window);
+            close.Add(() =>
+            {
+                if (window.IsVisible)
+                {
+                    ToggleWindow(window);
+                }
+            });
+        }
+
+        if (!ArtworkWindow.IsOpen)
+        {
+            ToggleArtwork();
+            close.Add(() =>
+            {
+                if (ArtworkWindow.IsOpen)
+                {
+                    ToggleArtwork();
+                }
+            });
+        }
+
+        if (!AnalyzerWindow.IsOpen)
+        {
+            ToggleAnalyzer();
+            close.Add(() =>
+            {
+                if (AnalyzerWindow.IsOpen)
+                {
+                    ToggleAnalyzer();
+                }
+            });
+        }
+
+        return () => close.ForEach(action => action());
+    }
 }
