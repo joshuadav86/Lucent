@@ -1662,6 +1662,9 @@ public partial class MainWindow : Window
             return;
         }
 
+        // What's waiting is laid out first (the player at the skin's height, and the windows under it moved with
+        // it), so the equalizer's bottom is read where it is now, not where it was before the skin.
+        UpdateLayout();
         var height = SizeOf(equalizer).Height;
         var bottom = equalizer.Top + height;
         equalizer.FitToSkin();
