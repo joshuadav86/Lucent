@@ -318,11 +318,48 @@ public partial class MainWindow
         }
 
         var block = shown.Select(entry => entry.Value).Aggregate((a, b) => Rect.Union(a, b));
+
+        // The player's column (the player and what's stacked under it) keeps its own size. When the stacks beside it
+        // can't get as short as it, every window in them at its smallest (a small screen with every window out), they
+        // end level with each other below it, and it's let off stopping short of them.
+        var column = new List<Window> { this };
+        while (shown.FirstOrDefault(entry => !column.Contains(entry.Key) && Touch(entry.Value.Top, at[column[^1]].Bottom)
+                   && entry.Value.Left > player.Left - 4 && entry.Value.Right < player.Right + 4).Key is { } under)
+        {
+            column.Add(under);
+        }
+
+        bool AtSmallest(Window window)
+        {
+            for (Window? current = window; current is not null;)
+            {
+                if (at[current].Height > current.MinHeight + 2)
+                {
+                    return false;
+                }
+
+                var below = current;
+                current = shown.FirstOrDefault(entry => entry.Key != below && !column.Contains(entry.Key) && Touch(entry.Value.Bottom, at[below].Top)
+                    && Math.Abs(entry.Value.Left - at[below].Left) <= 4 && Math.Abs(entry.Value.Width - at[below].Width) <= 4).Key;
+            }
+
+            return true;
+        }
+
+        var lowest = shown.Where(entry => !column.Contains(entry.Key) && Touch(entry.Value.Bottom, block.Bottom)).Select(entry => entry.Key).ToList();
+        var columnShort = at[column[^1]].Bottom < block.Bottom - 4 && lowest.Count > 0 && lowest.All(AtSmallest);
+        if (columnShort)
+        {
+            lines.Add($"ok {label}: the windows beside the player's column are as short as they go, so they end level " +
+                $"{block.Bottom - at[column[^1]].Bottom:0} below it");
+        }
+
         foreach (var (window, place) in shown)
         {
             var others = shown.Where(entry => entry.Key != window).Select(entry => entry.Value).ToList();
             var off = new List<string>();
-            if (!others.Any(other => Touch(place.Bottom, other.Top) && Across(place, other)) && Math.Abs(place.Bottom - block.Bottom) > 4)
+            if (!others.Any(other => Touch(place.Bottom, other.Top) && Across(place, other)) && Math.Abs(place.Bottom - block.Bottom) > 4
+                && !(columnShort && column.Contains(window)))
             {
                 off.Add($"its bottom is at {place.Bottom:0}, the others' at {block.Bottom:0}");
             }

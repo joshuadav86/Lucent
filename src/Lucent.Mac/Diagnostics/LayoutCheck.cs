@@ -458,7 +458,7 @@ internal static class LayoutCheck
     {
         var lines = new List<string>();
         var shown = new[] { main }.Concat(main.OwnedWindows.Where(IsOnScreen))
-            .Select(window => (Name: window == main ? "player" : window.Title ?? "window", At: Placement.BoundsOf(window)))
+            .Select(window => (Window: window, Name: window == main ? "player" : window.Title ?? "window", At: Placement.BoundsOf(window)))
             .Where(entry => entry.At.Width > 0 && entry.At.Height > 0)
             .ToList();
         var player = shown[0].At;
@@ -469,11 +469,48 @@ internal static class LayoutCheck
         }
 
         var block = shown.Select(entry => entry.At).Aggregate((a, b) => a.Union(b));
-        foreach (var (name, place) in shown)
+
+        // The player's column (the player and what's stacked under it) keeps its own size. When the stacks beside it
+        // can't get as short as it, every window in them at its smallest (a small screen with every window out), they
+        // end level with each other below it, and it's let off stopping short of them.
+        var column = new List<Rect> { player };
+        while (shown.Select(entry => entry.At).FirstOrDefault(at => !column.Contains(at) && Touch(at.Y, column[^1].Bottom)
+                   && at.X > player.X - 4 && at.Right < player.Right + 4) is { Width: > 0 } under)
+        {
+            column.Add(under);
+        }
+
+        bool AtSmallest((Window Window, string Name, Rect At) entry)
+        {
+            for (var current = entry; current.Window is not null;)
+            {
+                if (current.At.Height > current.Window.MinHeight + 2)
+                {
+                    return false;
+                }
+
+                var below = current.At;
+                current = shown.FirstOrDefault(other => other.At != below && !column.Contains(other.At) && Touch(other.At.Bottom, below.Y)
+                    && Math.Abs(other.At.X - below.X) <= 4 && Math.Abs(other.At.Width - below.Width) <= 4);
+            }
+
+            return true;
+        }
+
+        var lowest = shown.Where(entry => !column.Contains(entry.At) && Touch(entry.At.Bottom, block.Bottom)).ToList();
+        var columnShort = column[^1].Bottom < block.Bottom - 4 && lowest.Count > 0 && lowest.All(AtSmallest);
+        if (columnShort)
+        {
+            lines.Add($"ok {label}: the windows beside the player's column are as short as they go, so they end level " +
+                $"{block.Bottom - column[^1].Bottom:0} below it");
+        }
+
+        foreach (var (_, name, place) in shown)
         {
             var others = shown.Where(entry => entry.At != place).Select(entry => entry.At).ToList();
             var off = new List<string>();
-            if (!others.Any(other => Touch(place.Bottom, other.Y) && Across(place, other)) && Math.Abs(place.Bottom - block.Bottom) > 4)
+            if (!others.Any(other => Touch(place.Bottom, other.Y) && Across(place, other)) && Math.Abs(place.Bottom - block.Bottom) > 4
+                && !(columnShort && column.Contains(place)))
             {
                 off.Add($"its bottom is at {place.Bottom:0}, the others' at {block.Bottom:0}");
             }
