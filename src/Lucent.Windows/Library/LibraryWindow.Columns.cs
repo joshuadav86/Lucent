@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -20,12 +21,19 @@ public partial class LibraryWindow
     private Point _headingPressPoint;
     private bool _draggingHeading;
 
+    // The lines between the headings, which resize the columns either side of them.
+    private ColumnGrips? _columnGrips;
+
+    private ColumnGrips ColumnGrips => _columnGrips ??= new ColumnGrips(ColumnHeader,
+        () => LibraryColumns.Shown.Select(LibraryColumns.Width).ToList(), ResizeColumns, FitColumn, () => _settings.Save());
+
     /// <summary>
     /// Shows the settings' columns: their headings, and the cells in every row. The saved playlists' songs under
     /// PLAYLISTS show the same columns, sorted inside each playlist (SortPlaylistsByColumn).
     /// </summary>
     private void ApplyColumns()
     {
+        ColumnWidths.Custom = _settings.ColumnWidths ??= new();
         var shown = _settings.LibraryColumnsShown.Where(LibraryColumns.Choosable.Contains).Distinct().ToList();
         if (!shown.SequenceEqual(LibraryColumns.Shown))
         {
@@ -65,8 +73,8 @@ public partial class LibraryWindow
                 Cursor = Cursors.Hand,
                 Tag = column,
                 ToolTip = ShowingPlaylists
-                    ? $"Sort each playlist by {LibraryColumns.Label(column).ToLowerInvariant()}. A third click puts it back in order. Drag to move it."
-                    : $"Sort by {LibraryColumns.Label(column).ToLowerInvariant()}. Drag to move it.",
+                    ? $"Sort each playlist by {LibraryColumns.Label(column).ToLowerInvariant()}. A third click puts it back in order. {MoveOrResize}"
+                    : $"Sort by {LibraryColumns.Label(column).ToLowerInvariant()}. {MoveOrResize}",
             };
             text.SetResourceReference(TextBlock.ForegroundProperty, HeadingBrush(column));
             heading.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
@@ -81,7 +89,89 @@ public partial class LibraryWindow
         TitleHeading.SetResourceReference(TextBlock.ForegroundProperty, HeadingBrush(LibraryColumn.Title));
         LengthHeading.Text = HeadingText(LibraryColumn.Length);
         LengthHeading.SetResourceReference(TextBlock.ForegroundProperty, HeadingBrush(LibraryColumn.Length));
+        ColumnGrips.Place();
     }
+
+    // The end of each heading's tooltip.
+    private const string MoveOrResize = "Drag to move it, or drag the line beside it to resize it.";
+
+    /// <summary>Keeps new widths for the library's columns and shows them.</summary>
+    private void ResizeColumns(double[] widths)
+    {
+        foreach (var (column, width) in LibraryColumns.Shown.Zip(widths))
+        {
+            _settings.ColumnWidths[column.ToString()] = width;
+        }
+
+        ShowColumnWidths();
+    }
+
+    /// <summary>Shows the library's columns at their widths: their headings, and the cells in every row.</summary>
+    private void ShowColumnWidths()
+    {
+        foreach (var heading in ColumnHeadings.Children.OfType<Border>())
+        {
+            if (heading.Tag is LibraryColumn column)
+            {
+                heading.Width = LibraryColumns.Width(column);
+            }
+        }
+
+        foreach (var item in _library.Items.Concat(_playlistItems))
+        {
+            item.ColumnsChanged();
+        }
+
+        ColumnGrips.Place();
+    }
+
+    /// <summary>A double-click on a line: the column is made as wide as its widest text, heading included.</summary>
+    private void FitColumn(int index)
+    {
+        if (index >= LibraryColumns.Shown.Count)
+        {
+            return;
+        }
+
+        var column = LibraryColumns.Shown[index];
+        IEnumerable<LibraryItem> rows = ShowingPlaylists ? _playlistItems : _library.Items;
+        var widest = rows.Select(item => LibraryColumns.Text(column, item)).Where(text => text.Length > 0).Distinct()
+            .Select(text => TextWidth(text, 12)).Append(TextWidth(HeadingText(column), 11)).Max();
+        var widths = LibraryColumns.Shown.Select(LibraryColumns.Width).ToArray();
+        widths[index] = ColumnWidths.Fit(widths, index, widest, ColumnGrips.Room);
+        ResizeColumns(widths);
+        _settings.Save();
+    }
+
+    /// <summary>Puts the shown columns back at their standard widths.</summary>
+    private void ResetColumnWidths(IEnumerable<string> names)
+    {
+        foreach (var name in names)
+        {
+            _settings.ColumnWidths.Remove(name);
+        }
+
+        _settings.Save();
+        ShowColumnWidths();
+        ShowPlaylistColumnWidths();
+    }
+
+    /// <summary>"Reset column widths", when any of <paramref name="names"/> has been dragged to a new width.</summary>
+    private void AddResetWidths(ItemCollection items, IReadOnlyList<string> names)
+    {
+        if (names.Any(_settings.ColumnWidths.ContainsKey))
+        {
+            var reset = new MenuItem { Header = "Reset column widths" };
+            reset.Click += (_, _) => ResetColumnWidths(names);
+            items.Add(reset);
+            items.Add(new Separator());
+        }
+    }
+
+    /// <summary>How wide a row's text is in the window's font.</summary>
+    private double TextWidth(string text, double size) => new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+        new Typeface(FontFamily, FontStyle, FontWeight, FontStretch), size, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip)
+        .WidthIncludingTrailingWhitespace;
 
     /// <summary>What the headings show as sorted: the library's sort, or under PLAYLISTS the playlists' own.</summary>
     private (LibraryColumn? Column, bool Descending) HeadingSort => ShowingPlaylists
@@ -250,6 +340,7 @@ public partial class LibraryWindow
             menu.Items.Add(new Separator());
         }
 
+        AddResetWidths(menu.Items, LibraryColumns.Shown.Select(shown => shown.ToString()).ToList());
         AddColumnChoices(menu.Items);
     }
 

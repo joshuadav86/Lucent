@@ -724,7 +724,10 @@
             </Setter>
         </Style>
 
-        <!-- Thin, unobtrusive scroll bar for the playlist. -->
+        <!-- Thin, unobtrusive scroll bar for the playlist. A long list still gets a thumb long enough to see and grab:
+             WPF's Track makes it at least half this "button height" (it would be 8 pixels). -->
+        <sys:Double x:Key="{x:Static SystemParameters.VerticalScrollBarButtonHeightKey}">72</sys:Double>
+        <sys:Double x:Key="{x:Static SystemParameters.HorizontalScrollBarButtonWidthKey}">72</sys:Double>
         <Style TargetType="ScrollBar">
             <Setter Property="Width" Value="6" />
             <Setter Property="MinWidth" Value="6" />
@@ -736,7 +739,15 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <w:RoundedBorder CornerRadius="{DynamicResource TrackCorner}" Background="{DynamicResource HoverBrush}" />
+                                            <w:RoundedBorder x:Name="Bar" CornerRadius="{DynamicResource TrackCorner}" Background="{DynamicResource FaintTextBrush}" />
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bar" Property="Background" Value="{DynamicResource MutedTextBrush}" />
+                                                </Trigger>
+                                                <Trigger Property="IsDragging" Value="True">
+                                                    <Setter TargetName="Bar" Property="Background" Value="{DynamicResource MutedTextBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>

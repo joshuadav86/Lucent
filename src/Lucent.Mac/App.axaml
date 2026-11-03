@@ -55,12 +55,24 @@
             <Setter Property="Padding" Value="8,4" />
         </Style>
 
-        <!-- Thin, unobtrusive scroll bars. -->
+        <!-- Thin, unobtrusive scroll bars. A long list still gets a thumb long enough to see and grab. -->
         <Style Selector="ScrollBar">
             <Setter Property="AllowAutoHide" Value="True" />
         </Style>
         <Style Selector="ScrollBar /template/ Thumb">
-            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            <Setter Property="Background" Value="{DynamicResource FaintTextBrush}" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pointerover">
+            <Setter Property="Background" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pressed">
+            <Setter Property="Background" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="ScrollBar:vertical /template/ Thumb">
+            <Setter Property="MinHeight" Value="36" />
+        </Style>
+        <Style Selector="ScrollBar:horizontal /template/ Thumb">
+            <Setter Property="MinWidth" Value="36" />
         </Style>
 
         <!-- List rows: rounded, lit on hover, filled when picked. -->

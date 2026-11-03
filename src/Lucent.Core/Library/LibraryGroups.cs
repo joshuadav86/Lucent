@@ -117,9 +117,10 @@ public static class LibraryGroups
     /// <summary>
     /// The order for the library with headings. The headings go in the chosen order, judged by each one's first song
     /// (newest first: the folder or album that arrived last), or by name for Title and File name, with the songs
-    /// without an artist or album last. Under each heading the songs go in album order (album, disc, track) for
-    /// Newest, Oldest and Artist; any other order sorts them by it, with ties in album order.
-    /// Call <see cref="Assign"/> first, with the settings' <see cref="AppSettings.LibraryGrouping"/>.
+    /// without an artist or album last. Under each heading, for Newest, Oldest and Artist, an album's songs stay together
+    /// in album order (disc, track), and the albums and the songs without one go in the chosen order, each judged by
+    /// its first song: so a folder of loose files lists the newest first. Any other order sorts the songs by it, with
+    /// ties in album order. Call <see cref="Assign"/> first, with the settings' <see cref="AppSettings.LibraryGrouping"/>.
     /// </summary>
     public static IComparer Comparer(IReadOnlyList<LibraryItem> items, AppSettings settings) =>
         new GroupComparer(items, settings);
@@ -128,6 +129,7 @@ public static class LibraryGroups
     {
         private readonly Dictionary<string, int> _headings = new(StringComparer.Ordinal);
         private readonly Dictionary<string, int> _subheadings = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _albums = new(StringComparer.Ordinal);
         private readonly LibraryItemComparer _songs;
         private readonly bool _albumOrder;
         private readonly bool _unknownLast;
@@ -151,8 +153,20 @@ public static class LibraryGroups
                 songs.Sort(_songs.Compare);
                 Rank(_headings, songs.Select(item => item.Heading));
                 Rank(_subheadings, songs.Select(item => item.Subheading));
+                if (_albumOrder)
+                {
+                    foreach (var song in songs)
+                    {
+                        _albums.TryAdd(AlbumOf(song), _albums.Count);
+                    }
+                }
             }
         }
+
+        // What keeps songs together under a heading: their album, or the song alone when it has none.
+        private static string AlbumOf(LibraryItem item) => item.Album.Length > 0
+            ? item.Heading + "\0" + item.Subheading + "\0" + item.Album.ToUpperInvariant()
+            : item.Path;
 
         private void Rank(Dictionary<string, int> ranks, IEnumerable<string> inOrder)
         {
@@ -179,7 +193,12 @@ public static class LibraryGroups
 
             if (_albumOrder)
             {
-                result = LibraryItemComparer.TrackOrder(a, b);
+                result = _albums.GetValueOrDefault(AlbumOf(a), int.MaxValue).CompareTo(_albums.GetValueOrDefault(AlbumOf(b), int.MaxValue));
+                if (result == 0)
+                {
+                    result = LibraryItemComparer.TrackOrder(a, b);
+                }
+
                 return result != 0 ? result : string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase);
             }
 

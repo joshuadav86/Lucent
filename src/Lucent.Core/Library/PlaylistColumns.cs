@@ -53,7 +53,7 @@ public static class PlaylistColumns
 
     /// <summary>The column's width, with its divider line and the space either side of the text.</summary>
     public static double Width(PlaylistColumn column) =>
-        column == PlaylistColumn.Order ? 52 : LibraryColumns.Width(Same(column));
+        column == PlaylistColumn.Order ? ColumnWidths.Of(column.ToString(), 52) : LibraryColumns.Width(Same(column));
 
     public static bool AlignRight(PlaylistColumn column) =>
         column == PlaylistColumn.Order || LibraryColumns.AlignRight(Same(column));
