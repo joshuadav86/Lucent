@@ -88,6 +88,7 @@ public partial class MainWindow
             ShowNowPlaying(_current.Track);
         }
 
+        _libraryWindow.SongTagsSaved(saved);
         await _library.RereadTagsAsync(saved);
     }
 }

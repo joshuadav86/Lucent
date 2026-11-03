@@ -5,7 +5,8 @@ namespace Lucent.Library;
 
 /// <summary>
 /// Checks an opened streaming playlist's columns (<see cref="PlaylistColumns"/>): what Spotify's songs fill them with,
-/// which columns a playlist offers, and the sorts. Both apps run it in their self-tests.
+/// which columns a playlist offers, and the sorts. Also the saved playlists' sort under PLAYLISTS. Both apps run it in
+/// their self-tests.
 /// </summary>
 public static class PlaylistColumnsSelfTest
 {
@@ -59,6 +60,37 @@ public static class PlaylistColumnsSelfTest
             var offered = PlaylistColumns.For(new RemoteList("p", "Mix", tracks));
             Check("offered", offered.Contains(PlaylistColumn.Added) && offered.Contains(PlaylistColumn.Year) && !offered.Contains(PlaylistColumn.Genre),
                 string.Join(", ", offered));
+
+            // Saved playlists under PLAYLISTS: sorted inside each playlist, which stays in its place.
+            var rows = new List<LibraryItem>
+            {
+                new("/m/Mango.mp3", "Zest", "/m", day),
+                new("/m/Apple.mp3", "Zest", "/m", day.AddDays(1)),
+                LibraryItem.Placeholder("Empty", "Nothing here yet"),
+                new("/m/Cherry.mp3", "Berries", "/m", day.AddDays(2)),
+                new("/m/Banana.mp3", "Berries", "/m", day.AddDays(3)),
+            };
+            string Rows(LibraryColumn column, bool descending)
+            {
+                var sorted = rows.ToList();
+                var order = SavedPlaylistOrder.Comparer(rows, column, descending);
+                sorted.Sort(order.Compare);
+                return string.Join(", ", sorted.Select(item => item.IsPlaceholder ? "-" : item.Title));
+            }
+
+            Check("saved playlists by title", Rows(LibraryColumn.Title, false) == "Apple, Mango, -, Banana, Cherry", Rows(LibraryColumn.Title, false));
+            Check("saved playlists newest first", Rows(LibraryColumn.Added, true) == "Apple, Mango, -, Banana, Cherry", Rows(LibraryColumn.Added, true));
+            Check("saved playlists oldest first", Rows(LibraryColumn.Added, false) == "Mango, Apple, -, Cherry, Banana", Rows(LibraryColumn.Added, false));
+
+            var clicks = new List<string>();
+            (LibraryColumn? Column, bool Descending) sort = (null, false);
+            for (var click = 0; click < 3; click++)
+            {
+                sort = SavedPlaylistOrder.Next(sort.Column, sort.Descending, LibraryColumn.Bpm);
+                clicks.Add(sort.Column is null ? "order" : sort.Descending ? "down" : "up");
+            }
+
+            Check("saved playlist heading clicks", string.Join(" ", clicks) == "up down order", string.Join(" ", clicks));
         }
         catch (Exception ex)
         {

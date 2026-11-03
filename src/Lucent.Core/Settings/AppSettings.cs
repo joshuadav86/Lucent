@@ -67,6 +67,15 @@ public sealed class AppSettings
     [JsonIgnore]
     public bool LibraryNeedsWidening { get; set; }
 
+    /// <summary>
+    /// The tag the songs inside each saved playlist under PLAYLISTS are sorted by, after a click on a column heading
+    /// (<see cref="SavedPlaylistOrder"/>); null for the playlists' own order. The files are never changed.
+    /// </summary>
+    public LibraryColumn? SavedPlaylistSortColumn { get; set; }
+
+    /// <summary>Whether <see cref="SavedPlaylistSortColumn"/> runs Z to A, high to low, or newest first.</summary>
+    public bool SavedPlaylistSortDescending { get; set; }
+
     /// <summary>The order Spotify's and Music's playlists are listed in under the library's PLAYLISTS.</summary>
     public RemotePlaylistSort RemotePlaylistSort { get; set; }
 
