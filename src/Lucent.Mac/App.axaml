@@ -62,7 +62,10 @@
         <Style Selector="ScrollBar /template/ Thumb">
             <Setter Property="Background" Value="{DynamicResource FaintTextBrush}" />
         </Style>
-        <Style Selector="ScrollBar /template/ Thumb:pointerover, ScrollBar /template/ Thumb:pressed">
+        <Style Selector="ScrollBar /template/ Thumb:pointerover">
+            <Setter Property="Background" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pressed">
             <Setter Property="Background" Value="{DynamicResource MutedTextBrush}" />
         </Style>
         <Style Selector="ScrollBar:vertical /template/ Thumb">
