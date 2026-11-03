@@ -103,6 +103,17 @@ public sealed class TagSaveException : Exception
     }
 }
 
+/// <summary>A file another program has open, so its info couldn't be saved. The message names the program.</summary>
+public sealed class FileInUseException : IOException
+{
+    public FileInUseException(string message, IOException inner)
+        : base(message, inner)
+    {
+        // Keeps the sharing violation's code, so what tries again later still knows what this is.
+        HResult = inner.HResult;
+    }
+}
+
 /// <summary>
 /// Writes tags with TagLib without ever risking the music. TagLib rewrites files in place, so a crash or
 /// a full disk halfway through could ruin a song. Instead the new tags are written to a copy next to the
@@ -206,38 +217,37 @@ public static class TagWriter
 
         var backup = save.Path + BackupSuffix;
         DeleteQuietly(backup);
-        try
+        for (var attempt = 0; ; attempt++)
         {
             try
             {
-                // One step on NTFS: the original keeps its attributes, permissions and creation date.
-                System.IO.File.Replace(save.TempPath, save.Path, backup, ignoreMetadataErrors: true);
+                Swap(save, backup);
+                break;
             }
-            catch (IOException ex) when (!IsInUse(ex) && System.IO.File.Exists(save.Path) && System.IO.File.Exists(save.TempPath))
+            catch (IOException ex) when (IsInUse(ex) && attempt < InUseWaits.Length
+                && System.IO.File.Exists(save.Path) && System.IO.File.Exists(save.TempPath))
             {
-                // Some network drives can't swap files in one step; move them one at a time instead.
-                System.IO.File.Move(save.Path, backup);
-                try
-                {
-                    System.IO.File.Move(save.TempPath, save.Path);
-                }
-                catch
+                // Often only for a moment: OneDrive, a virus scanner or Windows Search looking at the new copy, or
+                // Lucent's own beat finder just finishing with the song. Wait a little and try again.
+                Thread.Sleep(InUseWaits[attempt]);
+            }
+            catch (Exception ex)
+            {
+                // If the swap stopped halfway, the original is still there under the backup name: put it back.
+                if (!System.IO.File.Exists(save.Path) && System.IO.File.Exists(backup))
                 {
                     System.IO.File.Move(backup, save.Path);
-                    throw;
                 }
-            }
-        }
-        catch
-        {
-            // If the swap stopped halfway, the original is still there under the backup name: put it back.
-            if (!System.IO.File.Exists(save.Path) && System.IO.File.Exists(backup))
-            {
-                System.IO.File.Move(backup, save.Path);
-            }
 
-            DeleteQuietly(save.TempPath);
-            throw;
+                var names = ex is IOException io && IsInUse(io) ? WhoIsUsing?.Invoke(new[] { save.Path, save.TempPath }) : null;
+                DeleteQuietly(save.TempPath);
+                if (names is { Length: > 0 })
+                {
+                    throw new FileInUseException($"{names} is using the file. Close it there and try again.", (IOException)ex);
+                }
+
+                throw;
+            }
         }
 
         DeleteQuietly(backup);
@@ -261,13 +271,46 @@ public static class TagWriter
         }
     }
 
+    // How long to wait before each try again, when something else has the file open: two seconds in all.
+    private static readonly int[] InUseWaits = { 100, 200, 300, 400, 500, 500 };
+
+    /// <summary>
+    /// The programs that have any of these files open, in words ("Ableton Live"), or null when that can't be told.
+    /// Windows sets it (the Restart Manager knows); elsewhere files can be swapped while they're open anyway.
+    /// </summary>
+    public static Func<IReadOnlyList<string>, string?>? WhoIsUsing { get; set; }
+
+    // Puts the checked copy where the original was, keeping the original as the backup until it's done.
+    private static void Swap(PreparedSave save, string backup)
+    {
+        try
+        {
+            // One step on NTFS: the original keeps its attributes, permissions and creation date.
+            System.IO.File.Replace(save.TempPath, save.Path, backup, ignoreMetadataErrors: true);
+        }
+        catch (IOException ex) when (!IsInUse(ex) && System.IO.File.Exists(save.Path) && System.IO.File.Exists(save.TempPath))
+        {
+            // Some network drives can't swap files in one step; move them one at a time instead.
+            System.IO.File.Move(save.Path, backup);
+            try
+            {
+                System.IO.File.Move(save.TempPath, save.Path);
+            }
+            catch
+            {
+                System.IO.File.Move(backup, save.Path);
+                throw;
+            }
+        }
+    }
+
     /// <summary>Throws away a prepared copy that won't be used.</summary>
     public static void Discard(PreparedSave save) => DeleteQuietly(save.TempPath);
 
     /// <summary>Why a save failed, in words for people rather than programmers.</summary>
     public static string Explain(Exception ex) => ex switch
     {
-        TagSaveException => ex.Message,
+        TagSaveException or FileInUseException => ex.Message,
         FileNotFoundException or DirectoryNotFoundException => "The file has been moved or deleted.",
         UnauthorizedAccessException => "Windows didn't let Lucent change it. The file may be read-only, or in a folder that needs administrator permission.",
         IOException io when IsInUse(io) => "Another program is using the file. Close it there and try again.",
