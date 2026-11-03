@@ -128,23 +128,18 @@ public partial class LibraryWindow
             }
         }
 
-        var widths = _playlistShown.Select(PlaylistColumns.Width).ToList();
-        foreach (var entry in _openRemoteEntries)
-        {
-            entry.Resize(widths);
-        }
-
+        ColumnWidths.Refresh();
         PlaylistColumnGrips.Place();
     }
 
-    /// <summary>The library's columns of the same names take the new widths too.</summary>
+    /// <summary>Keeps the new widths, and the library's headings of the same names take them too.</summary>
     private void PlaylistColumnsResized()
     {
         _settings.Save();
         ShowColumnWidths();
     }
 
-    /// <summary>A double-click on a line: the column is made as wide as its widest text, heading included.</summary>
+    /// <summary>A double-click on a line: a column beside it is made as wide as its widest text, heading included.</summary>
     private void FitPlaylistColumn(int index)
     {
         if (index >= _playlistShown.Count)

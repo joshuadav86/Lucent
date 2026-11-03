@@ -191,7 +191,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="core:LibraryCell">
-                                        <Border Width="{Binding Width}" Padding="8,0" BorderThickness="1,0,0,0"
+                                        <Border Width="{Binding Size.Width}" Padding="8,0" BorderThickness="1,0,0,0"
                                                 BorderBrush="{DynamicResource HairlineBrush}">
                                             <TextBlock Classes="cell" Classes.right="{Binding AlignRight}" Text="{Binding Text}"
                                                        FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
@@ -311,7 +311,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="core:LibraryCell">
-                                            <Border Width="{Binding Width}" Padding="8,0" BorderThickness="1,0,0,0"
+                                            <Border Width="{Binding Size.Width}" Padding="8,0" BorderThickness="1,0,0,0"
                                                     BorderBrush="{DynamicResource HairlineBrush}">
                                                 <TextBlock Classes="cell" Classes.right="{Binding AlignRight}" Text="{Binding Text}"
                                                            FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
