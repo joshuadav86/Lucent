@@ -402,7 +402,9 @@ public partial class MainWindow : Window
     /// <summary>
     /// The windows that ended flush with the bottom of the player's column (at <paramref name="was"/>), beside it, end
     /// where it does <paramref name="now"/>, so nothing's left hanging below it or stopping short of it (a skin's type
-    /// making the player a little taller, say).
+    /// making the player a little taller, say). In a stack (the queue under the visuals, say), the top one takes up the
+    /// change and the ones under it move with it at their own heights, down to the next one up once it's at its smallest,
+    /// so the windows always meet, and picking skins back and forth leaves every one where it was.
     /// </summary>
     private void FollowColumnBottom(double was, double now, List<Window> column)
     {
@@ -411,17 +413,39 @@ public partial class MainWindow : Window
             return;
         }
 
-        foreach (var (_, window) in TiledWindows())
+        var free = TiledWindows().Select(entry => entry.Window).Where(window => window != this && !column.Contains(window)
+            && window.WindowState == WindowState.Normal && !WindowLocks.IsLocked(window) && !(window == _visuals && _visuals.IsFullscreen)
+            && window.ResizeMode is (ResizeMode.CanResize or ResizeMode.CanResizeWithGrip)).ToList();
+        foreach (var last in free.Where(window => Math.Abs(window.Top + SizeOf(window).Height - was) < 2).ToList())
         {
-            if (window == this || column.Contains(window) || window.WindowState != WindowState.Normal || WindowLocks.IsLocked(window)
-                || window == _visuals && _visuals.IsFullscreen || window.ResizeMode is not (ResizeMode.CanResize or ResizeMode.CanResizeWithGrip))
+            // The stack it ends: it, the one just over it (in line with it and as wide), and so on up.
+            var stack = new List<Window> { last };
+            while (free.FirstOrDefault(window => !stack.Contains(window) && Math.Abs(window.Left - stack[^1].Left) < 2
+                && Math.Abs(SizeOf(window).Width - SizeOf(stack[^1]).Width) < 2 && Math.Abs(window.Top + SizeOf(window).Height - stack[^1].Top) < 2) is { } above)
+            {
+                stack.Add(above);
+            }
+
+            var heights = stack.Select(window => SizeOf(window).Height).ToList();
+            var change = now - was;
+            for (var i = stack.Count - 1; i >= 0 && Math.Abs(change) >= 0.5; i--)
+            {
+                var height = Math.Max(stack[i].MinHeight, heights[i] + change);
+                change -= height - heights[i];
+                heights[i] = height;
+            }
+
+            if (Math.Abs(change) >= 0.5)
             {
                 continue;
             }
 
-            if (Math.Abs(window.Top + SizeOf(window).Height - was) < 2 && now - window.Top >= window.MinHeight)
+            var top = stack[^1].Top;
+            for (var i = stack.Count - 1; i >= 0; i--)
             {
-                window.Height = now - window.Top;
+                stack[i].Top = top;
+                stack[i].Height = heights[i];
+                top += heights[i];
             }
         }
     }
