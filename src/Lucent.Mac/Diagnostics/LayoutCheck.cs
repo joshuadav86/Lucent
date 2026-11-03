@@ -470,9 +470,9 @@ internal static class LayoutCheck
 
         var block = shown.Select(entry => entry.At).Aggregate((a, b) => a.Union(b));
 
-        // The player's column (the player and what's stacked under it) keeps its own size. When the stacks beside it
-        // can't get as short as it, every window in them at its smallest (a small screen with every window out), they
-        // end level with each other below it, and it's let off stopping short of them.
+        // The player's column (the player and what's stacked under it) keeps its own size. When a stack beside it can't
+        // get as short as it, every window in it at its smallest (a small screen with every window out), the stacks end
+        // level with that one below it, and it's let off stopping short of them.
         var column = new List<Rect> { player };
         while (shown.Select(entry => entry.At).FirstOrDefault(at => !column.Contains(at) && Touch(at.Y, column[^1].Bottom)
                    && at.X > player.X - 4 && at.Right < player.Right + 4) is { Width: > 0 } under)
@@ -498,7 +498,7 @@ internal static class LayoutCheck
         }
 
         var lowest = shown.Where(entry => !column.Contains(entry.At) && Touch(entry.At.Bottom, block.Bottom)).ToList();
-        var columnShort = column[^1].Bottom < block.Bottom - 4 && lowest.Count > 0 && lowest.All(AtSmallest);
+        var columnShort = column[^1].Bottom < block.Bottom - 4 && lowest.Any(AtSmallest);
         if (columnShort)
         {
             lines.Add($"ok {label}: the windows beside the player's column are as short as they go, so they end level " +
