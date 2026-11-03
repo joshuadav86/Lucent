@@ -15,7 +15,7 @@ namespace Lucent.Mac.Streaming;
 /// <remarks>
 /// Windows reads the Spotify app through Windows' media controls instead (see Windows' Streaming/SpotifyAppRemote.cs).
 /// </remarks>
-public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteVolume, IRemoteOpener, IRemoteNotifier
+public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteVolume, IRemoteOpener, IRemoteNotifier, IRemoteLinkPlayer
 {
     private const string Osascript = "/usr/bin/osascript";
 
@@ -105,6 +105,17 @@ public sealed class SpotifyAppRemote : IRemotePlayer, IRemoteModes, IRemoteVolum
         : TellAsync($"set repeating to {(mode == RepeatMode.All ? "true" : "false")}", cancel);
 
     public Task PlayAsync(CancellationToken cancel) => TellAsync("play", cancel);
+
+    // Spotify's AppleScript plays a song (or a playlist or album) by its spotify: link, from a playlist or album when given
+    // one, so a song chosen in Lucent plays while Spotify's Web API has asked Lucent to wait.
+    public async Task<bool> PlayLinkAsync(string link, string? context, CancellationToken cancel)
+    {
+        await TellAsync(context is null ? $"play track {Quoted(link)}" : $"play track {Quoted(link)} in context {Quoted(context)}", cancel);
+        return true;
+    }
+
+    // An AppleScript string, for a link Spotify gave (letters, digits and colons, but nothing is taken on trust).
+    private static string Quoted(string text) => "\"" + text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
 
     public Task PauseAsync(CancellationToken cancel) => TellAsync("pause", cancel);
 

@@ -59,9 +59,25 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     private RemoteState? _appRead;
 
     // How often the Web API is asked while the app on this computer says what's playing, and how soon after a new
-    // song (for its playlist), as Spotify limits how often all of Lucent's users together may ask.
+    // song (for its playlist), as Spotify limits how often all of Lucent's users together may ask. A new song is asked
+    // about a few times, as Spotify's servers can take a moment to catch up with the app, then every half minute.
     private static readonly TimeSpan WebEvery = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan WebAfterNewSong = TimeSpan.FromSeconds(5);
+    private const int NewSongAsks = 3;
+
+    // The app's song the Web API was last asked about while the app played, and how many times.
+    private string? _webAskedFor;
+    private int _webAsks;
+
+    // While nothing plays here: when the Web API is next due to be asked, and what it said last time. Reads in between
+    // (the app here saying something changed, say) show that, so nothing asks Spotify faster than its pace, whatever it
+    // answered. A button sent through the Web API makes it due straight away, to show what the button did.
+    private DateTime _webDueAt;
+    private RemoteState? _idleRead;
+    private Exception? _idleProblem;
+
+    // A Web API wait this short is waited out before a song chosen in Lucent plays, rather than playing it another way.
+    private static readonly TimeSpan ShortWait = TimeSpan.FromSeconds(10);
 
     /// <param name="refreshToken">From <see cref="SpotifySignIn.SignInAsync"/>, or saved from before.</param>
     /// <param name="saveRefreshToken">Called when Spotify hands out a new refresh token, which replaces the saved one.</param>
@@ -114,23 +130,38 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     public async Task<RemoteState?> ReadAsync(CancellationToken cancel)
     {
         var app = await ReadAppAsync(cancel);
-        var newSong = !SameSong(_appRead?.Track, app?.Track);
+        var newSong = app?.Track is not null && !SameSong(_appRead?.Track, app.Track);
         _appRead = app;
+        var now = DateTime.UtcNow;
         if (app is { IsPlaying: true, Track: not null })
         {
             _usingApp = true;
-            var now = DateTime.UtcNow;
-            var due = _web is null || now - _webReadAt > WebEvery || (!SameSong(_web.Track, app.Track) && now - _webReadAt > WebAfterNewSong);
+            _idleSince = null;
+            _idleRead = null;
+            _idleProblem = null;
+            _webDueAt = default;
+
             // A new song shows the moment the app names it; the Web API is asked about it on the next read, which also
-            // gives Spotify's servers a moment to catch up with the app.
-            if (due && !newSong && !SpotifyWait.IsWaiting)
+            // gives Spotify's servers a moment to catch up with the app. Never sooner than that, whatever it answers, so an
+            // empty or failed answer isn't asked about again every second for as long as it keeps coming.
+            var song = app.Track.Title.Trim();
+            if (!string.Equals(_webAskedFor, song, StringComparison.OrdinalIgnoreCase))
+            {
+                _webAskedFor = song;
+                _webAsks = 0;
+            }
+
+            var caughtUp = _web?.Track is { } webTrack && SameSong(webTrack, app.Track);
+            var every = caughtUp || _webAsks >= NewSongAsks ? WebEvery : WebAfterNewSong;
+            if (!newSong && now - _webReadAt >= every && !SpotifyWait.IsWaiting)
             {
                 _webReadAt = now;
+                _webAsks++;
                 try
                 {
                     _web = await ReadWebAsync(cancel);
                 }
-                catch (RemoteProblem)
+                catch (Exception ex) when (CanCarryOn(ex, cancel))
                 {
                     // The app still says what's playing.
                 }
@@ -139,19 +170,51 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
             return Combine(app, _web);
         }
 
+        // Nothing plays here: the Web API says whether a phone or speaker plays for the account, at its own pace (see
+        // ReadAgainAfter), however often the app here says something changed. A new song named here is worth asking about.
+        var idleSince = _idleSince ??= now;
+        if (now < _webDueAt && !newSong)
+        {
+            return _idleProblem is { } problem ? throw problem : _idleRead;
+        }
+
+        // Due again at the idle pace even when Spotify can't be reached, so a failure is never asked about sooner.
+        _webDueAt = now + IdleReadEvery(now - idleSince) - PaceSlack;
+        _idleProblem = null;
         try
         {
             var web = await ReadWebAsync(cancel);
             _usingApp = false;
+            _idleRead = web;
+            if (web is { IsPlaying: true })
+            {
+                _idleSince = null;
+            }
+
+            _webDueAt = now + WebPace(web) - PaceSlack;
             return web;
         }
-        catch (RemoteProblem) when (app?.Track is not null)
+        catch (Exception ex) when (CanCarryOn(ex, cancel) && app?.Track is not null)
         {
-            // Spotify asked Lucent to wait (or can't be reached), but the app here has the song.
+            // Spotify asked Lucent to wait (or can't be reached), but the app here has the song, and takes the buttons.
             _usingApp = true;
-            return Combine(app, _web);
+            _idleRead = Combine(app, _web);
+            return _idleRead;
+        }
+        catch (Exception ex) when (!cancel.IsCancellationRequested)
+        {
+            _idleRead = null;
+            _idleProblem = ex;
+            throw;
         }
     }
+
+    // A problem reading the Web API that the app here can stand in for: Spotify asking Lucent to wait, saying no, or
+    // not being reachable. Not Lucent stopping.
+    private static bool CanCarryOn(Exception ex, CancellationToken cancel) =>
+        !cancel.IsCancellationRequested && (ex is RemoteProblem || Unreachable(ex));
+
+    private static readonly TimeSpan PaceSlack = TimeSpan.FromSeconds(1);
 
     private async Task<RemoteState?> ReadAppAsync(CancellationToken cancel)
     {
@@ -237,23 +300,23 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     // Spotify limits how often all of Lucent's users together may ask, and asking every few seconds all day (paused
     // overnight, say) ran into a wait of hours. While another device plays, every 5 seconds, or as the song ends if
     // that's sooner, so the next song shows on time. While nothing plays, every 5 seconds for a minute, then every 15,
-    // then once a minute after ten minutes: the app here says the moment it starts playing, and a press of Play in
-    // Lucent reads straight away, so only a phone or speaker starting on its own is noticed later.
+    // then once a minute, then every 5 minutes after an hour: the app here says the moment it starts playing, and a
+    // press of Play in Lucent reads straight away, so only a phone or speaker starting on its own is noticed later.
     public TimeSpan ReadAgainAfter(RemoteState? state)
     {
-        // The app on this computer can be asked every second; the Web API part keeps its own pace.
-        if (_usingApp)
-        {
-            _idleSince = null;
-            return TimeSpan.FromSeconds(1);
-        }
+        // The app on this computer is read every second while it plays (which asks Spotify's servers nothing); the Web
+        // API part keeps its own pace (see ReadAsync). A problem reading never makes it read sooner.
+        return _appRead is { IsPlaying: true, Track: not null } ? TimeSpan.FromSeconds(1) : WebPace(state);
+    }
 
+    // How soon the Web API is asked again after it said <paramref name="state"/>, while nothing plays on this computer.
+    private TimeSpan WebPace(RemoteState? state)
+    {
         if (state is not { IsPlaying: true })
         {
-            return IdleReadEvery(DateTime.UtcNow - (_idleSince ??= DateTime.UtcNow));
+            return IdleReadEvery(DateTime.UtcNow - (_idleSince ?? DateTime.UtcNow));
         }
 
-        _idleSince = null;
         var left = state.Track is { Duration.Ticks: > 0 } track ? track.Duration - state.PositionNow + TimeSpan.FromSeconds(0.5) : TimeSpan.MaxValue;
         return left < TimeSpan.FromSeconds(5) ? TimeSpan.FromSeconds(Math.Max(1, left.TotalSeconds)) : TimeSpan.FromSeconds(5);
     }
@@ -262,7 +325,8 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
     internal static TimeSpan IdleReadEvery(TimeSpan idle) =>
         idle < TimeSpan.FromMinutes(1) ? TimeSpan.FromSeconds(5)
         : idle < TimeSpan.FromMinutes(10) ? TimeSpan.FromSeconds(15)
-        : TimeSpan.FromMinutes(1);
+        : idle < TimeSpan.FromHours(1) ? TimeSpan.FromMinutes(1)
+        : TimeSpan.FromMinutes(5);
 
     // While the app here says what's playing, its own buttons are pressed (which needs no Premium and no Web API).
     public Task PlayAsync(CancellationToken cancel) => _usingApp && _app is { } app ? app.PlayAsync(cancel) : PlayOnSomeDeviceAsync(null, cancel);
@@ -509,9 +573,17 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         return await UpNextAsync(state.ListId, note, cancel);
     }
 
-    public async Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel)
+    public Task PlayFromListAsync(RemoteList list, RemoteTrack track, CancellationToken cancel)
     {
         var song = track.Uri ?? $"spotify:track:{track.Id}";
+        // Through the app here, it carries on through the playlist or album too (Liked Songs and what's up next can't be
+        // named to it, so the song plays on its own there).
+        var context = !list.FollowsSong && list.Id?.Split(':') is ["spotify", "playlist" or "album", _] ? list.Id : null;
+        return OrInAppHereAsync(stop => PlayFromListOnWebAsync(list, song, stop), song, context, track, cancel);
+    }
+
+    private async Task PlayFromListOnWebAsync(RemoteList list, string song, CancellationToken cancel)
+    {
         var justTheSong = JsonSerializer.Serialize(new Dictionary<string, object> { ["uris"] = new[] { song } });
         if (list.Id is not { } context)
         {
@@ -541,6 +613,69 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         {
             await PlayOnSomeDeviceAsync(justTheSong, cancel);
         }
+    }
+
+    /// <summary>
+    /// Plays a song or playlist chosen in Lucent through the Web API; or, while Spotify has asked Lucent to wait, through the
+    /// Spotify app here, which a Mac's plays itself and Windows' shows, to press play on there. A wait of a few seconds
+    /// is waited out instead, so the song just plays a moment late.
+    /// </summary>
+    /// <param name="link">The song's (or playlist's) spotify: link.</param>
+    /// <param name="context">The playlist or album to carry on through in the app here, or null.</param>
+    /// <param name="track">The song, to see whether Windows' Spotify started it itself, or null for a playlist.</param>
+    private async Task OrInAppHereAsync(Func<CancellationToken, Task> web, string link, string? context, RemoteTrack? track, CancellationToken cancel)
+    {
+        for (var tries = 0; tries < 2; tries++)
+        {
+            if (SpotifyWait.IsWaiting && SpotifyWait.Left <= ShortWait)
+            {
+                await Task.Delay(SpotifyWait.Left + TimeSpan.FromMilliseconds(100), cancel);
+            }
+
+            if (SpotifyWait.IsWaiting)
+            {
+                break;
+            }
+
+            try
+            {
+                await web(cancel);
+                return;
+            }
+            catch (RemoteProblem) when (SpotifyWait.IsWaiting && _app is IRemoteLinkPlayer)
+            {
+                // Spotify said to wait just now.
+            }
+        }
+
+        if (_app is not IRemoteLinkPlayer here)
+        {
+            throw new RemoteProblem(SlowDown());
+        }
+
+        if (await here.PlayLinkAsync(link, context, cancel) || (track is not null && await AppPlaysAsync(track, cancel)))
+        {
+            _usingApp = true;
+            return;
+        }
+
+        throw new RemoteProblem($"Spotify asked Lucent to wait {SpotifyWait.LeftText()} before asking again, so Lucent opened the "
+            + $"{(track is null ? "playlist" : "song")} in Spotify. Press play there.");
+    }
+
+    // Whether the app here plays the song within a few seconds of being shown it (Windows' Spotify may start it itself).
+    private async Task<bool> AppPlaysAsync(RemoteTrack track, CancellationToken cancel)
+    {
+        for (var look = 0; look < 6; look++)
+        {
+            await Task.Delay(500, cancel);
+            if (await ReadAppAsync(cancel) is { IsPlaying: true, Track: { } playing } && SameSong(playing, track))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -664,8 +799,9 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         }
     }
 
-    public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) =>
-        PlayOnSomeDeviceAsync(JsonSerializer.Serialize(new Dictionary<string, object> { ["context_uri"] = playlist.Uri }), cancel);
+    public Task PlayPlaylistAsync(RemotePlaylist playlist, CancellationToken cancel) => OrInAppHereAsync(
+        stop => PlayOnSomeDeviceAsync(JsonSerializer.Serialize(new Dictionary<string, object> { ["context_uri"] = playlist.Uri }), stop),
+        playlist.Uri, null, null, cancel);
 
     /// <summary>
     /// Adds the song to the end of a playlist (POST /playlists/{id}/items), or saves it to Liked Songs (PUT /me/library).
@@ -1164,6 +1300,12 @@ public sealed class SpotifyRemote : IRemotePlayer, IRemoteLists, IRemotePlaylist
         if (SpotifyWait.IsWaiting)
         {
             throw new RemoteProblem(SlowDown());
+        }
+
+        // A button (play, a playlist chosen) changes what plays, so the next read asks what it did rather than waiting its turn.
+        if (method != HttpMethod.Get)
+        {
+            _webDueAt = default;
         }
 
         for (var attempt = 0; ; attempt++)

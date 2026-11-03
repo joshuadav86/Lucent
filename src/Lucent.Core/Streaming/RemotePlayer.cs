@@ -191,6 +191,20 @@ public interface IRemoteOpener
     Task OpenAsync(CancellationToken cancel);
 }
 
+/// <summary>
+/// The Spotify app on this computer, told to play a song (or a playlist or album) by its spotify: link itself, without
+/// Spotify's Web API, so a song chosen in Lucent still plays while the Web API has asked Lucent to wait.
+/// </summary>
+public interface IRemoteLinkPlayer
+{
+    /// <summary>
+    /// Plays <paramref name="link"/>, carrying on through <paramref name="context"/> (a playlist or album's link) when
+    /// given. False when the app could only show it, to be played there: Windows' Spotify takes no song from other apps.
+    /// </summary>
+    /// <exception cref="RemoteProblem">When the app isn't on this computer, or wouldn't take it.</exception>
+    Task<bool> PlayLinkAsync(string link, string? context, CancellationToken cancel);
+}
+
 /// <summary>A problem the user can do something about, worded for them (sign in again, open the app, and so on).</summary>
 public sealed class RemoteProblem : Exception
 {

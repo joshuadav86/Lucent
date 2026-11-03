@@ -33,13 +33,14 @@ internal static class AppOpener
     }
 
     /// <summary>
-    /// Opens a link like spotify: when an app on this PC answers to it. False when none does, as Windows would otherwise
-    /// ask the user to find an app in the Store.
+    /// Opens a link like spotify: (or a whole one, spotify:track:…) when an app on this PC answers to it. False when none
+    /// does, as Windows would otherwise ask the user to find an app in the Store.
     /// </summary>
-    public static bool TryLink(string scheme)
+    public static bool TryLink(string link)
     {
+        var scheme = link.Split(':')[0];
         using var key = Registry.ClassesRoot.OpenSubKey(scheme);
-        return key?.GetValue("URL Protocol") is not null && TryStart(scheme + ":");
+        return key?.GetValue("URL Protocol") is not null && TryStart(link.Contains(':') ? link : scheme + ":");
     }
 
     /// <summary>Starts the program at <paramref name="path"/>, when it's there.</summary>
