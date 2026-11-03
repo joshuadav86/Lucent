@@ -576,6 +576,7 @@ public sealed class AppSettings
         ["Ringed World"] = "Tetra Vortex",
         ["Tide Line"] = "Hyperboloid",
         ["Diamond Fire"] = "Riemann Sphere",
+        ["Paper Cut"] = "Dupin Cyclide",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
