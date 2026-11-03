@@ -406,7 +406,7 @@ public partial class RadioWindow : Window
             Content = new System.Windows.Shapes.Path
             {
                 Data = (Geometry)FindResource("StarIcon"),
-                Stroke = (Brush)FindResource(favorite ? "AccentBrush" : "FaintTextBrush"),
+                Stroke = (Brush)FindResource(favorite ? "AccentBrush" : "FaintLineBrush"),
                 Fill = favorite ? (Brush)FindResource("AccentBrush") : Brushes.Transparent,
                 StrokeThickness = 1.2,
                 StrokeLineJoin = PenLineJoin.Round,
@@ -446,7 +446,7 @@ public partial class RadioWindow : Window
             Content = new System.Windows.Shapes.Path
             {
                 Data = (Geometry)FindResource("WebsiteIcon"),
-                Stroke = (Brush)FindResource("FaintTextBrush"),
+                Stroke = (Brush)FindResource("FaintLineBrush"),
                 StrokeThickness = 1.2,
                 Width = 12,
                 Height = 12,
@@ -473,7 +473,7 @@ public partial class RadioWindow : Window
             Content = new System.Windows.Shapes.Path
             {
                 Data = (Geometry)FindResource("HeartIcon"),
-                Stroke = (Brush)FindResource("FaintTextBrush"),
+                Stroke = (Brush)FindResource("FaintLineBrush"),
                 StrokeThickness = 1.2,
                 Width = 12,
                 Height = 12,
@@ -519,7 +519,7 @@ public partial class RadioWindow : Window
             var camera = new System.Windows.Shapes.Path
             {
                 Data = (Geometry)FindResource("VideoIcon"),
-                Stroke = (Brush)FindResource(playing ? "AccentBrush" : "FaintTextBrush"),
+                Stroke = (Brush)FindResource(playing ? "AccentBrush" : "FaintLineBrush"),
                 StrokeThickness = 1.2,
                 Width = 13,
                 Height = 13,

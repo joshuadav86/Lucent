@@ -135,7 +135,7 @@
                                                     <DockPanel>
                                                         <local:RoundedBorder x:Name="Box" DockPanel.Dock="Left" Width="14" Height="14" Margin="0,0,8,0"
                                                                              CornerRadius="4" BorderThickness="1.2" VerticalAlignment="Center"
-                                                                             BorderBrush="{DynamicResource FaintTextBrush}" Background="Transparent">
+                                                                             BorderBrush="{DynamicResource FaintLineBrush}" Background="Transparent">
                                                             <Path x:Name="Tick" Data="{StaticResource CheckIcon}" Width="8" Height="7" Stretch="Uniform"
                                                                   Stroke="{DynamicResource AccentForegroundBrush}" StrokeThickness="1.6"
                                                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
@@ -350,18 +350,18 @@
                                                     <!-- Star: click to make it a favourite. -->
                                                     <Button x:Name="Star" DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="24" Height="24"
                                                             Margin="6,-4,-4,-4" ToolTip="Favorite" Click="OnStarClick">
-                                                        <Path x:Name="StarShape" Data="{StaticResource StarIcon}" Stroke="{DynamicResource FaintTextBrush}"
+                                                        <Path x:Name="StarShape" Data="{StaticResource StarIcon}" Stroke="{DynamicResource FaintLineBrush}"
                                                               StrokeThickness="1.2" StrokeLineJoin="Round" Fill="Transparent"
                                                               Width="12" Height="12" Stretch="Uniform" />
                                                     </Button>
                                                     <!-- MilkDrop and AVS presets carry a small tag, so they stand out in the A to Z list. -->
                                                     <local:RoundedBorder x:Name="MilkDropTag" DockPanel.Dock="Right" Visibility="Collapsed" Margin="8,0,0,0" Padding="5,1"
-                                                                         CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
+                                                                         CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintLineBrush}"
                                                                          VerticalAlignment="Center" ToolTip="A MilkDrop preset">
                                                         <TextBlock Text="MILKDROP" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </local:RoundedBorder>
                                                     <local:RoundedBorder x:Name="AvsTag" DockPanel.Dock="Right" Visibility="Collapsed" Margin="8,0,0,0" Padding="5,1"
-                                                                         CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
+                                                                         CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintLineBrush}"
                                                                          VerticalAlignment="Center" ToolTip="An AVS preset">
                                                         <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </local:RoundedBorder>

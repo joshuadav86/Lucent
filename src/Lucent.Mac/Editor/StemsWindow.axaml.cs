@@ -321,7 +321,7 @@ public partial class StemsWindow : Window
         public void ShowState()
         {
             var audible = _window._mixer.IsAudible(_index);
-            Waveform.Fill = _window.Resource<IBrush>(audible ? "AccentBrush" : "FaintTextBrush") ?? Brushes.Gray;
+            Waveform.Fill = _window.Resource<IBrush>(audible ? "AccentBrush" : "FaintLineBrush") ?? Brushes.Gray;
             Waveform.FillOpacity = audible ? 0.85 : 0.35;
             Waveform.InvalidateVisual();
         }

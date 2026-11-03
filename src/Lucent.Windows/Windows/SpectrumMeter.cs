@@ -124,7 +124,7 @@ public sealed class SpectrumMeter : FrameworkElement
         }
 
         var fill = TryFindResource("AccentGradientBrush") as Brush ?? Brushes.White;
-        var faint = TryFindResource("FaintTextBrush") as Brush ?? Brushes.Gray;
+        var faint = TryFindResource("FaintLineBrush") as Brush ?? Brushes.Gray;
         var text = TryFindResource("TextBrush") as Brush ?? Brushes.White;
 
         switch (_mode)

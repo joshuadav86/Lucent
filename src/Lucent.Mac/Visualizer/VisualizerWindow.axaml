@@ -113,7 +113,7 @@
                                                 <DockPanel>
                                                     <Border Name="Box" DockPanel.Dock="Left" Width="14" Height="14" Margin="0,0,8,0"
                                                             CornerRadius="4" BorderThickness="1.2" VerticalAlignment="Center"
-                                                            BorderBrush="{DynamicResource FaintTextBrush}" Background="Transparent">
+                                                            BorderBrush="{DynamicResource FaintLineBrush}" Background="Transparent">
                                                         <Path Name="Tick" Data="{StaticResource CheckIcon}" Width="8" Height="7" Stretch="Uniform"
                                                               Stroke="{DynamicResource AccentForegroundBrush}" StrokeThickness="1.6"
                                                               StrokeLineCap="Round" StrokeJoin="Round" Opacity="0" />
@@ -145,7 +145,7 @@
                                     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
                                 </Style>
                                 <Style Selector="Path.star">
-                                    <Setter Property="Stroke" Value="{DynamicResource FaintTextBrush}" />
+                                    <Setter Property="Stroke" Value="{DynamicResource FaintLineBrush}" />
                                     <Setter Property="Fill" Value="Transparent" />
                                 </Style>
                                 <Style Selector="Path.star.favorite">
@@ -304,12 +304,12 @@
                                                     </Button>
                                                     <!-- MilkDrop and AVS presets carry a small tag, so they stand out in the A to Z list. -->
                                                     <Border DockPanel.Dock="Right" IsVisible="{Binding IsMilkDrop}" Margin="8,0,0,0" Padding="5,1"
-                                                            CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
+                                                            CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintLineBrush}"
                                                             VerticalAlignment="Center" ToolTip.Tip="A MilkDrop preset">
                                                         <TextBlock Text="MILKDROP" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </Border>
                                                     <Border DockPanel.Dock="Right" IsVisible="{Binding IsAvs}" Margin="8,0,0,0" Padding="5,1"
-                                                            CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintTextBrush}"
+                                                            CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource FaintLineBrush}"
                                                             VerticalAlignment="Center" ToolTip.Tip="An AVS preset">
                                                         <TextBlock Text="AVS" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
                                                     </Border>

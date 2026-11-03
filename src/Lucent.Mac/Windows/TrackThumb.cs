@@ -46,7 +46,7 @@ public sealed class TrackThumb : Border
         this.SetResourceReference(BackgroundProperty, "SurfaceRaisedBrush");
         var icon = new Avalonia.Controls.Shapes.Path();
         icon.SetResourceReference(Avalonia.Controls.Shapes.Path.DataProperty, "MusicIcon");
-        icon.SetResourceReference(Shape.FillProperty, "FaintTextBrush");
+        icon.SetResourceReference(Shape.FillProperty, "FaintLineBrush");
         _note = new Viewbox { Width = 14, Height = 14, Child = icon };
         Child = _note;
     }

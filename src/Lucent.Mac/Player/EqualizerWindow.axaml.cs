@@ -665,7 +665,7 @@ public partial class EqualizerWindow : Window
         CurveLine.Data = line;
         CurveFill.Data = fill;
         ZeroLine.Data = zeroLine;
-        CurveLine.SetResourceReference(Avalonia.Controls.Shapes.Shape.StrokeProperty, Eq.Enabled ? "AccentBrush" : "FaintTextBrush");
+        CurveLine.SetResourceReference(Avalonia.Controls.Shapes.Shape.StrokeProperty, Eq.Enabled ? "AccentBrush" : "FaintLineBrush");
         CurveFill.IsVisible = Eq.Enabled;
     }
 

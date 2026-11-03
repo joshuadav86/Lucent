@@ -211,7 +211,7 @@
             </ListBox>
 
             <StackPanel x:Name="EmptyLibraryHint" Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
+                <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintLineBrush}" HorizontalAlignment="Center" />
                 <TextBlock x:Name="EmptyLibraryTitle" Text="Link a music folder" Margin="0,12,0,0" FontSize="13"
                            HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
                 <TextBlock x:Name="EmptyLibraryText" Margin="0,4,0,0" FontSize="12" MaxWidth="220"

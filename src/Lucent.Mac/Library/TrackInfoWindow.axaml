@@ -128,7 +128,7 @@
                 </ControlTemplate>
             </Setter>
             <Style Selector="^:pointerover /template/ Border#Ring">
-                <Setter Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource FaintLineBrush}" />
             </Style>
             <Style Selector="^:selected /template/ Border#Ring">
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -191,7 +191,7 @@
                     <Grid>
                         <Image x:Name="ArtworkImage" Margin="6" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <StackPanel x:Name="ArtworkEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
-                            <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
+                            <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintLineBrush}" HorizontalAlignment="Center" />
                             <TextBlock x:Name="ArtworkEmptyTitle" Text="No artwork" Margin="0,12,0,0" FontSize="13"
                                        HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
                             <TextBlock x:Name="ArtworkEmptyText" Margin="0,4,0,0" FontSize="12" MaxWidth="210"

@@ -35,7 +35,7 @@
         <!-- A vertical equalizer slider drawn like a mixing desk fader: a dark slot cut into the panel,
              a scale of marks every 3 dB (longer at 0), and a metal cap with a coloured line across it. -->
         <Style x:Key="FaderMark" TargetType="Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource FaintLineBrush}" />
             <Setter Property="BorderThickness" Value="0,1,0,0" />
             <Setter Property="Opacity" Value="0.7" />
         </Style>

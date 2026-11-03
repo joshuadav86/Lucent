@@ -40,7 +40,7 @@ public sealed class TrackThumb : Border
         SetResourceReference(BackgroundProperty, "SurfaceRaisedBrush");
         var icon = new System.Windows.Shapes.Path();
         icon.SetResourceReference(System.Windows.Shapes.Path.DataProperty, "MusicIcon");
-        icon.SetResourceReference(System.Windows.Shapes.Path.FillProperty, "FaintTextBrush");
+        icon.SetResourceReference(System.Windows.Shapes.Path.FillProperty, "FaintLineBrush");
         _note = new Viewbox { Width = 14, Height = 14, Child = icon };
         Child = _note;
         Loaded += (_, _) =>

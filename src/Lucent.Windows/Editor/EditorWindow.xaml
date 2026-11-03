@@ -100,7 +100,7 @@
                     <ControlTemplate TargetType="ToggleButton">
                         <w:RoundedBorder x:Name="Chrome" CornerRadius="11" Background="Transparent">
                             <Ellipse x:Name="Dot" Width="10" Height="10" Fill="Transparent" StrokeThickness="1.5"
-                                     Stroke="{DynamicResource FaintTextBrush}" />
+                                     Stroke="{DynamicResource FaintLineBrush}" />
                         </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
@@ -384,7 +384,7 @@
 
         <!-- The whole song, with the visible part marked -->
         <editor:OverviewView x:Name="Overview" Grid.Row="2" Height="38" Margin="14,10,14,0"
-                             WaveBrush="{DynamicResource FaintTextBrush}"
+                             WaveBrush="{DynamicResource FaintLineBrush}"
                              BackgroundBrush="{DynamicResource SurfaceBrush}"
                              WindowBrush="{DynamicResource AccentBrush}"
                              WindowBorderBrush="{DynamicResource AccentBrush}"
