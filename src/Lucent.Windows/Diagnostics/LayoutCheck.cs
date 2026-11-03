@@ -86,6 +86,20 @@ public partial class MainWindow
             lines.AddRange(await CheckSkinsAsync("in a single window"));
             lines.AddRange(await CheckFillAsync("after changing skins"));
             lines.AddRange(await CheckLeavingSingleWindowAsync("after changing skins"));
+
+            // With the analyzer out too, as people with every window have it, single window off while it fills the
+            // screen (where on the Mac the queue, analyzer, and art once came back tucked under the windows above).
+            if (!AnalyzerWindow.IsOpen)
+            {
+                ToggleAnalyzer();
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            EnterSingleWindow();
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            ToggleLucentFullScreen();
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            lines.AddRange(await CheckLeavingSingleWindowAsync("while it fills the screen"));
         }
         catch (Exception ex)
         {

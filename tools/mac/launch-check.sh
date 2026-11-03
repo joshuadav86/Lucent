@@ -30,7 +30,7 @@ for run in first reopened; do
   cp "$work/layout-check-first.txt.visuals" "$LUCENT_LAYOUT_CHECK.visuals" 2> /dev/null || true
   "$exe" > "$work/layout-$run.log" 2>&1 &
   app=$!
-  for _ in $(seq 1 90); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
+  for _ in $(seq 1 150); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
   if kill -0 "$app" 2> /dev/null; then
     kill "$app"
     echo "::error::Lucent didn't quit when its player was closed ($run run)."

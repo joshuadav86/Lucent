@@ -293,6 +293,84 @@ internal static class LayoutCheck
             lines.AddRange(await CheckSkinsAsync(apart, visuals, "as separate windows"));
         }
 
+        // Then with every window out, as people have them, single window off while it fills the screen.
+        if (main is MainWindow every)
+        {
+            lines.AddRange(await CheckLeavingFilledAsync(every));
+        }
+
+        return lines;
+    }
+
+    /// <summary>
+    /// With every window out (the player, equalizer, queue, visuals, analyzer, library, and artwork), a single window
+    /// full screen, then single window off while it fills the screen, where the queue, analyzer, and art once came back
+    /// tucked under the windows above them. Each window goes where its panel was (the ones along the bottom can end
+    /// higher, flush with the player's column), the windows end flush as one block, nothing's over anything else, and
+    /// everything's on the screen. Then the windows it opened close again, for the rest of the check.
+    /// </summary>
+    private static async Task<List<string>> CheckLeavingFilledAsync(MainWindow main)
+    {
+        const string label = "single window off while full screen";
+        var lines = new List<string>();
+        var closeAgain = main.OpenEveryWindow();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        SingleWindow.Toggle?.Invoke();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        main.ToggleLucentFullScreen();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var frame = Placement.BoundsOf(main);
+        var screen = Placement.WorkArea(main);
+        var panels = main.OwnedWindows.Select(window => (Window: window, Panel: PanelOnScreen(main, window)))
+            .Where(entry => entry.Panel is not null)
+            .ToDictionary(entry => entry.Window, entry => entry.Panel!.Value);
+        lines.Add($"{label}: the single window at {Describe(frame)} on a screen of {Describe(screen)}, panels: " +
+            string.Join(", ", panels.Select(entry => $"{entry.Key.Title} {Describe(entry.Value)}")));
+        SingleWindow.Toggle?.Invoke();
+        foreach (var wait in new[] { 0, 300, 1500, 4000 })
+        {
+            await Task.Delay(wait);
+            lines.Add($"{label}: after {wait} ms: player {Describe(main)}, " +
+                string.Join(", ", panels.Keys.Select(window => $"{window.Title} {Describe(window)}")));
+        }
+
+        // How far short of the single window's bottom a column stops: the windows along the bottom can end that much
+        // higher, flush with it. A panel along the top reaches up over the title bar, where the window's own goes.
+        var room = panels.Values.Where(place => !panels.Values.Any(other => other != place && Touch(place.Bottom, other.Y) && Across(place, other)))
+            .Select(place => frame.Bottom - place.Bottom).DefaultIfEmpty(0).Max();
+        foreach (var (window, panel) in panels)
+        {
+            var at = Placement.BoundsOf(window);
+            var highest = panel.Y - frame.Y < 60 ? frame.Y : panel.Y - room;
+            var near = Math.Abs(at.X - panel.X) <= 4 && Math.Abs(at.Width - panel.Width) <= 4
+                && at.Y >= highest - 4 && at.Y <= panel.Y + 4 && at.Bottom <= panel.Bottom + 4 && at.Bottom >= panel.Bottom - room - 4;
+            lines.Add($"{(near ? "ok" : "MISMATCH")} {label}: the {window.Title} is at {Describe(at)}, its panel was at {Describe(panel)}");
+        }
+
+        var shown = new[] { (Name: "player", At: Placement.BoundsOf(main)) }
+            .Concat(panels.Keys.Where(IsOnScreen).Select(window => (Name: window.Title ?? "window", At: Placement.BoundsOf(window))))
+            .ToList();
+        foreach (var (name, at) in shown.Where(entry => entry.At.X < screen.X - 4 || entry.At.Y < screen.Y - 4
+            || entry.At.Right > screen.Right + 4 || entry.At.Bottom > screen.Bottom + 4))
+        {
+            lines.Add($"MISMATCH {label}: the {name} at {Describe(at)} isn't wholly on the screen, {Describe(screen)}");
+        }
+
+        for (var i = 0; i < shown.Count; i++)
+        {
+            for (var j = i + 1; j < shown.Count; j++)
+            {
+                var overlap = shown[i].At.Intersect(shown[j].At);
+                if (overlap.Width > 4 && overlap.Height > 4)
+                {
+                    lines.Add($"MISMATCH {label}: the {shown[i].Name} and the {shown[j].Name} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                }
+            }
+        }
+
+        lines.AddRange(CheckFlush(main, label));
+        closeAgain();
+        await Task.Delay(TimeSpan.FromSeconds(1));
         return lines;
     }
 

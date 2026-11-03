@@ -944,4 +944,50 @@ public partial class MainWindow
     }
 
     private static TileRect ToTileRect(Rect rect) => new(rect.X, rect.Y, rect.Width, rect.Height);
+
+    /// <summary>
+    /// For the layout check: opens the queue, library, artwork, and analyzer, the way someone with every window out has
+    /// them, and gives back a way to close again the ones it opened.
+    /// </summary>
+    internal Action OpenEveryWindow()
+    {
+        var close = new List<Action>();
+        foreach (var window in new ToolWindow[] { _queue, _libraryWindow }.Where(window => !window.IsVisible))
+        {
+            ToggleWindow(window);
+            close.Add(() =>
+            {
+                if (window.IsVisible)
+                {
+                    ToggleWindow(window);
+                }
+            });
+        }
+
+        if (!ArtworkWindow.IsOpen)
+        {
+            ToggleArtwork();
+            close.Add(() =>
+            {
+                if (ArtworkWindow.IsOpen)
+                {
+                    ToggleArtwork();
+                }
+            });
+        }
+
+        if (!AnalyzerWindow.IsOpen)
+        {
+            ToggleAnalyzer();
+            close.Add(() =>
+            {
+                if (AnalyzerWindow.IsOpen)
+                {
+                    ToggleAnalyzer();
+                }
+            });
+        }
+
+        return () => close.ForEach(action => action());
+    }
 }
