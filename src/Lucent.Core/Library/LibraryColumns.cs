@@ -79,9 +79,12 @@ public static class LibraryColumns
 
     /// <summary>
     /// The column's width in device-independent pixels (WPF's and Avalonia's units), with its divider line and the
-    /// space either side of the text.
+    /// space either side of the text: the one it was dragged to (<see cref="ColumnWidths"/>), or its standard width.
     /// </summary>
-    public static double Width(LibraryColumn column) => column switch
+    public static double Width(LibraryColumn column) => ColumnWidths.Of(column.ToString(), StandardWidth(column));
+
+    /// <summary>The column's width until it's dragged wider or narrower.</summary>
+    public static double StandardWidth(LibraryColumn column) => column switch
     {
         LibraryColumn.Artist or LibraryColumn.AlbumArtist or LibraryColumn.Composer => 126,
         LibraryColumn.Album => 136,

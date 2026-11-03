@@ -113,6 +113,7 @@ public static class SelfTest
         failures += Lucent.Lastfm.ScrobbleSelfTest.Run(Console.WriteLine);
         failures += Lucent.Library.TempoKeySelfTest.Run(Console.WriteLine);
         failures += Lucent.Library.LibraryGroupsSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Library.ColumnWidthsSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.CoverSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.SpotifyLimitSelfTest.Run(Console.WriteLine);
         failures += Lucent.Streaming.SpotifyVolume.SelfTest(Console.WriteLine);

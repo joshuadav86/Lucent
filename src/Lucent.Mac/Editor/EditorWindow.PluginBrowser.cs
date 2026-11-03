@@ -214,7 +214,7 @@ public partial class EditorWindow
             Content = new Avalonia.Controls.Shapes.Path
             {
                 Data = ThemeIcon("StarIcon"),
-                Stroke = ThemeBrush(entry.IsFavorite ? "AccentBrush" : "FaintTextBrush"),
+                Stroke = ThemeBrush(entry.IsFavorite ? "AccentBrush" : "FaintLineBrush"),
                 Fill = entry.IsFavorite ? ThemeBrush("AccentBrush") : Brushes.Transparent,
                 StrokeThickness = 1.2,
                 StrokeLineCap = PenLineCap.Round,

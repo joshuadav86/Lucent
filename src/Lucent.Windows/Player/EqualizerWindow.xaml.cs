@@ -585,7 +585,7 @@ public partial class EqualizerWindow : Window
         CurveLine.Data = line;
         CurveFill.Data = fill;
         ZeroLine.Data = zeroLine;
-        CurveLine.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, Eq.Enabled ? "AccentBrush" : "FaintTextBrush");
+        CurveLine.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, Eq.Enabled ? "AccentBrush" : "FaintLineBrush");
         CurveFill.Visibility = Eq.Enabled ? Visibility.Visible : Visibility.Collapsed;
     }
 

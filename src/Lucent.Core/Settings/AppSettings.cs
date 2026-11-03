@@ -94,6 +94,12 @@ public sealed class AppSettings
     /// <summary>Whether the library has widened once to fit an opened playlist's columns.</summary>
     public bool PlaylistColumnsFitted { get; set; }
 
+    /// <summary>
+    /// The widths columns were dragged to, by column name ("Album"), for the library's tag columns and opened playlists'
+    /// alike (<see cref="Library.ColumnWidths"/>). A column that isn't here has its standard width.
+    /// </summary>
+    public Dictionary<string, double> ColumnWidths { get; set; } = new();
+
     /// <summary>Whether the library has headings (<see cref="LibraryGrouping"/>), or is one long list.</summary>
     public bool GroupLibraryByFolder { get; set; } = true;
 

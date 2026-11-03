@@ -15,8 +15,11 @@
         <SolidColorBrush x:Key="HoverBrush" Color="#1D1D26" />
         <SolidColorBrush x:Key="HairlineBrush" Color="#1E1E28" />
         <SolidColorBrush x:Key="TextBrush" Color="#ECECF1" />
-        <SolidColorBrush x:Key="MutedTextBrush" Color="#8A8A99" />
-        <SolidColorBrush x:Key="FaintTextBrush" Color="#4A4A57" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#A7A7B3" />
+        <!-- Faint text still reads at WCAG AA (4.5:1) on every surface; FaintLine is the quieter colour for lines,
+             tracks and outline icons that aren't text. -->
+        <SolidColorBrush x:Key="FaintTextBrush" Color="#91919A" />
+        <SolidColorBrush x:Key="FaintLineBrush" Color="#4A4A57" />
         <SolidColorBrush x:Key="AccentBrush" Color="#8B7CFF" />
         <SolidColorBrush x:Key="AccentSoftBrush" Color="#2A2550" />
         <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
@@ -423,7 +426,7 @@
                                          BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <DockPanel>
                                 <Path x:Name="Glass" DockPanel.Dock="Left" Style="{StaticResource LineIcon}" Data="{StaticResource SearchIcon}"
-                                      Stroke="{DynamicResource FaintTextBrush}" Margin="8,0,4,0" />
+                                      Stroke="{DynamicResource FaintLineBrush}" Margin="8,0,4,0" />
                                 <Grid Margin="{TemplateBinding Padding}">
                                     <TextBlock x:Name="Hint" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
                                                Margin="2,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
@@ -438,7 +441,7 @@
                                 <Setter TargetName="Hint" Property="Visibility" Value="Visible" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource FaintLineBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -467,7 +470,7 @@
                             </Grid.ColumnDefinitions>
                             <ContentPresenter VerticalAlignment="Center" Margin="2,0,12,0" />
                             <w:RoundedBorder x:Name="Track" Grid.Column="1" Width="36" Height="20" CornerRadius="{DynamicResource RoundCorner}"
-                                             Background="{DynamicResource FaintTextBrush}">
+                                             Background="{DynamicResource FaintLineBrush}">
                                 <w:RoundedBorder x:Name="Thumb" Width="14" Height="14" Margin="3,0" HorizontalAlignment="Left"
                                                  CornerRadius="{DynamicResource RoundCorner}" Background="{DynamicResource TextBrush}" />
                             </w:RoundedBorder>
@@ -500,7 +503,7 @@
                         </w:RoundedBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource FaintTextBrush}" />
+                                <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource FaintLineBrush}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -724,7 +727,10 @@
             </Setter>
         </Style>
 
-        <!-- Thin, unobtrusive scroll bar for the playlist. -->
+        <!-- Thin, unobtrusive scroll bar for the playlist. A long list still gets a thumb long enough to see and grab:
+             WPF's Track makes it at least half this "button height" (it would be 8 pixels). -->
+        <sys:Double x:Key="{x:Static SystemParameters.VerticalScrollBarButtonHeightKey}">72</sys:Double>
+        <sys:Double x:Key="{x:Static SystemParameters.HorizontalScrollBarButtonWidthKey}">72</sys:Double>
         <Style TargetType="ScrollBar">
             <Setter Property="Width" Value="6" />
             <Setter Property="MinWidth" Value="6" />
@@ -736,7 +742,15 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <w:RoundedBorder CornerRadius="{DynamicResource TrackCorner}" Background="{DynamicResource HoverBrush}" />
+                                            <w:RoundedBorder x:Name="Bar" CornerRadius="{DynamicResource TrackCorner}" Background="{DynamicResource FaintLineBrush}" />
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bar" Property="Background" Value="{DynamicResource MutedTextBrush}" />
+                                                </Trigger>
+                                                <Trigger Property="IsDragging" Value="True">
+                                                    <Setter TargetName="Bar" Property="Background" Value="{DynamicResource MutedTextBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -781,8 +795,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
-                        <!-- Scrolls when there are more items than fit on the screen. -->
-                        <w:RoundedBorder MinWidth="190" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
+                        <!-- Scrolls when there are more items than fit on the screen. The menu is opaque, so its text keeps
+                             ClearType even though the window it opens in is see-through (for the round corners). -->
+                        <w:RoundedBorder MinWidth="190" RenderOptions.ClearTypeHint="Enabled" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
                                          Background="{DynamicResource SurfaceRaisedBrush}"
                                          BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                             <ScrollViewer Focusable="False" CanContentScroll="False"
@@ -819,7 +834,7 @@
                             <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="6" VerticalOffset="-5"
                                    AllowsTransparency="True" Focusable="False" PopupAnimation="Fade"
                                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
-                                <w:RoundedBorder MinWidth="150" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
+                                <w:RoundedBorder MinWidth="150" RenderOptions.ClearTypeHint="Enabled" Padding="4" CornerRadius="{DynamicResource PanelCorner}"
                                                  Background="{DynamicResource SurfaceRaisedBrush}"
                                                  BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
                                     <ScrollViewer Focusable="False" CanContentScroll="False"

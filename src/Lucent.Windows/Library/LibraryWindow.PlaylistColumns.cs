@@ -18,6 +18,12 @@ public partial class LibraryWindow
     // The columns the open playlist shows now: the settings' ones its app fills, in their order.
     private List<PlaylistColumn> _playlistShown = new();
 
+    // The lines between the open playlist's headings, which resize its columns.
+    private ColumnGrips? _playlistColumnGrips;
+
+    private ColumnGrips PlaylistColumnGrips => _playlistColumnGrips ??= new ColumnGrips(PlaylistColumnHeader,
+        () => _playlistShown.Select(PlaylistColumns.Width).ToList(), ResizePlaylistColumns, FitPlaylistColumn, PlaylistColumnsResized);
+
     /// <summary>What the open playlist is sorted by: the settings' choice, or its own order when its app can't fill it.</summary>
     private PlaylistColumn ShownPlaylistSort =>
         _openRemoteList is { } list && PlaylistColumns.For(list).Contains(_settings.PlaylistSortColumn)
@@ -67,7 +73,7 @@ public partial class LibraryWindow
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Tag = column,
-                ToolTip = $"Sort by {PlaylistColumns.Label(column).ToLowerInvariant()}. Drag to move it.",
+                ToolTip = $"Sort by {PlaylistColumns.Label(column).ToLowerInvariant()}. {MoveOrResize}",
             };
             text.SetResourceReference(TextBlock.ForegroundProperty, PlaylistHeadingBrush(column));
             heading.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
@@ -82,6 +88,62 @@ public partial class LibraryWindow
         PlaylistTitleHeading.SetResourceReference(TextBlock.ForegroundProperty, PlaylistHeadingBrush(PlaylistColumn.Title));
         PlaylistLengthHeading.Text = PlaylistHeadingText(PlaylistColumn.Length);
         PlaylistLengthHeading.SetResourceReference(TextBlock.ForegroundProperty, PlaylistHeadingBrush(PlaylistColumn.Length));
+        PlaylistColumnGrips.Place();
+    }
+
+    /// <summary>Keeps new widths for the open playlist's columns and shows them.</summary>
+    private void ResizePlaylistColumns(double[] widths)
+    {
+        foreach (var (column, width) in _playlistShown.Zip(widths))
+        {
+            _settings.ColumnWidths[column.ToString()] = width;
+        }
+
+        ShowPlaylistColumnWidths();
+    }
+
+    /// <summary>Shows the open playlist's columns at their widths: their headings, and the cells in every row.</summary>
+    private void ShowPlaylistColumnWidths()
+    {
+        foreach (var heading in PlaylistColumnHeadings.Children.OfType<Border>())
+        {
+            if (heading.Tag is PlaylistColumn column)
+            {
+                heading.Width = PlaylistColumns.Width(column);
+            }
+        }
+
+        var widths = _playlistShown.Select(PlaylistColumns.Width).ToList();
+        foreach (var entry in _openRemoteEntries)
+        {
+            entry.Resize(widths);
+        }
+
+        PlaylistColumnGrips.Place();
+    }
+
+    /// <summary>The library's columns of the same names take the new widths too.</summary>
+    private void PlaylistColumnsResized()
+    {
+        _settings.Save();
+        ShowColumnWidths();
+    }
+
+    /// <summary>A double-click on a line: the column is made as wide as its widest text, heading included.</summary>
+    private void FitPlaylistColumn(int index)
+    {
+        if (index >= _playlistShown.Count)
+        {
+            return;
+        }
+
+        var widest = _openRemoteEntries.Where(entry => entry.Cells.Count > index).Select(entry => entry.Cells[index].Text)
+            .Where(text => text.Length > 0).Distinct().Select(text => TextWidth(text, 12))
+            .Append(TextWidth(PlaylistHeadingText(_playlistShown[index]), 11)).Max();
+        var widths = _playlistShown.Select(PlaylistColumns.Width).ToArray();
+        widths[index] = ColumnWidths.Fit(widths, index, widest, PlaylistColumnGrips.Room);
+        ResizePlaylistColumns(widths);
+        PlaylistColumnsResized();
     }
 
     /// <summary>The sorted column's heading has an arrow and stands out.</summary>
@@ -254,6 +316,7 @@ public partial class LibraryWindow
             menu.Items.Add(new Separator());
         }
 
+        AddResetWidths(menu.Items, _playlistShown.Select(shown => shown.ToString()).ToList());
         AddPlaylistColumnChoices(menu.Items);
     }
 }
