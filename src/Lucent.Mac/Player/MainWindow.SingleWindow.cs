@@ -268,7 +268,10 @@ public partial class MainWindow
             }
 
             BringBack(window, belong: false);
-            placed.Add((window, window.Position));
+            // Where it's meant to be, to put it back there once it's settled: shown again, macOS can pull a window onto
+            // the screen going by the size it had before (on a small screen, the visuals' own wide window was pushed off
+            // its panel's place, against the far edge, before it took the panel's width).
+            placed.Add((window, places.TryGetValue(window, out var meant) ? Placement.PositionAt(window, meant.X, meant.Y) : window.Position));
         }
 
         _ = BelongAfterLeaving(placed);

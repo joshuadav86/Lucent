@@ -22,12 +22,18 @@ public static class Placement
 
     public static void MoveTo(this Window window, double left, double top)
     {
-        var scale = Scale(window);
-        var position = new PixelPoint((int)Math.Round(left * scale), (int)Math.Round(top * scale));
+        var position = PositionAt(window, left, top);
         if (window.Position != position)
         {
             window.Position = position;
         }
+    }
+
+    /// <summary>The window's position on the screen, in pixels, for a place in its own units.</summary>
+    public static PixelPoint PositionAt(Window window, double left, double top)
+    {
+        var scale = Scale(window);
+        return new PixelPoint((int)Math.Round(left * scale), (int)Math.Round(top * scale));
     }
 
     /// <summary>
