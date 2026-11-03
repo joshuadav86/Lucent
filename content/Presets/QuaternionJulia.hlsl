@@ -1,5 +1,5 @@
 // Name: Quaternion Julia
-// A glossy four-dimensional Julia set sliced into our world, a sculpture of lacquered lobes and curls that slowly melts into new forms. Coloured rim lights follow the bass and treble, and every beat brightens its sheen.
+// A glossy four-dimensional Julia set sliced into our world, a sculpture of lacquered lobes and curls that slowly melts into new forms. Every beat swells its curls and sends a shell of light rolling out through its ridges, the music pushes the melt and the turn along, and coloured rim lights follow the bass and treble.
 // Family: Fractal
 // Tags: 3D, Dark
 // Added: 2026-10-17 21:50
@@ -64,22 +64,28 @@ float3 Render(float2 uv, float2 p)
     // The constant behaves like a complex number x + i r, with r pointing along a slowly turning axis.
     // x + i r wanders round the plump inner edge of the Mandelbrot set, and turning the axis changes
     // which slice of the four-dimensional shape we see, so it morphs forever.
-    float t = Time * 0.05;
-    float real = -0.46 + 0.07 * sin(t * 0.61);
-    float imaginary = 0.55 + 0.06 * sin(t * 0.43 + 1.0);
+    // The music pushes the melt along: BeatGlide eases forward on every beat and never goes back, so it never jolts.
+    float t = Time * 0.05 + BeatGlide * 0.015;
+    // Each beat swells the curls: the constant leans out towards the edge of the set and eases back,
+    // so the ridges deepen and spread like a breath. (BeatSwell rises over a fifth of a second, without a snap.)
+    float swell = BeatSwell * (0.6 + 0.4 * Level);
+    float real = -0.46 + 0.07 * sin(t * 0.61) - swell * 0.012;
+    float imaginary = 0.55 + 0.06 * sin(t * 0.43 + 1.0) + swell * 0.022;
     float3 axis = normalize(float3(cos(t * 0.37), 0.8 * sin(t * 0.29) + 0.3, 0.6 + 0.5 * sin(t * 0.21 + 2.0)));
     float4 c = float4(real, axis * imaginary);
 
-    float orbit = Time * 0.07;
-    float3 eye = float3(sin(orbit) * 2.9, 0.7 * sin(Time * 0.05) + 0.4, cos(orbit) * 2.9);
+    // The beat turns the sculpture a little further each time, and the camera leans in as it swells.
+    float orbit = Time * 0.07 + BeatGlide * 0.025;
+    float reach = 2.9 / (1.0 + BeatSwell * 0.07);
+    float3 eye = float3(sin(orbit) * reach, 0.7 * sin(Time * 0.05) + 0.4, cos(orbit) * reach);
     float3 target = float3(0.0, 0.0, 0.0);
     float3 direction = cameraRay(eye, target, float2(p.x, -p.y), 2.3, 0.08 * sin(Time * 0.04));
 
     // Rim light colours follow the low and high parts of the spectrum.
     float low = spectrum(0.08);
     float high = spectrum(0.6);
-    float3 warm = float3(1.0, 0.45, 0.18) * (0.5 + 1.2 * low);
-    float3 cool = float3(0.2, 0.55, 1.0) * (0.5 + 1.2 * high);
+    float3 warm = float3(1.0, 0.45, 0.18) * (0.4 + 1.5 * low);
+    float3 cool = float3(0.2, 0.55, 1.0) * (0.4 + 1.5 * high);
 
     // Backdrop: a soft pool of light behind the sculpture.
     float3 colour = juliaStudio(direction, warm * 0.3, cool * 0.3) * 0.25
@@ -148,15 +154,23 @@ float3 Render(float2 uv, float2 p)
             float rimRight = pow(saturate(dot(normal, normalize(float3(1.0, -0.1, 0.7)))), 2.0);
             float rimEdge = pow(1.0 - facing, 2.0);
 
+            // A shell of light rolls outward through the sculpture on every beat, tracing a glowing contour
+            // across the ridges. The beat clock walks it out, so it glides rather than jumps. (It follows the
+            // distance from the centre, which is smooth over the surface, so the fine ridges don't sparkle.)
+            float shell = length(position) * 1.5 - BeatGlide;
+            float ridgeLight = pow(0.5 + 0.5 * cos(2.0 * PI * shell), 12.0);
+            float3 ridgeColour = lerp(base, lerp(warm, cool, saturate(length(position) * 0.8)), 0.7);
+
             colour = base * (0.08 + 1.1 * diffuse + 0.3 * wrapLight) * occlusion
                    + (warm * rimLeft + cool * rimRight) * (0.15 + rimEdge) * 0.8 * occlusion
-                   + juliaStudio(reflected, warm, cool) * fresnel * (0.8 + Beat * 0.4) * occlusion
-                   + float3(1.0, 0.97, 0.92) * specular * (0.5 + Beat * 0.4 + Treble * 0.4) * occlusion;
+                   + juliaStudio(reflected, warm, cool) * fresnel * (0.8 + BeatSwell * 0.5) * occlusion
+                   + float3(1.0, 0.97, 0.92) * specular * (0.5 + BeatSwell * 0.5 + Treble * 0.5) * occlusion
+                   + ridgeColour * ridgeLight * (BeatSwell * 0.5 + Bass * 0.1) * (0.4 + 0.6 * occlusion);
         }
         else
         {
             // A faint glow hugging the silhouette.
-            colour += lerp(warm, cool, 0.5) * exp(-closest * 30.0) * 0.12;
+            colour += lerp(warm, cool, 0.5) * exp(-closest * 30.0) * (0.1 + BeatSwell * 0.12);
         }
     }
     return lerp(colour, previous(uv), 0.12);
