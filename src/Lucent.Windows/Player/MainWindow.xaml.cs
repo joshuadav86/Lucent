@@ -1646,6 +1646,8 @@ public partial class MainWindow : Window
         ApplyLook();
         // Once the skin's type has reached the equalizer's labels, or it'd be measured in the last skin's.
         Dispatcher.BeginInvoke(FitEqualizerToSkin, DispatcherPriority.Loaded);
+        // And again once everything else has caught up, for type that reaches it later still (it changes nothing if it fits).
+        Dispatcher.BeginInvoke(FitEqualizerToSkin, DispatcherPriority.ApplicationIdle);
         ShowOptionValues();
     }
 
