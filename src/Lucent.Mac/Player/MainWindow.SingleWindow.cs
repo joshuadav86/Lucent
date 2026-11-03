@@ -300,7 +300,9 @@ public partial class MainWindow
     private Dictionary<Window, Rect> PanelPlaces()
     {
         var places = new Dictionary<Window, Rect>();
-        if (_paneArea is not { Bounds.Width: > 0 } area || WindowState != WindowState.Normal)
+        // macOS counts a window filling its screen (the single window full screen) as zoomed, which is still on the
+        // screen as usual: only minimized or in a full-screen space of its own does it have no places to give.
+        if (_paneArea is not { Bounds.Width: > 0 } area || WindowState is not (WindowState.Normal or WindowState.Maximized))
         {
             return places;
         }
@@ -887,7 +889,7 @@ public partial class MainWindow
     /// <summary>Remembers where the single window is and its size (not while it fills the screen).</summary>
     private void SaveSingleWindowPlace()
     {
-        if (!InSingleWindow || WindowState != WindowState.Normal)
+        if (!InSingleWindow || WindowState is not (WindowState.Normal or WindowState.Maximized))
         {
             return;
         }
