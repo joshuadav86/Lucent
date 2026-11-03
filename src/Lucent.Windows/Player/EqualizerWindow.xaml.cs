@@ -384,6 +384,9 @@ public partial class EqualizerWindow : Window
     // Sized by hand rather than with SizeToContent, which leaves a stray strip with custom chrome.
     private void FitToContent()
     {
+        // Lays out what's waiting first. Measured again at the same size, it gives back its last answer when only
+        // something inside it has changed since (a skin's type reaching the labels), and keeps the last skin's height.
+        UpdateLayout();
         Root.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         Width = _fitWidth ?? Math.Ceiling(Root.DesiredSize.Width) + BorderThickness.Left + BorderThickness.Right;
         Height = Math.Ceiling(Root.DesiredSize.Height) + BorderThickness.Top + BorderThickness.Bottom;
