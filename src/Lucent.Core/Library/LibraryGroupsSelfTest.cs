@@ -42,9 +42,11 @@ public static class LibraryGroupsSelfTest
             Song("Comps/Fabric 50", "Three", "Floating Points", "Fabric 50", "", disc: 0, track: 3, day.AddDays(1)),
             // One with an album artist.
             Song("Comps/Late Night Tales", "Four", "Khruangbin", "Late Night Tales", "Bonobo", disc: 0, track: 1, day.AddDays(2)),
-            // Songs with no album, and none with no artist either.
+            // Songs with no album, and none with no artist either. "Demo" came first, so newest first lists it last
+            // although its name comes first.
             Song("Loose", "Single", "Bicep", "", "", disc: 0, track: 0, day.AddDays(3)),
             Song("Loose", "Mystery", "", "", "", disc: 0, track: 0, day.AddDays(4)),
+            Song("Loose", "Demo", "", "", "", disc: 0, track: 0, day.AddDays(-1)),
         };
 
         var failures = 0;
@@ -67,6 +69,38 @@ public static class LibraryGroupsSelfTest
             "Atlas", "Apricots", "Saku", "Hawk");
         Expect("folders newest first", order.Select(song => song.Heading).Distinct(),
             "Loose", "Comps / Late Night Tales", "Comps / Fabric 50", "Bicep / Isles");
+        Expect("loose songs newest first", order.Where(song => song.Folder == "Loose").Select(song => song.Title),
+            "Mystery", "Single", "Demo");
+
+        settings.LibrarySort = LibrarySort.Oldest;
+        order = Sorted(songs, settings);
+        Expect("folders oldest first", order.Select(song => song.Heading).Distinct(),
+            "Loose", "Bicep / Isles", "Comps / Fabric 50", "Comps / Late Night Tales");
+        Expect("loose songs oldest first", order.Where(song => song.Folder == "Loose").Select(song => song.Title),
+            "Demo", "Single", "Mystery");
+        Expect("album in track order oldest first", order.Where(song => song.Folder == "Bicep / Isles").Select(song => song.Title),
+            "Atlas", "Apricots", "Saku", "Hawk");
+
+        // A folder with an album and loose songs: the album stays together, where its newest song puts it.
+        var mixed = new List<LibraryItem>
+        {
+            Song("Mixed", "Old loose", "", "", "", disc: 0, track: 0, day),
+            Song("Mixed", "Side B", "Bicep", "Lost", "", disc: 0, track: 2, day.AddDays(2)),
+            Song("Mixed", "Side A", "Bicep", "Lost", "", disc: 0, track: 1, day.AddDays(1)),
+            Song("Mixed", "New loose", "", "", "", disc: 0, track: 0, day.AddDays(3)),
+        };
+        settings.LibrarySort = LibrarySort.Newest;
+        LibraryGroups.Assign(mixed, settings.LibraryGrouping);
+        Expect("album kept together among loose songs", Sorted(mixed, settings).Select(song => song.Title),
+            "New loose", "Side A", "Side B", "Old loose");
+
+        settings.LibrarySort = LibrarySort.Title;
+        Expect("folder by title", Sorted(songs, settings).Where(song => song.Folder == "Loose").Select(song => song.Title),
+            "Demo", "Mystery", "Single");
+        settings.LibrarySort = LibrarySort.Artist;
+        Expect("folder by artist, no artist last", Sorted(songs, settings).Where(song => song.Folder == "Loose").Select(song => song.Title),
+            "Single", "Demo", "Mystery");
+        settings.LibrarySort = LibrarySort.Newest;
 
         settings.LibraryGrouping = LibraryGrouping.Artists;
         LibraryGroups.Assign(songs, settings.LibraryGrouping);
@@ -89,10 +123,41 @@ public static class LibraryGroupsSelfTest
         // Without headings, sorting by artist lists each artist's albums in track order.
         settings.GroupLibraryByFolder = false;
         settings.LibrarySort = LibrarySort.Artist;
-        var flat = songs.ToList();
-        flat.Sort(LibraryItemComparer.For(settings).Compare);
+        var flat = Flat(songs, settings);
         Expect("by artist in album order", flat.Where(song => song.Artist.Equals("Bicep", StringComparison.OrdinalIgnoreCase))
             .Select(song => song.Title), "Atlas", "Apricots", "Saku", "Hawk", "Single");
+
+        // Every other order without headings.
+        settings.LibrarySort = LibrarySort.Newest;
+        Expect("newest first", Flat(songs, settings).Take(4).Select(song => song.Title), "Mystery", "Single", "Four", "One");
+        settings.LibrarySort = LibrarySort.Oldest;
+        Expect("oldest first", Flat(songs, settings).Take(3).Select(song => song.Title), "Demo", "Atlas", "Apricots");
+        settings.LibrarySort = LibrarySort.Title;
+        Expect("by title", Flat(songs, settings).Take(4).Select(song => song.Title), "Apricots", "Atlas", "Demo", "Four");
+        settings.LibrarySort = LibrarySort.FileName;
+        Expect("by file name", Flat(songs, settings).Take(2).Select(song => song.Title), "Apricots", "Atlas");
+
+        // Tag columns: a first click on Date added is newest first, a second oldest first; songs without the tag go last
+        // either way.
+        settings.LibrarySortColumn = LibraryColumn.Added;
+        settings.LibrarySortDescending = LibraryColumns.DescendingFirst(LibraryColumn.Added);
+        Expect("date added newest first", Flat(songs, settings).Take(2).Select(song => song.Title), "Mystery", "Single");
+        settings.LibrarySortDescending = false;
+        Expect("date added oldest first", Flat(songs, settings).Take(2).Select(song => song.Title), "Demo", "Atlas");
+        settings.LibrarySortColumn = LibraryColumn.Year;
+        Expect("year, missing last", Flat(songs, settings).Take(4).Select(song => song.Title).Concat(new[] { Flat(songs, settings)[^1].Title }),
+            "Atlas", "Apricots", "Saku", "Hawk", "Mystery");
+        settings.LibrarySortDescending = true;
+        Expect("year flipped, missing still last", Flat(songs, settings).Take(1).Select(song => song.Title), "Atlas");
+
+        // With folder headings, a column sorts the songs under each one by it.
+        settings.GroupLibraryByFolder = true;
+        settings.LibraryGrouping = LibraryGrouping.Folders;
+        LibraryGroups.Assign(songs, settings.LibraryGrouping);
+        settings.LibrarySortColumn = LibraryColumn.Added;
+        settings.LibrarySortDescending = true;
+        Expect("folder by date added", Sorted(songs, settings).Where(song => song.Folder == "Loose").Select(song => song.Title),
+            "Mystery", "Single", "Demo");
 
         log(failures == 0 ? "Library headings: OK" : $"Library headings: {failures} problem(s)");
         return failures;
@@ -107,6 +172,13 @@ public static class LibraryGroupsSelfTest
             item.ApplyTags(Track.Sample(path, title, artist, album, tags));
             return item;
         }
+    }
+
+    private static List<LibraryItem> Flat(List<LibraryItem> songs, AppSettings settings)
+    {
+        var sorted = songs.ToList();
+        sorted.Sort(LibraryItemComparer.For(settings).Compare);
+        return sorted;
     }
 
     private static List<LibraryItem> Sorted(List<LibraryItem> songs, AppSettings settings)
