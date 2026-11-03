@@ -213,8 +213,11 @@ public partial class MainWindow
         _sizeFromSingleWindow = true;
         _ = ForgetSizeFromSingleWindowSoon();
         _settings.SingleWindow = false;
-        // Where each panel is now, so each window opens just there and the windows look as the single window did.
+        // Where each panel is now, so each window opens just there and the windows look as the single window did,
+        // ending flush along the bottom.
         var places = PanelPlaces();
+        LineUpBottoms(places);
+        KeepOnScreen(places, ScreenArea.Of(this));
         var giveBack = _panes.Keys.ToList();
         foreach (var window in giveBack)
         {
@@ -340,6 +343,101 @@ public partial class MainWindow
         places[this] = new Rect(Left + player.X, Math.Abs(playerTop - areaTop) < 2 ? Top : playerTop - HeaderHeight,
             PlayerRoot.ActualWidth, PlayerRoot.ActualHeight + HeaderHeight);
         return places;
+    }
+
+    /// <summary>
+    /// The player and the panels under it keep their own sizes, so their column can end above the single window's
+    /// bottom, where the panels beside it run on to. As windows, those end where the column does instead, so nothing
+    /// hangs below the rest: the bottom one in each stack gives up the height (down to its smallest, then the one above
+    /// it). With nothing under the player there's no column to line up with, and the windows beside it keep their size.
+    /// </summary>
+    private void LineUpBottoms(Dictionary<Window, Rect> places)
+    {
+        if (!places.TryGetValue(this, out var player))
+        {
+            return;
+        }
+
+        var column = new List<Window> { this };
+        var bottom = player.Bottom;
+        while (places.FirstOrDefault(entry => !column.Contains(entry.Key) && Math.Abs(entry.Value.Top - bottom) < 2
+                   && entry.Value.Left > player.Left - 2 && entry.Value.Right < player.Right + 2).Key is { } under)
+        {
+            column.Add(under);
+            bottom = places[under].Bottom;
+        }
+
+        var lowest = places.Values.Max(place => place.Bottom);
+        if (column.Count == 1 || lowest - bottom < 2
+            || places.Any(entry => !column.Contains(entry.Key) && entry.Value.Bottom > bottom + 2
+                && entry.Value.Left < player.Right - 2 && entry.Value.Right > player.Left + 2))
+        {
+            return;
+        }
+
+        foreach (var window in places.Keys.Where(window => !column.Contains(window) && Math.Abs(places[window].Bottom - lowest) < 2).ToList())
+        {
+            // Up the stack from the bottom: each window gives up what it can, and the ones under it move up by as much.
+            var stack = new List<Window> { window };
+            while (places.FirstOrDefault(entry => !column.Contains(entry.Key) && !stack.Contains(entry.Key)
+                       && Math.Abs(entry.Value.Bottom - places[stack[^1]].Top) < 2
+                       && Math.Abs(entry.Value.Left - places[window].Left) < 2 && Math.Abs(entry.Value.Width - places[window].Width) < 2).Key is { } above)
+            {
+                stack.Add(above);
+            }
+
+            var spare = lowest - bottom;
+            foreach (var shrinking in stack)
+            {
+                var place = places[shrinking];
+                var take = Math.Min(spare, Math.Max(0, place.Height - Math.Max(shrinking.MinHeight, 1)));
+                spare -= take;
+                places[shrinking] = new Rect(place.Left, place.Top, place.Width, place.Height - take);
+                if (spare < 0.5)
+                {
+                    break;
+                }
+            }
+
+            // The ones under a window that gave something up move up to meet it.
+            for (var i = stack.Count - 2; i >= 0; i--)
+            {
+                var place = places[stack[i]];
+                var above = places[stack[i + 1]];
+                places[stack[i]] = new Rect(place.Left, above.Bottom, place.Width, place.Height);
+            }
+        }
+    }
+
+    /// <summary>
+    /// If the single window hung off the edge of its screen, the windows move onto it together, keeping their places
+    /// against each other (on their own, each would be pulled back on separately and land over the others). Too wide or
+    /// tall for the screen even then, the ones past its far edge give up the room, down to their smallest.
+    /// </summary>
+    private void KeepOnScreen(Dictionary<Window, Rect> places, Rect work)
+    {
+        if (places.Count == 0)
+        {
+            return;
+        }
+
+        var block = places.Values.Aggregate((a, b) => Rect.Union(a, b));
+        static double Shift(double start, double end, double low, double high) =>
+            end - start > high - low ? low - start : Math.Clamp(0, low - start, high - end);
+        var dx = Shift(block.Left, block.Right, work.Left, work.Right);
+        var dy = Shift(block.Top, block.Bottom, work.Top, work.Bottom);
+        foreach (var window in places.Keys.ToList())
+        {
+            var place = places[window];
+            var (left, top, width, height) = (place.Left + dx, place.Top + dy, place.Width, place.Height);
+            if (window != this && window is not EqualizerWindow)
+            {
+                width = Math.Min(width, Math.Max(window.MinWidth, work.Right - left));
+                height = Math.Min(height, Math.Max(window.MinHeight, work.Bottom - top));
+            }
+
+            places[window] = new Rect(left, top, width, height);
+        }
     }
 
     private async Task ForgetSizeFromSingleWindowSoon()

@@ -464,20 +464,86 @@ public partial class MainWindow : Window
             return;
         }
 
-        var delta = e.NewSize.Height - e.PreviousSize.Height;
-        var column = ColumnUnderPlayer(Top + e.PreviousSize.Height);
+        ShiftColumnUnder(Top + e.PreviousSize.Height, e.NewSize.Height - e.PreviousSize.Height);
+        AlignBesidePlayer();
+    }
+
+    /// <summary>
+    /// The windows stacked under <paramref name="edge"/> in the player's column move down by <paramref name="delta"/>
+    /// (up, if it's less than nothing), and the last one keeps its bottom edge where it was. If it can't (the
+    /// equalizer sizes itself), the column's bottom moves, and the windows beside it that ended there follow it.
+    /// </summary>
+    private void ShiftColumnUnder(double edge, double delta)
+    {
+        var column = ColumnUnderPlayer(edge);
+        var bottom = column.Count == 0 ? edge : column[^1].Top() + Placement.SizeOf(column[^1]).Height;
+        var moved = delta;
         for (var i = 0; i < column.Count; i++)
         {
             var window = column[i];
             var height = Placement.SizeOf(window).Height;
-            window.SetTop(window.Top() + delta);
+            var top = window.Top() + delta;
+            window.SetTop(top);
             if (i == column.Count - 1 && window.CanResize)
             {
                 window.Height = Math.Max(window.MinHeight, height - delta);
+                moved = top + window.Height - bottom;
             }
         }
 
-        AlignBesidePlayer();
+        FollowColumnBottom(bottom, bottom + moved, column);
+    }
+
+    /// <summary>
+    /// The windows that ended flush with the bottom of the player's column (at <paramref name="was"/>), beside it, end
+    /// where it does <paramref name="now"/>, so nothing's left hanging below it or stopping short of it (a skin's type
+    /// making the player a little taller, say). In a stack (the queue under the visuals, say), the top one takes up the
+    /// change and the ones under it move with it at their own heights, down to the next one up once it's at its smallest,
+    /// so the windows always meet, and picking skins back and forth leaves every one where it was.
+    /// </summary>
+    private void FollowColumnBottom(double was, double now, List<Window> column)
+    {
+        if (Math.Abs(now - was) < 0.5 || _settings.LucentFullScreen)
+        {
+            return;
+        }
+
+        var free = TiledWindows().Select(entry => entry.Window).Where(window => window != this && !column.Contains(window)
+            && window.WindowState == WindowState.Normal && !WindowLocks.IsLocked(window) && !(window == _visuals && _visuals.IsFullscreen)
+            && window.CanResize).ToList();
+        foreach (var last in free.Where(window => Math.Abs(window.Top() + Placement.SizeOf(window).Height - was) < 2).ToList())
+        {
+            // The stack it ends: it, the one just over it (in line with it and as wide), and so on up.
+            var stack = new List<Window> { last };
+            while (free.FirstOrDefault(window => !stack.Contains(window) && Math.Abs(window.Left() - stack[^1].Left()) < 2
+                && Math.Abs(Placement.SizeOf(window).Width - Placement.SizeOf(stack[^1]).Width) < 2
+                && Math.Abs(window.Top() + Placement.SizeOf(window).Height - stack[^1].Top()) < 2) is { } above)
+            {
+                stack.Add(above);
+            }
+
+            var heights = stack.Select(window => Placement.SizeOf(window).Height).ToList();
+            var change = now - was;
+            for (var i = stack.Count - 1; i >= 0 && Math.Abs(change) >= 0.5; i--)
+            {
+                var height = Math.Max(stack[i].MinHeight, heights[i] + change);
+                change -= height - heights[i];
+                heights[i] = height;
+            }
+
+            if (Math.Abs(change) >= 0.5)
+            {
+                continue;
+            }
+
+            var top = stack[^1].Top();
+            for (var i = stack.Count - 1; i >= 0; i--)
+            {
+                stack[i].SetTop(top);
+                stack[i].Height = heights[i];
+                top += heights[i];
+            }
+        }
     }
 
     /// <summary>
@@ -1211,12 +1277,19 @@ public partial class MainWindow : Window
 
             var width = Placement.SizeOf(window).Width;
             var beside = Math.Abs(window.Left() - (Left + ActualWidth)) < 2 || Math.Abs(window.Left() + width - Left) < 2;
-            if (beside && Math.Abs(window.Top() - Top) < 2)
+            // Not over a window under it, though (the artwork under the library, as single window can leave them).
+            var stretched = new Rect(window.Left(), window.Top(), width, Math.Max(window.MinHeight, height));
+            if (beside && Math.Abs(window.Top() - Top) < 2 && !CoversAnother(window, stretched))
             {
-                window.Height = Math.Max(window.MinHeight, height);
+                window.Height = stretched.Height;
             }
         }
     }
+
+    /// <summary>Whether <paramref name="window"/> at <paramref name="place"/> would be over another of the windows that are shown.</summary>
+    private bool CoversAnother(Window window, Rect place) => TiledWindows().Any(entry =>
+        entry.Window != window && entry.Window != this
+        && place.Intersect(Placement.BoundsOf(entry.Window)) is { Width: > 2, Height: > 2 });
 
     // Once the windows that just opened or closed have settled their sizes.
     private void AlignBesidePlayerSoon() =>
@@ -1580,15 +1653,7 @@ public partial class MainWindow : Window
                 ApplyLook();
                 break;
             case "Skin":
-                // A skin brings the theme it was made for; another theme can be picked after it. Picking one
-                // also brings back Lucent's own player if a classic skin was drawing it.
-                _settings.Skin = value;
-                _settings.ClassicSkin = null;
-                ApplyClassicSkin();
-                BuildClassicSkinSwatches();
-                _settings.Theme = SkinManager.Find(value).Theme;
-                ApplyLook();
-                ShowOptionValues();
+                ChooseSkin(value);
                 break;
             case "Updates":
                 _settings.EveryBuild = value == "EveryBuild";
@@ -1725,6 +1790,48 @@ public partial class MainWindow : Window
         ShowSoundValues();
         ShowTempoKeyState();
         ShowLastfmState();
+    }
+
+    /// <summary>
+    /// One of Lucent's own skins, as picked in Options › Look. A skin brings the theme it was made for; another theme
+    /// can be picked after it. Picking one also brings back Lucent's own player if a classic skin was drawing it.
+    /// </summary>
+    internal void ChooseSkin(string name)
+    {
+        _settings.Skin = name;
+        _settings.ClassicSkin = null;
+        ApplyClassicSkin();
+        BuildClassicSkinSwatches();
+        _settings.Theme = SkinManager.Find(name).Theme;
+        ApplyLook();
+        // Once the skin's type has reached the equalizer's labels, or it'd be measured in the last skin's.
+        Dispatcher.UIThread.Post(FitEqualizerToSkin, DispatcherPriority.Loaded);
+        ShowOptionValues();
+    }
+
+    /// <summary>
+    /// The equalizer lays its sliders out again in the skin's type, which can make it a little taller or shorter
+    /// (Linework's is), so none of it's cut off; the windows docked under it follow its bottom edge.
+    /// </summary>
+    private void FitEqualizerToSkin()
+    {
+        if (EqualizerWindow.Current is not { } equalizer)
+        {
+            return;
+        }
+
+        var height = Placement.SizeOf(equalizer).Height;
+        var bottom = equalizer.Top() + height;
+        equalizer.FitToSkin();
+        if (InSingleWindow)
+        {
+            RetileSoon();
+        }
+        else if (equalizer.IsVisible && equalizer.WindowState == WindowState.Normal && !double.IsNaN(equalizer.Height)
+            && Math.Abs(equalizer.Height - height) >= 0.5)
+        {
+            ShiftColumnUnder(bottom, equalizer.Height - height);
+        }
     }
 
     /// <summary>Applies the chosen theme and skin to every window.</summary>

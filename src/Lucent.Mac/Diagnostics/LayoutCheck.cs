@@ -17,7 +17,8 @@ namespace Lucent.Mac;
 /// the player and checks the windows around it went to the Dock too, and came back with it, and quits
 /// the way people do. On the way it checks the app menu has Lucent's items, Quit among them. Run again on the same settings with LUCENT_LAYOUT_CHECK_REOPENED=1, it first
 /// checks the windows came back as they were left: the visuals open, the equalizer under the player. Before minimizing it
-/// switches single window on and off (CheckSingleWindowAsync).
+/// switches single window on and off (CheckSingleWindowAsync), picking every skin and going full screen and back while
+/// it's on, and every skin again once it's off, the windows ending flush as one block each time they're apart.
 /// </summary>
 internal static class LayoutCheck
 {
@@ -206,20 +207,47 @@ internal static class LayoutCheck
             lines.Add((await SettleAsync(main, $"single window {width} x {height}")).Line);
         }
 
+        // Every skin picked in the single window (where picking Linework once squeezed it, hiding panels and keeping it
+        // from filling the screen), and full screen and back before and after.
+        if (main is MainWindow lucent)
+        {
+            lines.AddRange(await CheckFillAsync(lucent, "before changing skins"));
+            lines.AddRange(await CheckSkinsAsync(lucent, visuals, "in a single window"));
+            lines.AddRange(await CheckFillAsync(lucent, "after changing skins"));
+        }
+
         // Where the visuals' panel is on the screen as it ends: their window goes just there. A panel along the top
         // reaches up over the title bar, where the window's own goes, so its top is anywhere from there to the window's top.
         var panel = PanelOnScreen(main, visuals);
         var equalizer = EqualizerWindow.Current is { IsVisible: true } open ? open : null;
         var equalizerPanel = equalizer is null ? null : PanelOnScreen(main, equalizer);
+        // How far short of the single window's bottom the player's column (the player and equalizer, which keep their
+        // own sizes) stops: the windows beside it end that much higher as windows, flush with it.
+        var room = equalizerPanel is { } under ? Math.Max(0, Placement.BoundsOf(main).Bottom - under.Bottom) : 0;
+        // A single window hanging off the screen (on the Apple silicon runners' 1024-wide one, it does) brings the windows
+        // onto it together: sideways by just what that takes, and up or down by no more than the whole of it would need.
+        var screen = Placement.WorkArea(main);
+        var frame = Placement.BoundsOf(main);
+        var (blockLeft, blockRight) = (frame.X, new[] { panel, equalizerPanel }.Max(r => r?.Right ?? frame.X));
+        var blockBottom = new[] { panel, equalizerPanel }.Max(r => r?.Bottom ?? frame.Y);
+        var dx = OntoScreen(blockLeft, blockRight, screen.X, screen.Right);
+        var dyMost = OntoScreen(frame.Y, blockBottom, screen.Y, screen.Bottom);
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var back = !SingleWindow.IsOn() && visuals.GetVisualDescendants().OfType<MetalView>().Any() && IsOnScreen(visuals);
         lines.Add($"{(back ? "ok" : "MISMATCH")} single window off: the visuals {(back ? "are a window again" : "didn't come back as a window")}");
         lines.Add((await SettleAsync(visuals, "single window off")).Line);
+        var dy = main.Top() - frame.Y;
+        var moved = Math.Abs(main.Left() - frame.X - dx) <= 4 && dy >= Math.Min(0, dyMost) - 4 && dy <= Math.Max(0, dyMost) + 4;
+        lines.Add($"{(moved ? "ok" : "MISMATCH")} single window off: the player is at {Describe(main)}, the single window was at " +
+            $"{Describe(frame)} on a screen of {Describe(screen)}, so it moves {dx:0} across and up to {dyMost:0} down");
         var (x, y, w, h) = (visuals.Left(), visuals.Top(), visuals.ActualWidth(), visuals.ActualHeight());
+        // As wide as its panel, unless that's past the screen's edge once moved, where it gives up the room.
+        var wide = panel is { } o ? Math.Min(o.Width, Math.Max(visuals.MinWidth, screen.Right - (o.X + dx))) : 0;
         var where = panel is { } p
-            && Math.Abs(x - p.X) <= 4 && Math.Abs(w - p.Width) <= 4 && Math.Abs(y + h - p.Bottom) <= 4
-            && y >= main.Top() - 4 && y <= p.Y + 4;
+            && Math.Abs(x - (p.X + dx)) <= 4 && Math.Abs(w - wide) <= 4
+            && y + h <= p.Bottom + dy + 4 && y + h >= Math.Min(p.Bottom + dy, screen.Bottom) - room - 4
+            && y >= main.Top() - 4 && y <= p.Y + dy + 4;
         var panelText = panel is { } r ? $"{r.X:0},{r.Y:0} {r.Width:0} x {r.Height:0}" : "(not found)";
         lines.Add($"{(where ? "ok" : "MISMATCH")} single window off: the visuals are at {Describe(visuals)}, their panel was at {panelText}");
 
@@ -230,7 +258,7 @@ internal static class LayoutCheck
         if (equalizer is not null)
         {
             var eq = new Rect(equalizer.Left(), equalizer.Top(), equalizer.ActualWidth(), equalizer.ActualHeight());
-            var fits = equalizerPanel is { } e && Math.Abs(eq.X - e.X) <= 4 && Math.Abs(eq.Y - e.Y) <= 4 && Math.Abs(eq.Width - e.Width) <= 4;
+            var fits = equalizerPanel is { } e && Math.Abs(eq.X - (e.X + dx)) <= 4 && Math.Abs(eq.Y - (e.Y + dy)) <= 4 && Math.Abs(eq.Width - e.Width) <= 4;
             var equalizerText = equalizerPanel is { } q ? $"{q.X:0},{q.Y:0} {q.Width:0} x {q.Height:0}" : "(not found)";
             lines.Add($"{(fits ? "ok" : "MISMATCH")} single window off: the equalizer is at {Describe(equalizer)}, its panel was at {equalizerText}");
         }
@@ -239,6 +267,12 @@ internal static class LayoutCheck
             .Where(entry => entry.Item2 is not null)
             .Select(entry => (Name: entry.Item1, At: new Rect(entry.Item2!.Left(), entry.Item2.Top(), entry.Item2.ActualWidth(), entry.Item2.ActualHeight())))
             .ToList();
+        foreach (var (name, at) in shown.Where(entry => entry.At.X < screen.X - 4 || entry.At.Y < screen.Y - 4
+            || entry.At.Right > screen.Right + 4 || entry.At.Bottom > screen.Bottom + 4))
+        {
+            lines.Add($"MISMATCH single window off: the {name} at {Describe(at)} isn't wholly on the screen, {Describe(screen)}");
+        }
+
         for (var i = 0; i < shown.Count; i++)
         {
             for (var j = i + 1; j < shown.Count; j++)
@@ -251,8 +285,222 @@ internal static class LayoutCheck
             }
         }
 
+        lines.AddRange(CheckFlush(main, "single window off"));
+
+        // Then every skin again with the windows apart.
+        if (main is MainWindow apart)
+        {
+            lines.AddRange(await CheckSkinsAsync(apart, visuals, "as separate windows"));
+        }
+
         return lines;
     }
+
+    /// <summary>Each of Lucent's own skins, ending on Lucent's, which a fresh start has.</summary>
+    private static readonly string[] SkinsToCheck = { "Linework", "Verdes", "Glass", "Neon", "Studio", "Lucent" };
+
+    /// <summary>
+    /// Picks each skin in turn and checks nothing moved or shrank: the player's window where it was, and the visuals and
+    /// equalizer (their panels in a single window) where they were, give or take what a skin's type does to a height,
+    /// still shown, and not over each other, and the equalizer just tall enough for its sliders in the skin's type. Back
+    /// on Lucent's skin, everything's just where it started.
+    /// </summary>
+    private static async Task<List<string>> CheckSkinsAsync(MainWindow main, Window visuals, string label)
+    {
+        var lines = new List<string>();
+        var single = SingleWindow.IsOn();
+        var before = PlacesNow(main, visuals);
+        lines.Add($"skins {label}: before, " + DescribeAll(before));
+        foreach (var skin in SkinsToCheck)
+        {
+            main.ChooseSkin(skin);
+            await Task.Delay(TimeSpan.FromSeconds(1.5));
+            var now = PlacesNow(main, visuals);
+            var name = $"skins {label}: {skin}";
+            lines.Add($"{name}: " + DescribeAll(now));
+            // A skin's type can make the player a little taller or shorter, and what's under it moves with it. The
+            // single window itself stays put.
+            var heights = skin == "Lucent" ? 4 : 30;
+            foreach (var (what, was) in before)
+            {
+                if (!now.TryGetValue(what, out var place))
+                {
+                    lines.Add($"MISMATCH {name}: the {what} isn't shown any more");
+                }
+                else if (!Near(place, was, 4, what == "player" && single ? 4 : heights))
+                {
+                    lines.Add($"MISMATCH {name}: the {what} is at {Describe(place)}, was at {Describe(was)}");
+                }
+            }
+
+            if (!single)
+            {
+                lines.AddRange(CheckFlush(main, name));
+            }
+
+            if (!single && now.TryGetValue("player", out var player))
+            {
+                lines.Add($"{(Math.Abs(player.Width - before["player"].Width) <= 4 ? "ok" : "MISMATCH")} {name}: the player is {player.Width:0} wide, was {before["player"].Width:0}");
+            }
+
+            var keys = now.Keys.Where(key => !(single && key == "player")).ToList();
+            for (var i = 0; i < keys.Count; i++)
+            {
+                if (single && now.TryGetValue("player", out var frame) && !Near(frame.Intersect(now[keys[i]]), now[keys[i]], 4, 4))
+                {
+                    lines.Add($"MISMATCH {name}: the {keys[i]} at {Describe(now[keys[i]])} is outside the single window");
+                }
+
+                for (var j = i + 1; j < keys.Count; j++)
+                {
+                    var overlap = now[keys[i]].Intersect(now[keys[j]]);
+                    if (overlap.Width > 4 && overlap.Height > 4)
+                    {
+                        lines.Add($"MISMATCH {name}: the {keys[i]} and the {keys[j]} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                    }
+                }
+            }
+
+            if (EqualizerWindow.Current is { IsVisible: true } equalizer)
+            {
+                var needs = equalizer.HeightNeeded;
+                lines.Add($"{(Math.Abs(needs - equalizer.Height) <= 2 ? "ok" : "MISMATCH")} {name}: the equalizer is {equalizer.Height:0} tall, its sliders need {needs:0}");
+            }
+        }
+
+        return lines;
+    }
+
+    /// <summary>
+    /// The windows end flush, as one block with nothing hanging past the rest: each window's outer edges (the ones no
+    /// other window is against) are on the block's edges, and together they fill it. With nothing under the player,
+    /// the windows beside it are taller than it can be, so that isn't checked.
+    /// </summary>
+    private static List<string> CheckFlush(Window main, string label)
+    {
+        var lines = new List<string>();
+        var shown = new[] { main }.Concat(main.OwnedWindows.Where(IsOnScreen))
+            .Select(window => (Name: window == main ? "player" : window.Title ?? "window", At: Placement.BoundsOf(window)))
+            .Where(entry => entry.At.Width > 0 && entry.At.Height > 0)
+            .ToList();
+        var player = shown[0].At;
+        if (!shown.Skip(1).Any(entry => Touch(player.Bottom, entry.At.Y) && Across(player, entry.At)))
+        {
+            lines.Add($"{label}: nothing's under the player, so the windows beside it can't end flush with it");
+            return lines;
+        }
+
+        var block = shown.Select(entry => entry.At).Aggregate((a, b) => a.Union(b));
+        foreach (var (name, place) in shown)
+        {
+            var others = shown.Where(entry => entry.At != place).Select(entry => entry.At).ToList();
+            var off = new List<string>();
+            if (!others.Any(other => Touch(place.Bottom, other.Y) && Across(place, other)) && Math.Abs(place.Bottom - block.Bottom) > 4)
+            {
+                off.Add($"its bottom is at {place.Bottom:0}, the others' at {block.Bottom:0}");
+            }
+
+            if (!others.Any(other => Touch(place.Y, other.Bottom) && Across(place, other)) && Math.Abs(place.Y - block.Y) > 4)
+            {
+                off.Add($"its top is at {place.Y:0}, the others' at {block.Y:0}");
+            }
+
+            if (!others.Any(other => Touch(place.X, other.Right) && Down(place, other)) && Math.Abs(place.X - block.X) > 4)
+            {
+                off.Add($"its left is at {place.X:0}, the others' at {block.X:0}");
+            }
+
+            if (!others.Any(other => Touch(place.Right, other.X) && Down(place, other)) && Math.Abs(place.Right - block.Right) > 4)
+            {
+                off.Add($"its right is at {place.Right:0}, the others' at {block.Right:0}");
+            }
+
+            if (off.Count > 0)
+            {
+                lines.Add($"MISMATCH {label}: the {name} isn't flush with the other windows: {string.Join(", ", off)}");
+            }
+        }
+
+        var filled = shown.Sum(entry => entry.At.Width * entry.At.Height) / (block.Width * block.Height);
+        lines.Add($"{(filled >= 0.985 ? "ok" : "MISMATCH")} {label}: the windows end flush, filling {filled:P1} of the block they make at {Describe(block)}");
+        return lines;
+    }
+
+    /// <summary>Two edges together, give or take a few points.</summary>
+    private static bool Touch(double edge, double other) => Math.Abs(edge - other) <= 4;
+
+    /// <summary>Two places side by side across more than a few points (one over the other).</summary>
+    private static bool Across(Rect a, Rect b) => Math.Min(a.Right, b.Right) - Math.Max(a.X, b.X) > 4;
+
+    /// <summary>Two places alongside each other down more than a few points.</summary>
+    private static bool Down(Rect a, Rect b) => Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Y, b.Y) > 4;
+
+    /// <summary>
+    /// The player's window, and the visuals and equalizer: their panels in a single window (the player's window being
+    /// the single window then), their windows otherwise. One that isn't shown is left out.
+    /// </summary>
+    private static Dictionary<string, Rect> PlacesNow(MainWindow main, Window visuals)
+    {
+        var places = new Dictionary<string, Rect> { ["player"] = Placement.BoundsOf(main) };
+        var equalizer = EqualizerWindow.Current is { IsVisible: true } open ? open : null;
+        foreach (var (name, window) in new[] { ("visuals", (Window?)visuals), ("equalizer", equalizer) })
+        {
+            if (window is null)
+            {
+                continue;
+            }
+
+            if (SingleWindow.IsOn())
+            {
+                if (PanelOnScreen(main, window) is { } panel && SingleWindow.PaneOf(window) is { IsVisible: true })
+                {
+                    places[name] = panel;
+                }
+            }
+            else if (IsOnScreen(window))
+            {
+                places[name] = Placement.BoundsOf(window);
+            }
+        }
+
+        return places;
+    }
+
+    /// <summary>
+    /// Full screen in a single window: the window fills the usable part of its screen (give or take its title bar),
+    /// then goes back to just where it was.
+    /// </summary>
+    private static async Task<List<string>> CheckFillAsync(MainWindow main, string label)
+    {
+        var before = Placement.BoundsOf(main);
+        var screen = Placement.WorkArea(main);
+        main.ToggleLucentFullScreen();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var filled = Placement.BoundsOf(main);
+        var lines = new List<string>
+        {
+            $"{(Near(filled, screen, 4, 32) ? "ok" : "MISMATCH")} full screen {label}: the single window is at {Describe(filled)}, the screen at {Describe(screen)}",
+        };
+        main.ToggleLucentFullScreen();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var back = Placement.BoundsOf(main);
+        lines.Add($"{(Near(back, before, 4, 4) ? "ok" : "MISMATCH")} full screen {label} off: the single window is at {Describe(back)}, was at {Describe(before)}");
+        return lines;
+    }
+
+    private static string DescribeAll(Dictionary<string, Rect> places) =>
+        string.Join(", ", places.Select(entry => $"{entry.Key} {Describe(entry.Value)}"));
+
+    /// <summary>How far a span moves to be on the screen: to its near edge if it's too long for it, else just enough.</summary>
+    private static double OntoScreen(double start, double end, double low, double high) =>
+        end - start > high - low ? low - start : Math.Clamp(0, low - start, high - end);
+
+    private static string Describe(Rect rect) => $"{rect.X:0},{rect.Y:0} {rect.Width:0} x {rect.Height:0}";
+
+    /// <summary>Two places within <paramref name="across"/> in left and width, and <paramref name="down"/> in top and height.</summary>
+    private static bool Near(Rect a, Rect b, double across, double down) =>
+        a.Width > 0 && b.Width > 0 && Math.Abs(a.X - b.X) <= across && Math.Abs(a.Width - b.Width) <= across
+        && Math.Abs(a.Y - b.Y) <= down && Math.Abs(a.Height - b.Height) <= down;
 
     /// <summary>A window's panel in the single window, where it is on the screen, or null if it isn't one.</summary>
     private static Rect? PanelOnScreen(Window main, Window window)
