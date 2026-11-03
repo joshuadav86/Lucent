@@ -87,7 +87,7 @@ public partial class MainWindow
             CaptionRepaint.SetResizeMode(this, ResizeMode.CanMinimize);
             MinWidth = 0;
             MaxWidth = double.PositiveInfinity;
-            LucentPlayer.LayoutTransform = Transform.Identity;
+            ScalePlayer(1);
             return;
         }
 
@@ -283,8 +283,20 @@ public partial class MainWindow
         ScalePlayer(scale);
     }
 
-    private void ScalePlayer(double scale) =>
-        LucentPlayer.LayoutTransform = Math.Abs(scale - 1) < 0.001 ? Transform.Identity : new ScaleTransform(scale, scale);
+    private void ScalePlayer(double scale)
+    {
+        var scaled = Math.Abs(scale - 1) >= 0.001;
+        LucentPlayer.LayoutTransform = scaled ? new ScaleTransform(scale, scale) : Transform.Identity;
+        // Pixel-snapped text (see App) is laid out for its own size, so a scaled-up player uses WPF's smooth layout instead.
+        if (scaled)
+        {
+            TextOptions.SetTextFormattingMode(LucentPlayer, TextFormattingMode.Ideal);
+        }
+        else
+        {
+            LucentPlayer.ClearValue(TextOptions.TextFormattingModeProperty);
+        }
+    }
 
     /// <summary>
     /// Once a resize ends, the player's height goes back to following what's in it (Windows stops that

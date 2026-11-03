@@ -44,7 +44,7 @@
                 <ControlTemplate>
                     <Border Name="Chrome" CornerRadius="11" Background="{TemplateBinding Background}">
                         <Ellipse Name="Dot" Width="10" Height="10" StrokeThickness="1.5"
-                                 Stroke="{DynamicResource FaintTextBrush}" Fill="Transparent" />
+                                 Stroke="{DynamicResource FaintLineBrush}" Fill="Transparent" />
                     </Border>
                 </ControlTemplate>
             </Setter>
@@ -338,7 +338,7 @@
 
         <!-- The whole song, with the visible part marked -->
         <editor:OverviewView x:Name="Overview" Grid.Row="2" Height="38" Margin="14,10,14,0"
-                             WaveBrush="{DynamicResource FaintTextBrush}"
+                             WaveBrush="{DynamicResource FaintLineBrush}"
                              BackgroundBrush="{DynamicResource SurfaceBrush}"
                              WindowBrush="{DynamicResource AccentBrush}"
                              WindowBorderBrush="{DynamicResource AccentBrush}"

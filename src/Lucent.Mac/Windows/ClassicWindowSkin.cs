@@ -183,8 +183,10 @@ public static class ClassicWindowSkin
             Set("HoverBrush", Solid(Mix(background, text, 0.14)));
             Set("HairlineBrush", Solid(Mix(background, text, 0.2)));
             Set("TextBrush", Solid(text));
-            Set("MutedTextBrush", Solid(Mix(text, background, 0.35)));
-            Set("FaintTextBrush", Solid(Mix(text, background, 0.6)));
+            // Secondary text keeps most of the skin's text colour so it stays easy to read; lines and outlines can be quieter.
+            Set("MutedTextBrush", Solid(Mix(text, background, 0.25)));
+            Set("FaintTextBrush", Solid(Mix(text, background, 0.4)));
+            Set("FaintLineBrush", Solid(Mix(text, background, 0.6)));
             Set("AccentBrush", Solid(current));
             Set("AccentSoftBrush", Solid(selected));
             Set("AccentGradientBrush", new LinearGradientBrush

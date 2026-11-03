@@ -213,7 +213,7 @@ public partial class EditorWindow
             Content = new System.Windows.Shapes.Path
             {
                 Data = (Geometry)FindResource("StarIcon"),
-                Stroke = (Brush)FindResource(entry.IsFavorite ? "AccentBrush" : "FaintTextBrush"),
+                Stroke = (Brush)FindResource(entry.IsFavorite ? "AccentBrush" : "FaintLineBrush"),
                 Fill = entry.IsFavorite ? (Brush)FindResource("AccentBrush") : Brushes.Transparent,
                 StrokeThickness = 1.2,
                 StrokeLineJoin = PenLineJoin.Round,

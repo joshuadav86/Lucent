@@ -164,7 +164,7 @@ public sealed partial class Spectrogram : Control
         this.SetResourceReference(ThemeHighBrushProperty, "AccentBrush");
         this.SetResourceReference(ThemePeakBrushProperty, "TextBrush");
         this.SetResourceReference(WaveBrushProperty, "AccentGradientBrush");
-        this.SetResourceReference(GridBrushProperty, "FaintTextBrush");
+        this.SetResourceReference(GridBrushProperty, "FaintLineBrush");
         this.SetResourceReference(LabelBrushProperty, "TextBrush");
         this.SetResourceReference(AxisBrushProperty, "SurfaceBrush");
         ResourcesChanged += (_, _) => ForgetLabels();

@@ -54,8 +54,9 @@ public static class SkinManager
         new Skin("Verdes", "Square corners, raised buttons, and a black LCD, like the players of 1999.", "Emerald",
             "Tahoma, Segoe UI", "Lucida Console, Consolas", FontWeights.Normal,
             Rounding: 0, RoundShapes: false, SkinFinish.Bevel),
+        // Segoe's Display cut is drawn for big type, so the small text around the display uses its Text cut.
         new Skin("Glass", "Frosted panes, soft light, and big round buttons.", "Deep Ocean",
-            "Segoe UI Variable Display, Segoe UI", "Segoe UI Variable Display, Segoe UI", FontWeights.Light,
+            "Segoe UI Variable Text, Segoe UI", "Segoe UI Variable Display, Segoe UI", FontWeights.Light,
             Rounding: 1.6, RoundShapes: true, SkinFinish.Glass),
         new Skin("Neon", "Hard edges that glow in the accent colour, over scan lines.", "Ultraviolet",
             "Bahnschrift, Segoe UI", "Cascadia Mono, Consolas", FontWeights.SemiBold,

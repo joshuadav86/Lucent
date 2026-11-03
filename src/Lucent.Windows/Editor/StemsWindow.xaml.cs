@@ -292,7 +292,7 @@ public partial class StemsWindow : Window
         public void ShowState()
         {
             var audible = _window._mixer.IsAudible(_index);
-            _wave.Fill = (Brush)_window.FindResource(audible ? "AccentBrush" : "FaintTextBrush");
+            _wave.Fill = (Brush)_window.FindResource(audible ? "AccentBrush" : "FaintLineBrush");
             _wave.Opacity = audible ? 0.85 : 0.35;
         }
 

@@ -192,7 +192,7 @@
 
             <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="1" IsHitTestVisible="False"
                         VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintTextBrush}" HorizontalAlignment="Center" />
+                <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintLineBrush}" HorizontalAlignment="Center" />
                 <TextBlock Text="Drop music here" Margin="0,12,0,0" FontSize="13" HorizontalAlignment="Center"
                            Foreground="{DynamicResource MutedTextBrush}" />
                 <TextBlock Text="MP3 · FLAC · WAV · M4A · ALAC · WMA · OGG · Opus · AIFF" Margin="0,4,0,0"

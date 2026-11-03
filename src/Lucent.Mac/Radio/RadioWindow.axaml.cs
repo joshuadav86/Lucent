@@ -452,7 +452,7 @@ public partial class RadioWindow : Window
             Content = new Avalonia.Controls.Shapes.Path
             {
                 Data = ThemeIcon("StarIcon"),
-                Stroke = ThemeBrush(favorite ? "AccentBrush" : "FaintTextBrush"),
+                Stroke = ThemeBrush(favorite ? "AccentBrush" : "FaintLineBrush"),
                 Fill = favorite ? ThemeBrush("AccentBrush") : Brushes.Transparent,
                 StrokeThickness = 1.2,
                 StrokeLineCap = PenLineCap.Round,
@@ -494,7 +494,7 @@ public partial class RadioWindow : Window
             Content = new Avalonia.Controls.Shapes.Path
             {
                 Data = ThemeIcon("WebsiteIcon"),
-                Stroke = ThemeBrush("FaintTextBrush"),
+                Stroke = ThemeBrush("FaintLineBrush"),
                 StrokeThickness = 1.2,
                 Width = 12,
                 Height = 12,
@@ -526,7 +526,7 @@ public partial class RadioWindow : Window
             Content = new Avalonia.Controls.Shapes.Path
             {
                 Data = ThemeIcon("HeartIcon"),
-                Stroke = ThemeBrush("FaintTextBrush"),
+                Stroke = ThemeBrush("FaintLineBrush"),
                 StrokeThickness = 1.2,
                 Width = 12,
                 Height = 12,
@@ -577,7 +577,7 @@ public partial class RadioWindow : Window
             var camera = new Avalonia.Controls.Shapes.Path
             {
                 Data = ThemeIcon("VideoIcon"),
-                Stroke = ThemeBrush(playing ? "AccentBrush" : "FaintTextBrush"),
+                Stroke = ThemeBrush(playing ? "AccentBrush" : "FaintLineBrush"),
                 StrokeThickness = 1.2,
                 Width = 13,
                 Height = 13,

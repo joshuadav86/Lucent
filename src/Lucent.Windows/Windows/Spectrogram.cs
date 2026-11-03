@@ -141,7 +141,7 @@ public sealed partial class Spectrogram : FrameworkElement
         SetResourceReference(ThemeHighBrushProperty, "AccentBrush");
         SetResourceReference(ThemePeakBrushProperty, "TextBrush");
         SetResourceReference(WaveBrushProperty, "AccentGradientBrush");
-        SetResourceReference(GridBrushProperty, "FaintTextBrush");
+        SetResourceReference(GridBrushProperty, "FaintLineBrush");
         SetResourceReference(LabelBrushProperty, "TextBrush");
         SetResourceReference(AxisBrushProperty, "SurfaceBrush");
         BuildPalette();

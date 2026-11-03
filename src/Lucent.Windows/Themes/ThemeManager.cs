@@ -17,6 +17,7 @@ public sealed record Theme(
     string Text,
     string MutedText,
     string FaintText,
+    string FaintLine,
     string Accent,
     string AccentSoft,
     string GradientStart,
@@ -33,24 +34,24 @@ public static class ThemeManager
     public static IReadOnlyList<Theme> Themes { get; } = new[]
     {
         new Theme("Midnight", "#09090C", "#101015", "#16161D", "#1D1D26", "#1E1E28",
-            "#ECECF1", "#8A8A99", "#4A4A57", "#8B7CFF", "#2A2550", "#8B5CF6", "#22D3EE", "#FFFFFF"),
+            "#ECECF1", "#A7A7B3", "#91919A", "#4A4A57", "#8B7CFF", "#2A2550", "#8B5CF6", "#22D3EE", "#FFFFFF"),
         new Theme("Deep Ocean", "#050B14", "#0A1422", "#0F1C2E", "#15263C", "#172A40",
-            "#E6F1FF", "#7A93B0", "#415670", "#3B9EFF", "#0F2A4A", "#2563EB", "#22D3EE", "#FFFFFF"),
+            "#E6F1FF", "#9DB2CA", "#8798AC", "#415670", "#3B9EFF", "#0F2A4A", "#2563EB", "#22D3EE", "#FFFFFF"),
         new Theme("Glacier", "#E9EFF5", "#F5F8FB", "#FFFFFF", "#E1E9F2", "#D3DEE9",
-            "#0F1B2A", "#56677B", "#93A3B5", "#2563EB", "#DCE7FB", "#2563EB", "#06B6D4", "#FFFFFF"),
+            "#0F1B2A", "#3E4D60", "#5C6A7B", "#93A3B5", "#2563EB", "#DCE7FB", "#2563EB", "#06B6D4", "#FFFFFF"),
         new Theme("Ultraviolet", "#0B0614", "#120A1F", "#1A0F2B", "#241538", "#2A1840",
-            "#F3EAFF", "#9B87B8", "#5A4874", "#D946EF", "#3B1450", "#A855F7", "#EC4899", "#FFFFFF"),
+            "#F3EAFF", "#B19FCA", "#988AAC", "#5A4874", "#D946EF", "#3B1450", "#A855F7", "#EC4899", "#FFFFFF"),
         new Theme("Emerald", "#050F0C", "#0A1813", "#0F2019", "#142A21", "#173026",
-            "#E8FFF6", "#7BA394", "#3F6155", "#10D9A0", "#0D3A2D", "#10B981", "#22D3EE", "#04130E"),
+            "#E8FFF6", "#94B8AA", "#819E93", "#3F6155", "#10D9A0", "#0D3A2D", "#10B981", "#22D3EE", "#04130E"),
         new Theme("Ember", "#120806", "#1A0D09", "#22120C", "#2D1810", "#331C13",
-            "#FFF1EA", "#B08E80", "#6B5047", "#FF7A3D", "#4A1F0F", "#F97316", "#EF4444", "#FFFFFF"),
+            "#FFF1EA", "#C0A295", "#A28C84", "#6B5047", "#FF7A3D", "#4A1F0F", "#F97316", "#EF4444", "#FFFFFF"),
         new Theme("Graphite", "#0C0C0C", "#141414", "#1B1B1B", "#242424", "#262626",
-            "#F2F2F2", "#8C8C8C", "#505050", "#E5E5E5", "#2E2E2E", "#FAFAFA", "#A3A3A3", "#0C0C0C"),
+            "#F2F2F2", "#AFAFAF", "#979797", "#505050", "#E5E5E5", "#2E2E2E", "#FAFAFA", "#A3A3A3", "#0C0C0C"),
         new Theme("Rosé", "#120A0D", "#1A0F14", "#22141A", "#2C1A22", "#331F28",
-            "#FFEFF4", "#B48C9A", "#6E4E5A", "#FF8FB1", "#4A1F2E", "#F472B6", "#FB923C", "#FFFFFF"),
+            "#FFEFF4", "#C3A0AD", "#A68D96", "#6E4E5A", "#FF8FB1", "#4A1F2E", "#F472B6", "#FB923C", "#FFFFFF"),
         // True black and warm white, with no gradient: the visuals are the only colour. Made for Linework.
         new Theme("Ivory", "#000000", "#0A0A09", "#121211", "#1C1B19", "#2A2925",
-            "#EEEAE2", "#9A958B", "#5C5852", "#EEEAE2", "#26241F", "#EEEAE2", "#EEEAE2", "#000000"),
+            "#EEEAE2", "#A9A59B", "#918D86", "#5C5852", "#EEEAE2", "#26241F", "#EEEAE2", "#EEEAE2", "#000000"),
     };
 
     public static Theme Find(string? name) =>
@@ -67,6 +68,7 @@ public static class ThemeManager
         resources["TextBrush"] = Solid(theme.Text);
         resources["MutedTextBrush"] = Solid(theme.MutedText);
         resources["FaintTextBrush"] = Solid(theme.FaintText);
+        resources["FaintLineBrush"] = Solid(theme.FaintLine);
         resources["AccentBrush"] = Solid(theme.Accent);
         resources["AccentSoftBrush"] = Solid(theme.AccentSoft);
         resources["AccentGradientBrush"] = Gradient(theme);

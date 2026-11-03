@@ -145,7 +145,7 @@ public sealed class SpectrumMeter : Control
         }
 
         var fill = Find("AccentGradientBrush") ?? Brushes.White;
-        var faint = Find("FaintTextBrush") ?? Brushes.Gray;
+        var faint = Find("FaintLineBrush") ?? Brushes.Gray;
         var text = Find("TextBrush") ?? Brushes.White;
 
         switch (_mode)
