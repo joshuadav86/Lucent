@@ -11,7 +11,7 @@ namespace Lucent.Streaming;
 /// <remarks>
 /// The Mac reads the Spotify app through AppleScript instead (see the Mac's Streaming/SpotifyAppRemote.cs).
 /// </remarks>
-public sealed class SpotifyAppRemote : MediaControlsRemote, IRemoteOpener
+public sealed class SpotifyAppRemote : MediaControlsRemote, IRemoteOpener, IRemoteLinkPlayer
 {
     public override string Name => "Spotify";
 
@@ -30,6 +30,22 @@ public sealed class SpotifyAppRemote : MediaControlsRemote, IRemoteOpener
         {
             throw new RemoteProblem("Lucent couldn't find Spotify on this PC. Install it from spotify.com.");
         }
+    }
+
+    // Windows' Spotify takes play, pause and skip from other apps, but no song: its spotify: links only show one (starting
+    // Spotify first when it isn't running). So while its Web API has asked Lucent to wait, a song chosen in Lucent opens
+    // there, to press play on, unless Spotify starts it itself.
+    public Task<bool> PlayLinkAsync(string link, string? context, CancellationToken cancel)
+    {
+        // Only a spotify: link goes to Windows to open, never anything it could run.
+        if (!link.StartsWith("spotify:", StringComparison.Ordinal) || !link.All(c => char.IsAsciiLetterOrDigit(c) || c is ':' or '.' or '_' or '-'))
+        {
+            throw new RemoteProblem("Spotify didn't say which song this is. Play it in Spotify itself.");
+        }
+
+        return AppOpener.TryLink(link)
+            ? Task.FromResult(false)
+            : throw new RemoteProblem("Lucent couldn't find Spotify on this PC. Install it from spotify.com.");
     }
 
     protected override GlobalSystemMediaTransportControlsSession? Pick(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions) =>
