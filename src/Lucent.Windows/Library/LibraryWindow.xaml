@@ -87,7 +87,7 @@
                 </Button>
             </DockPanel>
 
-            <!-- The tag columns' headings, when any are shown (LibraryWindow.Columns.cs): a click sorts by one and
+            <!-- The title, tag columns' and length headings (LibraryWindow.Columns.cs): a click sorts by one and
                  another flips it, a drag moves one, and a right-click chooses them. They line up with the rows'
                  cells: the list's own inset (1), the rows' padding (12) and cover (36 + 2 + 10) on the left, and the inset,
                  padding and scroll bar (1 + 12 + 6) on the right, so the headings' lines meet the rows' lines. -->
@@ -101,11 +101,11 @@
                 <Grid.ContextMenu>
                     <ContextMenu />
                 </Grid.ContextMenu>
-                <TextBlock x:Name="TitleHeading" Grid.Column="0" Text="Title" FontSize="11" Cursor="Hand"
+                <TextBlock x:Name="TitleHeading" Grid.Column="0" Text="Title" FontSize="11" Padding="0,4" Cursor="Hand"
                            ToolTip="Sort by title" MouseLeftButtonUp="OnTitleHeadingClick" />
                 <StackPanel x:Name="ColumnHeadings" Grid.Column="1" Orientation="Horizontal" />
                 <Border Grid.Column="2" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource HairlineBrush}">
-                    <TextBlock x:Name="LengthHeading" Text="Length" FontSize="11" Cursor="Hand" TextAlignment="Right"
+                    <TextBlock x:Name="LengthHeading" Text="Length" FontSize="11" Padding="0,4" Cursor="Hand" TextAlignment="Right"
                                ToolTip="Sort by length" MouseLeftButtonUp="OnLengthHeadingClick" />
                 </Border>
             </Grid>
@@ -131,7 +131,7 @@
                         <MenuItem x:Name="ConvertItem" Header="Convert to…" Click="OnLibraryConvert" />
                         <MenuItem x:Name="ShowFileItem" Header="Show in File Explorer" Click="OnLibraryShowInExplorer" />
                         <Separator />
-                        <MenuItem Header="Find duplicates…" Click="OnFindDuplicates" />
+                        <MenuItem x:Name="FindDuplicatesItem" Header="Find duplicates…" Click="OnFindDuplicates" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <!-- A heading per folder. A store's folder (Bandcamp, Beatport) is one heading, with a
@@ -349,11 +349,11 @@
                     <Grid.ContextMenu>
                         <ContextMenu />
                     </Grid.ContextMenu>
-                    <TextBlock x:Name="PlaylistTitleHeading" Grid.Column="0" Text="Title" FontSize="11" Cursor="Hand"
+                    <TextBlock x:Name="PlaylistTitleHeading" Grid.Column="0" Text="Title" FontSize="11" Padding="0,4" Cursor="Hand"
                                ToolTip="Sort by title" MouseLeftButtonUp="OnPlaylistTitleHeadingClick" />
                     <StackPanel x:Name="PlaylistColumnHeadings" Grid.Column="1" Orientation="Horizontal" />
                     <Border Grid.Column="2" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource HairlineBrush}">
-                        <TextBlock x:Name="PlaylistLengthHeading" Text="Length" FontSize="11" Cursor="Hand" TextAlignment="Right"
+                        <TextBlock x:Name="PlaylistLengthHeading" Text="Length" FontSize="11" Padding="0,4" Cursor="Hand" TextAlignment="Right"
                                    ToolTip="Sort by length" MouseLeftButtonUp="OnPlaylistLengthHeadingClick" />
                     </Border>
                 </Grid>
@@ -377,6 +377,8 @@
                                 <MenuItem Header="Copy song link" Click="OnRemoteSongCopyLink" />
                                 <MenuItem Header="Copy song and link" Click="OnRemoteSongCopySongAndLink" />
                             </MenuItem>
+                            <Separator />
+                            <MenuItem x:Name="RemoteSongColumnsItem" Header="Columns" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListBox.ItemTemplate>
