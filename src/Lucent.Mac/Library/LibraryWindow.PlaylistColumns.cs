@@ -83,7 +83,7 @@ public partial class LibraryWindow
             {
                 Child = text,
                 Width = PlaylistColumns.Width(column),
-                Padding = new Thickness(8, 0, 8, 0),
+                Padding = HeadingPadding,
                 BorderThickness = new Thickness(1, 0, 0, 0),
                 Background = Brushes.Transparent,
                 Cursor = new Cursor(StandardCursorType.Hand),

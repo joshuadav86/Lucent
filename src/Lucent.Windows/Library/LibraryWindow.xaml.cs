@@ -820,6 +820,8 @@ public partial class LibraryWindow : ToolWindow
 
         RemotePlaylistView.SelectedItem = row;
         FillRemoteSongAddMenu(row);
+        RemoteSongColumnsItem.Items.Clear();
+        AddPlaylistColumnChoices(RemoteSongColumnsItem.Items);
     }
 
     // ---- Adding the open playlist's songs to the app's playlists, and sharing them, as in the queue window ----
@@ -1011,6 +1013,7 @@ public partial class LibraryWindow : ToolWindow
         var folders = new MenuItem { Header = "Back to library folders" };
         folders.Click += (_, _) => SetShowingPlaylists(false);
         menu.Items.Add(folders);
+        AddColumnsMenu(menu.Items);
         LucentFullScreen.AddTo(menu, this);
         menu.IsOpen = true;
     }
@@ -1451,6 +1454,8 @@ public partial class LibraryWindow : ToolWindow
                 menu.Items.Add(item);
             }
 
+            // The saved playlists' songs show the library's columns.
+            AddColumnsMenu(menu.Items);
             menu.IsOpen = true;
             return;
         }
@@ -1627,6 +1632,11 @@ public partial class LibraryWindow : ToolWindow
             LibraryMenu.Items.Insert(at++, item);
         }
 
+        // The tag columns, beside Find duplicates, so they can be brought back from any song.
+        var columns = ColumnsMenu();
+        LibraryMenu.Items.Insert(LibraryMenu.Items.IndexOf(FindDuplicatesItem) + 1, columns);
+        _songMenuItems.Add(columns);
+
         if (ShowingPlaylists)
         {
             // Under PLAYLISTS the bottom item takes the sounds out of the playlists they're listed in.
@@ -1683,6 +1693,7 @@ public partial class LibraryWindow : ToolWindow
         };
         menu.Items.Add(play);
         menu.Items.Add(queue);
+        AddColumnsMenu(menu.Items);
         LucentFullScreen.AddTo(menu, this);
         menu.IsOpen = true;
     }
@@ -1740,6 +1751,7 @@ public partial class LibraryWindow : ToolWindow
             menu.Items.Add(show);
         }
 
+        AddColumnsMenu(menu.Items);
         LucentFullScreen.AddTo(menu, this);
         menu.IsOpen = true;
     }

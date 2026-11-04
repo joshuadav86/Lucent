@@ -59,8 +59,9 @@ public partial class LibraryWindow
 
     private void UpdateColumnHeadings()
     {
-        // Under PLAYLISTS, only over saved playlists' songs; an opened streaming playlist has its own headings.
-        ColumnHeader.IsVisible = LibraryColumns.Shown.Count > 0 && !ShowingRemotePlaylist
+        // Shown even with no tag columns, so a right-click on it can always bring them back. Under PLAYLISTS, only over
+        // saved playlists' songs; an opened streaming playlist has its own headings.
+        ColumnHeader.IsVisible = !ShowingRemotePlaylist
             && (!ShowingPlaylists || _savedPlaylistItems.Any(item => !item.IsPlaceholder));
         ColumnHeadings.Children.Clear();
         foreach (var column in LibraryColumns.Shown)
@@ -76,7 +77,7 @@ public partial class LibraryWindow
             {
                 Child = text,
                 Width = LibraryColumns.Width(column),
-                Padding = new Thickness(8, 0, 8, 0),
+                Padding = HeadingPadding,
                 BorderThickness = new Thickness(1, 0, 0, 0),
                 Background = Brushes.Transparent,
                 Cursor = new Cursor(StandardCursorType.Hand),
@@ -103,6 +104,10 @@ public partial class LibraryWindow
 
     // The end of each heading's tooltip.
     private const string MoveOrResize = "Drag to move it, or drag the line beside it to resize it.";
+
+    // The space around a heading's text. The headings are taller than their text, so the lines between them are easy to
+    // grab; the title's and length's headings in the window's layout have the same space above and below.
+    private static readonly Thickness HeadingPadding = new(8, 4, 8, 4);
 
     /// <summary>Keeps new widths for the library's columns and shows them.</summary>
     private void ResizeColumns(double[] widths)
@@ -299,6 +304,20 @@ public partial class LibraryWindow
             _settings.Save();
             ApplyColumns();
         }
+    }
+
+    /// <summary>
+    /// "Columns" at the end of a heading's or the list's right-click menu, so the tag columns can always be found from the
+    /// list itself, even with none shown.
+    /// </summary>
+    private void AddColumnsMenu(ItemCollection items)
+    {
+        if (items.Count > 0 && items[^1] is not Separator)
+        {
+            items.Add(new Separator());
+        }
+
+        items.Add(ColumnsMenu());
     }
 
     /// <summary>"Columns": a tick for each tag that can be shown beside the songs.</summary>
