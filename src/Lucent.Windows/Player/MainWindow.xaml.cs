@@ -1644,10 +1644,11 @@ public partial class MainWindow : Window
         BuildClassicSkinSwatches();
         _settings.Theme = SkinManager.Find(name).Theme;
         ApplyLook();
-        // Once the skin's type has reached the equalizer's labels, or it'd be measured in the last skin's.
+        // The equalizer fits the skin's type straight away (it lays the new type out before measuring it). Left for
+        // later, it could wait for seconds behind the windows drawing every frame, still at the last skin's height.
+        FitEqualizerToSkin();
+        // And again once the rest of the skin has been laid out (it changes nothing if it fits).
         Dispatcher.BeginInvoke(FitEqualizerToSkin, DispatcherPriority.Loaded);
-        // And again once everything else has caught up, for type that reaches it later still (it changes nothing if it fits).
-        Dispatcher.BeginInvoke(FitEqualizerToSkin, DispatcherPriority.ApplicationIdle);
         ShowOptionValues();
     }
 
