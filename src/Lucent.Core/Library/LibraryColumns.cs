@@ -31,8 +31,14 @@ public enum LibraryColumn
     Comment,
 }
 
-/// <summary>One song's value in one column, as the row shows it.</summary>
-public sealed record LibraryCell(string Text, double Width, bool AlignRight);
+/// <summary>
+/// One song's value in one column, as the row shows it. Its width is the column's (<see cref="ColumnSize"/>), which every
+/// row shares, so dragging a column wider changes no row.
+/// </summary>
+public sealed record LibraryCell(string Text, ColumnSize Size, bool AlignRight)
+{
+    public double Width => Size.Width;
+}
 
 /// <summary>What each column is called, how wide it is, what it shows for a song, and how it sorts.</summary>
 public static class LibraryColumns
@@ -82,6 +88,9 @@ public static class LibraryColumns
     /// space either side of the text: the one it was dragged to (<see cref="ColumnWidths"/>), or its standard width.
     /// </summary>
     public static double Width(LibraryColumn column) => ColumnWidths.Of(column.ToString(), StandardWidth(column));
+
+    /// <summary>The column's width that its cells follow (see <see cref="ColumnWidths.Size"/>).</summary>
+    public static ColumnSize Size(LibraryColumn column) => ColumnWidths.Size(column.ToString(), StandardWidth(column));
 
     /// <summary>The column's width until it's dragged wider or narrower.</summary>
     public static double StandardWidth(LibraryColumn column) => column switch

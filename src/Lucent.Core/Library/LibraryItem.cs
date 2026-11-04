@@ -205,7 +205,7 @@ public sealed class LibraryItem : INotifyPropertyChanged
     public IReadOnlyList<LibraryCell> Cells => IsPlaceholder || RemotePlaylist is not null
         ? Array.Empty<LibraryCell>()
         : LibraryColumns.Shown
-            .Select(column => new LibraryCell(LibraryColumns.Text(column, this), LibraryColumns.Width(column), LibraryColumns.AlignRight(column)))
+            .Select(column => new LibraryCell(LibraryColumns.Text(column, this), LibraryColumns.Size(column), LibraryColumns.AlignRight(column)))
             .ToList();
 
     /// <summary>Whether the row has tag columns, so its time gets a divider line before it too.</summary>

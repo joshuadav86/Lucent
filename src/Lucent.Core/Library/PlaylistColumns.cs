@@ -53,7 +53,14 @@ public static class PlaylistColumns
 
     /// <summary>The column's width, with its divider line and the space either side of the text.</summary>
     public static double Width(PlaylistColumn column) =>
-        column == PlaylistColumn.Order ? ColumnWidths.Of(column.ToString(), 52) : LibraryColumns.Width(Same(column));
+        column == PlaylistColumn.Order ? ColumnWidths.Of(column.ToString(), OrderWidth) : LibraryColumns.Width(Same(column));
+
+    /// <summary>The column's width that its cells follow (see <see cref="ColumnWidths.Size"/>).</summary>
+    public static ColumnSize Size(PlaylistColumn column) =>
+        column == PlaylistColumn.Order ? ColumnWidths.Size(column.ToString(), OrderWidth) : LibraryColumns.Size(Same(column));
+
+    // The playlist order's standard width.
+    private const double OrderWidth = 52;
 
     public static bool AlignRight(PlaylistColumn column) =>
         column == PlaylistColumn.Order || LibraryColumns.AlignRight(Same(column));
@@ -74,7 +81,7 @@ public static class PlaylistColumns
     /// counting from 0.
     /// </summary>
     public static IReadOnlyList<LibraryCell> Cells(IReadOnlyList<PlaylistColumn> shown, RemoteTrack track, int order) =>
-        shown.Select(column => new LibraryCell(Text(column, track, order), Width(column), AlignRight(column))).ToList();
+        shown.Select(column => new LibraryCell(Text(column, track, order), Size(column), AlignRight(column))).ToList();
 
     /// <summary>What the song's row shows in the column; empty when the app doesn't say.</summary>
     public static string Text(PlaylistColumn column, RemoteTrack track, int order) => column switch

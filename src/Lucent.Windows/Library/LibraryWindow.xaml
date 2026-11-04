@@ -89,8 +89,9 @@
 
             <!-- The tag columns' headings, when any are shown (LibraryWindow.Columns.cs): a click sorts by one and
                  another flips it, a drag moves one, and a right-click chooses them. They line up with the rows'
-                 cells: the rows' padding (12) and cover (36 + 2 + 10) on the left, and the padding and scroll bar on the right. -->
-            <Grid x:Name="ColumnHeader" Grid.Row="3" Margin="60,0,18,2" Visibility="Collapsed" Background="Transparent"
+                 cells: the list's own inset (1), the rows' padding (12) and cover (36 + 2 + 10) on the left, and the inset,
+                 padding and scroll bar (1 + 12 + 6) on the right, so the headings' lines meet the rows' lines. -->
+            <Grid x:Name="ColumnHeader" Grid.Row="3" Margin="61,0,19,2" Visibility="Collapsed" Background="Transparent"
                   ContextMenuOpening="OnColumnHeaderMenuOpening">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -262,7 +263,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type core:LibraryCell}">
-                                        <Border Width="{Binding Width}" Padding="8,0" BorderThickness="1,0,0,0"
+                                        <Border Width="{Binding Size.Width}" Padding="8,0" BorderThickness="1,0,0,0"
                                                 BorderBrush="{DynamicResource HairlineBrush}">
                                             <TextBlock x:Name="Cell" Text="{Binding Text}" FontSize="12" VerticalAlignment="Center"
                                                        TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
@@ -336,9 +337,9 @@
                 </Button>
                 <!-- The playlist's column headings (LibraryWindow.PlaylistColumns.cs), as the library's: a click sorts by one
                      and another flips it, a drag moves one, and a right-click chooses them. They line up with the rows' cells:
-                     the rows' padding (12), playing bar (3) and cover (8 + 36 + 10) on the left, and the padding and scroll
-                     bar on the right. -->
-                <Grid x:Name="PlaylistColumnHeader" DockPanel.Dock="Top" Margin="69,0,18,2" Visibility="Collapsed" Background="Transparent"
+                     the list's own inset (1), the rows' padding (12), playing bar (3) and cover (8 + 36 + 10) on the left, and
+                     the inset, padding and scroll bar (1 + 12 + 6) on the right. -->
+                <Grid x:Name="PlaylistColumnHeader" DockPanel.Dock="Top" Margin="70,0,19,2" Visibility="Collapsed" Background="Transparent"
                       ContextMenuOpening="OnPlaylistColumnHeaderMenuOpening">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -408,7 +409,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type core:LibraryCell}">
-                                            <Border Width="{Binding Width}" Padding="8,0" BorderThickness="1,0,0,0"
+                                            <Border Width="{Binding Size.Width}" Padding="8,0" BorderThickness="1,0,0,0"
                                                     BorderBrush="{DynamicResource HairlineBrush}">
                                                 <TextBlock x:Name="Cell" Text="{Binding Text}" FontSize="12" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedTextBrush}" />
