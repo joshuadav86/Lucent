@@ -8,14 +8,15 @@ namespace Lucent;
 
 /// <summary>
 /// Makes the lines between a row of column headings draggable, as in a streaming app's playlist: over a line the mouse
-/// shows the resize cursor and the line lights up, dragging it resizes the columns either side
-/// (<see cref="ColumnWidths.Drag"/>), and a double-click fits the column to its widest text. The grips lie over the
-/// headings' grid, whose columns are the title, the tag columns' row, and the length.
+/// shows the resize cursor and the line lights up, dragging it moves the line with the mouse and resizes the columns
+/// either side (<see cref="ColumnWidths.Drag"/>), and a double-click fits them to their widest text. The grips lie over
+/// the headings' grid, whose columns are the title, the tag columns' row, and the length; the length's line has none, as
+/// the length stays as it is.
 /// </summary>
 internal sealed class ColumnGrips
 {
     // How wide the line can be grabbed: a few pixels either side of it.
-    private const double GripWidth = 9;
+    private const double GripWidth = 11;
 
     private readonly Grid _header;
     private readonly Canvas _grips = new();
@@ -53,7 +54,8 @@ internal sealed class ColumnGrips
     public void Place()
     {
         var widths = _widths();
-        var lines = widths.Count == 0 ? 0 : widths.Count + 1;
+        // A line on each tag column's left.
+        var lines = widths.Count;
         while (_grips.Children.Count < lines)
         {
             _grips.Children.Add(NewGrip());
@@ -72,10 +74,7 @@ internal sealed class ColumnGrips
             grip.Tag = line;
             grip.Height = _header.ActualHeight;
             Canvas.SetLeft(grip, Math.Round(x) - (GripWidth - 1) / 2);
-            if (line < widths.Count)
-            {
-                x += widths[line];
-            }
+            x += widths[line];
         }
     }
 
@@ -99,7 +98,11 @@ internal sealed class ColumnGrips
         e.Handled = true;
         if (e.ClickCount == 2)
         {
-            _fit(ColumnWidths.ColumnOf((int)grip.Tag));
+            foreach (var column in ColumnWidths.FittedBy((int)grip.Tag))
+            {
+                _fit(column);
+            }
+
             Place();
             return;
         }

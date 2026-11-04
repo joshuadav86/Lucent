@@ -34,6 +34,7 @@ public partial class LibraryWindow
     private void ApplyColumns()
     {
         ColumnWidths.Custom = _settings.ColumnWidths ??= new();
+        ColumnWidths.Refresh();
         var shown = _settings.LibraryColumnsShown.Where(LibraryColumns.Choosable.Contains).Distinct().ToList();
         if (!shown.SequenceEqual(LibraryColumns.Shown))
         {
@@ -117,15 +118,12 @@ public partial class LibraryWindow
             }
         }
 
-        foreach (var item in _library.Items.Concat(_playlistItems))
-        {
-            item.ColumnsChanged();
-        }
-
+        // Every row's cells follow their column's width, so nothing is rebuilt while a line is dragged.
+        ColumnWidths.Refresh();
         ColumnGrips.Place();
     }
 
-    /// <summary>A double-click on a line: the column is made as wide as its widest text, heading included.</summary>
+    /// <summary>A double-click on a line: a column beside it is made as wide as its widest text, heading included.</summary>
     private void FitColumn(int index)
     {
         if (index >= LibraryColumns.Shown.Count)
