@@ -5,6 +5,7 @@ lucentaudio.net, served by GitHub Pages from `site/` (`pages.yml`).
 ## What it does
 
 - One page: hero window tour (layered full-screen shot; chips toggle windows, click to zoom), visuals gallery with family counts, editor, analyzer, radio, and live video radio sections, downloads, and coffee link.
+- Updates page (`site/updates/`, lucentaudio.net/updates/): one entry per stable release from 1.2, newest first, with before/after shots of the bigger changes and plain-language new and fixed lists. The apps link to each release's entry after updating (`#v1-3` for 1.3).
 - Headline: "See what you're hearing." Lucent stands on its own: no Winamp comparisons in copy or branding (2026-10-30). Copy stays short. "Beta" labels until 1.0.
 - Display font is Sora (no fonts with notched letters).
 - Download buttons point at the "latest" release; once a stable release exists, `pages.yml` rewrites them to `releases/latest/download`.
