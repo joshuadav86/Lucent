@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucent updates</title>
+<meta name="description" content="What's new and what's fixed in each stable release of Lucent for Windows and Mac.">
+<meta property="og:title" content="Lucent updates">
+<meta property="og:description" content="What's new and what's fixed in each stable release of Lucent for Windows and Mac.">
+<meta property="og:image" content="https://lucentaudio.net/img/updates/1.2-windows-after.jpg">
+<meta property="og:url" content="https://lucentaudio.net/updates/">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/svg+xml" href="../img/lens.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../img/lens-32.png">
+<link rel="apple-touch-icon" href="../img/lens-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap">
+<style>
+/* The main page's Linework look: true black, warm white type, thin lines. Only the pictures carry color. */
+:root {
+  --bg: #000000; --fg: #EEEAE2; --muted: #9A958B;
+  --line: rgba(238,234,226,.16); --line-2: rgba(238,234,226,.34);
+  --font: "Jost", "Futura", "Century Gothic", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 400 17px/1.6 var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; }
+img { display: block; max-width: 100%; height: auto; }
+:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; }
+p { margin: 0; }
+h1, h2, h3 { font-weight: 500; margin: 0; text-wrap: balance; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.mark { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 5.5; }
+
+.nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 24px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand .mark { width: 31px; height: 22px; }
+.brand span { font: 500 20px/1 var(--font); }
+.nav-links { display: flex; gap: 24px; margin-left: auto; }
+.nav-links a { text-decoration: none; color: var(--muted); font-size: 15px; transition: color .2s; }
+.nav-links a:hover, .nav-links a[aria-current] { color: var(--fg); }
+.btn { display: inline-flex; align-items: center; text-decoration: none; padding: 10px 16px; font: 500 15px/1 var(--font); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-2); transition: box-shadow .2s; }
+.btn:hover { box-shadow: inset 0 0 0 1px var(--fg); }
+
+header.top { padding: 72px 0 40px; }
+header.top h1 { font-size: clamp(40px, 6vw, 72px); line-height: 1.04; letter-spacing: -.03em; }
+header.top p { color: var(--muted); font-size: 19px; max-width: 56ch; margin-top: 16px; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 24px; font-size: 15px; color: var(--muted); }
+.toc a { text-decoration: none; }
+.toc a:hover { color: var(--fg); }
+
+.release { border-top: 1px solid var(--line); padding: 48px 0 72px; scroll-margin-top: 64px; }
+.release > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+.release h2 { font-size: clamp(32px, 4.4vw, 48px); line-height: 1.04; letter-spacing: -.025em; }
+.release time, .release .for { color: var(--muted); font-size: 15px; }
+.release .summary { margin-top: 14px; max-width: 64ch; font-size: 19px; color: var(--muted); }
+
+.feature { margin-top: 56px; }
+.feature h3 { font-size: 24px; line-height: 1.25; letter-spacing: -.01em; }
+.feature > p { margin-top: 8px; max-width: 64ch; color: var(--muted); }
+.feature > p strong { color: var(--fg); font-weight: 500; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 22px; }
+.pair.wide { grid-template-columns: 1fr; }
+figure { margin: 0; }
+figure a { display: block; border: 1px solid var(--line); }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+figcaption b { color: var(--fg); font-weight: 500; }
+.single { margin-top: 22px; max-width: 520px; }
+.visuals { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 22px; }
+.visuals figure img { aspect-ratio: 16 / 9; object-fit: cover; width: 100%; border: 1px solid var(--line); }
+
+.list { margin-top: 64px; display: grid; gap: 48px; max-width: 760px; }
+.list h3 { font-size: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.list ul { list-style: none; margin: 0; padding: 0; }
+.list li { padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 16px; line-height: 1.5; }
+.list li strong { color: var(--fg); font-weight: 500; }
+.tag { display: inline-block; font-size: 12px; line-height: 1; padding: 3px 6px; margin-left: 6px; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-2); vertical-align: 2px; }
+.list .group { margin-top: 28px; }
+.list .group:first-of-type { margin-top: 0; }
+.list h4 { font: 500 15px/1.2 var(--font); color: var(--fg); margin: 18px 0 2px; }
+
+footer { border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; align-items: center; padding-block: 28px; font-size: 15px; color: var(--muted); }
+footer .brand { color: var(--fg); }
+footer nav { display: flex; gap: 20px; flex-wrap: wrap; }
+footer a { text-decoration: none; }
+footer a:hover { color: var(--fg); }
+footer .credits { flex-basis: 100%; font-size: 13px; opacity: .8; }
+
+@media (max-width: 760px) {
+  .nav-links { display: none; }
+  .nav .btn { margin-left: auto; }
+  header.top { padding: 48px 0 28px; }
+  .pair { grid-template-columns: 1fr; }
+}
+</style>
+<!-- Private visit counts (GoatCounter: no cookies, nothing personal). The dashboard is private. -->
+<script data-goatcounter="https://joshuadav86.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="mk" viewBox="7 19 86 62"><path d="M10 50A46.19 46.19 0 0 1 90 50A46.19 46.19 0 0 1 10 50Z"/><path d="M10 50 C13.33 50 16.67 47.43 20 45.31 C23.33 43.19 26.67 41.16 30 40.41 C33.33 39.66 36.67 40.21 40 42.04 C43.33 43.86 46.67 46.91 50 50 C53.33 53.09 56.67 56.14 60 57.96 C63.33 59.79 66.67 60.34 70 59.59 C73.33 58.84 76.67 56.81 80 54.69 C83.33 52.57 86.67 50 90 50"/></symbol></svg>
+<div class="nav">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="Lucent home"><svg class="mark" aria-hidden="true"><use href="#mk"/></svg><span>Lucent</span></a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="../">Home</a>
+      <a href="./" aria-current="page">Updates</a>
+      <a href="../#about">About</a>
+    </nav>
+    <a class="btn" href="../#download">Download</a>
+  </div>
+</div>
+
+<main class="wrap">
+  <header class="top">
+    <h1>Updates</h1>
+    <p>What's new and what's fixed in each stable release of Lucent, for Windows and Mac. If Lucent is installed, it updates itself.</p>
+    <nav class="toc" aria-label="Releases"><a href="#v1-2">1.2</a></nav>
+  </header>
+
+  <!-- One <article class="release"> per stable release, newest first. Images go in img/updates/<version>-*. -->
+  <article class="release" id="v1-2" aria-labelledby="v1-2-title">
+    <header>
+      <h2 id="v1-2-title">Lucent 1.2</h2>
+      <time datetime="2026-11-04">November 4, 2026</time>
+      <span class="for">Windows and Mac</span>
+    </header>
+    <p class="summary">Everything can live in one window now, playlists can mix Spotify with your own files, and text is easier to read. There are thirteen new visuals and a long list of fixes.</p>
+
+    <section class="feature" aria-labelledby="f-one-window">
+      <h3 id="f-one-window">Everything in one window</h3>
+      <p>The player, visuals, library, queue, equalizer, and artwork can now sit together as panels in one window, under one title bar. Drag a panel onto another to swap them, drag the lines between panels to resize them, and saved layouts remember how you set it up. <strong>Press U</strong> to switch between one window and separate windows.</p>
+      <div class="pair">
+        <figure>
+          <a href="../img/updates/1.2-windows-before.jpg"><img src="../img/updates/1.2-windows-before.jpg" width="1600" height="900" loading="lazy" alt="Lucent 1.1 with the player, library, equalizer, queue, visuals, analyzer, and radio each in its own window"></a>
+          <figcaption><b>Before</b> · each part was its own window</figcaption>
+        </figure>
+        <figure>
+          <a href="../img/updates/1.2-windows-after.jpg"><img src="../img/updates/1.2-windows-after.jpg" width="1600" height="900" loading="lazy" alt="Lucent 1.2 with the player, equalizer, queue, visuals, library, and artwork as panels in one window"></a>
+          <figcaption><b>After</b> · one window, one title bar</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="feature" aria-labelledby="f-library">
+      <h3 id="f-library">Easier-to-read library, with columns you can resize</h3>
+      <p>Artist names, dates, and other secondary text are brighter, and Windows draws small text sharper. Library columns now resize by dragging the lines between their headings, you can pick columns from any right-click menu in the list, and newest first works inside folders.</p>
+      <div class="pair">
+        <figure>
+          <a href="../img/updates/1.2-library-before.png"><img src="../img/updates/1.2-library-before.png" width="658" height="560" loading="lazy" alt="The Lucent 1.1 library, with faint gray artist names, years, and lengths"></a>
+          <figcaption><b>Before</b> · faint secondary text</figcaption>
+        </figure>
+        <figure>
+          <a href="../img/updates/1.2-library-after.png"><img src="../img/updates/1.2-library-after.png" width="658" height="560" loading="lazy" alt="The Lucent 1.2 library, with brighter artist names, years, and lengths"></a>
+          <figcaption><b>After</b> · clearer text, resizable columns</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="feature" aria-labelledby="f-linework">
+      <h3 id="f-linework">A new skin, Linework, and a slimmer logo</h3>
+      <p>Linework is a quiet black and warm white skin, with its own Ivory theme. Pick it under Skins. The usual Lucent look stays the default, and the app wears the new slim lens logo.</p>
+      <figure class="single">
+        <a href="../img/updates/1.2-linework.png"><img src="../img/updates/1.2-linework.png" width="520" height="214" loading="lazy" alt="The Lucent player in the Linework skin, black with warm white type and controls"></a>
+        <figcaption>The player in Linework</figcaption>
+      </figure>
+    </section>
+
+    <section class="feature" aria-labelledby="f-playlists">
+      <h3 id="f-playlists">Playlists that mix Spotify and your files</h3>
+      <p>A Lucent playlist can hold Spotify songs and your own music side by side. Add songs from the playlist itself, by dropping music on it, or straight into a new Spotify playlist. Saved playlists also show the library's tag columns and sort by them.</p>
+    </section>
+
+    <section class="feature" aria-labelledby="f-streaming">
+      <h3 id="f-streaming">The equalizer works on Spotify and other apps</h3>
+      <p>Turn it on, and the equalizer shapes the sound of Spotify and other streaming apps, not just Lucent's own music. The volume bar now sets your computer's volume, so it sounds the same whatever is playing, while the visuals still hear every app.</p>
+    </section>
+
+    <section class="feature" aria-labelledby="f-visuals">
+      <h3 id="f-visuals">Thirteen new visuals, and you can play with them</h3>
+      <p>New originals include Neon Maze, Lucent Bounce, Riemann Sphere, Hyperboloid, Dupin Cyclide, Loxodrome, Tetra Vortex, Boy's Surface, Enneper Bloom, Epicycle Rosette, Polytope Bloom, Superformula, and Spiral Shell. Abyssal Glow now drifts past glowing radiolarians, Quaternion Julia swells with the music, and a dozen more got a fresh 2.0 look. On particle visuals, <strong>move the mouse</strong> to push the particles, click and hold to gather them, and drag to grab and throw them. You can turn that off in the visuals menu.</p>
+      <div class="visuals">
+        <figure><img src="../img/clips/neon-maze.jpg" width="640" height="360" loading="lazy" alt="Neon Maze, a glowing corridor flying forward"><figcaption>Neon Maze</figcaption></figure>
+        <figure><img src="../img/clips/riemann-sphere.jpg" width="640" height="360" loading="lazy" alt="Riemann Sphere, a glowing wire globe over rings"><figcaption>Riemann Sphere</figcaption></figure>
+        <figure><img src="../img/updates/1.2-hyperboloid.jpg" width="640" height="360" loading="lazy" alt="Hyperboloid, an hourglass of straight neon lines"><figcaption>Hyperboloid</figcaption></figure>
+        <figure><img src="../img/updates/1.2-dupin-cyclide.jpg" width="640" height="360" loading="lazy" alt="Dupin Cyclide, a tilted wireframe ring"><figcaption>Dupin Cyclide</figcaption></figure>
+        <figure><img src="../img/updates/1.2-abyssal-glow.jpg" width="640" height="360" loading="lazy" alt="Abyssal Glow, glowing radiolarians drifting in the dark"><figcaption>Abyssal Glow</figcaption></figure>
+      </div>
+    </section>
+
+    <div class="list">
+      <section aria-labelledby="v1-2-new">
+        <h3 id="v1-2-new">Also new</h3>
+        <ul>
+          <li><strong>Power choice for the visuals:</strong> Auto, Smoothest, Balanced, or Power saver.</li>
+          <li><strong>Advanced menu</strong> in the visuals' right-click menu, to see, edit, and recompile a visual's shader.</li>
+          <li><strong>Drag the equalizer's curve</strong> up or down to move the slider under it.</li>
+          <li><strong>Tooltips</strong> explain the options in the visuals menu.</li>
+          <li><strong>Adding a folder shows its progress</strong> while Lucent reads it.</li>
+          <li><strong>Visuals move more smoothly with the beat:</strong> they swell instead of snapping, and fly-throughs ease forward instead of jolting.</li>
+          <li><strong>The equalizer tells you</strong> when a streaming app is playing its own sound.</li>
+          <li><strong>Classic skins frame every window,</strong> and the Retro skin is now called Verdes.</li>
+          <li><strong>Add to playlist and Share</strong> work on songs in a playlist opened in the library.</li>
+        </ul>
+      </section>
+      <section aria-labelledby="v1-2-fixed">
+        <h3 id="v1-2-fixed">Fixed</h3>
+        <h4>Windows and layout</h4>
+        <ul>
+          <li>Windows stay put and line up flush when you switch skins or turn one window on and off.</li>
+          <li>The player keeps its size unless you drag its own edge. Ctrl+0 (Cmd+0 on Mac) puts it back.</li>
+          <li>Saved layouts open on the player's screen, and the default layout puts a stretched player back to its usual size.</li>
+          <li>Leaving full screen keeps the windows together around the player, and the equalizer fills the player's column in full screen.</li>
+          <li>One window no longer freezes with a big library or queue, and the mouse wheel scrolls lists there instead of changing the volume.</li>
+          <li>Online radio opens in one window without a blank window over it.</li>
+          <li>Name and question boxes open centered on Lucent.</li>
+          <li>Dragging window edges between docked windows is smooth and stops at locked ones.</li>
+          <li>Lucent's own title bar buttons stay after switching skins.</li>
+          <li>The classic skin playlist keeps its bottom bar below the songs.</li>
+          <li>The equalizer takes a new skin's height straight away.<span class="tag">Windows</span></li>
+          <li>Windows go back where they were after one window is turned off, including at full screen.<span class="tag">Mac</span></li>
+        </ul>
+        <h4>Spotify and streaming apps</h4>
+        <ul>
+          <li>Song changes from Spotify and other apps show straight away.</li>
+          <li>The visuals pick up Spotify's sound again on their own if listening stalls.</li>
+          <li>When Spotify asks Lucent to wait, Lucent waits as long as asked, sends songs you pick to the Spotify app meanwhile, and asks Spotify less often while idle.</li>
+          <li>The analyzer and meters keep a steady frame rate while another app plays, and the volume bar no longer changes what the analyzer shows.</li>
+        </ul>
+        <h4>Visuals</h4>
+        <ul>
+          <li>Chrome Blobs and six other visuals no longer flicker the longer they play.</li>
+          <li>Visuals keep their full frame rate while another app has focus.</li>
+          <li>Volcanic Eruption runs much faster.</li>
+          <li>MilkDrop presets that were missing some effects draw them again.</li>
+          <li>MilkDrop presets draw all their waves and shapes.<span class="tag">Windows</span></li>
+        </ul>
+        <h4>Everything else</h4>
+        <ul>
+          <li>Updates install quietly when Lucent closes, without the UPDATE button coming back after every build.</li>
+          <li>Updates install even when a File Explorer window is open in Lucent's folder.<span class="tag">Windows</span></li>
+          <li>Settings survive a crash in the middle of saving.</li>
+          <li>Saving a song's info waits out a briefly locked file, and says which program is holding it.</li>
+          <li>Damaged audio files, skins, and radio streams are handled more safely.</li>
+          <li>Long playlists glide smoothly all the way to the playing song.</li>
+          <li>A video played again from partway after it ended shows the right time.</li>
+          <li>The seek bar fills right up to its handle, and menu tooltips close when their submenu opens.</li>
+        </ul>
+      </section>
+    </div>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="../"><svg class="mark" aria-hidden="true"><use href="#mk"/></svg><span>Lucent</span></a>
+    <nav aria-label="Footer">
+      <a href="../">Home</a><a href="../#download">Download</a><a href="https://github.com/joshuadav86/Lucid/issues/new?template=bug_report.yml" target="_blank" rel="noopener">Report a bug</a><a href="../#about">Contact</a>
+    </nav>
+    <span class="credits">Isles cover art © Bicep. Other album art © its owners. Shown to illustrate Lucent playing them; all rights stay with their owners.</span>
+  </div>
+</footer>
+</body>
+</html>
