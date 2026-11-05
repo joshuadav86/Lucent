@@ -303,6 +303,7 @@ public partial class MainWindow : Window
         _updater.InstallAutomatically = _settings.InstallUpdatesAutomatically;
         _ = _updater.RunAsync();
         RestoreQueue();
+        OfferReleaseNotes();
         AddStarterMusic();
         StartOpeningFiles();
         StartStreaming();

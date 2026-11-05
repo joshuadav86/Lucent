@@ -40,6 +40,7 @@ h1, h2, h3 { font-weight: 500; margin: 0; text-wrap: balance; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand .mark { width: 31px; height: 22px; }
 .brand span { font: 500 20px/1 var(--font); }
+.brand .beta { font: 400 12px/1 var(--font); color: var(--muted); align-self: flex-start; margin-top: 2px; letter-spacing: .02em; }
 .nav-links { display: flex; gap: 24px; margin-left: auto; }
 .nav-links a { text-decoration: none; color: var(--muted); font-size: 15px; transition: color .2s; }
 .nav-links a:hover, .nav-links a[aria-current] { color: var(--fg); }
@@ -105,7 +106,7 @@ footer .credits { flex-basis: 100%; font-size: 13px; opacity: .8; }
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="mk" viewBox="7 19 86 62"><path d="M10 50A46.19 46.19 0 0 1 90 50A46.19 46.19 0 0 1 10 50Z"/><path d="M10 50 C13.33 50 16.67 47.43 20 45.31 C23.33 43.19 26.67 41.16 30 40.41 C33.33 39.66 36.67 40.21 40 42.04 C43.33 43.86 46.67 46.91 50 50 C53.33 53.09 56.67 56.14 60 57.96 C63.33 59.79 66.67 60.34 70 59.59 C73.33 58.84 76.67 56.81 80 54.69 C83.33 52.57 86.67 50 90 50"/></symbol></svg>
 <div class="nav">
   <div class="wrap">
-    <a class="brand" href="../" aria-label="Lucent home"><svg class="mark" aria-hidden="true"><use href="#mk"/></svg><span>Lucent</span></a>
+    <a class="brand" href="../" aria-label="Lucent home"><svg class="mark" aria-hidden="true"><use href="#mk"/></svg><span>Lucent</span><span class="beta">beta</span></a>
     <nav class="nav-links" aria-label="Site">
       <a href="../">Home</a>
       <a href="./" aria-current="page">Updates</a>
@@ -119,13 +120,13 @@ footer .credits { flex-basis: 100%; font-size: 13px; opacity: .8; }
   <header class="top">
     <h1>Updates</h1>
     <p>What's new and what's fixed in each stable release of Lucent, for Windows and Mac. If Lucent is installed, it updates itself.</p>
-    <nav class="toc" aria-label="Releases"><a href="#v1-2">1.2</a></nav>
+    <nav class="toc" aria-label="Releases"><a href="#v1-2">1.2 Beta</a></nav>
   </header>
 
   <!-- One <article class="release"> per stable release, newest first. Images go in img/updates/<version>-*. -->
   <article class="release" id="v1-2" aria-labelledby="v1-2-title">
     <header>
-      <h2 id="v1-2-title">Lucent 1.2</h2>
+      <h2 id="v1-2-title">Lucent 1.2 Beta</h2>
       <time datetime="2026-11-04">November 4, 2026</time>
       <span class="for">Windows and Mac</span>
     </header>

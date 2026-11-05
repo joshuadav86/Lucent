@@ -7,6 +7,7 @@
 - Windows: before handing over an install, Lucent closes File Explorer windows showing a folder inside its program folder (`ExplorerWindows.CloseInside`). One open there (Show shader on a built-in visual opens one in `current\Presets`) made every install fail with Access denied and reopen the old build. Mac doesn't need it: Finder doesn't stop the app bundle being replaced.
 - **Channels:** stable (default) or every build. Until the first stable release exists, everyone follows the "latest" build.
 - What's new lists every change to that platform between the installed build and the ready one, so it repeats older items only while an update waits uninstalled.
+- After an update to a new stable release (1.3, say), Lucent asks once "Would you like to see what's new and what's fixed?" (Yes / No). Yes opens that release's entry on lucentaudio.net/updates/ (`#v1-3`). It doesn't ask on a first start, on every-build testers, or in CI's launch check (`ReleaseNotes.Due`, setting `ReleaseNotesAsked`). Write the release's entry on the updates page before promoting it.
 - Settings persist between updates (`FreshStart.Generation` is 0). Raise it only if Joshua asks for a fresh start.
 
 ## Crash reports

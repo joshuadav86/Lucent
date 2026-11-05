@@ -191,6 +191,9 @@ public sealed class AppSettings
     /// <summary>Update to every new build of Lucent, not only stable releases.</summary>
     public bool EveryBuild { get; set; }
 
+    /// <summary>The last release ("1.3", say) whose "see what's new" question was asked (see ReleaseNotes).</summary>
+    public string? ReleaseNotesAsked { get; set; }
+
     /// <summary>
     /// Install a downloaded update when Lucent closes (or on its next start). Off, Lucent still downloads
     /// it and says it's ready, but installs it only when Restart and install is chosen.
