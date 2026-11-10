@@ -368,7 +368,9 @@ internal static class LayoutCheck
             }
         }
 
-        lines.AddRange(CheckFlush(main, label));
+        // Only the windows that had a panel: one the single window left out (no room for it on a small screen) stays
+        // where it was, behind the others, as the checks above leave it out too.
+        lines.AddRange(CheckFlush(main, label, panels.Keys));
         closeAgain();
         await Task.Delay(TimeSpan.FromSeconds(1));
         return lines;
@@ -452,12 +454,13 @@ internal static class LayoutCheck
     /// <summary>
     /// The windows end flush, as one block with nothing hanging past the rest: each window's outer edges (the ones no
     /// other window is against) are on the block's edges, and together they fill it. With nothing under the player,
-    /// the windows beside it are taller than it can be, so that isn't checked.
+    /// the windows beside it are taller than it can be, so that isn't checked. Given <paramref name="only"/>, just those
+    /// windows (and the player) are checked.
     /// </summary>
-    private static List<string> CheckFlush(Window main, string label)
+    private static List<string> CheckFlush(Window main, string label, IEnumerable<Window>? only = null)
     {
         var lines = new List<string>();
-        var shown = new[] { main }.Concat(main.OwnedWindows.Where(IsOnScreen))
+        var shown = new[] { main }.Concat((only ?? main.OwnedWindows).Where(IsOnScreen))
             .Select(window => (Window: window, Name: window == main ? "player" : window.Title ?? "window", At: Placement.BoundsOf(window)))
             .Where(entry => entry.At.Width > 0 && entry.At.Height > 0)
             .ToList();
