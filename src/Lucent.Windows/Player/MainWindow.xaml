@@ -93,10 +93,10 @@
             <!-- The display: time and meter on the left, the scrolling title and track details on the right. -->
             <!-- The skin decides how the display looks: its fill and edge, a glow, a shadow along the top
                  and left (an inset look), and scan lines over the top. -->
-            <w:RoundedBorder Grid.Row="1" Margin="10,0,10,0" CornerRadius="{DynamicResource PanelCorner}"
+            <w:RoundedBorder Grid.Row="1" Margin="10,10,10,0" CornerRadius="{DynamicResource PanelCorner}"
                              BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1"
                              Effect="{DynamicResource DisplayGlowEffect}" IsHitTestVisible="False" />
-            <w:RoundedBorder Grid.Row="1" Margin="10,0,10,0" Padding="14,10,14,10" CornerRadius="{DynamicResource PanelCorner}"
+            <w:RoundedBorder Grid.Row="1" Margin="10,10,10,0" Padding="14,10,14,10" CornerRadius="{DynamicResource PanelCorner}"
                              Background="{DynamicResource DisplayBrush}"
                              BorderBrush="{DynamicResource DisplayEdgeBrush}" BorderThickness="1">
                 <Grid>
@@ -431,6 +431,11 @@
                               Content="Modern look for MilkDrop presets" Margin="0,18,0,0" Click="OnOptionSwitched" />
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="Light MilkDrop presets with Lucent's glow, richer colour, and HDR highlights. Off shows them as MilkDrop did." />
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Your own visuals" />
+                    <Button Style="{StaticResource PillButton}" HorizontalAlignment="Left" Content="Import visuals…" Click="OnImportVisuals" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Add Lucent shaders (.hlsl), MilkDrop (.milk), and AVS (.avs) presets. They join the picker and stay through updates." />
                 </StackPanel>
 
                 <StackPanel x:Name="SoundTab" Visibility="Collapsed">

@@ -89,7 +89,7 @@ Media keys work in the background, the Dock and taskbar have play controls, and 
 
 ## Make your own visuals
 
-Each visual is one HLSL shader in [`content/Presets`](content/Presets), or the `Presets` folder next to the app. Both platforms load the same files.
+Each visual is one HLSL shader in [`content/Presets`](content/Presets). Both platforms load the same files. To add your own, right-click the visuals › **Import visuals…** (or Options › Visuals), which copies `.hlsl`, `.milk`, and `.avs` files into your Presets folder (`%APPDATA%\Lucent\Presets` on Windows, `~/Library/Application Support/Lucent/Presets` on a Mac).
 
 ```hlsl
 // Name: My Visual

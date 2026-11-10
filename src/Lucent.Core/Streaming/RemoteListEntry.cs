@@ -22,6 +22,11 @@ public sealed class RemoteListEntry : INotifyPropertyChanged
     /// <summary>The row as a classic skin's playlist shows it: "Artist - Title".</summary>
     public string ClassicText => string.IsNullOrEmpty(Track.Artist) ? Track.Title : $"{Track.Artist} - {Track.Title}";
 
+    /// <summary>What the queue's search looks in: the title, artist and album.</summary>
+    public string SearchKey => _searchKey ??= SearchText.Key(new[] { Track.Title, Track.Artist, Track.Album });
+
+    private string? _searchKey;
+
     public bool IsCurrent
     {
         get => _isCurrent;

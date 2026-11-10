@@ -114,6 +114,11 @@ public partial class MainWindow
             lines.Add(QueueBesideLine(queueBeside, LaidOutPanels, _paneArea?.ActualWidth ?? 0, _paneArea?.ActualHeight ?? 0));
             lines.AddRange(await CheckLeavingSingleWindowAsync(queueBeside));
             _settings.SingleWindowStyle = style;
+
+            // With nothing beside the player (just the queue, with or without the equalizer), the player and the
+            // equalizer stretch across the single window, and as windows again they all end flush at the player's width.
+            lines.AddRange(await CheckStretchedAsync(equalizer: true));
+            lines.AddRange(await CheckStretchedAsync(equalizer: false));
         }
         catch (Exception ex)
         {
@@ -221,6 +226,49 @@ public partial class MainWindow
                     lines.Add($"MISMATCH {label}: the {NameFor(window)} and the {NameFor(other)} overlap by {overlap.Width:0} x {overlap.Height:0}");
                 }
             }
+        }
+
+        return lines;
+    }
+
+    /// <summary>
+    /// Just the queue (and the equalizer) open with the player, in a single window wider than the player: no empty block
+    /// beside the player or the equalizer (with the queue under them, they run the whole width; on a short screen the
+    /// queue goes beside them instead); then single window off, where
+    /// the player's back at its own width and the queue and equalizer end flush with it.
+    /// </summary>
+    private async Task<List<string>> CheckStretchedAsync(bool equalizer)
+    {
+        var label = equalizer ? "with just the equalizer and queue" : "with just the queue";
+        var lines = new List<string>();
+        if (InSingleWindow)
+        {
+            LeaveSingleWindow();
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
+        OpenOnlyQueue(equalizer);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        EnterSingleWindow();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var screen = ScreenArea.Of(this);
+        Width = Math.Min(screen.Width - 20, PlayerPaneWidth + 400);
+        Left = screen.Left + 10;
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var (player, eq, body) = PanelWidths();
+        lines.Add($"{(Math.Abs(player - body) <= 1 ? "ok" : "MISMATCH")} {label}: the panels across the player's rows fill {player:0} of the single window's {body:0}");
+        if (equalizer)
+        {
+            lines.Add($"{(eq is { } wide && Math.Abs(wide - body) <= 1 ? "ok" : "MISMATCH")} {label}: the panels across the equalizer's rows fill {eq:0} of the single window's {body:0}");
+        }
+
+        lines.AddRange(await CheckLeavingSingleWindowAsync(label));
+        if (equalizer)
+        {
+            var under = EqualizerWindow.Current is { IsVisible: true } open ? OnScreen(open) : Rect.Empty;
+            var playerNow = OnScreen(this);
+            var flush = !under.IsEmpty && Math.Abs(under.Left - playerNow.Left) <= 4 && Math.Abs(under.Width - playerNow.Width) <= 4;
+            lines.Add($"{(flush ? "ok" : "MISMATCH")} {label}: the equalizer is at {Describe(under)}, the player at {Describe(playerNow)}");
         }
 
         return lines;

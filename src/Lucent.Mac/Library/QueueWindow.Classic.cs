@@ -101,6 +101,8 @@ public partial class QueueWindow
 
         if (!_classicOn)
         {
+            // The skin's frame has no room for the search box, so every song shows again.
+            CloseSearch();
             _classicOn = true;
             _lucentContent = Content;
             _lucentSize = Placement.SizeOf(this);

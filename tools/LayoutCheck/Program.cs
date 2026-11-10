@@ -34,6 +34,8 @@ using Lucent.Layout;
 //     locks make no difference; and the window put round the open windows lands on the screen. Every
 //     divider between panels dragged as far as it goes either way (and all at once) keeps all of that true,
 //     stops where its room runs out, and never touches the player or the equalizer.
+//     The player and the equalizer then stretched sideways over any empty space beside them leave no empty block
+//     beside either, move nothing else, and with nothing beside the player it runs the whole width.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
@@ -554,6 +556,19 @@ static bool Fits(IReadOnlyList<TileWindow> windows, TileRect area)
     return area.Width >= player.Width + side + mainWidth && area.Height >= Math.Max(column, Math.Max(mainHeight, sideHeight));
 }
 
+// Sets only a single window has to cope with: nothing beside the player, where it stretches across.
+static List<(string Name, List<TileWindow> Windows)> SingleWindowSets(double playerScale)
+{
+    var all = Sets(playerScale).SelectMany(set => set.Windows).GroupBy(window => window.Key).ToDictionary(group => group.Key, group => group.First());
+    return new()
+    {
+        ("the player alone", new() { all["Player"] }),
+        ("player and queue", new() { all["Player"], all["Queue"] }),
+        ("player, equalizer and queue", new() { all["Player"], all["Equalizer"], all["Queue"] }),
+        ("player, equalizer and library", new() { all["Player"], all["Equalizer"], all["Library"] }),
+    };
+}
+
 // The sets of open windows checked, with their smallest sizes and their usual sizes, as in the apps' window files.
 static List<(string Name, List<TileWindow> Windows)> Sets(double playerScale)
 {
@@ -589,7 +604,7 @@ void CheckSingleWindow()
     var styles = FullScreenLayout.TidyStyles.Prepend(TileStyle.AsTheyAre).ToList();
     foreach (var playerScale in new[] { 1.0, 1.5 })
     {
-        foreach (var (setName, windows) in Sets(playerScale))
+        foreach (var (setName, windows) in Sets(playerScale).Concat(SingleWindowSets(playerScale)))
         {
             var panels = windows.Where(window => window.Kind != TileKind.Editor).ToList();
             foreach (var style in styles)
@@ -680,6 +695,7 @@ void CheckPanels(string name, double width, double height, IReadOnlyList<TileWin
     }
 
     CheckPlaced(name, body, result, panels);
+    CheckStretched(name, body, result, panels);
 
     // Every divider dragged as far as it goes each way, and all of them at once: still every panel inside the
     // body, at its smallest or more, none over another, and the ones that size themselves left alone.
@@ -717,6 +733,60 @@ void CheckPanels(string name, double width, double height, IReadOnlyList<TileWin
         Offset = index % 2 == 0 ? 37 : -53,
     }).ToList();
     CheckPlaced($"{name}, every divider moved", body, PanelDividers.Apply(result, panels, all), panels);
+}
+
+// The panels that size themselves (the player and the equalizer) stretched over the empty space beside them: none
+// left beside them (so with nothing beside the player it runs the whole width), nothing over anything, and every
+// other panel where it was.
+void CheckStretched(string name, TileRect body, TileResult result, IReadOnlyList<TileWindow> panels)
+{
+    var stretched = SingleWindowLayout.Stretched(result, body.Width, panels);
+    foreach (var (key, place) in stretched.Places)
+    {
+        var panel = panels.Single(candidate => candidate.Key == key);
+        if (!place.IsInside(body))
+        {
+            problems.Add($"{name}, stretched: {key} at {place} is outside the window's body {body}.");
+        }
+
+        if (!panel.FixedSize && place != result.Places[key])
+        {
+            problems.Add($"{name}, stretched: {key} moved from {result.Places[key]} to {place}.");
+        }
+
+        if (panel.FixedSize)
+        {
+            var was = result.Places[key];
+            if (Math.Abs(place.Height - panel.Height) > 1 || Math.Abs(place.Top - was.Top) > 0.5 || place.Left > was.Left + 0.5 || place.Right < was.Right - 0.5)
+            {
+                problems.Add($"{name}, stretched: {key} sizes itself and only stretches sideways, but went from {was} to {place}.");
+            }
+
+            // Across its rows, the panels there fill the body's width: no empty block beside it.
+            var across = stretched.Places.Values.Where(other => Math.Min(other.Bottom, place.Bottom) - Math.Max(other.Top, place.Top) > 1).Sum(other => other.Width);
+            if (across < body.Width - 1)
+            {
+                problems.Add($"{name}, stretched: the panels beside {key} fill {across:0} of the body's {body.Width:0} width, leaving an empty block.");
+            }
+        }
+
+        foreach (var (otherKey, other) in stretched.Places.Where(entry => string.CompareOrdinal(entry.Key, key) > 0))
+        {
+            if (place.Overlaps(other))
+            {
+                problems.Add($"{name}, stretched: {key} {place} is over {otherKey} {other}.");
+            }
+        }
+    }
+
+    // With nothing beside the player, it runs the whole width.
+    var player = panels.First(panel => panel.Kind == TileKind.Player).Key;
+    if (result.Places.TryGetValue(player, out var at) && !result.Places.Any(entry => entry.Key != player
+            && Math.Min(entry.Value.Bottom, at.Bottom) - Math.Max(entry.Value.Top, at.Top) > 1)
+        && (Math.Abs(stretched.Places[player].Left - body.Left) > 0.5 || Math.Abs(stretched.Places[player].Width - body.Width) > 0.5))
+    {
+        problems.Add($"{name}, stretched: nothing's beside the player, but it's at {stretched.Places[player]}, not across the body {body}.");
+    }
 }
 
 void CheckPlaced(string name, TileRect body, TileResult result, IReadOnlyList<TileWindow> panels)

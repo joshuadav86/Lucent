@@ -30,6 +30,8 @@ public static class MenuTips
 
     public const string ImportAvs = "Add .avs preset files you've downloaded.";
 
+    public const string ImportVisuals = "Add visuals you've made or downloaded: Lucent shaders (.hlsl), MilkDrop (.milk), and AVS (.avs) presets.";
+
     public const string ImportFolder = "Add every preset in a folder, such as a whole pack.";
 
     public const string PresetFolder = "Open the folder Lucent keeps these presets in.";

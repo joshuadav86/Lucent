@@ -37,6 +37,12 @@
         <Style Selector="ListBox.classic TextBlock.current">
             <Setter Property="Foreground" Value="{DynamicResource ClassicCurrentBrush}" />
         </Style>
+
+        <!-- The search box's hint is faint, as on Windows and in the library. -->
+        <Style Selector="TextBox#SearchBox /template/ TextBlock#PART_Watermark">
+            <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+            <Setter Property="Margin" Value="2,0,0,0" />
+        </Style>
     </w:ToolWindow.Styles>
 
     <w:ToolWindow.Resources>
@@ -57,7 +63,7 @@
 
     <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}">
-        <Grid Margin="6,6,4,8" RowDefinitions="Auto,*,Auto">
+        <Grid Margin="6,6,4,8" RowDefinitions="Auto,Auto,*,Auto">
 
             <!-- The title bar: it moves the window, as WindowChrome's caption does on Windows. -->
             <DockPanel Grid.Row="0" Margin="8,0,0,6" Height="34" Background="{DynamicResource TitleBarBrush}"
@@ -88,6 +94,11 @@
                                   Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                         </StackPanel>
                     </Button>
+                    <!-- Search: opens a box under the title bar that narrows the list to the matching songs. -->
+                    <Button Theme="{StaticResource IconButton}" x:Name="SearchButton" Width="32" Height="32"
+                            ToolTip.Tip="Search the list for a song, artist, or album (⌘F)" Click="OnSearchButton">
+                        <Path Theme="{StaticResource LineIcon}" Data="{StaticResource SearchIcon}" />
+                    </Button>
                     <Button Theme="{StaticResource IconButton}" x:Name="AddFilesButton" Width="32" Height="32" ToolTip.Tip="Add files" Click="OnAddFiles">
                         <Path Theme="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" />
                     </Button>
@@ -110,7 +121,7 @@
                 </StackPanel>
             </DockPanel>
 
-            <ListBox x:Name="PlaylistView" Grid.Row="1" Background="Transparent" BorderThickness="0"
+            <ListBox x:Name="PlaylistView" Grid.Row="2" Background="Transparent" BorderThickness="0"
                      Focusable="True" FocusAdorner="{x:Null}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionMode="Multiple"
@@ -149,7 +160,7 @@
             </ListBox>
 
             <!-- Another app's playlist (Spotify's or Music's), in place of the queue while Lucent controls that app. -->
-            <ListBox x:Name="RemoteListView" Grid.Row="1" Background="Transparent" BorderThickness="0" IsVisible="False"
+            <ListBox x:Name="RemoteListView" Grid.Row="2" Background="Transparent" BorderThickness="0" IsVisible="False"
                      Focusable="True" FocusAdorner="{x:Null}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionMode="Single"
@@ -187,10 +198,10 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <TextBlock x:Name="RemoteListNote" Grid.Row="2" IsVisible="False" Margin="10,6,8,0" FontSize="11"
+            <TextBlock x:Name="RemoteListNote" Grid.Row="3" IsVisible="False" Margin="10,6,8,0" FontSize="11"
                        TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
 
-            <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="1" IsHitTestVisible="False"
+            <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="2" IsHitTestVisible="False"
                         VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintLineBrush}" HorizontalAlignment="Center" />
                 <TextBlock Text="Drop music here" Margin="0,12,0,0" FontSize="13" HorizontalAlignment="Center"
@@ -198,6 +209,22 @@
                 <TextBlock Text="MP3 · FLAC · WAV · M4A · ALAC · WMA · OGG · Opus · AIFF" Margin="0,4,0,0"
                            FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
+
+            <TextBlock x:Name="NoMatchHint" Grid.Row="2" IsVisible="False" IsHitTestVisible="False"
+                       VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="13"
+                       Text="No sounds match your search" Foreground="{DynamicResource MutedTextBrush}" />
+
+            <!-- Search, after the lists so a classic skin's swap of them keeps its place: every typed word in the title, artist, album, or file name. -->
+            <Grid x:Name="SearchRow" Grid.Row="1" Margin="8,0,4,6" IsVisible="False">
+                <TextBox x:Name="SearchBox" Theme="{StaticResource SearchInput}" Watermark="Search sounds, artists, and albums"
+                         ToolTip.Tip="Find sounds in the list by title, artist, album, or file name. Esc clears it, then closes it."
+                         TextChanged="OnSearchChanged" />
+                <Button x:Name="ClearSearchButton" Theme="{StaticResource IconButton}" Width="22" Height="22"
+                        HorizontalAlignment="Right" Margin="0,0,3,0"
+                        ToolTip.Tip="Close the search (Esc)" Click="OnCloseSearch">
+                    <Path Theme="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
         </Grid>
     </Border>
 </w:ToolWindow>

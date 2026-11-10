@@ -190,7 +190,7 @@ public partial class QueueWindow : ToolWindow
             QueueTitle.Text = list is null ? "QUEUE" : appName.ToUpperInvariant();
             if (list is not null)
             {
-                QueueCount.Text = list.CountText;
+                ShowRemoteListSize();
             }
         }
 
@@ -219,6 +219,7 @@ public partial class QueueWindow : ToolWindow
         var tracks = _remoteList is null ? Array.Empty<RemoteTrack>() : RemoteListSorting.Sort(_remoteList.Tracks, ShownOrder);
         _remoteEntries = tracks.Select(track => new RemoteListEntry(track)).ToList();
         RemoteListView.ItemsSource = _remoteEntries;
+        FilterRemoteList();
         // The song chosen stays chosen when the list is read again (what's up next is, with every song).
         RemoteListView.SelectedItem = _remoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
     }
