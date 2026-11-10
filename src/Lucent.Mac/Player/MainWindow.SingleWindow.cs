@@ -315,6 +315,7 @@ public partial class MainWindow
         }
 
         var areaTop = Top + (area.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0)).Y;
+        var unfolded = UnfoldedChanges();
         foreach (var (window, pane) in _panes)
         {
             if (pane.Box.Bounds.Width <= 0 || pane.Box.Bounds.Height <= 0)
@@ -328,6 +329,12 @@ public partial class MainWindow
             {
                 // Stretched across with the player: its window goes back to its own width, where it'd be without the stretch.
                 place = new Rect(place.X + own.Left - Canvas.GetLeft(pane.Box), place.Y, own.Width, place.Height);
+            }
+
+            if (KeyOf(pane) is { } name && unfolded.TryGetValue(name, out var change))
+            {
+                // The equalizer's its own height as a window, not folded: the windows under it move down and give up as much.
+                place = new Rect(place.X, place.Y + change.Top, place.Width, Math.Max(1, place.Height + change.Height));
             }
 
             if (window is not EqualizerWindow && Math.Abs(place.Y - areaTop) < 2)
@@ -616,8 +623,13 @@ public partial class MainWindow
             window.SizeToContent = pane.Sizing;
         }
 
-        // Back to the player's width, if it was stretched across the single window with the player.
-        (window as EqualizerWindow)?.FitTo(PlayerPaneWidth);
+        // Back to the player's width, if it was stretched across the single window with the player, and unfolded, as a
+        // window sizes itself to its sliders.
+        if (window is EqualizerWindow equalizer)
+        {
+            equalizer.Fold(0);
+            equalizer.FitTo(PlayerPaneWidth);
+        }
 
         if (show)
         {
@@ -797,7 +809,9 @@ public partial class MainWindow
                 var size = new Size(
                     _unstretched.ContainsKey(name) ? PlayerPaneWidth : double.IsNaN(pane.Window.Width) ? pane.Wanted.Width : pane.Window.Width,
                     double.IsNaN(pane.Window.Height) ? pane.Wanted.Height : pane.Window.Height);
-                panels.Add((pane.Box, new TileWindow(name, kind, size.Width, size.Height, size.Width, size.Height, FixedSize: true)));
+                // In the single window it can be folded shorter, by the line under it dragged up, to give the panel under it room.
+                panels.Add((pane.Box, new TileWindow(name, kind, size.Width, size.Height, size.Width, size.Height, FixedSize: true,
+                    FoldsTo: Math.Max(1, size.Height - EqualizerWindow.MostFold))));
             }
             else
             {
@@ -886,6 +900,8 @@ public partial class MainWindow
                 // The equalizer lays its sliders out across its panel, stretched or not; a new height lays the panels out again.
                 var height = equalizer.Height;
                 equalizer.FitTo(place.Width);
+                // Folded by as much as the line under it was dragged up, its curve and sliders shorter to fit its panel.
+                equalizer.Fold(tile.Height - place.Height);
                 if (Math.Abs(equalizer.Height - height) > 0.5)
                 {
                     RetileSoon();
@@ -1082,6 +1098,47 @@ public partial class MainWindow
 
         return () => close.ForEach(action => action());
     }
+
+    /// <summary>
+    /// For the layout check: the library, artwork, equalizer, and analyzer open with the visuals and the queue closed, so the
+    /// library and the art go under the equalizer, as Joshua had them. Gives back what puts the windows it closed or opened
+    /// back as they were.
+    /// </summary>
+    internal Action OpenLibraryUnderEqualizer()
+    {
+        var undo = new List<Action>();
+        foreach (var window in new ToolWindow[] { _libraryWindow, _visuals, _queue })
+        {
+            if (window.IsVisible != (window != _queue))
+            {
+                ToggleWindow(window);
+                undo.Add(() => ToggleWindow(window));
+            }
+        }
+
+        if (!ArtworkWindow.IsOpen)
+        {
+            ToggleArtwork();
+            undo.Add(ToggleArtwork);
+        }
+
+        if (!AnalyzerWindow.IsOpen)
+        {
+            ToggleAnalyzer();
+            undo.Add(ToggleAnalyzer);
+        }
+
+        if (EqualizerWindow.Current is not { IsVisible: true })
+        {
+            ToggleEqualizer();
+            undo.Add(ToggleEqualizer);
+        }
+
+        return () => undo.ForEach(action => action());
+    }
+
+    /// <summary>For the layout check: where each window goes as single window ends, as <see cref="PanelPlaces"/> has it.</summary>
+    internal Dictionary<Window, Rect> PlacesForWindows() => PanelPlaces();
 
     /// <summary>
     /// For the layout check: just the queue (and the equalizer, with <paramref name="equalizer"/>) open with the player,

@@ -30,6 +30,8 @@ public sealed class PanelDivider
 /// but a column of them with panels either side (the player's column, between the library and the visuals)
 /// is <see cref="Carried"/> along: then the line is the column's two edges, <see cref="CarriedWidth"/> apart,
 /// and dragging either moves the column, the panels before it growing and the ones after it shrinking.
+/// The one exception is a panel that folds (<see cref="TileWindow.FoldsTo"/>, the equalizer): the line under it
+/// can be dragged up, folding it shorter so the panels under it grow, and back down to where the layout put it.
 /// </summary>
 public sealed record DividerLine(bool Across, double Position, double Start, double End, IReadOnlyList<string> Before,
     IReadOnlyList<string> After, IReadOnlyList<string>? Carried = null, double CarriedWidth = 0)
@@ -53,6 +55,8 @@ public sealed record DividerLine(bool Across, double Position, double Start, dou
 /// divider moved by hand is moved from there, as far as the panels either side allow at their smallest.
 /// A divider's known by the panels either side of it, so it's found again however big the window is, and
 /// one whose panels aren't side by side any more (a panel closed, or two swapped) is just left alone.
+/// The line under the equalizer folds it (<see cref="TileWindow.FoldsTo"/>): with the equalizer's sliders
+/// above the library and the art under that, it's the only way to make the library taller.
 /// Shared by both apps; tools/LayoutCheck checks it.
 /// </summary>
 public static class PanelDividers
@@ -66,10 +70,14 @@ public static class PanelDividers
     /// <summary>Within this, two edges are the same line.</summary>
     private const double Near = 1;
 
+    /// <summary>Within this, one side of a line reaches as far along it as the other (the layouts round a point either way).</summary>
+    private const double Covered = 2;
+
     /// <summary>The lines between the placed panels that can be dragged.</summary>
     public static List<DividerLine> Lines(IReadOnlyDictionary<string, TileRect> places, IReadOnlyList<TileWindow> panels)
     {
         var fixedSize = panels.Where(panel => panel.FixedSize).Select(panel => panel.Key).ToHashSet();
+        var folding = panels.Where(Folds).Select(panel => panel.Key).ToHashSet();
         bool Moves(IEnumerable<string> keys) => !keys.Any(fixedSize.Contains);
         static List<string> Sorted(IEnumerable<string> keys) => keys.Order(StringComparer.Ordinal).ToList();
         var lines = new List<DividerLine>();
@@ -105,11 +113,21 @@ public static class PanelDividers
                     // The column after it (the player's) is carried along to the line past it.
                     lines.Add(new DividerLine(across, position, Math.Min(start, next.Start), Math.Max(end, next.End), before, beyond, after, width));
                 }
+                else if (across && Moves(after) && before.All(key => !fixedSize.Contains(key) || folding.Contains(key))
+                    && !before.Any(key => found.Any(other => other.After.Contains(key) && Moves(other.Before))))
+                {
+                    // Under a panel that folds (the equalizer, under the player): up folds it, the panels under it growing.
+                    // Not when there's a panel over it to carry it down instead (the equalizer under the visuals on a short screen).
+                    lines.Add(new DividerLine(across, position, start, end, before, after));
+                }
             }
         }
 
         return lines;
     }
+
+    /// <summary>True for a panel that sizes itself but can be folded shorter by the line under it (the equalizer).</summary>
+    private static bool Folds(TileWindow panel) => panel.FixedSize && panel.FoldsTo > 0 && panel.FoldsTo < panel.Height - Near;
 
     /// <summary>The width of a column of panels lined up one over another, all as wide, or null if they aren't.</summary>
     private static double? Column(List<string> keys, Dictionary<string, TileRect> rects)
@@ -122,7 +140,8 @@ public static class PanelDividers
 
     /// <summary>
     /// How far the line can move back (a negative number, or 0) and on (0 or more), keeping every panel either side
-    /// at least its smallest, and stopping at any other panel in the way.
+    /// at least its smallest, and stopping at any other panel in the way. A panel that folds (the equalizer) goes no
+    /// shorter than it folds to, and no taller than its own height.
     /// </summary>
     public static (double Least, double Most) Room(DividerLine line, IReadOnlyDictionary<string, TileRect> places, IReadOnlyList<TileWindow> panels)
     {
@@ -131,12 +150,48 @@ public static class PanelDividers
             var place = places[key];
             var panel = panels.FirstOrDefault(entry => entry.Key == key);
             var size = line.Across ? place.Height : place.Width;
-            var smallest = panel is null ? 0 : line.Across ? panel.MinHeight : panel.MinWidth;
+            var smallest = panel is null ? 0
+                : panel.FixedSize ? line.Across && Folds(panel) ? panel.FoldsTo : size
+                : line.Across ? panel.MinHeight : panel.MinWidth;
             return Math.Max(0, size - smallest);
         }
 
         var least = -line.Before.Min(Spare);
         var most = line.After.Min(Spare);
+
+        // A panel that sizes itself (folded) grows back no taller than its own height.
+        foreach (var key in line.Before)
+        {
+            if (panels.FirstOrDefault(entry => entry.Key == key) is { FixedSize: true } panel)
+            {
+                most = Math.Min(most, Math.Max(0, line.Across ? panel.Height - places[key].Height : panel.Width - places[key].Width));
+            }
+        }
+
+        // Only as far as the side growing covers all of the side shrinking, or it would leave a gap where that one was: once
+        // another line's moved, the panels either side can stop at different places along it (the equalizer folded up over
+        // the visuals after the line beside the visuals moved).
+        if (line.Carries.Count == 0)
+        {
+            (double From, double To) Span(IEnumerable<string> keys)
+            {
+                var rects = keys.Select(key => line.Across ? Turned(places[key]) : places[key]).ToList();
+                return (rects.Min(rect => rect.Top), rects.Max(rect => rect.Bottom));
+            }
+
+            static bool Covers((double From, double To) outer, (double From, double To) inner) =>
+                outer.From <= inner.From + Covered && outer.To >= inner.To - Covered;
+            var (before, after) = (Span(line.Before), Span(line.After));
+            if (!Covers(after, before))
+            {
+                least = 0;
+            }
+
+            if (!Covers(before, after))
+            {
+                most = 0;
+            }
+        }
 
         // Nor over a panel that doesn't reach the line (one that sizes itself can leave a gap beside it).
         foreach (var (key, place) in places)
@@ -219,6 +274,14 @@ public static class PanelDividers
 
         return result;
     }
+
+    /// <summary>
+    /// The layout with the dividers moved by hand moved, as <see cref="Apply"/> does, but with every panel that folds
+    /// (the equalizer) at its own height: where the windows go when single window ends, the equalizer a window that
+    /// sizes itself again. The panels under it give that height back, so they still end where they did.
+    /// </summary>
+    public static TileResult Unfolded(TileResult layout, IReadOnlyList<TileWindow> panels, IReadOnlyList<PanelDivider> dividers) =>
+        Apply(layout, panels.Select(panel => panel.FoldsTo > 0 ? panel with { FoldsTo = 0 } : panel).ToList(), dividers);
 
     /// <summary>Keeps a line moved by <paramref name="offset"/>, replacing what was kept for it, as the last moved.</summary>
     public static PanelDivider Remember(List<PanelDivider> dividers, DividerLine line, double offset)

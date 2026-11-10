@@ -33,13 +33,19 @@ using Lucent.Layout;
 //     body, at its smallest size or more (the player and equalizer at their own), none over another, and
 //     locks make no difference; and the window put round the open windows lands on the screen. Every
 //     divider between panels dragged as far as it goes either way (and all at once) keeps all of that true,
-//     stops where its room runs out, and never touches the player or the equalizer.
+//     stops where its room runs out, and never touches the player; the equalizer only folds, the line under it
+//     dragged up making it shorter (down to what it folds to, never taller than its own height) and the panels
+//     under it taller. Laid out again unfolded (as the windows go when single window ends), every panel's
+//     still placed as above, the equalizer at its own height, the panels filling the same space. With the
+//     library squeezed between the equalizer and the art (as on a laptop), the line under the equalizer folds
+//     it all the way, the library growing by as much.
 //     The player and the equalizer then stretched sideways over any empty space beside them leave no empty block
 //     beside either, move nothing else, and with nothing beside the player it runs the whole width.
 // Prints each layout, and exits with 1 if anything's wrong.
 var problems = new List<string>();
 var checkedCount = 0;
 var carriedLines = 0;
+var foldLines = 0;
 
 // Screens in pixels, and the taskbar (Windows) or menu bar and Dock (Mac) taken off their height.
 var windowsScreens = new (int Width, int Height)[] { (1366, 768), (1920, 1080), (1920, 1200), (2560, 1440), (2880, 1800), (3440, 1440), (3840, 2160) };
@@ -137,9 +143,15 @@ foreach (var (setName, windows) in Sets(1.0))
 CheckSavedLayouts();
 CheckSingleWindow();
 CheckDividers();
+CheckFold();
 if (carriedLines == 0)
 {
     problems.Add("Single window dividers: no layout let the player's column be moved, between the library and the visuals.");
+}
+
+if (foldLines == 0)
+{
+    problems.Add("Single window dividers: no layout let the line under the equalizer be dragged up to fold it.");
 }
 
 
@@ -566,6 +578,9 @@ static List<(string Name, List<TileWindow> Windows)> SingleWindowSets(double pla
         ("player and queue", new() { all["Player"], all["Queue"] }),
         ("player, equalizer and queue", new() { all["Player"], all["Equalizer"], all["Queue"] }),
         ("player, equalizer and library", new() { all["Player"], all["Equalizer"], all["Library"] }),
+        // The library squeezed between the equalizer and the art, beside the visuals and analyzer (2026-11-10).
+        ("player, equalizer, library, artwork, visuals and analyzer, no queue",
+            new() { all["Player"], all["Equalizer"], all["Library"], all["Artwork"], all["Visuals"], all["Analyzer"] }),
     };
 }
 
@@ -573,7 +588,8 @@ static List<(string Name, List<TileWindow> Windows)> SingleWindowSets(double pla
 static List<(string Name, List<TileWindow> Windows)> Sets(double playerScale)
 {
     var player = new TileWindow("Player", TileKind.Player, 520 * playerScale, 215 * playerScale, 520 * playerScale, 215 * playerScale, FixedSize: true);
-    var equalizer = new TileWindow("Equalizer", TileKind.Equalizer, 520, 392, 520, 392, FixedSize: true);
+    // The equalizer folds 144 shorter in the single window: its response curve (84) and 60 off its sliders (EqualizerWindow.MostFold).
+    var equalizer = new TileWindow("Equalizer", TileKind.Equalizer, 520, 392, 520, 392, FixedSize: true, FoldsTo: 392 - 144);
     var queue = new TileWindow("Queue", TileKind.Queue, 300, 160, 520, 320);
     var library = new TileWindow("Library", TileKind.Library, 280, 200, 380, 560);
     var visuals = new TileWindow("Visuals", TileKind.Visuals, 360, 240, 820, 560);
@@ -718,6 +734,7 @@ void CheckPanels(string name, double width, double height, IReadOnlyList<TileWin
             var moved = PanelDividers.Apply(result, panels, new[] { divider });
             var lineName = $"{name}, divider between {string.Join("+", line.Before)} and {string.Join("+", line.After)} moved {(offset < 0 ? "back" : "on")}";
             CheckPlaced(lineName, body, moved, panels);
+            CheckSameSpace(lineName, body, result, moved, panels);
             var expected = line.Position + line.CarriedWidth + (offset < 0 ? least : most);
             var after = moved.Places[line.After[0]];
             if (Math.Abs((line.Across ? after.Top : after.Left) - expected) > 0.5)
@@ -732,7 +749,111 @@ void CheckPanels(string name, double width, double height, IReadOnlyList<TileWin
         Across = line.Across, Before = line.Before.ToList(), After = line.After.ToList(), Carried = line.Carries.ToList(),
         Offset = index % 2 == 0 ? 37 : -53,
     }).ToList();
-    CheckPlaced($"{name}, every divider moved", body, PanelDividers.Apply(result, panels, all), panels);
+    var allMoved = PanelDividers.Apply(result, panels, all);
+    CheckPlaced($"{name}, every divider moved", body, allMoved, panels);
+    CheckUnfolded($"{name}, every divider moved", body, result, allMoved, panels, all);
+
+    // The line under the equalizer (if it folds) dragged up as far as it goes, with every other line moved too.
+    var folds = lines.Where(line => line.Across && line.Before.Any(key => panels.Single(panel => panel.Key == key).FixedSize)).ToList();
+    foldLines += folds.Count;
+    if (folds.Count > 0)
+    {
+        var folded = all.Select(divider => folds.Any(line => line.Is(divider)) ? new PanelDivider
+        {
+            Across = divider.Across, Before = divider.Before, After = divider.After, Carried = divider.Carried, Offset = -100000,
+        } : divider).ToList();
+        var foldedLayout = PanelDividers.Apply(result, panels, folded);
+        CheckPlaced($"{name}, equalizer folded", body, foldedLayout, panels);
+        CheckUnfolded($"{name}, equalizer folded", body, result, foldedLayout, panels, folded);
+    }
+}
+
+// A line moved only trades space between the panels either side of it: stretched as the window shows them (the player
+// and equalizer over any empty block beside them), the panels fill just as much of the body as before, with no gap opened.
+void CheckSameSpace(string name, TileRect body, TileResult result, TileResult moved, IReadOnlyList<TileWindow> panels)
+{
+    static double Area(TileResult layout) => layout.Places.Values.Sum(place => place.Area);
+    var before = Area(SingleWindowLayout.Stretched(result, body.Width, panels));
+    var after = Area(SingleWindowLayout.Stretched(moved, body.Width, panels));
+    if (Math.Abs(before - after) > 2 * body.Width)
+    {
+        problems.Add($"{name}: the panels fill {after:0} of the body, {before:0} before the line moved, so it opened a gap or closed one.");
+    }
+}
+
+// Laid out again with the equalizer unfolded, as the windows go when single window ends: every panel placed as usual,
+// the equalizer at its own height, and the panels filling just the space they filled folded, so they still end flush.
+void CheckUnfolded(string name, TileRect body, TileResult result, TileResult moved, IReadOnlyList<TileWindow> panels, IReadOnlyList<PanelDivider> dividers)
+{
+    var unfolded = PanelDividers.Unfolded(result, panels, dividers);
+    var unfoldedName = $"{name}, unfolded";
+    CheckPlaced(unfoldedName, body, unfolded, panels);
+    foreach (var panel in panels.Where(panel => panel.FixedSize && unfolded.Places.ContainsKey(panel.Key)))
+    {
+        if (Math.Abs(unfolded.Places[panel.Key].Height - panel.Height) > 1)
+        {
+            problems.Add($"{unfoldedName}: {panel.Key} is {unfolded.Places[panel.Key].Height:0} tall, not its own {panel.Height:0}.");
+        }
+    }
+
+    double Area(TileResult layout) => SingleWindowLayout.Stretched(layout, body.Width, panels).Places.Values.Sum(place => place.Area);
+    static double Lowest(TileResult layout) => layout.Places.Values.Max(place => place.Bottom);
+    if (!unfolded.Places.Keys.ToHashSet().SetEquals(moved.Places.Keys) || Math.Abs(Area(unfolded) - Area(moved)) > 2 * body.Width
+        || Math.Abs(Lowest(unfolded) - Lowest(moved)) > 0.5)
+    {
+        problems.Add($"{unfoldedName}: the panels fill {Area(unfolded):0} down to {Lowest(unfolded):0}, folded {Area(moved):0} down to {Lowest(moved):0}.");
+    }
+}
+
+// The library squeezed between the equalizer and the art, in a single window on a laptop (2026-11-10, Joshua's MacBook):
+// the art already at its smallest, so the only way to make the library taller is the line under the equalizer, which
+// folds it as far as it goes, the library growing by just as much, the art left as it was.
+void CheckFold()
+{
+    checkedCount++;
+    var all = Sets(1.0).SelectMany(set => set.Windows).GroupBy(window => window.Key).ToDictionary(group => group.Key, group => group.First());
+    var panels = new List<TileWindow> { all["Player"], all["Equalizer"], all["Library"], all["Artwork"], all["Visuals"], all["Analyzer"] };
+    var equalizer = all["Equalizer"];
+    var name = "single window on a laptop, the library between the equalizer and the art";
+    var result = SingleWindowLayout.Arrange(1728, 1044, panels, TileStyle.AsTheyAre, new List<List<string>>());
+    var lines = PanelDividers.Lines(result.Places, panels);
+    if (lines.FirstOrDefault(line => line.Across && line.Before.SequenceEqual(new[] { "Equalizer" }) && line.After.SequenceEqual(new[] { "Library" })) is not { } line)
+    {
+        problems.Add($"{name}: there's no line to drag between the equalizer and the library; lines: " +
+            string.Join(", ", lines.Select(each => $"{string.Join("+", each.Before)}|{string.Join("+", each.After)}")));
+        return;
+    }
+
+    var (least, most) = PanelDividers.Room(line, result.Places, panels);
+    var folds = equalizer.Height - equalizer.FoldsTo;
+    if (Math.Abs(least + folds) > 0.5 || Math.Abs(most) > 0.5)
+    {
+        problems.Add($"{name}: the line under the equalizer should go from {-folds:0} to 0, but goes from {least:0} to {most:0}.");
+    }
+
+    var dividers = new List<PanelDivider>();
+    PanelDividers.Remember(dividers, line, -100000);
+    var moved = PanelDividers.Apply(result, panels, dividers);
+    var (was, now) = (result.Places["Library"], moved.Places["Library"]);
+    if (Math.Abs(now.Height - was.Height - folds) > 0.5 || Math.Abs(now.Bottom - was.Bottom) > 0.5
+        || Math.Abs(moved.Places["Equalizer"].Height - equalizer.FoldsTo) > 0.5 || moved.Places["Artwork"] != result.Places["Artwork"])
+    {
+        problems.Add($"{name}: folding the equalizer should make the library {folds:0} taller, from {was} to {now}, the equalizer " +
+            $"{equalizer.FoldsTo:0} tall ({moved.Places["Equalizer"].Height:0}), and leave the art be.");
+    }
+
+    var unfolded = PanelDividers.Unfolded(result, panels, dividers);
+    if (unfolded.Places.Any(entry => entry.Value != result.Places[entry.Key]))
+    {
+        problems.Add($"{name}: unfolded, the panels should be just where the layout put them.");
+    }
+
+    // Moved down again past where it started, it stops there: the equalizer's no taller than its own height.
+    PanelDividers.Remember(dividers, line, 100000);
+    if (PanelDividers.Apply(result, panels, dividers).Places.Any(entry => entry.Value != result.Places[entry.Key]))
+    {
+        problems.Add($"{name}: the line under the equalizer moved down past where the layout puts it.");
+    }
 }
 
 // The panels that size themselves (the player and the equalizer) stretched over the empty space beside them: none
@@ -800,15 +921,18 @@ void CheckPlaced(string name, TileRect body, TileResult result, IReadOnlyList<Ti
             problems.Add($"{name}: {key} at {place} is outside the window's body {body}.");
         }
 
-        // The player keeps its size; the equalizer its height (it can stretch across the player's column, as full screen).
-        if (panel.FixedSize && (Math.Abs(place.Height - panel.Height) > 1 || panel.Kind == TileKind.Player && Math.Abs(place.Width - panel.Width) > 1))
+        // The player keeps its size; the equalizer its height (it can stretch across the player's column, as full screen),
+        // or anything down to what it folds to.
+        var shortest = panel.FoldsTo > 0 ? panel.FoldsTo : panel.Height;
+        if (panel.FixedSize && (place.Height > panel.Height + 1 || place.Height < shortest - 1 || panel.Kind == TileKind.Player && Math.Abs(place.Width - panel.Width) > 1))
         {
             problems.Add($"{name}: {key} sizes itself, but was made {place.Width:0}x{place.Height:0}.");
         }
 
-        if (place.Width < panel.MinWidth - 0.5 || place.Height < panel.MinHeight - 0.5)
+        var smallestHeight = panel.FixedSize ? Math.Min(panel.MinHeight, shortest) : panel.MinHeight;
+        if (place.Width < panel.MinWidth - 0.5 || place.Height < smallestHeight - 0.5)
         {
-            problems.Add($"{name}: {key} is {place.Width:0}x{place.Height:0}, smaller than its smallest, {panel.MinWidth}x{panel.MinHeight}.");
+            problems.Add($"{name}: {key} is {place.Width:0}x{place.Height:0}, smaller than its smallest, {panel.MinWidth}x{smallestHeight}.");
         }
 
         foreach (var (otherKey, other) in placed.Where(entry => string.CompareOrdinal(entry.Key, key) > 0))
