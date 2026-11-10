@@ -112,7 +112,7 @@ public partial class MainWindow : Window
         LucentPlayer.SizeChanged += (_, _) => KeepPlayerShape();
         Opened += (_, _) => KeepPlayerShape();
 
-        _queue.PlaylistView.ItemsSource = _playlist;
+        _queue.ShowQueue(_playlist);
         _playlist.CollectionChanged += (_, _) =>
         {
             ShowQueueSize();
