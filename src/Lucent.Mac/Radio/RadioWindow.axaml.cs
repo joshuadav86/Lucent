@@ -920,10 +920,31 @@ public partial class RadioWindow : Window
 
     private async void OnAddStation(object? sender, RoutedEventArgs e)
     {
-        if (await AddStationWindow.AskAsync(this) is { } added)
+        switch (await AddStationWindow.AskAsync(this, _player.LookUpStationAsync))
         {
-            AddStation(added.Station, added.Favorite);
+            case { Station: { } station } added:
+                AddStation(station, added.Favorite);
+                break;
+            case { Search: { } search }:
+                SearchAllStations(search);
+                break;
         }
+    }
+
+    /// <summary>
+    /// Searches every station in the directory for <paramref name="search"/>: what Add a station does with a
+    /// station's web page that doesn't link its stream (radio.net's, say), or a name typed as the address.
+    /// </summary>
+    private void SearchAllStations(string search)
+    {
+        _settings.RadioSection = RadioGuide.AllStations;
+        _settings.Save();
+        ShowSections();
+        SearchBox.Text = search;
+        SearchBox.CaretIndex = search.Length;
+        _searchDelay.Stop();
+        ShowStations();
+        SearchBox.Focus();
     }
 
     /// <summary>Plays a station added by its address, kept in the favorites first when <paramref name="favorite"/>.</summary>

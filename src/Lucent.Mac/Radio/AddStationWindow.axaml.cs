@@ -7,31 +7,54 @@ using Lucent.Radio;
 
 namespace Lucent.Mac;
 
-/// <summary>Asks for a station that isn't listed: its stream's address, typed or read from a .pls or .m3u file, and a name.</summary>
+/// <summary>
+/// Asks for a station that isn't listed: its stream's address (typed, read from a .pls or .m3u file, or found on the
+/// station's web page) and a name. A page that doesn't link its stream gives a name to search the list for instead.
+/// </summary>
 public partial class AddStationWindow : Window
 {
     private const string Explanation =
-        "Paste the stream's address from the station's website. Its .pls, .m3u or .m3u8 link works too, and so do video stations.";
+        "Paste the stream's address or the station's web page, and Lucent finds the stream. A .pls, .m3u, or .m3u8 link works too, and so do video stations.";
 
+    private readonly Func<string, string?, CancellationToken, Task<StationLookup>> _lookUp;
+    private CancellationTokenSource? _looking;
+    private StationLookup? _found;
     private bool _favorite;
 
+    // For the XAML previewer and loader.
     public AddStationWindow()
+        : this((_, _, _) => Task.FromResult(new StationLookup()))
     {
+    }
+
+    private AddStationWindow(Func<string, string?, CancellationToken, Task<StationLookup>> lookUp)
+    {
+        _lookUp = lookUp;
         InitializeComponent();
         Chrome.UseLucentFrame(this);
         Hint.Text = Explanation;
+        Closed += (_, _) => _looking?.Cancel();
     }
 
-    /// <summary>The station asked for and whether to keep it in the favorites, or null if cancelled.</summary>
+    /// <summary>
+    /// The station asked for and whether to keep it in the favorites, or what to search the list for when the page
+    /// given doesn't link its stream. Null if cancelled. <paramref name="lookUp"/> is <see cref="StationAddress.LookUpAsync(string, string?, string, CancellationToken)"/>.
+    /// </summary>
     /// <remarks>Windows' version waits in ShowDialog; Avalonia's dialogs are awaited instead.</remarks>
-    public static async Task<(RadioStation Station, bool Favorite)?> AskAsync(Window owner)
+    public static async Task<(RadioStation? Station, bool Favorite, string? Search)?> AskAsync(Window owner,
+        Func<string, string?, CancellationToken, Task<StationLookup>> lookUp)
     {
-        var window = new AddStationWindow();
+        var window = new AddStationWindow(lookUp);
         window.Opened += (_, _) => window.Address.Focus();
         // Centred on the window the user sees: a window that's a panel in the single window is out of sight.
-        return await window.ShowDialog<bool>(SingleWindow.FrameOf(owner))
-            ? (RadioGuide.FromAddress(window.Address.Text ?? string.Empty, window.StationName.Text), window._favorite)
-            : null;
+        if (!await window.ShowDialog<bool>(SingleWindow.FrameOf(owner)) || window._found is not { } found)
+        {
+            return null;
+        }
+
+        return found.Address is { } address
+            ? (RadioGuide.FromAddress(address, window.StationName.Text), window._favorite, null)
+            : (null, false, found.Search);
     }
 
     private async void OnChooseFile(object? sender, RoutedEventArgs e)
@@ -94,20 +117,63 @@ public partial class AddStationWindow : Window
         }
     }
 
-    private void Finish(bool favorite)
+    private async void Finish(bool favorite)
     {
-        var address = (Address.Text ?? string.Empty).Trim();
-        if (!RadioGuide.IsStreamAddress(address))
+        if (_looking is not null)
         {
-            ShowProblem(address.Length == 0
-                ? "Paste the stream's address first, or choose its .pls or .m3u file."
-                : "That doesn't look like a web address (http:// or https://).");
+            return;
+        }
+
+        var typed = (Address.Text ?? string.Empty).Trim();
+        if (typed.Length == 0)
+        {
+            ShowProblem("Paste the stream's address first, or choose its .pls or .m3u file.");
             Address.Focus();
             return;
         }
 
-        _favorite = favorite;
-        Close(true);
+        var looking = _looking = new CancellationTokenSource();
+        ShowLooking(true);
+        try
+        {
+            var found = await _lookUp(typed, StationName.Text, looking.Token);
+            if (looking.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (found.Problem is { } problem)
+            {
+                ShowLooking(false);
+                ShowProblem(problem);
+                Address.Focus();
+                return;
+            }
+
+            _found = found;
+            _favorite = favorite;
+            Close(true);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled, and closed with it.
+        }
+        finally
+        {
+            _looking = null;
+            looking.Dispose();
+        }
+    }
+
+    /// <summary>While the address is looked at, only Cancel works.</summary>
+    private void ShowLooking(bool looking)
+    {
+        Address.IsEnabled = StationName.IsEnabled = FileButton.IsEnabled = PlayButton.IsEnabled = FavoriteButton.IsEnabled = !looking;
+        if (looking)
+        {
+            Hint.Text = "Looking at that address…";
+            Hint.SetResourceReference(TextBlock.ForegroundProperty, "MutedTextBrush");
+        }
     }
 
     private void ShowProblem(string problem)

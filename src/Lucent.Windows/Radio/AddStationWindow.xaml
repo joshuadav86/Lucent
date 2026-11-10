@@ -11,16 +11,16 @@
                       CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
-    <!-- Asks for a station that isn't listed: its stream's address (or a .pls/.m3u file) and a name. -->
+    <!-- Asks for a station that isn't listed: its stream's address (or a .pls/.m3u file, or the station's web page) and a name. -->
     <Border BorderBrush="{DynamicResource WindowFrameBrush}" BorderThickness="1"
             Background="{DynamicResource PanelSheenBrush}" Padding="18,16,18,16">
         <StackPanel>
             <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Text="Add a station" />
             <TextBlock x:Name="Hint" Style="{StaticResource OptionHint}" Margin="0,4,0,12" />
 
-            <TextBlock Style="{StaticResource OptionHint}" Text="Stream address" Margin="0,0,0,4" />
+            <TextBlock Style="{StaticResource OptionHint}" Text="Stream or web page address" Margin="0,0,0,4" />
             <DockPanel>
-                <Button DockPanel.Dock="Right" Style="{StaticResource PickerButton}" Content="File…" Height="30" Padding="12,0" Margin="8,0,0,0"
+                <Button x:Name="FileButton" DockPanel.Dock="Right" Style="{StaticResource PickerButton}" Content="File…" Height="30" Padding="12,0" Margin="8,0,0,0"
                         ToolTip="Read the address from a .pls or .m3u file the station's website gave you" Click="OnChooseFile" />
                 <TextBox x:Name="Address" Style="{StaticResource TextInput}" KeyDown="OnFieldKeyDown" />
             </DockPanel>
@@ -30,9 +30,9 @@
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                 <Button Style="{StaticResource PickerButton}" Content="Cancel" Height="32" Padding="16,0" Click="OnCancel" />
-                <Button Style="{StaticResource PickerButton}" Content="Just play" Height="32" Padding="16,0" Margin="8,0,0,0"
+                <Button x:Name="PlayButton" Style="{StaticResource PickerButton}" Content="Just play" Height="32" Padding="16,0" Margin="8,0,0,0"
                         ToolTip="Play it now. It's kept in Recent, where its star adds it to the favorites later." Click="OnPlay" />
-                <Button Style="{StaticResource PickerButton}" Content="Add to favorites" Height="32" Padding="16,0" Margin="8,0,0,0"
+                <Button x:Name="FavoriteButton" Style="{StaticResource PickerButton}" Content="Add to favorites" Height="32" Padding="16,0" Margin="8,0,0,0"
                         Foreground="{DynamicResource AccentBrush}" ToolTip="Keep it in Favorites and play it" Click="OnAddToFavorites" />
             </StackPanel>
         </StackPanel>

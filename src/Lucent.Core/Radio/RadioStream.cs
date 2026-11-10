@@ -212,7 +212,8 @@ public sealed class RadioStream : WaveStream, ILiveStream
         base.Dispose(disposing);
     }
 
-    private static HttpClient CreateClient()
+    /// <summary>A client for stations: it reads Shoutcast's "ICY 200 OK" answers, and has no overall timeout.</summary>
+    internal static HttpClient CreateClient()
     {
         var handler = new SocketsHttpHandler
         {

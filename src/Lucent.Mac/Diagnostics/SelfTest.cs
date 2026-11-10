@@ -93,6 +93,9 @@ public static partial class SelfTest
         failures += Lucent.Radio.RadioSelfTest.Run(Console.WriteLine,
             formatsFolder is null ? null : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(formatsFolder))!, "hls-fmp4"));
 
+        // Add a station's address box: addresses without https://, station pages, and directory pages, served from memory.
+        failures += Lucent.Radio.StationAddressSelfTest.Run(Console.WriteLine);
+
         failures += Lucent.Video.VideoSelfTest.Run(Console.WriteLine, videos, IsVirtualMachine());
 
         failures += TestOutputDevices();

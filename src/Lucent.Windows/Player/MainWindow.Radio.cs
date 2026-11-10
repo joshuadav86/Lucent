@@ -40,6 +40,10 @@ public partial class MainWindow
     /// <summary>The Radio Browser directory, shared by the radio browser and the player.</summary>
     public RadioDirectory RadioDirectory => _radioDirectory ??= new RadioDirectory(StreamingHttp, RadioUserAgent);
 
+    /// <summary>What Add a station makes of what was typed: a stream, the stream a station's page links, or a name to search for.</summary>
+    public Task<StationLookup> LookUpStationAsync(string typed, string? name, CancellationToken cancel) =>
+        StationAddress.LookUpAsync(typed, name, RadioUserAgent, cancel);
+
     /// <summary>The station on, playing or not, or null when the player is playing Lucent's own music.</summary>
     public RadioStation? CurrentStation => _station;
 
