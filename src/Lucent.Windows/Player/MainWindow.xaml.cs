@@ -85,7 +85,7 @@ public partial class MainWindow : Window
         StateChanged += OnPlayerStateChanged;
         SourceInitialized += (_, _) => (PresentationSource.FromVisual(this) as HwndSource)?.AddHook(RefuseMaximize);
 
-        _queue.PlaylistView.ItemsSource = _playlist;
+        _queue.ShowQueue(_playlist);
         _playlist.CollectionChanged += (_, _) =>
         {
             ShowQueueSize();

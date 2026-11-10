@@ -237,13 +237,7 @@ public partial class MainWindow
             return;
         }
 
-        _queue.EmptyPlaylistHint.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        _queue.QueueCount.Text = _playlist.Count switch
-        {
-            0 => "Empty",
-            1 => "1 track",
-            var count => $"{count} tracks",
-        };
+        _queue.ShowQueueSize();
     }
 
     /// <summary>Shows the playlist the other app is playing through in the queue window, or the queue again.</summary>

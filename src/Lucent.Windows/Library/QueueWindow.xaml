@@ -60,6 +60,7 @@
         <Grid Margin="6,6,4,8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
@@ -91,6 +92,12 @@
                                   Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
                         </StackPanel>
                     </Button>
+                    <!-- Search: opens a box under the title bar that narrows the list to the matching songs. -->
+                    <Button Style="{StaticResource IconButton}" x:Name="SearchButton" Width="32" Height="32"
+                            ToolTip="Search the list for a song, artist, or album (Ctrl+F)"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Click="OnSearchButton">
+                        <Path Style="{StaticResource LineIcon}" Data="{StaticResource SearchIcon}" />
+                    </Button>
                     <Button Style="{StaticResource IconButton}" x:Name="AddFilesButton" Width="32" Height="32" ToolTip="Add files"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="OnAddFiles">
                         <Path Style="{StaticResource LineIcon}" Data="{StaticResource AddIcon}" />
@@ -117,7 +124,7 @@
                 </StackPanel>
             </DockPanel>
 
-            <ListBox x:Name="PlaylistView" Grid.Row="1" Background="Transparent" BorderThickness="0"
+            <ListBox x:Name="PlaylistView" Grid.Row="2" Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      SelectionMode="Extended"
                      MouseDoubleClick="OnPlaylistDoubleClick"
@@ -162,7 +169,7 @@
             </ListBox>
 
             <!-- Another app's playlist (Spotify's), in place of the queue while Lucent controls that app. -->
-            <ListBox x:Name="RemoteListView" Grid.Row="1" Background="Transparent" BorderThickness="0" Visibility="Collapsed"
+            <ListBox x:Name="RemoteListView" Grid.Row="2" Background="Transparent" BorderThickness="0" Visibility="Collapsed"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.VirtualizationMode="Recycling"
@@ -209,10 +216,10 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <TextBlock x:Name="RemoteListNote" Grid.Row="2" Visibility="Collapsed" Margin="10,6,8,0" FontSize="11"
+            <TextBlock x:Name="RemoteListNote" Grid.Row="3" Visibility="Collapsed" Margin="10,6,8,0" FontSize="11"
                        TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" />
 
-            <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="1" IsHitTestVisible="False"
+            <StackPanel x:Name="EmptyPlaylistHint" Grid.Row="2" IsHitTestVisible="False"
                         VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Path Data="{StaticResource MusicIcon}" Fill="{DynamicResource FaintLineBrush}" HorizontalAlignment="Center" />
                 <TextBlock Text="Drop music here" Margin="0,12,0,0" FontSize="13" HorizontalAlignment="Center"
@@ -220,6 +227,22 @@
                 <TextBlock Text="MP3 · FLAC · WAV · M4A · ALAC · WMA · OGG · Opus · AIFF" Margin="0,4,0,0"
                            FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
+
+            <TextBlock x:Name="NoMatchHint" Grid.Row="2" Visibility="Collapsed" IsHitTestVisible="False"
+                       VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="13"
+                       Text="No sounds match your search" Foreground="{DynamicResource MutedTextBrush}" />
+
+            <!-- Search, after the lists so a classic skin's swap of them keeps its place: every typed word in the title, artist, album, or file name. -->
+            <Grid x:Name="SearchRow" Grid.Row="1" Margin="8,0,4,6" Visibility="Collapsed">
+                <TextBox x:Name="SearchBox" Style="{StaticResource SearchInput}" Tag="Search sounds, artists, and albums"
+                         ToolTip="Find sounds in the list by title, artist, album, or file name. Esc clears it, then closes it."
+                         TextChanged="OnSearchChanged" PreviewKeyDown="OnSearchKeyDown" />
+                <Button x:Name="ClearSearchButton" Style="{StaticResource IconButton}" Width="22" Height="22"
+                        HorizontalAlignment="Right" Margin="0,0,3,0"
+                        ToolTip="Close the search (Esc)" Click="OnCloseSearch">
+                    <Path Style="{StaticResource CaptionIcon}" Data="{StaticResource CloseIcon}" />
+                </Button>
+            </Grid>
         </Grid>
     </Border>
 </local:ToolWindow>

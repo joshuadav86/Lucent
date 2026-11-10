@@ -19,6 +19,8 @@
 
 **Queue (Q):** what plays next. Shuffle (S), repeat (R), favorite (H). The queue is kept between runs (`Queue.m3u8` in the app data folder, saved 2 s after a change and on closing); on the next start it comes back with the song that was playing selected, and Play starts it. Files that are gone are left out.
 
+- Search (both): the magnifier in the queue's title bar, or Ctrl+F / ⌘F in the queue window, opens a box under the title bar. As in the library, every typed word must be in the song's title, artist, album, album artist, genre, or file name, ignoring case and accents, after a 150 ms pause in the typing (`PlaylistEntry.SearchKey`, `SearchText`). It narrows Spotify's (or Music's) playlist the same way while that shows in the queue's place (`RemoteListEntry.SearchKey`: title, artist, album). The title bar counts "3 of 40 tracks", and "No sounds match your search" shows when nothing does. It only hides rows: the queue plays in its own order, and Delete or Remove act on the rows showing. Down or Enter picks the first match (Enter again plays it); Esc clears the box, then closes it; the X closes it. A classic skin's frame has no room for it, so switching to one closes the search. `QueueWindow.Search.cs` in each app.
+
 **Sources panel (M):** add music, tune in to radio, or connect a music app.
 
 **Import:** Apple Music/iTunes, MusicBee, foobar2000, playlist files (M3U and friends), file tags, Plex, and YouTube Music (Google Takeout). Loved songs become favorites; playlists come in with the source's name.

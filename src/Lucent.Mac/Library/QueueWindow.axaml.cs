@@ -22,6 +22,8 @@ public partial class QueueWindow : ToolWindow
         // Runs before the list's menu opens, to fill in the items that depend on what's selected.
         PlaylistView.AddHandler(ContextRequestedEvent, OnQueueMenuOpening, RoutingStrategies.Tunnel);
         RemoteListView.AddHandler(ContextRequestedEvent, OnRemoteMenuOpening, RoutingStrategies.Tunnel);
+        // Before the box's own handling: Esc, Down and Enter (see QueueWindow.Search.cs).
+        SearchBox.AddHandler(KeyDownEvent, OnSearchKeyDown, RoutingStrategies.Tunnel);
     }
 
     /// <summary>Music dropped on the queue goes on the end of it, as on Winamp's playlist.</summary>
@@ -193,7 +195,7 @@ public partial class QueueWindow : ToolWindow
             QueueTitle.Text = list is null ? "QUEUE" : appName.ToUpperInvariant();
             if (list is not null)
             {
-                QueueCount.Text = list.CountText;
+                ShowRemoteListSize();
             }
         }
 
@@ -221,7 +223,7 @@ public partial class QueueWindow : ToolWindow
         var chosen = (RemoteListView.SelectedItem as RemoteListEntry)?.Track.Id;
         var tracks = _remoteList is null ? Array.Empty<RemoteTrack>() : RemoteListSorting.Sort(_remoteList.Tracks, ShownOrder);
         _remoteEntries = tracks.Select(track => new RemoteListEntry(track)).ToList();
-        RemoteListView.ItemsSource = _remoteEntries;
+        FilterRemoteList();
         // The song chosen stays chosen when the list is read again (what's up next is, with every song).
         RemoteListView.SelectedItem = _remoteEntries.FirstOrDefault(entry => entry.Track.Id == chosen);
     }
