@@ -14,7 +14,8 @@ namespace Lucent;
 //   - The lines between panels can be dragged to make the panels either side bigger or smaller (PanelDividers
 //     in Lucent.Core), down to their smallest; the player's column is carried along between the panels either
 //     side of it. Each line moved is kept (AppSettings.SingleWindowDividers) and moved again from wherever the
-//     layout puts it, so it stays moved as the window's resized. Tidy layout (Shift+D) forgets the swaps and
+//     layout puts it, so it stays moved as the window's resized. The line under the equalizer folds it
+//     (EqualizerWindow.Fold.cs) to give the panel under it room. Tidy layout (Shift+D) forgets the swaps and
 //     the lines moved.
 public partial class MainWindow
 {
@@ -93,6 +94,67 @@ public partial class MainWindow
         }
 
         return moved;
+    }
+
+    /// <summary>
+    /// How far each panel's top and height change with the equalizer at its own height, not folded, as the windows go when
+    /// single window ends: the panels under it move down and give up just that much, so they still end where they did.
+    /// Only the panels that change, by name.
+    /// </summary>
+    private Dictionary<string, (double Top, double Height)> UnfoldedChanges()
+    {
+        var changes = new Dictionary<string, (double Top, double Height)>();
+        if (_laidOutBase is null || _laidOutTiles is null || _laidOut is null)
+        {
+            return changes;
+        }
+
+        var unfolded = PanelDividers.Unfolded(_laidOutBase, _laidOutTiles, _settings.SingleWindowDividers);
+        foreach (var (key, place) in _laidOut.Places)
+        {
+            if (unfolded.Places.TryGetValue(key, out var open) && (Math.Abs(open.Top - place.Top) > 0.1 || Math.Abs(open.Height - place.Height) > 0.1))
+            {
+                changes[key] = (open.Top - place.Top, open.Height - place.Height);
+            }
+        }
+
+        return changes;
+    }
+
+    /// <summary>
+    /// For the layout check: the line under the equalizer dragged up as far as <paramref name="by"/> (or as far as it goes),
+    /// as a drag leaves it, and the panels laid out again. Gives back the panels under it and how far the line moved, or
+    /// null if there's no such line (nothing under the equalizer).
+    /// </summary>
+    internal (string Under, double Moved)? FoldEqualizer(double by)
+    {
+        if (_laidOutBase is null || _laidOutTiles?.FirstOrDefault(tile => tile.Kind == TileKind.Equalizer) is not { } equalizer)
+        {
+            return null;
+        }
+
+        // Moved as the last line moved, from where the layout and the other lines moved put it, as a drag does.
+        bool Under(DividerLine line) => line.Across && line.Before.SequenceEqual(new[] { equalizer.Key });
+        var others = _settings.SingleWindowDividers.Where(divider => !(divider.Across && divider.Before.SequenceEqual(new[] { equalizer.Key }))).ToList();
+        var without = PanelDividers.Apply(_laidOutBase, _laidOutTiles, others);
+        if (PanelDividers.Lines(without.Places, _laidOutTiles).FirstOrDefault(Under) is not { } line)
+        {
+            return null;
+        }
+
+        var (least, _) = PanelDividers.Room(line, without.Places, _laidOutTiles);
+        var offset = Math.Max(-by, least);
+        _settings.SingleWindowDividers = others;
+        PanelDividers.Remember(_settings.SingleWindowDividers, line, offset);
+        Retile();
+        return (string.Join(" and ", line.After), offset);
+    }
+
+    /// <summary>For the layout check: the lines moved by hand forgotten, as Tidy layout does, and the panels laid out again.</summary>
+    internal void ForgetMovedLines()
+    {
+        _settings.SingleWindowDividers.Clear();
+        Retile();
     }
 
     // ---- Swapping panels ----

@@ -21,7 +21,7 @@ namespace Lucent.Mac;
 /// switches single window on and off (CheckSingleWindowAsync), picking every skin and going full screen and back while
 /// it's on, and every skin again once it's off, the windows ending flush as one block each time they're apart, and
 /// switches it off while it fills the screen with every window out, laid out as it was and then "Player on the left,
-/// queue beside it".
+/// queue beside it", and then with the queue closed and the line under the equalizer dragged up, folding the equalizer.
 /// </summary>
 internal static class LayoutCheck
 {
@@ -304,6 +304,10 @@ internal static class LayoutCheck
             // And again laid out "Player on the left, queue beside it" (one of Tidy layout's): the art under the player
             // and the queue in a column of its own right of it.
             lines.AddRange(await CheckLeavingFilledAsync(every, TileStyle.QueueBeside));
+
+            // And with the queue closed, the library squeezed between the equalizer and the art, and the line under the
+            // equalizer dragged up to make the library taller, folding the equalizer.
+            lines.AddRange(await CheckLeavingFilledAsync(every, fold: true));
         }
 
         // Then with nothing beside the player (just the queue, with or without the equalizer): the player and the
@@ -324,12 +328,16 @@ internal static class LayoutCheck
     /// higher, flush with the player's column), the windows end flush as one block, nothing's over anything else, and
     /// everything's on the screen. Then the windows it opened close again, for the rest of the check. With
     /// <paramref name="style"/>, the panels are laid out that way first (as Tidy layout would), and put back after.
+    /// With <paramref name="fold"/>, the queue's closed instead, so the library goes under the equalizer, and the line under
+    /// the equalizer is dragged up as far as it goes (<see cref="CheckFoldAsync"/>): each window then goes where its panel
+    /// was, the equalizer its own height again and the windows under it moved down to make room for it.
     /// </summary>
-    private static async Task<List<string>> CheckLeavingFilledAsync(MainWindow main, TileStyle? style = null)
+    private static async Task<List<string>> CheckLeavingFilledAsync(MainWindow main, TileStyle? style = null, bool fold = false)
     {
-        var label = "single window off while full screen" + (style == TileStyle.QueueBeside ? ", player on the left, queue beside it" : string.Empty);
+        var label = "single window off while full screen" + (style == TileStyle.QueueBeside ? ", player on the left, queue beside it" : string.Empty)
+            + (fold ? ", the equalizer folded" : string.Empty);
         var lines = new List<string>();
-        var closeAgain = main.OpenEveryWindow();
+        var closeAgain = fold ? main.OpenLibraryUnderEqualizer() : main.OpenEveryWindow();
         await Task.Delay(TimeSpan.FromSeconds(2));
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
@@ -345,7 +353,14 @@ internal static class LayoutCheck
                 body.Count == 0 ? 0 : body.Max(place => place.Right), body.Count == 0 ? 0 : body.Max(place => place.Bottom)));
         }
 
-        var panels = main.OwnedWindows.Select(window => (Window: window, Panel: PanelOnScreen(main, window)))
+        if (fold)
+        {
+            lines.AddRange(await CheckFoldAsync(main, label));
+        }
+
+        // Folded, the windows go where the panels would be with the equalizer unfolded, which is where the app puts them.
+        var placesForWindows = main.PlacesForWindows();
+        var panels = main.OwnedWindows.Select(window => (Window: window, Panel: fold && placesForWindows.TryGetValue(window, out var place) ? place : PanelOnScreen(main, window)))
             .Where(entry => entry.Panel is not null)
             .ToDictionary(entry => entry.Window, entry => entry.Panel!.Value);
         lines.Add($"{label}: the single window at {Describe(frame)} on a screen of {Describe(screen)}, panels: " +
@@ -395,6 +410,15 @@ internal static class LayoutCheck
         // Only the windows that had a panel: one the single window left out (no room for it on a small screen) stays
         // where it was, behind the others, as the checks above leave it out too.
         lines.AddRange(CheckFlush(main, label, panels.Keys));
+        if (fold && EqualizerWindow.Current is { IsVisible: true } equalizer)
+        {
+            // A window again, it's its own height, unfolded.
+            var (needs, content, height) = (equalizer.HeightNeeded, equalizer.ContentHeight, equalizer.ActualHeight());
+            lines.Add($"{(Math.Abs(needs - height) <= 2 && Math.Abs(content - height) <= 2 ? "ok" : "MISMATCH")} {label}: the equalizer is " +
+                $"{height:0} tall, its sliders need {needs:0}, and its insides are {content:0}");
+            main.ForgetMovedLines();
+        }
+
         closeAgain();
         if (styleWas is { } was)
         {
@@ -404,6 +428,72 @@ internal static class LayoutCheck
         await Task.Delay(TimeSpan.FromSeconds(1));
         return lines;
     }
+
+    /// <summary>
+    /// In the single window, the line under the equalizer dragged up as far as it goes (2026-11-10: the library squeezed
+    /// between the equalizer and the art couldn't be made any taller): the equalizer's panel is that much shorter and its
+    /// insides fit it, the panels under it that much taller, ending where they did, and nothing else moves. Its insides
+    /// still fit after a skin change, and back on Lucent's. With nothing under the equalizer (a small screen), there's no
+    /// line to drag, which is only a mismatch if something is under it.
+    /// </summary>
+    private static async Task<List<string>> CheckFoldAsync(MainWindow main, string label)
+    {
+        var lines = new List<string>();
+        var before = main.LaidOutPanels.ToDictionary(entry => entry.Key, entry => entry.Value);
+        if (EqualizerWindow.Current is not { IsVisible: true } equalizer || !before.TryGetValue("Equalizer", out var was))
+        {
+            lines.Add($"MISMATCH {label}: the equalizer isn't a panel: {DescribePanels(before)}");
+            return lines;
+        }
+
+        var under = before.Where(entry => entry.Key != "Equalizer" && Math.Abs(entry.Value.Top - was.Bottom) < 1
+            && Math.Min(entry.Value.Right, was.Right) - Math.Max(entry.Value.Left, was.Left) > 1).Select(entry => entry.Key).ToList();
+        if (main.FoldEqualizer(EqualizerWindow.MostFold) is not { } folded)
+        {
+            lines.Add($"{(under.Count == 0 ? "ok" : "MISMATCH")} {label}: there's no line to drag under the equalizer, with " +
+                $"{(under.Count == 0 ? "nothing" : string.Join(" and ", under))} under it: {DescribePanels(before)}");
+            return lines;
+        }
+
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        var after = main.LaidOutPanels.ToDictionary(entry => entry.Key, entry => entry.Value);
+        var moved = -folded.Moved;
+        lines.Add($"{(moved > 1 ? "ok" : "MISMATCH")} {label}: the line under the equalizer (over the {folded.Under}) moved up {moved:0} " +
+            $"of the {EqualizerWindow.MostFold:0} it folds: {DescribePanels(after)}");
+        foreach (var (key, place) in before)
+        {
+            var expected = key == "Equalizer" ? place with { Height = place.Height - moved }
+                : under.Contains(key) ? place with { Top = place.Top - moved, Height = place.Height + moved }
+                : place;
+            var now = after.GetValueOrDefault(key);
+            var same = Math.Abs(now.Left - expected.Left) <= 1 && Math.Abs(now.Top - expected.Top) <= 1
+                && Math.Abs(now.Width - expected.Width) <= 1 && Math.Abs(now.Height - expected.Height) <= 1;
+            lines.Add($"{(same ? "ok" : "MISMATCH")} {label}: the {key} panel is at {DescribePanel(now)}, " +
+                $"{(key == "Equalizer" ? "folded" : under.Contains(key) ? "grown" : "left")} from {DescribePanel(place)}");
+        }
+
+        foreach (var skin in new[] { "Current", "Linework", "Lucent" })
+        {
+            if (skin != "Current")
+            {
+                main.ChooseSkin(skin);
+                await Task.Delay(TimeSpan.FromSeconds(1.5));
+            }
+
+            var panel = main.LaidOutPanels.GetValueOrDefault("Equalizer");
+            var (content, needs, height) = (equalizer.ContentHeight, equalizer.HeightNeeded, equalizer.Height);
+            var fits = Math.Abs(content - panel.Height) <= 2 && Math.Abs(needs - height) <= 2 && Math.Abs(height - moved - panel.Height) <= 2;
+            lines.Add($"{(fits ? "ok" : "MISMATCH")} {label}, {(skin == "Current" ? "as it is" : skin)}: the equalizer's panel is {panel.Height:0} " +
+                $"tall and its insides {content:0}; its own height is {height:0}, its sliders need {needs:0}");
+        }
+
+        return lines;
+    }
+
+    private static string DescribePanel(TileRect place) => $"{place.Left:0},{place.Top:0} {place.Width:0} x {place.Height:0}";
+
+    private static string DescribePanels(IReadOnlyDictionary<string, TileRect> places) =>
+        string.Join(", ", places.Select(entry => $"{entry.Key} {DescribePanel(entry.Value)}"));
 
     /// <summary>
     /// With the panels laid out "Player on the left, queue beside it": the player in the top left corner, the queue in a

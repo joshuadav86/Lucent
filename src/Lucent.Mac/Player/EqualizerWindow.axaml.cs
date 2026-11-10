@@ -387,6 +387,8 @@ public partial class EqualizerWindow : Window
         }
 
         CurveFrame.Width = _columnWidth * _bands.Count;
+        // New sliders are their own height: as short as the fold has them (in the single window) before it's measured.
+        ApplyFold();
         FitToContent();
     }
 
@@ -438,8 +440,14 @@ public partial class EqualizerWindow : Window
     }
 
     // Sized by hand rather than with SizeToContent, so the width can glide when the band count changes.
-    /// <summary>How tall its sliders and buttons need it to be, as it sizes itself to them (for the layout check).</summary>
-    internal double HeightNeeded
+    /// <summary>
+    /// How tall its sliders and buttons need it to be, as it sizes itself to them (for the layout check): its own height,
+    /// unfolded, even while it's folded in the single window.
+    /// </summary>
+    internal double HeightNeeded => ContentHeight + _folded;
+
+    /// <summary>How tall its insides are as they're shown now, folded or not (for the layout check).</summary>
+    internal double ContentHeight
     {
         get
         {
@@ -455,7 +463,8 @@ public partial class EqualizerWindow : Window
         UpdateLayout();
         Frame.Measure(Size.Infinity);
         Width = _fitWidth ?? Math.Ceiling(Frame.DesiredSize.Width);
-        Height = Math.Ceiling(Frame.DesiredSize.Height);
+        // Its own height: folded in the single window, its insides are shorter by just that much.
+        Height = Math.Ceiling(Frame.DesiredSize.Height) + _folded;
     }
 
     /// <summary>

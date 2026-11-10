@@ -68,8 +68,13 @@ public readonly record struct TileRect(double Left, double Top, double Width, do
 /// <param name="Key">What the app knows it by, e.g. "Queue". Two editors need two keys.</param>
 /// <param name="FixedSize">It can't be resized (the player and the equalizer size themselves): it keeps <paramref name="Width"/> and <paramref name="Height"/>.</param>
 /// <param name="LockedAt">Where it's locked: it stays there, and the others fill the screen around it.</param>
+/// <param name="FoldsTo">
+/// For a window that sizes itself, how short a line dragged up under it in the single window can make it (the equalizer
+/// folds its response curve away and shortens its sliders), or 0 if it can't be made shorter. The layouts themselves
+/// always give it <paramref name="Height"/>; only <see cref="PanelDividers"/> folds it.
+/// </param>
 public sealed record TileWindow(string Key, TileKind Kind, double MinWidth, double MinHeight, double Width, double Height,
-    bool FixedSize = false, TileRect? LockedAt = null);
+    bool FixedSize = false, TileRect? LockedAt = null, double FoldsTo = 0);
 
 /// <summary>Where <see cref="FullScreenLayout.Arrange"/> put each window.</summary>
 public sealed class TileResult
