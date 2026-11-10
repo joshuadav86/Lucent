@@ -1103,9 +1103,21 @@ public partial class MainWindow
         return () => undo.ForEach(action => action());
     }
 
-    /// <summary>For the layout check: how wide the player's panel, the equalizer's (if it's one), and the body are now in the single window.</summary>
-    internal (double Player, double? Equalizer, double Body) PanelWidths() =>
-        (PlayerRoot.Bounds.Width,
-            EqualizerWindow.Current is { } equalizer && _panes.TryGetValue(equalizer, out var pane) ? pane.Box.Bounds.Width : null,
+    /// <summary>
+    /// For the layout check: how much of the single window's width the panels fill across the player's rows, and across
+    /// the equalizer's (if it's a panel), and the width of the window's body. Any less than the body is an empty block.
+    /// </summary>
+    internal (double Player, double? Equalizer, double Body) PanelWidths()
+    {
+        var boxes = new List<Control> { PlayerRoot }.Concat(_panes.Values.Select(pane => (Control)pane.Box)).Where(box => box.IsVisible).ToList();
+        double Across(Control row)
+        {
+            var (top, bottom) = (Canvas.GetTop(row), Canvas.GetTop(row) + row.Bounds.Height);
+            return boxes.Where(box => Math.Min(Canvas.GetTop(box) + box.Bounds.Height, bottom) - Math.Max(Canvas.GetTop(box), top) > 1).Sum(box => box.Bounds.Width);
+        }
+
+        return (Across(PlayerRoot),
+            EqualizerWindow.Current is { } equalizer && _panes.TryGetValue(equalizer, out var pane) ? Across(pane.Box) : null,
             _paneArea?.Bounds.Width ?? 0);
+    }
 }

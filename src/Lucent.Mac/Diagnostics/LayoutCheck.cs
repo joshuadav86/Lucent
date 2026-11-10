@@ -383,8 +383,9 @@ internal static class LayoutCheck
     }
 
     /// <summary>
-    /// Just the queue (and the equalizer) open with the player, in a single window wider than the player: the player's
-    /// panel (and the equalizer's) run the whole width, with no empty block beside them; then single window off, where
+    /// Just the queue (and the equalizer) open with the player, in a single window wider than the player: no empty block
+    /// beside the player or the equalizer (with the queue under them, they run the whole width; on a short screen the
+    /// queue goes beside them instead); then single window off, where
     /// the player's back at its own width and the queue and equalizer end flush with it. Then the windows it closed open
     /// again, for the rest of the check.
     /// </summary>
@@ -408,20 +409,21 @@ internal static class LayoutCheck
         main.MoveTo(screen.X + 10, Math.Max(screen.Y, main.Top()));
         await Task.Delay(TimeSpan.FromSeconds(2));
         var (player, eq, body) = main.PanelWidths();
-        lines.Add($"{(Math.Abs(player - body) <= 1 ? "ok" : "MISMATCH")} {label}: the player's panel is {player:0} wide, the single window's {body:0}");
+        lines.Add($"{(Math.Abs(player - body) <= 1 ? "ok" : "MISMATCH")} {label}: the panels across the player's rows fill {player:0} of the single window's {body:0}");
         if (equalizer)
         {
-            lines.Add($"{(eq is { } wide && Math.Abs(wide - body) <= 1 ? "ok" : "MISMATCH")} {label}: the equalizer's panel is {eq:0} wide, the single window's {body:0}");
+            lines.Add($"{(eq is { } wide && Math.Abs(wide - body) <= 1 ? "ok" : "MISMATCH")} {label}: the panels across the equalizer's rows fill {eq:0} of the single window's {body:0}");
         }
 
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(3));
         var playerNow = Placement.BoundsOf(main);
         lines.Add($"{(Math.Abs(playerNow.Width - playerWidth) <= 4 ? "ok" : "MISMATCH")} {label}, single window off: the player is {playerNow.Width:0} wide, was {playerWidth:0}");
-        foreach (var window in main.OwnedWindows.Where(IsOnScreen))
+        // The windows under the player (the equalizer, and the queue unless a short screen put it beside them) as wide as it.
+        foreach (var window in main.OwnedWindows.Where(IsOnScreen).Where(window => Placement.BoundsOf(window).Y >= playerNow.Bottom - 4))
         {
             var at = Placement.BoundsOf(window);
-            var flush = Math.Abs(at.X - playerNow.X) <= 4 && Math.Abs(at.Width - playerNow.Width) <= 4 && at.Y >= playerNow.Bottom - 4;
+            var flush = Math.Abs(at.X - playerNow.X) <= 4 && Math.Abs(at.Width - playerNow.Width) <= 4;
             lines.Add($"{(flush ? "ok" : "MISMATCH")} {label}, single window off: the {window.Title} is at {Describe(at)}, the player at {Describe(playerNow)}");
         }
 
