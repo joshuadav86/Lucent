@@ -85,6 +85,12 @@ public partial class MainWindow
 
     private bool InSingleWindow => _singleFrame is not null;
 
+    /// <summary>
+    /// The player and the equalizer when they're stretched across the single window (nothing beside them), where
+    /// they'd be at their own width, by key: their windows go there when single window ends.
+    /// </summary>
+    private readonly Dictionary<string, TileRect> _unstretched = new();
+
     /// <summary>The player's width, for the equalizer under it: in the single window the window's much wider than the player.</summary>
     internal double PlayerColumnWidth => InSingleWindow ? PlayerPaneWidth : Bounds.Width;
 
@@ -218,6 +224,7 @@ public partial class MainWindow
         _singleFrame = null;
         _header = null;
         _paneArea = null;
+        _unstretched.Clear();
         ForgetPanelDrags();
         LinkToggle.IsVisible = true;
         foreach (var lockButton in TitleButtons.Children.OfType<LockButton>())
@@ -317,6 +324,12 @@ public partial class MainWindow
 
             var at = pane.Box.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0);
             var place = new Rect(Left + at.X, Top + at.Y, pane.Box.Bounds.Width, pane.Box.Bounds.Height);
+            if (KeyOf(pane) is { } key && _unstretched.TryGetValue(key, out var own))
+            {
+                // Stretched across with the player: its window goes back to its own width, where it'd be without the stretch.
+                place = new Rect(place.X + own.Left - Canvas.GetLeft(pane.Box), place.Y, own.Width, place.Height);
+            }
+
             if (window is not EqualizerWindow && Math.Abs(place.Y - areaTop) < 2)
             {
                 place = new Rect(place.X, Top, place.Width, place.Height + place.Y - Top);
@@ -327,8 +340,26 @@ public partial class MainWindow
 
         var player = PlayerRoot.TranslatePoint(new Point(0, 0), this) ?? new Point(0, 0);
         var playerTop = Top + player.Y;
-        places[this] = new Rect(Left + player.X, Math.Abs(playerTop - areaTop) < 2 ? Top : playerTop - HeaderHeight,
-            PlayerRoot.Bounds.Width, PlayerRoot.Bounds.Height + HeaderHeight);
+        var (playerLeft, playerWidth) = _unstretched.TryGetValue("Player", out var ownPlayer)
+            ? (Left + player.X + ownPlayer.Left - Canvas.GetLeft(PlayerRoot), ownPlayer.Width)
+            : (Left + player.X, PlayerRoot.Bounds.Width);
+        places[this] = new Rect(playerLeft, Math.Abs(playerTop - areaTop) < 2 ? Top : playerTop - HeaderHeight,
+            playerWidth, PlayerRoot.Bounds.Height + HeaderHeight);
+        if (ownPlayer.Width > 0 && PlayerRoot.Bounds.Width > ownPlayer.Width && PlayerRoot.Bounds.Width >= area.Bounds.Width - 1)
+        {
+            // Stretched across, the player had nothing beside it, only panels under it: as windows they go back to
+            // the player's own width with it, so they all end flush.
+            var scale = ownPlayer.Width / PlayerRoot.Bounds.Width;
+            var stretchedLeft = Left + player.X;
+            foreach (var (window, pane) in _panes)
+            {
+                if (KeyOf(pane) is { } key && !_unstretched.ContainsKey(key) && places.TryGetValue(window, out var under))
+                {
+                    places[window] = new Rect(playerLeft + (under.X - stretchedLeft) * scale, under.Y, under.Width * scale, under.Height);
+                }
+            }
+        }
+
         return places;
     }
 
@@ -585,6 +616,9 @@ public partial class MainWindow
             window.SizeToContent = pane.Sizing;
         }
 
+        // Back to the player's width, if it was stretched across the single window with the player.
+        (window as EqualizerWindow)?.FitTo(PlayerPaneWidth);
+
         if (show)
         {
             BringBack(window);
@@ -758,9 +792,10 @@ public partial class MainWindow
             var name = WindowLocks.NameOf(pane.Window) ?? kind.ToString();
             if (kind == TileKind.Equalizer)
             {
-                // The equalizer sizes itself, as a window does to fit its sliders.
+                // The equalizer sizes itself, as a window does to fit its sliders: to the player's width, even while
+                // it's stretched across with the player (or the single window could never be made narrower again).
                 var size = new Size(
-                    double.IsNaN(pane.Window.Width) ? pane.Wanted.Width : pane.Window.Width,
+                    _unstretched.ContainsKey(name) ? PlayerPaneWidth : double.IsNaN(pane.Window.Width) ? pane.Wanted.Width : pane.Window.Width,
                     double.IsNaN(pane.Window.Height) ? pane.Wanted.Height : pane.Window.Height);
                 panels.Add((pane.Box, new TileWindow(name, kind, size.Width, size.Height, size.Width, size.Height, FixedSize: true)));
             }
@@ -815,7 +850,10 @@ public partial class MainWindow
         }
 
         var laidOut = SingleWindowLayout.Arrange(body.Width, body.Height, tiles, style, _settings.SingleWindowSwaps);
-        var layout = WithDividers(laidOut, tiles);
+        // With nothing beside the player, it (and the equalizer under it) runs the whole width, so there's no empty block beside it.
+        var arranged = WithDividers(laidOut, tiles);
+        var layout = SingleWindowLayout.Stretched(arranged, body.Width, tiles);
+        _unstretched.Clear();
         foreach (var (box, tile) in panels)
         {
             if (!layout.Places.TryGetValue(tile.Key, out var place))
@@ -831,6 +869,27 @@ public partial class MainWindow
             {
                 box.Width = place.Width;
                 box.Height = place.Height;
+            }
+            else
+            {
+                PlayerRoot.Width = place.Width;
+            }
+
+            if (arranged.Places.TryGetValue(tile.Key, out var own) && Math.Abs(own.Width - place.Width) > 0.5)
+            {
+                // Stretched across: where it'd be at its own width, for its window to go to when single window ends.
+                _unstretched[tile.Key] = own;
+            }
+
+            if (_panes.Values.FirstOrDefault(pane => pane.Box == box) is { Window: EqualizerWindow equalizer })
+            {
+                // The equalizer lays its sliders out across its panel, stretched or not; a new height lays the panels out again.
+                var height = equalizer.Height;
+                equalizer.FitTo(place.Width);
+                if (Math.Abs(equalizer.Height - height) > 0.5)
+                {
+                    RetileSoon();
+                }
             }
 
             // What it'd like as the layout has it, not as a line moved by hand has it, or each layout would
@@ -853,7 +912,8 @@ public partial class MainWindow
         }
 
         var panels = PanelTiles();
-        var now = panels.ToDictionary(panel => panel.Tile.Key, panel => new TileRect(
+        // The player (and the equalizer) where they'd be at their own width, as the layouts tried put them.
+        var now = panels.ToDictionary(panel => panel.Tile.Key, panel => _unstretched.TryGetValue(panel.Tile.Key, out var own) ? own : new TileRect(
             Canvas.GetLeft(panel.Box), Canvas.GetTop(panel.Box), panel.Box.Bounds.Width, panel.Box.Bounds.Height));
         var (style, _) = SingleWindowLayout.Tidy(_paneArea.Bounds.Width, _paneArea.Bounds.Height,
             panels.Select(panel => panel.Tile).ToList(), now, _settings.SingleWindowStyle);
@@ -1004,5 +1064,60 @@ public partial class MainWindow
         }
 
         return () => close.ForEach(action => action());
+    }
+
+    /// <summary>
+    /// For the layout check: just the queue (and the equalizer, with <paramref name="equalizer"/>) open with the player,
+    /// so nothing's beside the player. Gives back what puts the windows it closed or opened back as they were.
+    /// </summary>
+    internal Action OpenOnlyQueue(bool equalizer)
+    {
+        var undo = new List<Action>();
+        foreach (var window in new ToolWindow[] { _libraryWindow, _visuals, _queue })
+        {
+            if (window.IsVisible != (window == _queue))
+            {
+                ToggleWindow(window);
+                undo.Add(() => ToggleWindow(window));
+            }
+        }
+
+        if (ArtworkWindow.IsOpen)
+        {
+            ToggleArtwork();
+            undo.Add(ToggleArtwork);
+        }
+
+        if (AnalyzerWindow.IsOpen)
+        {
+            ToggleAnalyzer();
+            undo.Add(ToggleAnalyzer);
+        }
+
+        if (EqualizerWindow.Current is { IsVisible: true } != equalizer)
+        {
+            ToggleEqualizer();
+            undo.Add(ToggleEqualizer);
+        }
+
+        return () => undo.ForEach(action => action());
+    }
+
+    /// <summary>
+    /// For the layout check: how much of the single window's width the panels fill across the player's rows, and across
+    /// the equalizer's (if it's a panel), and the width of the window's body. Any less than the body is an empty block.
+    /// </summary>
+    internal (double Player, double? Equalizer, double Body) PanelWidths()
+    {
+        var boxes = new List<Control> { PlayerRoot }.Concat(_panes.Values.Select(pane => (Control)pane.Box)).Where(box => box.IsVisible).ToList();
+        double Across(Control row)
+        {
+            var (top, bottom) = (Canvas.GetTop(row), Canvas.GetTop(row) + row.Bounds.Height);
+            return boxes.Where(box => Math.Min(Canvas.GetTop(box) + box.Bounds.Height, bottom) - Math.Max(Canvas.GetTop(box), top) > 1).Sum(box => box.Bounds.Width);
+        }
+
+        return (Across(PlayerRoot),
+            EqualizerWindow.Current is { } equalizer && _panes.TryGetValue(equalizer, out var pane) ? Across(pane.Box) : null,
+            _paneArea?.Bounds.Width ?? 0);
     }
 }
