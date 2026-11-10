@@ -14,6 +14,9 @@ using Lucent.Layout;
 //   - windows swapped while full screen only trade places that fit them, and the player never moves.
 //   - all of that again for each tidy layout (Tidy layout, Shift+D), and each press of Tidy layout
 //     moves something while there's another tidy layout to go to.
+//   - "Player on the left, queue beside it" puts the queue in a column of its own right of the player's,
+//     with the art or library under the player, whenever there's room, and the windows then fill the
+//     screen with no gaps.
 //   - Tidy layout outside full screen (FullScreenLayout.TidyAround) with the player in a few spots and
 //     the other windows scattered, some far away or huge, and some locked: every window on the screen,
 //     at its smallest or more, none over another or a locked one; the windows in one block docked
@@ -485,6 +488,47 @@ void Check(string name, TileRect area, IReadOnlyList<TileWindow> windows, TileSt
     if (result.LeftOut.Count > 0 && Fits(windows, area))
     {
         problems.Add($"{name}: {string.Join(", ", result.LeftOut)} left out, on a screen with room for everything.");
+    }
+
+    if (style == TileStyle.QueueBeside)
+    {
+        CheckQueueBeside(name, area, windows, result);
+    }
+}
+
+// Player on the left, queue beside it: on a screen with room (1400 x 900 or more, the player at its usual size, and no
+// radio or editor, which can need the queue's room), with the art or the library to go under the player, the player's
+// in the top left corner and the queue in a column of its own along its right edge from the top. Laid out that way,
+// something's under the player, and the windows fill the screen with no gaps, so they end flush.
+void CheckQueueBeside(string name, TileRect area, IReadOnlyList<TileWindow> windows, TileResult result)
+{
+    var player = windows.Single(window => window.Kind == TileKind.Player);
+    var places = result.Places;
+    var beside = places.TryGetValue("Player", out var playerPlace) && places.TryGetValue("Queue", out var queuePlace)
+        && Math.Abs(playerPlace.Left - area.Left) < 1 && Math.Abs(playerPlace.Top - area.Top) < 1
+        && Math.Abs(queuePlace.Left - playerPlace.Right) < 1 && Math.Abs(queuePlace.Top - area.Top) < 1;
+    var room = area.Width >= 1400 && area.Height >= 900 && player.Width <= 520
+        && windows.All(window => window.LockedAt is null && window.Kind is not (TileKind.Radio or TileKind.Editor));
+    var filler = windows.Any(window => window.Kind is TileKind.Artwork or TileKind.Library);
+    if (!beside)
+    {
+        if (room && filler && windows.Any(window => window.Kind == TileKind.Queue))
+        {
+            problems.Add($"{name}: the queue isn't beside the player, on a screen with room for it.");
+        }
+
+        return;
+    }
+
+    if (!places.Any(entry => entry.Value.Left < playerPlace.Right - 1 && entry.Value.Top >= playerPlace.Bottom - 1
+        && windows.Single(window => window.Key == entry.Key).Kind is TileKind.Artwork or TileKind.Library or TileKind.Analyzer or TileKind.Video))
+    {
+        problems.Add($"{name}: the queue's beside the player, but nothing's under the player.");
+    }
+
+    if (result.LeftOut.Count == 0 && Math.Abs(places.Values.Sum(place => place.Area) - area.Area) > 4 * (area.Width + area.Height))
+    {
+        problems.Add($"{name}: the queue's beside the player, but the windows leave gaps ({places.Values.Sum(place => place.Area):0} of {area.Area:0}).");
     }
 }
 

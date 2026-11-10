@@ -925,6 +925,23 @@ public partial class MainWindow
     }
 
     /// <summary>
+    /// For the layout check: the panels laid out in <paramref name="style"/>, as Tidy layout leaves them (swaps and lines
+    /// moved forgotten). Gives back the layout they were in, to put back afterwards.
+    /// </summary>
+    internal TileStyle UseSingleWindowStyle(TileStyle style)
+    {
+        var was = _settings.SingleWindowStyle;
+        _settings.SingleWindowStyle = style;
+        _settings.SingleWindowSwaps.Clear();
+        _settings.SingleWindowDividers.Clear();
+        Retile();
+        return was;
+    }
+
+    /// <summary>For the layout check: where each panel is laid out in the window's body, by name.</summary>
+    internal IReadOnlyDictionary<string, TileRect> LaidOutPanels => _laidOut?.Places ?? new Dictionary<string, TileRect>();
+
+    /// <summary>
     /// Shift+F11 or a double-click on the title bar while it's a single window: the window fills its screen, or
     /// goes back to where it was.
     /// </summary>

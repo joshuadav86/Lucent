@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Lucent.Layout;
 using Lucent.Mac.Interop;
 using Lucent.Mac.Visuals;
 using Lucent.Mac.Windows;
@@ -18,7 +19,9 @@ namespace Lucent.Mac;
 /// the way people do. On the way it checks the app menu has Lucent's items, Quit among them. Run again on the same settings with LUCENT_LAYOUT_CHECK_REOPENED=1, it first
 /// checks the windows came back as they were left: the visuals open, the equalizer under the player. Before minimizing it
 /// switches single window on and off (CheckSingleWindowAsync), picking every skin and going full screen and back while
-/// it's on, and every skin again once it's off, the windows ending flush as one block each time they're apart.
+/// it's on, and every skin again once it's off, the windows ending flush as one block each time they're apart, and
+/// switches it off while it fills the screen with every window out, laid out as it was and then "Player on the left,
+/// queue beside it".
 /// </summary>
 internal static class LayoutCheck
 {
@@ -297,6 +300,10 @@ internal static class LayoutCheck
         if (main is MainWindow every)
         {
             lines.AddRange(await CheckLeavingFilledAsync(every));
+
+            // And again laid out "Player on the left, queue beside it" (one of Tidy layout's): the art under the player
+            // and the queue in a column of its own right of it.
+            lines.AddRange(await CheckLeavingFilledAsync(every, TileStyle.QueueBeside));
         }
 
         // Then with nothing beside the player (just the queue, with or without the equalizer): the player and the
@@ -315,20 +322,29 @@ internal static class LayoutCheck
     /// full screen, then single window off while it fills the screen, where the queue, analyzer, and art once came back
     /// tucked under the windows above them. Each window goes where its panel was (the ones along the bottom can end
     /// higher, flush with the player's column), the windows end flush as one block, nothing's over anything else, and
-    /// everything's on the screen. Then the windows it opened close again, for the rest of the check.
+    /// everything's on the screen. Then the windows it opened close again, for the rest of the check. With
+    /// <paramref name="style"/>, the panels are laid out that way first (as Tidy layout would), and put back after.
     /// </summary>
-    private static async Task<List<string>> CheckLeavingFilledAsync(MainWindow main)
+    private static async Task<List<string>> CheckLeavingFilledAsync(MainWindow main, TileStyle? style = null)
     {
-        const string label = "single window off while full screen";
+        var label = "single window off while full screen" + (style == TileStyle.QueueBeside ? ", player on the left, queue beside it" : string.Empty);
         var lines = new List<string>();
         var closeAgain = main.OpenEveryWindow();
         await Task.Delay(TimeSpan.FromSeconds(2));
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
+        var styleWas = style is { } use ? main.UseSingleWindowStyle(use) : (TileStyle?)null;
         main.ToggleLucentFullScreen();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var frame = Placement.BoundsOf(main);
         var screen = Placement.WorkArea(main);
+        if (style == TileStyle.QueueBeside)
+        {
+            var body = main.LaidOutPanels.Values.ToList();
+            lines.Add(QueueBesideLine(label, main.LaidOutPanels,
+                body.Count == 0 ? 0 : body.Max(place => place.Right), body.Count == 0 ? 0 : body.Max(place => place.Bottom)));
+        }
+
         var panels = main.OwnedWindows.Select(window => (Window: window, Panel: PanelOnScreen(main, window)))
             .Where(entry => entry.Panel is not null)
             .ToDictionary(entry => entry.Window, entry => entry.Panel!.Value);
@@ -378,8 +394,34 @@ internal static class LayoutCheck
 
         lines.AddRange(CheckFlush(main, label));
         closeAgain();
+        if (styleWas is { } was)
+        {
+            main.UseSingleWindowStyle(was);
+        }
+
         await Task.Delay(TimeSpan.FromSeconds(1));
         return lines;
+    }
+
+    /// <summary>
+    /// With the panels laid out "Player on the left, queue beside it": the player in the top left corner, the queue in a
+    /// column of its own along the player's right edge, and the art under the player. A body too small for that (the art
+    /// doesn't fit under the player, or there's no room for the queue's column beside the visuals) is laid out as usual
+    /// instead, so it's only a mismatch on a big one: a full HD screen.
+    /// </summary>
+    private static string QueueBesideLine(string label, IReadOnlyDictionary<string, TileRect> places, double width, double height)
+    {
+        var text = string.Join(", ", places.Select(entry => $"{entry.Key} {entry.Value.Left:0},{entry.Value.Top:0} {entry.Value.Width:0}x{entry.Value.Height:0}"));
+        if (!places.TryGetValue("Player", out var player) || !places.TryGetValue("Queue", out var queue))
+        {
+            return $"MISMATCH {label}: the player or queue panel isn't laid out: {text}";
+        }
+
+        var beside = player.Left < 1 && player.Top < 1 && Math.Abs(queue.Left - player.Right) < 1 && queue.Top < 1
+            && places.TryGetValue("Artwork", out var art) && art.Left < 1 && art.Top >= player.Bottom - 1;
+        var room = width >= 1400 && height >= 900;
+        return $"{(beside || !room ? "ok" : "MISMATCH")} {label}: in a body {width:0} x {height:0}, the queue is " +
+            $"{(beside ? "beside the player, the art under it" : "laid out as usual")}: {text}";
     }
 
     /// <summary>
