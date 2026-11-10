@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Lucent.Radio;
+using Lucent.Text;
 using Lucent.Settings;
 
 namespace Lucent;
@@ -41,7 +42,7 @@ public partial class RadioWindow : Window
         Windows.SingleWindow.Watch(this);
         _player = player;
         _settings = settings;
-        if (!Genres.All.Any(genre => genre.Name == settings.RadioSection) && !RadioGuide.IsLocal(settings.RadioSection))
+        if (!RadioGuide.IsSection(settings.RadioSection))
         {
             settings.RadioSection = RadioGuide.Featured;
         }
@@ -50,7 +51,7 @@ public partial class RadioWindow : Window
         _searchDelay.Tick += (_, _) =>
         {
             _searchDelay.Stop();
-            ShowStations();
+            ShowStations(searched: true);
         };
         _player.StationChanged += OnStationChanged;
         Closed += (_, _) =>
@@ -137,12 +138,12 @@ public partial class RadioWindow : Window
     private void ShowSections()
     {
         Sections.Children.Clear();
+        Sections.Children.Add(SectionButton(RadioGuide.AllStations, null));
         Sections.Children.Add(SectionButton(RadioGuide.Featured, _featured.Count));
         Sections.Children.Add(SectionButton(RadioGuide.LiveAndVideo,
             RadioGuide.Local(RadioGuide.LiveAndVideo, _settings, _featured, string.Empty, _settings.RadioSort).Count));
         Sections.Children.Add(SectionButton(RadioGuide.Favorites, _settings.RadioFavorites.Count));
         Sections.Children.Add(SectionButton(RadioGuide.Recent, _settings.RadioRecent.Count));
-        Sections.Children.Add(SectionButton(RadioGuide.AllStations, null));
         Sections.Children.Add(new TextBlock
         {
             Text = "GENRES",
@@ -176,7 +177,7 @@ public partial class RadioWindow : Window
 
         content.Children.Add(new TextBlock
         {
-            Text = section,
+            Text = TitleCase.Of(section),
             FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
@@ -188,14 +189,16 @@ public partial class RadioWindow : Window
             button.Background = (Brush)FindResource("AccentSoftBrush");
         }
 
-        button.Click += (_, _) =>
-        {
-            _settings.RadioSection = section;
-            _settings.Save();
-            ShowSections();
-            ShowStations();
-        };
+        button.Click += (_, _) => ShowSection(section);
         return button;
+    }
+
+    private void ShowSection(string section)
+    {
+        _settings.RadioSection = section;
+        _settings.Save();
+        ShowSections();
+        ShowStations();
     }
 
     // ---- Stations ----
@@ -203,8 +206,10 @@ public partial class RadioWindow : Window
     /// <summary>
     /// The section's stations that match the search and filters, under their headings. Lucent's own sections show
     /// straight away; the directory's are looked up (<paramref name="again"/> false shows the last answer again).
+    /// When what was just typed (<paramref name="searched"/>) matches nothing in a smaller list (Featured, a genre),
+    /// it moves to All Stations, where most searches mean to look.
     /// </summary>
-    private async void ShowStations(bool keepPlace = false, bool again = true)
+    private async void ShowStations(bool keepPlace = false, bool again = true, bool searched = false)
     {
         var search = SearchText;
         ClearSearchButton.Visibility = search.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -213,7 +218,14 @@ public partial class RadioWindow : Window
         {
             _searching?.Cancel();
             _problem = null;
-            ShowList(RadioGuide.Local(Section, _settings, _featured, search, _settings.RadioSort), keepPlace ? offset : 0);
+            var local = RadioGuide.Local(Section, _settings, _featured, search, _settings.RadioSort);
+            if (searched && local.Count == 0 && search.Length > 0)
+            {
+                ShowSection(RadioGuide.AllStations);
+                return;
+            }
+
+            ShowList(local, keepPlace ? offset : 0);
             return;
         }
 
@@ -237,6 +249,12 @@ public partial class RadioWindow : Window
             }
 
             _problem = null;
+            if (searched && found.Count == 0 && search.Length > 0 && genre is not null)
+            {
+                ShowSection(RadioGuide.AllStations);
+                return;
+            }
+
             ShowList(found, keepPlace ? offset : 0);
         }
         catch (OperationCanceledException)
@@ -280,7 +298,7 @@ public partial class RadioWindow : Window
 
         foreach (var (heading, group) in RadioGuide.Group(stations, Section))
         {
-            StationRows.Children.Add(Heading(heading, group.Count, first: StationRows.Children.Count == 0));
+            StationRows.Children.Add(Heading(TitleCase.Of(heading), group.Count, first: StationRows.Children.Count == 0));
             foreach (var station in group)
             {
                 StationRows.Children.Add(StationRow(station));
@@ -359,12 +377,12 @@ public partial class RadioWindow : Window
         var filtered = _settings.RadioMinBitrate > 0 || _settings.RadioCountry is not null || _settings.RadioVideoOnly;
         return Section switch
         {
-            RadioGuide.LiveAndVideo => "No live DJ or video stations match. To find more video stations, open All stations and switch the filter to VIDEO ONLY.",
+            RadioGuide.LiveAndVideo => "No live DJ or video stations match. To find more video stations, open All Stations and switch the filter to VIDEO ONLY.",
             RadioGuide.Favorites when SearchText.Length == 0 && !filtered => "No favorites yet. Click the star beside a station to keep it here.",
             RadioGuide.Recent when SearchText.Length == 0 && !filtered => "Stations you play show up here.",
-            _ when _settings.RadioVideoOnly => "No video stations match. Try fewer words, look in All stations, or turn off the video filter.",
+            _ when _settings.RadioVideoOnly => "No video stations match. Try fewer words, look in All Stations, or turn off the video filter.",
             _ when filtered => "No stations match. Try fewer words, or loosen the quality or country filter.",
-            _ => "No stations match. Try fewer words, or look in All stations.",
+            _ => "No stations match. Try fewer words, or look in All Stations.",
         };
     }
 
@@ -768,7 +786,7 @@ public partial class RadioWindow : Window
         _searchDelay.Stop();
         if (RadioGuide.IsLocal(Section))
         {
-            ShowStations();
+            ShowStations(searched: true);
         }
         else
         {
@@ -794,7 +812,7 @@ public partial class RadioWindow : Window
                 if (_searchDelay.IsEnabled)
                 {
                     _searchDelay.Stop();
-                    ShowStations();
+                    ShowStations(searched: true);
                 }
                 else if (ShownRows.FirstOrDefault()?.Tag is RadioStation first)
                 {

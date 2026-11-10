@@ -7,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Lucent.Editor.Plugins;
+using Lucent.Text;
 
 namespace Lucent.Mac;
 
@@ -113,7 +114,7 @@ public partial class EditorWindow
         content.Children.Add(number);
         content.Children.Add(new TextBlock
         {
-            Text = label,
+            Text = TitleCase.Of(label),
             FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
@@ -158,14 +159,14 @@ public partial class EditorWindow
                       "If yours are somewhere else, add their folder below."
                     : _pluginSection == PluginBrowser.Favorites && search.Length == 0
                         ? "No favorites yet. Click the star beside a plugin to keep it here."
-                        : "No plugins match. Try fewer words, or look in All plugins.",
+                        : "No plugins match. Try fewer words, or look in All Plugins.",
             });
             return;
         }
 
         foreach (var (heading, entries) in PluginBrowser.Group(shown, _settings.PluginsByMaker))
         {
-            PluginRows.Children.Add(PluginHeading(heading, entries.Count, first: PluginRows.Children.Count == 0));
+            PluginRows.Children.Add(PluginHeading(_settings.PluginsByMaker ? heading : TitleCase.Of(heading), entries.Count, first: PluginRows.Children.Count == 0));
             foreach (var entry in entries)
             {
                 PluginRows.Children.Add(PluginRow(entry));
@@ -400,6 +401,15 @@ public partial class EditorWindow
     {
         if (PluginPopup.IsOpen)
         {
+            // A search that finds nothing in one type or Favorites looks in All Plugins instead.
+            var search = (PluginSearchBox.Text ?? string.Empty).Trim();
+            if (_pluginSection is not null && search.Length > 0
+                && !_pluginEntries.Any(entry => PluginBrowser.InSection(entry, _pluginSection) && PluginBrowser.Matches(entry, search)))
+            {
+                _pluginSection = null;
+                ShowPluginSections();
+            }
+
             ShowPluginList();
             PluginScroller.ScrollToHome();
         }

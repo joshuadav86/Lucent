@@ -5,7 +5,7 @@ The "Video and audio editor" opens from the title bar's waveform button or a son
 ## What it does
 
 - **Editing:** split into clips, slide clips (overlaps crossfade), trim, delete, fades with shapes, undo history (jump to any step). Hand tool drags clips.
-- **Effects menu** (searchable): normalize (peak or LUFS), volume, fades, pitch, tempo, reverse, EQ, dynamics, hum, click and noise repair, DC offset, channel tools, silence, stems, analyze.
+- **Effects menu** (searchable): normalize (peak or LUFS), volume, fades, pitch, tempo, reverse, EQ, dynamics, hum, click and noise repair, DC offset, channel tools, silence, stems, analyze. A search that matches nothing in the chosen category (or Recent) moves to All Effects. The plugin browser does the same with its types and Favorites (All Plugins). Both sidebars show their names in Title Case (`TitleCase`), like Online Radio's.
 - **VST3 plugins:** an Inserts strip (I) beside the waveform with numbered slots, bypass (B), live through Play. Plugin browser with search, types, makers, and favorites. Chains save as `.lucentchain`; REAPER `.RfxChain` imports.
 - **Stems:** splits vocals, drums, bass, and other with Demucs (HTDemucs), on the GPU when it passes a quality check, else the processor. The Listen… window mixes them; saved stems go to a Stems folder.
 - **Beats, key, and loops:** BPM and key detection, a beat grid, and a loop maker that snaps to beats and shows bars/beats. Loops save as WAV.
