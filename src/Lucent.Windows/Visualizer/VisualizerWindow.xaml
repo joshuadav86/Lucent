@@ -177,7 +177,7 @@
                                             Height="28" Padding="10,0" ToolTip="Show all visuals, your favorites, or one of your lists"
                                             Click="OnListMenu">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock x:Name="ListPickerLabel" Text="All visuals" FontSize="12" MaxWidth="130"
+                                            <TextBlock x:Name="ListPickerLabel" Text="All Visuals" FontSize="12" MaxWidth="130"
                                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                             <Path Style="{StaticResource LineIcon}" Data="{StaticResource ChevronDownIcon}"
                                                   Stroke="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />

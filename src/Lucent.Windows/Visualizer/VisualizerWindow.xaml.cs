@@ -316,7 +316,7 @@ public partial class VisualizerWindow : ToolWindow
         ShowActiveList();
     }
 
-    /// <summary>The visuals in a list (by name), or null for "All visuals".</summary>
+    /// <summary>The visuals in a list (by name), or null for "All Visuals".</summary>
     private List<string>? NamesInList(string? list) =>
         list is null ? null
         : list == AppSettings.FavoritesListName ? _settings.FavoriteVisuals
@@ -366,7 +366,7 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         PresetList.ItemsSource = view;
-        ListPickerLabel.Text = list is null ? "All visuals" : $"{list} ({inList.Count})";
+        ListPickerLabel.Text = list is null ? "All Visuals" : $"{list} ({inList.Count})";
         UpdateFavoritesOnlyButton();
         VisualCount.Text = VisualChoice.CountText(_shown.Count, inList.Count);
 
@@ -423,7 +423,7 @@ public partial class VisualizerWindow : ToolWindow
         ListHint.Text = list is not null && inListCount == 0
             ? list == AppSettings.FavoritesListName
                 ? "No favorites yet. Click a visual's star to add it here."
-                : "This list is empty. Right-click any visual in All visuals to add it."
+                : "This list is empty. Right-click any visual in All Visuals to add it."
             : _shown.Count == 0
                 ? searching
                     ? $"No visuals {(tagNames.Count > 0 ? $"tagged {tagText} " : string.Empty)}match \u201C{search}\u201D. Try other words, or press Esc to clear the search."
@@ -542,7 +542,7 @@ public partial class VisualizerWindow : ToolWindow
         var menu = new ContextMenu { PlacementTarget = ListPickerButton, Placement = PlacementMode.Bottom };
         var active = _settings.ActiveVisualList;
 
-        menu.Items.Add(ListMenuItem("All visuals", null, _choices.Count));
+        menu.Items.Add(ListMenuItem("All Visuals", null, _choices.Count));
         menu.Items.Add(ListMenuItem(AppSettings.FavoritesListName, AppSettings.FavoritesListName, _settings.FavoriteVisuals.Count));
         foreach (var (name, names) in _settings.VisualLists.OrderBy(pair => pair.Key, StringComparer.CurrentCultureIgnoreCase))
         {

@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Lucent.Editor;
 using Lucent.Editor.Effects;
+using Lucent.Text;
 
 namespace Lucent.Mac;
 
@@ -96,7 +97,7 @@ public partial class EditorWindow
         content.Children.Add(number);
         content.Children.Add(new TextBlock
         {
-            Text = label,
+            Text = TitleCase.Of(label),
             FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
@@ -138,14 +139,14 @@ public partial class EditorWindow
                 Margin = new Thickness(8, 6, 8, 0),
                 Text = _effectSection == EffectCatalog.Recent && search.Length == 0
                     ? "Effects you use show up here, so they're quick to find again."
-                    : "No effects match. Try fewer words, or look in All effects. Installed VST3 effects are under Plugins.",
+                    : "No effects match. Try fewer words, or look in All Effects. Installed VST3 effects are under Plugins.",
             });
             return;
         }
 
         foreach (var (heading, items) in groups)
         {
-            EffectRows.Children.Add(PluginHeading(heading, items.Count, first: EffectRows.Children.Count == 0));
+            EffectRows.Children.Add(PluginHeading(TitleCase.Of(heading), items.Count, first: EffectRows.Children.Count == 0));
             foreach (var item in items)
             {
                 EffectRows.Children.Add(EffectRow(item));
@@ -336,6 +337,15 @@ public partial class EditorWindow
     {
         if (EffectsPopup.IsOpen)
         {
+            // A search that finds nothing in one category or Recent looks in All Effects instead.
+            var search = (EffectSearchBox.Text ?? string.Empty).Trim();
+            if (_effectSection is not null && search.Length > 0
+                && EffectCatalog.Shown(_effectSection, search, _settings.RecentEffects).Sum(group => group.Items.Count) == 0)
+            {
+                _effectSection = null;
+                ShowEffectSections();
+            }
+
             ShowEffectList();
             EffectScroller.ScrollToHome();
         }

@@ -44,6 +44,9 @@ public static class RadioGuide
         (LiveShows.Knows(station) && !LiveShows.SaysSongs(station))
         || station.Tags.Any(tag => tag.Equals("dj sets", StringComparison.OrdinalIgnoreCase) || tag.Equals("live dj", StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>True for a section the radio browser lists, so a saved one opens again (All Stations included).</summary>
+    public static bool IsSection(string section) => section == AllStations || IsLocal(section) || GenreOf(section) is not null;
+
     /// <summary>The genre a section is, or null for the other sections.</summary>
     public static Genre? GenreOf(string section) => Genres.All.FirstOrDefault(genre => genre.Name == section);
 
