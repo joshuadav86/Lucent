@@ -1512,6 +1512,9 @@ public partial class MainWindow : Window
         _settings.Save();
     }
 
+    /// <summary>Options › Visuals › Import visuals…: the same as the visuals' right-click menu, with the dialog over Options.</summary>
+    private void OnImportVisuals(object sender, RoutedEventArgs e) => _visuals.ImportVisuals(this);
+
     /// <summary>One of the on/off switches in the options panel.</summary>
     private void OnOptionSwitched(object sender, RoutedEventArgs e)
     {

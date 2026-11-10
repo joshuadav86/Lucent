@@ -59,6 +59,7 @@ public partial class VisualizerWindow
         menu.Items.Add(originals);
         menu.Items.Add(MilkDropMenu());
         menu.Items.Add(AvsMenu());
+        menu.Items.Add(Item("Import visuals…", null, () => ImportVisuals(), MenuTips.ImportVisuals));
 
         menu.Items.Add(new Separator());
         var auto = Item("Auto", new KeyGesture(Key.A), () =>
