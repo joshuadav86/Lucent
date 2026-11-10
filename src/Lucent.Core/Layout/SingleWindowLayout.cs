@@ -33,6 +33,41 @@ public static class SingleWindowLayout
     }
 
     /// <summary>
+    /// The panels that size themselves (the player and the equalizer) stretched sideways over any empty space beside
+    /// them, up to the next panel or the body's edge, so there's never an empty block beside them: with just the queue
+    /// or the library under the player, the player (and the equalizer under it) run the whole width of a body
+    /// <paramref name="width"/> wide, flush with the panels under them. <see cref="Arrange"/> lays them out at their own
+    /// width; this is applied to what it gives (after any lines moved by hand), and each panel stretches its insides to match.
+    /// </summary>
+    public static TileResult Stretched(TileResult result, double width, IReadOnlyList<TileWindow> panels)
+    {
+        var stretched = new TileResult();
+        foreach (var (key, at) in result.Places)
+        {
+            stretched.Places[key] = at;
+        }
+
+        stretched.LeftOut.AddRange(result.LeftOut);
+        // From the top down, so the equalizer under the player follows it across.
+        foreach (var panel in panels.Where(panel => panel.FixedSize && result.Places.ContainsKey(panel.Key))
+                     .OrderBy(panel => result.Places[panel.Key].Top).ThenBy(panel => panel.Kind))
+        {
+            var place = stretched.Places[panel.Key];
+            var beside = stretched.Places.Where(entry => entry.Key != panel.Key
+                    && Math.Min(entry.Value.Bottom, place.Bottom) - Math.Max(entry.Value.Top, place.Top) > 1)
+                .Select(entry => entry.Value).ToList();
+            var left = beside.Where(other => other.Right <= place.Left + 1).Select(other => other.Right).DefaultIfEmpty(0).Max();
+            var right = beside.Where(other => other.Left >= place.Right - 1).Select(other => other.Left).DefaultIfEmpty(width).Min();
+            if (left < place.Left - 0.5 || right > place.Right + 0.5)
+            {
+                stretched.Places[panel.Key] = place with { Left = Math.Min(left, place.Left), Width = Math.Max(right, place.Right) - Math.Min(left, place.Left) };
+            }
+        }
+
+        return stretched;
+    }
+
+    /// <summary>
     /// Tidy layout (Shift+D) in the single window: the next tidy layout that moves something, as
     /// <see cref="FullScreenLayout.Tidy"/> does across a screen.
     /// </summary>
