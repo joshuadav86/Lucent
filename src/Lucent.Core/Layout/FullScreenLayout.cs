@@ -35,6 +35,12 @@ public enum TileStyle
 
     /// <summary><see cref="Classic"/> the other way round: the player's column on the right, the library on the far right.</summary>
     Mirrored,
+
+    /// <summary>
+    /// The player on the far left, with the artwork and the library under it, and the queue in a column of its own
+    /// just right of it, so they read left to right; the visuals fill the rest on the right.
+    /// </summary>
+    QueueBeside,
 }
 
 /// <summary>A rectangle on the screen, in the window units the apps place windows in (WPF's and Avalonia's own, not pixels).</summary>
@@ -96,7 +102,7 @@ public static class FullScreenLayout
     private const double MainShare = 0.5;
 
     /// <summary>The tidy layouts, in the order Tidy layout goes through them.</summary>
-    public static readonly IReadOnlyList<TileStyle> TidyStyles = new[] { TileStyle.Centred, TileStyle.CentredMirrored, TileStyle.Classic, TileStyle.Mirrored };
+    public static readonly IReadOnlyList<TileStyle> TidyStyles = new[] { TileStyle.Centred, TileStyle.CentredMirrored, TileStyle.Classic, TileStyle.QueueBeside, TileStyle.Mirrored };
 
     /// <summary>What the user sees a layout called.</summary>
     public static string NameOf(TileStyle style) => style switch
@@ -105,6 +111,7 @@ public static class FullScreenLayout
         TileStyle.CentredMirrored => "Visuals in the middle, player on the right",
         TileStyle.Classic => "Player on the left",
         TileStyle.Mirrored => "Player on the right",
+        TileStyle.QueueBeside => "Player on the left, queue beside it",
         _ => "As they are",
     };
 
@@ -382,6 +389,27 @@ public static class FullScreenLayout
             main.Insert(main.Count > 0 ? 1 : 0, equalizer!);
         }
 
+        // The queue beside the player: in a column of its own just right of the player's, so the player's on the far
+        // left and the queue reads after it, with the artwork and the library filling the space under the player
+        // instead (as they do when the queue's closed). A library that doesn't fit under the player too goes under
+        // the queue. Only when something fills that space and the queue's column leaves the big windows their room;
+        // otherwise it's laid out as usual.
+        var queueColumn = new List<TileWindow>();
+        if (style == TileStyle.QueueBeside && fillUnder && lockedLeft is null && under.Count > 0)
+        {
+            var fillers = Borrow(side, main, columnWidth, underHeight, keepOneSide: false);
+            var column = under.Concat(side.Where(window => !fillers.Contains(window))).ToList();
+            var rest = main.Where(window => !fillers.Contains(window)).ToList();
+            if (fillers.Count > 0 && column.Sum(window => window.MinHeight) <= area.Height + 0.5
+                && columnWidth + NeededWidth(column) + NeededWidth(rest) <= area.Width + 0.5)
+            {
+                queueColumn = column;
+                under = fillers;
+                side.Clear();
+                main = rest;
+            }
+        }
+
         if (under.Count > 0 && (underHeight < under[0].MinHeight || columnWidth < under[0].MinWidth))
         {
             // No room for the queue under the player: under the visuals instead, first in line.
@@ -483,8 +511,19 @@ public static class FullScreenLayout
         }
 
         // With nothing beside it, the queue (or the library) runs the whole width under the player.
-        var underWidth = main.Count == 0 && side.Count == 0 && lockedLeft is null ? area.Right - columnLeft : columnWidth;
+        var underWidth = main.Count == 0 && side.Count == 0 && queueColumn.Count == 0 && lockedLeft is null ? area.Right - columnLeft : columnWidth;
         Pack(new TileRect(columnLeft, below, underWidth, underHeight), under, result, even);
+        if (queueColumn.Count > 0)
+        {
+            // The queue's column: as wide as the player's where there's room, the visuals keeping their share, or all
+            // that's left with nothing else beside it.
+            var least = NeededWidth(queueColumn);
+            var most = Math.Max(least, mainRegion.Width - NeededWidth(main));
+            var queueWidth = main.Count == 0 ? mainRegion.Width : Math.Clamp(Math.Min(columnWidth, area.Width * SideShare), least, most);
+            Pack(new TileRect(mainRegion.Left, mainRegion.Top, queueWidth, mainRegion.Height), queueColumn, result, even);
+            mainRegion = new TileRect(mainRegion.Left + queueWidth, mainRegion.Top, mainRegion.Width - queueWidth, mainRegion.Height);
+        }
+
         Pack(sideRegion, side, result, even);
         Pack(mainRegion, main, result, even);
         if (mirrored)

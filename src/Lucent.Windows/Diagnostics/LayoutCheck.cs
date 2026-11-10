@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Lucent.Layout;
 using Lucent.Windows;
 
 namespace Lucent;
@@ -16,7 +17,8 @@ namespace Lucent;
 /// with the shortest column, so the windows make one clean block), then ok or MISMATCH for each check,
 /// and PASSED or FAILED, and quits. On the way it picks every skin with the windows apart and in a single window
 /// (each window and panel staying where it was), and takes the single window full screen and back before and
-/// after. The Mac app checks the same in its own LayoutCheck.
+/// after. Last, it lays the panels out "Player on the left, queue beside it" filling the screen and switches single
+/// window off from there. The Mac app checks the same in its own LayoutCheck.
 /// </summary>
 public partial class MainWindow
 {
@@ -100,6 +102,18 @@ public partial class MainWindow
             ToggleLucentFullScreen();
             await Task.Delay(TimeSpan.FromSeconds(2));
             lines.AddRange(await CheckLeavingSingleWindowAsync("while it fills the screen"));
+
+            // Player on the left, queue beside it (one of Tidy layout's): the art under the player and the queue in a
+            // column of its own right of it, filling the screen, then single window off, the windows ending flush there too.
+            const string queueBeside = "player on the left, queue beside it";
+            EnterSingleWindow();
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            var style = UseSingleWindowStyle(TileStyle.QueueBeside);
+            ToggleLucentFullScreen();
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            lines.Add(QueueBesideLine(queueBeside, LaidOutPanels, _paneArea?.ActualWidth ?? 0, _paneArea?.ActualHeight ?? 0));
+            lines.AddRange(await CheckLeavingSingleWindowAsync(queueBeside));
+            _settings.SingleWindowStyle = style;
         }
         catch (Exception ex)
         {
@@ -109,6 +123,27 @@ public partial class MainWindow
         lines.Add(lines.Any(line => line.StartsWith("MISMATCH", StringComparison.Ordinal)) ? "FAILED" : "PASSED");
         await File.WriteAllLinesAsync(file, lines);
         Close();
+    }
+
+    /// <summary>
+    /// With the panels laid out "Player on the left, queue beside it": the player in the top left corner, the queue in a
+    /// column of its own along the player's right edge, and the art under the player. A body too small for that (the art
+    /// doesn't fit under the player, or there's no room for the queue's column beside the visuals) is laid out as usual
+    /// instead, so it's only a mismatch on a big one: a full HD screen at 100%.
+    /// </summary>
+    private static string QueueBesideLine(string label, IReadOnlyDictionary<string, TileRect> places, double width, double height)
+    {
+        var text = string.Join(", ", places.Select(entry => $"{entry.Key} {entry.Value.Left:0},{entry.Value.Top:0} {entry.Value.Width:0}x{entry.Value.Height:0}"));
+        if (!places.TryGetValue("Player", out var player) || !places.TryGetValue("Queue", out var queue))
+        {
+            return $"MISMATCH {label}: the player or queue panel isn't laid out: {text}";
+        }
+
+        var beside = player.Left < 1 && player.Top < 1 && Math.Abs(queue.Left - player.Right) < 1 && queue.Top < 1
+            && places.TryGetValue("Artwork", out var art) && art.Left < 1 && art.Top >= player.Bottom - 1;
+        var room = width >= 1400 && height >= 900;
+        return $"{(beside || !room ? "ok" : "MISMATCH")} {label}: in a body {width:0} x {height:0}, the queue is " +
+            $"{(beside ? "beside the player, the art under it" : "laid out as usual")}: {text}";
     }
 
     /// <summary>Switches single window off and checks every window went where its panel was.</summary>
