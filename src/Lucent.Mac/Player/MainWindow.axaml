@@ -461,7 +461,7 @@
                                 Click="OnFindClassicSkins" />
                     </StackPanel>
                     <TextBlock Theme="{StaticResource OptionHint}"
-                               Text="Load any classic .wsz skin and the player wears it, with the other windows in the skin and theme above. Pick a skin above to go back to Lucent's own player. Right-click the classic player for more." />
+                               Text="Load any classic .wsz skin and the player wears it, with the other windows in the skin and theme above. Pick a skin above to turn the classic skin off. Right-click the classic player for more." />
                 </StackPanel>
 
                 <StackPanel x:Name="UpdatesTab" IsVisible="False">
