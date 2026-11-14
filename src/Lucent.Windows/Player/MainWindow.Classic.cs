@@ -325,7 +325,7 @@ public partial class MainWindow
         _player.Equalizer.Balance = balance;
     }
 
-    private void ToggleClassicDoubleSize()
+    internal void ToggleClassicDoubleSize()
     {
         _settings.ClassicDoubleSize = !_settings.ClassicDoubleSize;
         _settings.Save();
@@ -336,7 +336,7 @@ public partial class MainWindow
     }
 
     /// <summary>Switches to a classic skin by name, or back to Lucent's own player with null.</summary>
-    private void ChooseClassicSkin(string? name)
+    internal void ChooseClassicSkin(string? name)
     {
         _settings.ClassicSkin = name;
         _settings.Save();
@@ -345,9 +345,9 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Makes a change that resizes the player and the equalizer (a skin on or off, double size), then stacks the
-    /// windows that were under the player against its new bottom again, so none ends up over Lucent's button strip
-    /// or leaves a gap. In Lucent's full screen every window is laid out again instead.
+    /// Makes a change that resizes the player and the equalizer (a skin on or off, double size), then tidies the
+    /// windows into a block round the player (TidyAroundPlayer), so none ends up over Lucent's button strip, leaves
+    /// a gap, or hangs past the others. In Lucent's full screen every window is laid out again instead.
     /// </summary>
     private void KeepWindowsDocked(Action change)
     {
@@ -358,30 +358,17 @@ public partial class MainWindow
             return;
         }
 
-        var column = ColumnUnderPlayer(Top + ActualHeight);
-        var bottom = column.Count > 0 ? column[^1].Top + SizeOf(column[^1]).Height : 0;
         change();
-        // Once the player and the equalizer have their new sizes.
+        // Once the player and the equalizer have their new sizes, the windows round them are tidied (2026-11-14: they
+        // used to be left wherever the size change put them).
         Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
         {
-            if (IsShuttingDown || WindowState != WindowState.Normal)
+            if (IsShuttingDown || WindowState != WindowState.Normal || _settings.LucentFullScreen || InSingleWindow)
             {
                 return;
             }
 
-            var edge = Top + ActualHeight;
-            for (var i = 0; i < column.Count; i++)
-            {
-                var window = column[i];
-                window.Top = edge;
-                if (i == column.Count - 1 && window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip)
-                {
-                    // The last one keeps its bottom edge, in line with the windows beside it.
-                    window.Height = Math.Max(window.MinHeight, bottom - edge);
-                }
-
-                edge += SizeOf(window).Height;
-            }
+            TidyAroundPlayer();
         });
     }
 

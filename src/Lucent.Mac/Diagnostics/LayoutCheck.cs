@@ -23,7 +23,7 @@ namespace Lucent.Mac;
 /// switches it off while it fills the screen with every window out, laid out as it was and then "Player on the left,
 /// queue beside it", and then with the queue closed and the line under the equalizer dragged up, folding the equalizer.
 /// </summary>
-internal static class LayoutCheck
+internal static partial class LayoutCheck
 {
     private static readonly (double Width, double Height)[] Sizes =
     {
@@ -294,6 +294,8 @@ internal static class LayoutCheck
         if (main is MainWindow apart)
         {
             lines.AddRange(await CheckSkinsAsync(apart, visuals, "as separate windows"));
+            // A classic skin picked with the windows apart tidies them round the player (CheckClassicTidyAsync).
+            lines.AddRange(await CheckClassicTidyAsync(apart, visuals));
         }
 
         // Then with every window out, as people have them, single window off while it fills the screen.
