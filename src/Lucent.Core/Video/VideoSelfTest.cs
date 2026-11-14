@@ -161,6 +161,7 @@ public static class VideoSelfTest
 
             problems += Check(log, $"{name} cut without re-encoding", Play(video, pauseAt: null), 2, virtualMachine);
             problems += TestEditorSound(log, path);
+            problems += TestCutToEnd(log, path);
             problems += TestPreview(log, path);
             problems += TestPictures(log, path, virtualMachine);
         }
@@ -282,7 +283,7 @@ public static class VideoSelfTest
         problems += TestCopy(log, name, video, audio, virtualMachine);
 
         var rate = audio.SampleRate;
-        video.Delete(new FrameRange((int)(1.5 * rate), rate), 1);
+        video.Delete(new VideoCut(new FrameRange((int)(1.5 * rate), rate), 1.5, 2.5), 1);
         var cut = Colours(1.9, 2.2);
         if (cut != FlashExpected)
         {
@@ -355,6 +356,35 @@ public static class VideoSelfTest
 
         log($"Video: the editor reads {name}'s sound ({seconds:0.000} s, beeps at {heard}).");
         return 0;
+    }
+
+    // A video whose sound stops a little before its pictures (a screen recording's often does): Delete or Trim to the
+    // end snaps to the pictures' end, and the sound's part of the cut has to stop at the sound's end, not past it.
+    private static int TestCutToEnd(Action<string> log, string path)
+    {
+        var name = Path.GetFileName(path);
+        var (video, audio, _, _) = VideoEdit.Load(path, null, CancellationToken.None);
+        var rate = audio.SampleRate;
+        var sound = (int)(video.Length * rate) - rate / 14; // about 70 ms short, as in a recording that failed
+        var selection = new FrameRange((int)(2.6 * rate), sound - (int)(2.6 * rate));
+        var problems = 0;
+        foreach (var (what, cut) in new[] { ("Delete", video.SnapDelete(selection, sound)), ("Trim", video.SnapTrim(selection, sound)) })
+        {
+            var reachesEnd = what == "Trim" || (cut.Sound.End == sound && Math.Abs(cut.To - video.Length) < 0.001);
+            if (cut.IsEmpty || cut.Sound.Start < 0 || cut.Sound.End > sound || !reachesEnd)
+            {
+                problems++;
+                log($"::error::Video: {what} to the end of {name}, with its sound {sound} frames long, snapped to frames {cut.Sound.Start}-{cut.Sound.End} " +
+                    $"and {cut.From:0.000}-{cut.To:0.000} s of {video.Length:0.000} s, past the sound's end.");
+            }
+        }
+
+        if (problems == 0)
+        {
+            log($"Video: Delete and Trim to the end of {name} stop at the sound's end when the pictures run longer.");
+        }
+
+        return problems;
     }
 
     // The editor's picture: asked for the middle of a flash (three pictures long), it shows the flash, to a picture
