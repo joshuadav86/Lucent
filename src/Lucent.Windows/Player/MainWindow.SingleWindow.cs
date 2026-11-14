@@ -170,7 +170,7 @@ public partial class MainWindow
         SizeToContent = SizeToContent.Manual;
         MaxWidth = double.PositiveInfinity;
         MinWidth = 0;
-        ResizeMode = ResizeMode.CanResize;
+        CaptionRepaint.SetResizeMode(this, ResizeMode.CanResize);
         // A classic skin's player draws its own title bar: no Lucent title bar over it, and the edges resize the window.
         ShowClassicInSingleWindow();
         _settings.SingleWindow = true;

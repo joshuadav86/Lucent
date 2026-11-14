@@ -83,7 +83,12 @@ public partial class MainWindow : Window
         SnapEveryWindow();
         SizeChanged += OnPlayerWidthChanged;
         StateChanged += OnPlayerStateChanged;
-        SourceInitialized += (_, _) => (PresentationSource.FromVisual(this) as HwndSource)?.AddHook(RefuseMaximize);
+        SourceInitialized += (_, _) =>
+        {
+            (PresentationSource.FromVisual(this) as HwndSource)?.AddHook(RefuseMaximize);
+            // A classic skin going on or off changes the player's frame; Windows mustn't paint its own caption over Lucent's.
+            CaptionRepaint.Guard(this);
+        };
 
         _queue.ShowQueue(_playlist);
         _playlist.CollectionChanged += (_, _) =>
