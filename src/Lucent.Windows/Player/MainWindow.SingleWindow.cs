@@ -187,7 +187,7 @@ public partial class MainWindow
         SizeToContent = SizeToContent.Manual;
         MaxWidth = double.PositiveInfinity;
         MinWidth = 0;
-        ResizeMode = ResizeMode.CanResize;
+        CaptionRepaint.SetResizeMode(this, ResizeMode.CanResize);
         _settings.SingleWindow = true;
         _settings.LucentFullScreen = false;
         _openingSingle = false;
