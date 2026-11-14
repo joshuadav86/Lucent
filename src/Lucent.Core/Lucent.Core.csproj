@@ -18,6 +18,11 @@
   <ItemGroup>
     <PackageReference Include="Concentus.Oggfile" Version="1.0.7" />
     <!--
+      A SoundFont synthesizer in plain C#, for playing MIDI files (see Audio/Midi): the same on every platform, about
+      70 KB. MIT. The instruments it plays with are downloaded the first time a MIDI file plays (Audio/Midi/SoundFonts.cs).
+    -->
+    <PackageReference Include="MeltySynth" Version="2.4.1" />
+    <!--
       ONNX Runtime's .NET side, for the stem splitter. Each app brings the native library that fits it:
       DirectML's build on Windows (any DirectX 12 graphics card), the standard one (with Core ML) on a Mac.
       1.23.0 is the newest with both a DirectML build and Intel Mac libraries.

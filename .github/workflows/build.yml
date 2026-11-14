@@ -122,7 +122,8 @@ jobs:
 
   # The audio editor's stem splitter model: Demucs' HTDemucs exported to ONNX and checked against Demucs
   # itself (see tools/StemModel). It's cached until the export changes, tested by the Windows and Mac
-  # self-tests, and published once as the release the app downloads it from.
+  # self-tests, and published once as the release the app downloads it from. The SoundFont MIDI files
+  # play with is fetched and published here too, the same way (tools/SoundFont).
   stem-model:
     needs: changes
     if: needs.changes.outputs.app == 'true'
@@ -175,6 +176,33 @@ jobs:
           fi
           cp tools/StemModel/LICENSE-Demucs.txt stem-model/
           gh release upload "$tag" stem-model/htdemucs.onnx stem-model/htdemucs.onnx.sha256 stem-model/LICENSE-Demucs.txt --clobber
+
+      # The SoundFont MIDI files play with (GeneralUser GS), fetched from its author at one fixed commit and checked,
+      # then published once the same way as the model: the app downloads it the first time a MIDI file plays.
+      - name: Fetch the SoundFont for MIDI files
+        run: tools/SoundFont/fetch.sh soundfont
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: soundfont
+          path: soundfont/GeneralUser-GS.sf2
+
+      - name: Publish the SoundFont for the app to download
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="midi-soundfont-$(grep -oP 'const string Version = "\K[^"]+' src/Lucent.Core/Audio/Midi/SoundFonts.cs)"
+          if gh release view "$tag" --json assets --jq '.assets[].name' 2> /dev/null | grep -qx GeneralUser-GS.sf2; then
+            echo "$tag is already published."
+            exit 0
+          fi
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --prerelease --latest=false --title "MIDI instruments ($tag)" --notes \
+              "Lucent downloads this the first time a MIDI file plays. It's GeneralUser GS 2.0.3 by S. Christian Collins (schristiancollins.com), free to use and pass on (see LICENSE-GeneralUser-GS.txt), fetched by tools/SoundFont/fetch.sh."
+          fi
+          gh release upload "$tag" soundfont/GeneralUser-GS.sf2 soundfont/LICENSE-GeneralUser-GS.txt --clobber
 
   build:
     needs: [changes, stem-model]
@@ -391,10 +419,16 @@ jobs:
           name: stem-model
           path: stem-model
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: soundfont
+          path: soundfont
+
       - name: Self-test (decoding, videos, every visual, and the stem splitter)
         shell: pwsh
         env:
           LUCENT_STEM_MODEL: ${{ github.workspace }}\stem-model\htdemucs.onnx
+          LUCENT_SOUNDFONT: ${{ github.workspace }}\soundfont\GeneralUser-GS.sf2
         run: |
           # Lucent.exe is a windowed program: piping its output makes PowerShell wait for it, shows what it
           # writes and sets $LASTEXITCODE. The runner has no graphics card, so Direct3D draws in software.
@@ -800,12 +834,19 @@ jobs:
           name: stem-model
           path: stem-model
 
+      - uses: actions/download-artifact@v4
+        if: env.BUILD_MAC == 'true' && (matrix.arch == 'x64')
+        with:
+          name: soundfont
+          path: soundfont
+
       - name: Self-test (decoding, videos, every visual, recording a video, and the stem splitter)
         if: env.BUILD_MAC == 'true' && (matrix.arch == 'x64')
         # A hang fails the build instead of holding the runner for GitHub's six-hour limit.
         timeout-minutes: 40
         env:
           LUCENT_STEM_MODEL: ${{ github.workspace }}/stem-model/htdemucs.onnx
+          LUCENT_SOUNDFONT: ${{ github.workspace }}/soundfont/GeneralUser-GS.sf2
         run: |
           # libVLC (videos) ships in its own folder for this chip, with its plugins.
           test -f "publish-mac/libvlc/$RID/lib/libvlc.dylib" && test -f "publish-mac/libvlc/$RID/lib/vlc/plugins/libavcodec_plugin.dylib" \
@@ -1076,6 +1117,11 @@ jobs:
           name: stem-model
           path: stem-model
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: soundfont
+          path: soundfont
+
       - name: Unpack Lucent.app
         run: |
           ditto -x -k built/Lucent-mac-arm64.zip built
@@ -1089,6 +1135,7 @@ jobs:
         timeout-minutes: 40
         env:
           LUCENT_STEM_MODEL: ${{ github.workspace }}/stem-model/htdemucs.onnx
+          LUCENT_SOUNDFONT: ${{ github.workspace }}/soundfont/GeneralUser-GS.sf2
         run: |
           # libVLC (videos) ships inside the app for this chip, with its plugins.
           test -f built/Lucent.app/Contents/MacOS/libvlc/osx-arm64/lib/libvlc.dylib \

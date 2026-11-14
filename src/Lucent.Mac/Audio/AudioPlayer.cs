@@ -65,6 +65,9 @@ public sealed class AudioPlayer : IDisposable
     /// <summary>The equalizer every track plays through. Its settings carry over from track to track.</summary>
     public Equalizer Equalizer { get; } = new();
 
+    /// <summary>Volume leveling (Options > Sound): how far each track is turned up or down. Never in exclusive mode.</summary>
+    public VolumeLeveling? Leveling { get; set; }
+
     /// <summary>Whether a track lined up with <see cref="QueueNext"/> follows without a gap. Takes effect from the next track.</summary>
     public bool Gapless { get; set; } = true;
 
@@ -166,6 +169,7 @@ public sealed class AudioPlayer : IDisposable
             try
             {
                 Open(path, reader);
+                RefreshLeveling();
             }
             catch
             {
@@ -244,10 +248,36 @@ public sealed class AudioPlayer : IDisposable
         {
             reader.Dispose();
         }
+        else
+        {
+            next.Gain = LevelFor(path);
+        }
 
         _chain.SetNext(next)?.Dispose();
         return next is not null;
     }
+
+    /// <summary>
+    /// Gives the playing and lined-up tracks their volume leveling again: once a song has been measured, or when
+    /// leveling is turned on, off, or changed. A track already playing glides to its new level.
+    /// </summary>
+    public void RefreshLeveling()
+    {
+        if (_chain is not { } chain)
+        {
+            return;
+        }
+
+        chain.Current.Gain = LevelFor(chain.Current.Path);
+        if (chain.Next is { } next)
+        {
+            next.Gain = LevelFor(next.Path);
+        }
+    }
+
+    // A track's leveling gain: none in exclusive mode (where bit-perfect is the point), for videos, or with leveling off.
+    private float LevelFor(string path) =>
+        Leveling is null || Output is { Exclusive: true } || VideoFiles.IsVideo(path) ? 1f : Leveling.GainFor(path);
 
     public void Play() => Play(reopenIfLost: true);
 
@@ -531,7 +561,7 @@ public sealed class AudioPlayer : IDisposable
     private ISampleProvider BuildChain(TrackChain chain)
     {
         var equalized = Equalizer.Attach(chain);
-        var captured = new CapturingSampleProvider(equalized, Capture);
+        var captured = new CapturingSampleProvider(equalized, Capture) { Leveling = () => chain.Gain };
         _volumeProvider = new VolumeSampleProvider(captured) { Volume = _volume };
         return _volumeProvider;
     }

@@ -13,6 +13,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using Lucent.Audio;
+using Lucent.Audio.Midi;
 using Lucent.Diagnostics;
 using Lucent.Editor;
 using Lucent.Layout;
@@ -104,6 +105,7 @@ public partial class MainWindow : Window
         _player.TrackEnded += (_, _) => OnTrackEnded();
         _player.TrackAdvanced += (_, _) => OnTrackAdvanced();
         _player.VideoChanged += (_, _) => OnVideoChanged();
+        StartPlaybackExtras();
         ApplySoundSettings();
         _player.PlaybackFailed += (_, ex) => ShowError("Playback stopped because of an audio device error.", ex);
 
@@ -118,6 +120,7 @@ public partial class MainWindow : Window
             ObserveForScrobbling();
             FollowComputerVolume();
             WatchListening();
+            NoteResumePoint();
         };
         _positionTimer.Start();
         StartScrobbling();
@@ -1489,6 +1492,9 @@ public partial class MainWindow : Window
             case "PreviousVisual" when Enum.TryParse<PreviousVisualMode>(value, out var previous):
                 _settings.PreviousVisual = previous;
                 break;
+            case "Leveling" when Enum.TryParse<LevelingMode>(value, out var leveling):
+                ChangeLeveling(leveling);
+                return;
             case "Theme":
                 _settings.Theme = value;
                 ApplyLook();
@@ -1606,6 +1612,7 @@ public partial class MainWindow : Window
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
                 "PreviousVisual" => _settings.PreviousVisual.ToString(),
+                "Leveling" => _settings.Leveling.ToString(),
                 "Theme" => ThemeManager.Find(_settings.Theme).Name,
                 "Skin" => SkinManager.Find(_settings.Skin).Name,
                 "Updates" => _settings.EveryBuild ? "EveryBuild" : "Stable",
@@ -2017,7 +2024,13 @@ public partial class MainWindow : Window
         LeaveRadio();
         try
         {
+            NoteResumePoint(force: true);
             _player.Load(entry.Track.Path);
+        }
+        catch (SoundFontNeededException)
+        {
+            GetSoundFontThenPlay(entry);
+            return;
         }
         catch (Exception ex)
         {
@@ -2026,6 +2039,7 @@ public partial class MainWindow : Window
         }
 
         ForgetUpNext();
+        ResumeWhereLeft(entry.Track.Path);
         _player.Play();
         ShowEntryPlaying(entry);
     }
@@ -2364,6 +2378,12 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // A global shortcut being typed in the options takes the keys, before they do what they usually do.
+        if (TypeHotkey(e))
+        {
+            return;
+        }
+
         // A key in a panel of the single window goes to that window first, as it would if it were on its own.
         if (KeyForPane(e))
         {

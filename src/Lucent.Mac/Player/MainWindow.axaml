@@ -440,6 +440,35 @@
                               Margin="0,18,0,0" Click="OnSoundSwitched" />
                     <TextBlock Theme="{StaticResource OptionHint}"
                                Text="While Lucent controls Spotify, Apple Music, or a browser, their sound plays through the equalizer. Lucent quietens the app and plays it instead, and the app is heard as usual again when Lucent quits." />
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Volume leveling" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Leveling" Tag="Off" Content="Off" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Leveling" Tag="Track" Content="Each song" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="Leveling" Tag="Album" Content="Each album" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Plays your music at about the same loudness, so the volume stays put from song to song. It uses ReplayGain tags, or Lucent measures a song the first time it plays. Each album keeps an album's quiet songs quieter than its loud ones. Never in exclusive mode." />
+
+                    <CheckBox x:Name="ResumeLongFilesSwitch" Theme="{StaticResource SwitchToggle}" Content="Pick up long files where you left off"
+                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Files of 20 minutes or more, like DJ mixes, live sets, and audiobooks, start again where you stopped them." />
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="MIDI instruments" />
+                    <Button x:Name="SoundFontButton" Theme="{StaticResource PillButton}" HorizontalAlignment="Left"
+                            ToolTip.Tip="The SoundFont that MIDI files play with" Click="OnChooseSoundFont">
+                        <TextBlock x:Name="SoundFontName" MaxWidth="290" TextTrimming="CharacterEllipsis" />
+                    </Button>
+                    <TextBlock x:Name="SoundFontHint" Theme="{StaticResource OptionHint}" />
+
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Shortcuts in every app" />
+                    <TextBlock Theme="{StaticResource OptionHint}" Margin="2,0,0,0"
+                               Text="These work while another app is in front. Click one, then press the keys, with ⌃, ⌥, or ⌘. Delete clears it." />
+                    <StackPanel x:Name="HotkeyRows" Margin="0,8,0,0" />
+                    <TextBlock x:Name="HotkeyProblem" Theme="{StaticResource OptionHint}" Margin="2,8,0,0"
+                               Foreground="{DynamicResource AccentBrush}" IsVisible="False" />
                 </StackPanel>
 
                 <StackPanel x:Name="ThemeTab" IsVisible="False">
