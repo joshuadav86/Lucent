@@ -31,7 +31,7 @@ A free, open-source music and video player for Windows and Mac, with 450 live GP
 - **Skins and themes.** Six skins, nine themes, and Lucent Classic, a pixel skin in the spirit of classic desktop players. Any .wsz skin works too.
 - **Internet radio.** Thousands of stations, SomaFM and friends up front, and live video from The Lot Radio.
 - **Your streaming apps, too.** Spotify, Apple Music, TIDAL, Pandora, SoundCloud, and YouTube play with Lucent's visuals and controls.
-- **Sounds right.** Gapless, crossfades, bit-perfect exclusive mode, and 15 formats from MP3 and FLAC to WavPack and APE.
+- **Sounds right.** Gapless, crossfades, bit-perfect exclusive mode, optional volume leveling, and 15 formats from MP3 and FLAC to WavPack and APE, plus MIDI, tracker modules, and game music. Long mixes and podcasts pick up where you left off, and your own shortcuts work from any app.
 
 <table>
 <tr>
@@ -145,6 +145,7 @@ Lucent is free, and always will be. If it's earned a spot in your setup, you can
 - MP3s are made with [LAME](https://lame.sourceforge.io/) (LGPL), shipped as separate `libmp3lame` libraries you can swap for your own build, through [NAudio.Lame](https://github.com/Corey-M/NAudio.Lame) (MIT).
 - Videos play with [libVLC](https://www.videolan.org/vlc/libvlc.html) (LGPL 2.1 or later) through [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp) (LGPL 2.1 or later). libVLC ships unchanged in the `libvlc` folder and can be swapped for your own build; its licence and source are in `Licenses/LICENSE-libVLC.txt`. VLC is a trademark of VideoLAN, which doesn't make or endorse Lucent.
 - WavPack and Monkey's Audio decoding are C# ports of the [WavPack](https://github.com/dbry/WavPack) decoder by David Bryant ([BSD](assets/licenses/LICENSE-WavPack.txt)) and the [Monkey's Audio](https://www.monkeysaudio.com) decoder by Matthew T. Ashland ([BSD 3-Clause](assets/licenses/LICENSE-MonkeysAudio.txt)).
+- MIDI files play with [MeltySynth](https://github.com/sinshu/meltysynth) by Nobuaki Tanaka (MIT) and the [GeneralUser GS](https://www.schristiancollins.com/generaluser) SoundFont by S. Christian Collins ([license](tools/SoundFont/LICENSE-GeneralUser-GS.txt)), downloaded the first time a MIDI file plays.
 - The plugin helper is built with the [VST 3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT). VST is a registered trademark of Steinberg Media Technologies GmbH.
 - The 34 AVS presets are the stock set from Nullsoft's open-source release of Winamp's Advanced Visualization Studio (BSD), credited in [`content/Presets/AVS/CREDITS.md`](content/Presets/AVS/CREDITS.md). Winamp is a trademark of its owner, who doesn't make or endorse Lucent.
 - The starter song, "Self Actualize," is © Kepler North and isn't covered by the MIT license.

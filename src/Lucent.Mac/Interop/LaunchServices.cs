@@ -29,7 +29,7 @@ internal static partial class LaunchServices
     [
         ("public.mpeg-4-audio", ".m4a"), ("com.microsoft.windows-media-wma", ".wma"), ("public.aifc-audio", ".aifc"),
         ("com.apple.coreaudio-format", ".caf"), ("public.ac3-audio", ".ac3"), ("public.enhanced-ac3-audio", ".eac3"),
-        ("com.wavpack.audio", ".wv"), ("com.monkeysaudio.ape", ".ape"),
+        ("com.wavpack.audio", ".wv"), ("com.monkeysaudio.ape", ".ape"), ("public.midi-audio", ".mid"),
         ("public.mpeg-4", ".mp4"), ("com.apple.quicktime-movie", ".mov"), ("com.apple.m4v-video", ".m4v"),
         ("org.matroska.mkv", ".mkv"), ("org.webmproject.webm", ".webm"), ("public.avi", ".avi"),
         ("com.microsoft.windows-media-wmv", ".wmv"), ("public.mpeg", ".mpg"), ("public.mpeg-2-transport-stream", ".ts"),

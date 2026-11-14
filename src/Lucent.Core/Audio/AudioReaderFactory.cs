@@ -1,6 +1,7 @@
 using System.IO;
 using NAudio.Vorbis;
 using NAudio.Wave;
+using Lucent.Audio.Midi;
 using Lucent.Video;
 
 namespace Lucent.Audio;
@@ -12,9 +13,10 @@ namespace Lucent.Audio;
 /// <remarks>
 /// <list type="number">
 /// <item>Uncompressed files (WAV, RF64, Wave64, AIFF, AIFF-C, CAF): <see cref="PcmFileReader"/>, the same on both systems.</item>
-/// <item>Ogg Vorbis and Opus: managed decoders.</item>
+/// <item>Ogg Vorbis and Opus: managed decoders. MIDI: Lucent's own synthesizer (<see cref="MidiReader"/>).</item>
 /// <item>The system's decoders (<see cref="OpenWithSystemDecoder"/>): MP3, AAC, ALAC, FLAC, WMA on Windows, and so on.</item>
-/// <item>libVLC, for everything else: <see cref="LibVlcAudioDecoder"/> for decoding, <see cref="VideoStream"/> for playing.</item>
+/// <item>libVLC, for everything else: <see cref="LibVlcAudioDecoder"/> for decoding, <see cref="VideoStream"/> for playing.
+/// Tracker modules and game music (<see cref="LibVlcOnlyExtensions"/>) go straight to it.</item>
 /// </list>
 /// </remarks>
 public static class AudioReaderFactory
@@ -29,6 +31,21 @@ public static class AudioReaderFactory
         ".m4b", ".mp2", ".ac3", ".eac3", ".ec3", ".dts", ".mka", ".weba", ".tta", ".spx",
         // Read by Lucent's own WavPack and Monkey's Audio decoders.
         ".wv", ".ape",
+        // Played by Lucent's own synthesizer.
+        ".mid", ".midi", ".kar", ".rmi",
+        // Tracker modules and game music, played by libVLC.
+        ".mod", ".xm", ".s3m", ".it", ".mtm", ".669", ".med", ".okt", ".stm", ".ult", ".far", ".umx",
+        ".nsf", ".nsfe", ".spc", ".vgm", ".vgz", ".gbs", ".gym", ".hes", ".kss", ".ay", ".sap",
+    };
+
+    /// <summary>
+    /// Tracker modules (libVLC's mod player, libmodplug) and game music (its gme player: NES, SNES, Game Boy, Sega
+    /// and more), which only libVLC reads, so the system's decoders aren't asked first.
+    /// </summary>
+    public static readonly IReadOnlySet<string> LibVlcOnlyExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mod", ".xm", ".s3m", ".it", ".mtm", ".669", ".med", ".okt", ".stm", ".ult", ".far", ".umx",
+        ".nsf", ".nsfe", ".spc", ".vgm", ".vgz", ".gbs", ".gym", ".hes", ".kss", ".ay", ".sap",
     };
 
     /// <summary>Extensions <see cref="PcmFileReader"/> is tried on first.</summary>
@@ -61,7 +78,7 @@ public static class AudioReaderFactory
         {
             return OpenQuickly(path);
         }
-        catch (Exception) when (VideoEngine.MayWork && File.Exists(path))
+        catch (Exception ex) when (ex is not SoundFontNeededException && VideoEngine.MayWork && File.Exists(path))
         {
             // libVLC's reasons are less use than the first decoder's, so that's the one passed on if libVLC fails too.
             // Raw Dolby Digital and FLAC in Ogg are decoded first instead (quickly), since libVLC plays only their start.
@@ -106,7 +123,7 @@ public static class AudioReaderFactory
         {
             return OpenQuickly(path);
         }
-        catch (Exception) when (VideoEngine.MayWork && File.Exists(path))
+        catch (Exception ex) when (ex is not SoundFontNeededException && VideoEngine.MayWork && File.Exists(path))
         {
             var decoded = DecodeWithLibVlc(path);
             if (decoded is null)
@@ -142,9 +159,15 @@ public static class AudioReaderFactory
             return pcm;
         }
 
+        if (LibVlcOnlyExtensions.Contains(extension))
+        {
+            throw new NotSupportedException($"{extension} files play with libVLC.");
+        }
+
         return extension switch
         {
             ".ogg" or ".oga" => OpenOgg(path),
+            ".mid" or ".midi" or ".kar" or ".rmi" => MidiReader.Open(path),
             ".opus" => new OpusWaveStream(path),
             ".wv" => WavPackReader.TryOpen(path) ?? throw new InvalidDataException("This isn't a WavPack file."),
             ".ape" => ApeReader.TryOpen(path) ?? throw new InvalidDataException("This isn't a Monkey's Audio file."),

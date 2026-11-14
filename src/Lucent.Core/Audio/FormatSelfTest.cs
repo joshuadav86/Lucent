@@ -7,6 +7,7 @@ namespace Lucent.Audio;
 /// For the self-test: decodes every file in tools/test-media/formats (half a second of a 440 Hz tone with a quiet
 /// sweep, in each format and codec people's music comes in) the way the editor does, and checks each comes out as that
 /// tone, whole. The same files are decoded on Windows and the Mac, so a format one of them can't read fails the build.
+/// The MIDI file needs a SoundFont: CI points LUCENT_SOUNDFONT at the one Lucent downloads.
 /// </summary>
 public static class FormatSelfTest
 {
@@ -47,6 +48,25 @@ public static class FormatSelfTest
                 var (seconds, rms, hz) = Measure(reader);
                 var line = $"Format {name}: {reader.GetType().Name}, {reader.WaveFormat.SampleRate} Hz, {reader.WaveFormat.Channels} ch, "
                     + $"{seconds:0.000} s, level {rms:0.00}, {hz:0} Hz, in {timer.ElapsedMilliseconds} ms";
+                // MIDI, tracker and game music are made by a synthesizer as they play (tools/test-media/make-retro.py): an
+                // instrument rings on after its note and a tracker rounds to its rows, so they only have to come out
+                // about half a second long, or a little more, and audible.
+                var extension = Path.GetExtension(path);
+                if (Midi.MidiSong.IsMidi(path) || AudioReaderFactory.LibVlcOnlyExtensions.Contains(extension))
+                {
+                    if (seconds < Seconds - 0.1 || seconds > Seconds + 2.5 || rms < 0.01)
+                    {
+                        failures++;
+                        log($"::error::{line}: not the half-second note it holds.");
+                    }
+                    else
+                    {
+                        log(line);
+                    }
+
+                    continue;
+                }
+
                 // Lossy formats add their encoder's padding (MP3's is the most, about 75 ms). libVLC's WMA decoder (the
                 // Mac's) leaves off the last packet or two, which can't be had back: about 80 ms of silence, in a song.
                 var shortest = Path.GetExtension(path).Equals(".wma", StringComparison.OrdinalIgnoreCase) ? Seconds - 0.1 : Seconds - 0.04;

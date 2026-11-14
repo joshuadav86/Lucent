@@ -167,6 +167,21 @@ public sealed class AppSettings
     /// <summary>Take the output for Lucent alone and send each track at its own format: bit-perfect playback.</summary>
     public bool ExclusiveOutput { get; set; }
 
+    /// <summary>Volume leveling: play every song (or every album) at about the same loudness. Off in exclusive mode.</summary>
+    public Audio.LevelingMode Leveling { get; set; }
+
+    /// <summary>The SoundFont (.sf2) MIDI files play with, or null for Lucent's own (GeneralUser GS, downloaded the first time).</summary>
+    public string? MidiSoundFont { get; set; }
+
+    /// <summary>Start files of 20 minutes or more (DJ mixes, live sets, audiobooks) where they were left.</summary>
+    public bool ResumeLongFiles { get; set; } = true;
+
+    /// <summary>Where long files were left, oldest first (see <see cref="Playlist.ResumePoints"/>).</summary>
+    public List<Playlist.ResumePoint> ResumePoints { get; set; } = new();
+
+    /// <summary>Shortcuts that work while another app is in front: each <see cref="HotkeyAction"/>'s name, with its keys ("Control+Alt+P").</summary>
+    public Dictionary<string, string> GlobalHotkeys { get; set; } = new();
+
     /// <summary>List Lucent's original shaders in the visual picker and play them in Auto (off leaves MilkDrop, AVS and the user's own).</summary>
     public bool LucentVisuals { get; set; } = true;
 
