@@ -1,0 +1,19 @@
+name: Classic single window layout check (temporary)
+on:
+  push:
+    branches: [claude/project-thread-rr4xxk]
+permissions:
+  contents: read
+jobs:
+  layout:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Build
+        run: dotnet publish src/Lucent.Windows/Lucent.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - name: Layout check
+        shell: pwsh
+        run: tools/windows/layout-check.ps1 publish/Lucent.exe
