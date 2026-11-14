@@ -133,8 +133,8 @@ public partial class MainWindow
 
     /// <summary>
     /// Puts the classic skin's frame round one of Lucent's other windows, or takes it off when no skin is on. A panel in
-    /// the single window (as one opened while it's on already is) gives its window its insides back to be framed, and has
-    /// them again in the frame.
+    /// the single window (as one opened while it's on already is) gives its window its insides back for the frame to go
+    /// on or come off, and has them again; a frame that only changes its skin leaves the panel be.
     /// </summary>
     private void FrameInSkin(Window window)
     {
@@ -143,7 +143,7 @@ public partial class MainWindow
             return;
         }
 
-        var hosted = InSingleWindow && _panes.ContainsKey(window);
+        var hosted = (_framedSkin is not null) != ClassicWindowSkin.IsFramed(window) && InSingleWindow && _panes.ContainsKey(window);
         if (hosted)
         {
             GiveBack(window, show: false);

@@ -43,6 +43,9 @@ public static class ClassicWindowSkin
         framed.Show(title, skin, zoom);
     }
 
+    /// <summary>Whether the window is in a classic frame now (its own content inside the frame's).</summary>
+    public static bool IsFramed(Window window) => States.TryGetValue(window, out var framed) && framed.On;
+
     private sealed class Framed
     {
         private readonly Window _window;
@@ -53,6 +56,8 @@ public static class ClassicWindowSkin
         private readonly Dictionary<string, object?> _savedResources = new();
         private object? _lucentContent;
         private bool _on;
+
+        public bool On => _on;
 
         public Framed(Window window)
         {
