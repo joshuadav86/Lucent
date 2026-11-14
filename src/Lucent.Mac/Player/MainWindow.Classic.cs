@@ -395,7 +395,7 @@ public partial class MainWindow
         }
 
         skins.Items.Add(new Separator());
-        skins.Items.Add(MenuItemFor("Import a skin…", ImportClassicSkin));
+        skins.Items.Add(MenuItemFor("Import skins…", ImportClassicSkin));
         skins.Items.Add(MenuItemFor("Find more skins online", OpenSkinMuseum));
         if (_settings.ClassicSkin is { } current && !string.Equals(current, ClassicSkinLibrary.DefaultName, StringComparison.OrdinalIgnoreCase))
         {
@@ -439,24 +439,27 @@ public partial class MainWindow
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Import a classic skin",
+            Title = "Import classic skins",
             FileTypeFilter = new[]
             {
                 new FilePickerFileType("Classic skins") { Patterns = new[] { "*.wsz", "*.zip" } },
                 FilePickerFileTypes.All,
             },
+            AllowMultiple = true,
         });
 
-        if (files.Count > 0 && files[0].TryGetLocalPath() is { } path)
+        var paths = files.Select(file => file.TryGetLocalPath()).OfType<string>().ToList();
+        if (paths.Count > 0)
         {
-            ImportClassicSkins(new[] { path });
+            ImportClassicSkins(paths);
         }
     }
 
-    /// <summary>Imports skins (from the dialog or dropped on a window) and switches to the last one.</summary>
+    /// <summary>Imports skins (from the dialog or dropped on a window) and switches to the last one. Any that fail are listed in one message.</summary>
     private async void ImportClassicSkins(IEnumerable<string> paths)
     {
         string? imported = null;
+        var failed = new List<(string File, string Reason)>();
         foreach (var path in paths)
         {
             try
@@ -466,14 +469,18 @@ public partial class MainWindow
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
             {
-                await MessageWindow.ShowAsync(this, $"Lucent couldn't use {Path.GetFileName(path)} as a skin.\n\n{ex.Message}",
-                    "Import a skin");
+                failed.Add((Path.GetFileName(path), ex.Message));
             }
         }
 
         if (imported is not null)
         {
             ChooseClassicSkin(imported);
+        }
+
+        if (ClassicSkinLibrary.FailureMessage(failed) is { } message)
+        {
+            await MessageWindow.ShowAsync(this, message, "Import skins");
         }
     }
 
