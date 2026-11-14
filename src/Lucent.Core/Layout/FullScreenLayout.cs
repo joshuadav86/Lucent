@@ -188,7 +188,7 @@ public static class FullScreenLayout
         foreach (var (wider, taller) in new[] { (1.0, 1.0), (1.0, 1.25), (1.0, 1.5), (1.0, 2.0), (1.25, 2.0), (1.5, 2.0) })
         {
             var area = new TileRect(screen.Left, screen.Top, Math.Min(screen.Width, width * wider), Math.Min(screen.Height, height * taller));
-            var result = Arrange(area, sized, style);
+            var result = EndingWithPlayerColumn(area, sized, style, Arrange(area, sized, style), player.Key);
             if (result.LeftOut.Count > 0 || !result.Places.TryGetValue(player.Key, out var placed)
                 || Shifted(result, anchor.Left - placed.Left, anchor.Top - placed.Top, screen, locked, keepPlayer: lockedPlayer) is not { } shifted)
             {
@@ -213,6 +213,34 @@ public static class FullScreenLayout
         var none = new TileResult();
         none.LeftOut.AddRange(windows.Where(window => window.LockedAt is null).Select(window => window.Key));
         return none;
+    }
+
+    /// <summary>
+    /// A compact block whose player's column (the player and the equalizer can't stretch) stops short of the block's
+    /// bottom, with no window fitting in the gap under it, leaves an empty strip there. Laid out again just as tall as
+    /// that column, the windows beside it end level with it instead, if they all still fit; otherwise it's left as it was.
+    /// </summary>
+    private static TileResult EndingWithPlayerColumn(TileRect area, IReadOnlyList<TileWindow> windows, TileStyle style, TileResult result, string playerKey)
+    {
+        double? ColumnShortBy(TileResult laidOut, TileRect within)
+        {
+            if (laidOut.LeftOut.Count > 0 || !laidOut.Places.TryGetValue(playerKey, out var player))
+            {
+                return null;
+            }
+
+            var bottom = laidOut.Places.Values.Where(place => place.Left < player.Right - 1 && place.Right > player.Left + 1).Max(place => place.Bottom);
+            return within.Bottom - bottom;
+        }
+
+        if (ColumnShortBy(result, area) is not { } gap || gap <= 1)
+        {
+            return result;
+        }
+
+        var shorter = area with { Height = area.Height - gap };
+        var again = Arrange(shorter, windows, style);
+        return ColumnShortBy(again, shorter) is { } left && left <= 1 ? again : result;
     }
 
     /// <summary>
