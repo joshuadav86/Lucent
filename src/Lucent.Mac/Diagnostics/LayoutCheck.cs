@@ -380,7 +380,10 @@ internal static class LayoutCheck
         await Task.Delay(TimeSpan.FromSeconds(3));
         (_, _, body) = main.PanelWidths();
         now = Placement.BoundsOf(main);
-        var again = body > main.PlayerPanelWidth + 50 && Math.Abs(now.X - wide.X) <= 4 && now.Width >= wide.Width - 10;
+        // Where it was, unless it hung off the screen's right edge: then only as far left as puts it on the screen.
+        var screen = Placement.WorkArea(main);
+        var expected = Math.Max(screen.X, Math.Min(wide.X, screen.Right - now.Width));
+        var again = body > main.PlayerPanelWidth + 50 && Math.Abs(now.X - expected) <= 4 && now.Width >= wide.Width - 10;
         lines.Add($"{(again ? "ok" : "MISMATCH")} {label}, the other windows open again: the single window is at {Describe(now)}, " +
             $"was at {Describe(wide)}; its body is {body:0} wide, the player {main.PlayerPanelWidth:0}");
         lines.AddRange(ClassicPanelLines(main, $"{label}, the other windows open again", count));
@@ -440,8 +443,12 @@ internal static class LayoutCheck
             }
         }
 
-        var (across, _, body) = main.PanelWidths();
-        lines.Add($"{(Math.Abs(across - body) <= 1 ? "ok" : "MISMATCH")} {label}: the panels across the player's rows fill {across:0} of the single window's {body:0}");
+        // Across the middle of the player, it and the panels beside it fill the window's width: nothing empty, nothing past it.
+        // (Not across all its rows: two panels stacked beside it, the line between them level with it, would count twice.)
+        var (_, _, body) = main.PanelWidths();
+        var middle = places.TryGetValue(main, out var own) ? own.Y + own.Height / 2 : frame.Y;
+        var across = places.Values.Where(place => place.Y < middle && place.Bottom > middle).Sum(place => place.Width);
+        lines.Add($"{(Math.Abs(across - body) <= 2 ? "ok" : "MISMATCH")} {label}: the panels across the player's middle fill {across:0} of the single window's {body:0}");
         return lines;
     }
 

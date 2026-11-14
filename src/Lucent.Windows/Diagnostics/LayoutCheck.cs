@@ -445,7 +445,10 @@ public partial class MainWindow
         putBack();
         await Task.Delay(TimeSpan.FromSeconds(3));
         (_, _, body) = PanelWidths();
-        var again = body > PlayerPaneWidth + 50 && Math.Abs(Left - wide.Left) <= 4 && ActualWidth >= wide.Width - 10;
+        // Where it was, unless it hung off the screen's right edge: then only as far left as puts it on the screen.
+        var screen = ScreenArea.Of(this);
+        var expected = Math.Max(screen.Left, Math.Min(wide.Left, screen.Right - ActualWidth));
+        var again = body > PlayerPaneWidth + 50 && Math.Abs(Left - expected) <= 4 && ActualWidth >= wide.Width - 10;
         lines.Add($"{(again ? "ok" : "MISMATCH")} {label}, the other windows open again: the single window is at {Left:0},{Top:0} " +
             $"{ActualWidth:0} x {ActualHeight:0}, was at {Describe(wide)}; its body is {body:0} wide, the player {PlayerPaneWidth:0}");
         lines.AddRange(ClassicPanelLines($"{label}, the other windows open again", count));
@@ -500,8 +503,12 @@ public partial class MainWindow
             }
         }
 
-        var (across, _, body) = PanelWidths();
-        lines.Add($"{(Math.Abs(across - body) <= 1 ? "ok" : "MISMATCH")} {label}: the panels across the player's rows fill {across:0} of the single window's {body:0}");
+        // Across the middle of the player, it and the panels beside it fill the window's width: nothing empty, nothing past it.
+        // (Not across all its rows: two panels stacked beside it, the line between them level with it, would count twice.)
+        var (_, _, body) = PanelWidths();
+        var middle = places.TryGetValue(this, out var own) ? own.Top + own.Height / 2 : frame.Top;
+        var across = places.Values.Where(place => place.Top < middle && place.Bottom > middle).Sum(place => place.Width);
+        lines.Add($"{(Math.Abs(across - body) <= 2 ? "ok" : "MISMATCH")} {label}: the panels across the player's middle fill {across:0} of the single window's {body:0}");
         return lines;
     }
 
