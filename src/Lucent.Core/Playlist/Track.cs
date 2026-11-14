@@ -136,8 +136,9 @@ public sealed class Track
         }
         catch (Exception)
         {
-            // Untagged or unusual files still play; they just show their file name.
-            return new Track(path, fallbackTitle, string.Empty, TimeSpan.Zero);
+            // Untagged or unusual files still play; they just show their file name. A MIDI file says how long it is.
+            var length = Audio.Midi.MidiSong.IsMidi(path) ? Audio.Midi.MidiSong.LengthOf(path) : TimeSpan.Zero;
+            return new Track(path, fallbackTitle, string.Empty, length);
         }
     }
 

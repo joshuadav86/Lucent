@@ -9,11 +9,14 @@ namespace Lucent.Audio;
 /// </summary>
 public sealed class ChainedTrack : IDisposable
 {
+    private readonly LevelledSamples _levelled;
+
     private ChainedTrack(string path, WaveStream reader, ISampleProvider audio)
     {
         Path = path;
         Reader = reader;
-        Audio = audio;
+        _levelled = new LevelledSamples(audio);
+        Audio = _levelled;
     }
 
     public string Path { get; }
@@ -21,8 +24,21 @@ public sealed class ChainedTrack : IDisposable
     /// <summary>The file's own reader: its position, length and format.</summary>
     public WaveStream Reader { get; }
 
-    /// <summary>The track's audio, resampled to the chain's rate if it needed to be.</summary>
+    /// <summary>The track's audio, resampled to the chain's rate if it needed to be, and levelled (<see cref="Gain"/>).</summary>
     internal ISampleProvider Audio { get; }
+
+    /// <summary>
+    /// How much the track is turned up or down to play about as loud as the others (volume leveling), as a factor:
+    /// 1 leaves it as it is. A change once it's playing glides there over a fraction of a second rather than jumping.
+    /// </summary>
+    public float Gain
+    {
+        get => _levelled.Target;
+        set => _levelled.Target = value;
+    }
+
+    /// <summary>The gain the track's sound has now: <see cref="Gain"/>, or on its way there.</summary>
+    internal float AppliedGain => _levelled.Applied;
 
     /// <summary>
     /// Wraps an opened file for a chain playing <paramref name="format"/>, or returns null when it can't
@@ -106,6 +122,12 @@ public sealed class TrackChain : ISampleProvider
 
     /// <summary>The track playing now.</summary>
     public ChainedTrack Current => _current;
+
+    /// <summary>
+    /// The volume leveling gain of the track playing now, as it is at the moment (see <see cref="ChainedTrack.Gain"/>), so
+    /// what the visuals and analyzer hear can be put back to the song's own level.
+    /// </summary>
+    public float Gain => _current.AppliedGain;
 
     /// <summary>The track still fading out under <see cref="Current"/>, during a crossfade.</summary>
     public ChainedTrack? Fading => _fading;
@@ -264,5 +286,77 @@ public sealed class TrackChain : ISampleProvider
         }
 
         return total;
+    }
+}
+
+/// <summary>
+/// A track's sound turned up or down by its volume leveling gain. A new gain set in its first moments (before the
+/// output has played any of it, or just after) is taken at once; one set later glides there over about half a second,
+/// so nothing clicks or jumps.
+/// </summary>
+internal sealed class LevelledSamples : ISampleProvider
+{
+    private readonly ISampleProvider _source;
+    private volatile float _target = 1f;
+    private float _applied = 1f;
+    private long _read;
+    private readonly long _firstMoments;
+    private readonly float _step;
+
+    public LevelledSamples(ISampleProvider source)
+    {
+        _source = source;
+        // Most of the way to a new gain in about a fifth of a second, and there in half a second, at any rate and channels.
+        var samplesPerSecond = (float)Math.Max(8000, source.WaveFormat.SampleRate) * Math.Max(1, source.WaveFormat.Channels);
+        _step = 1f - MathF.Exp(-1f / (0.06f * samplesPerSecond));
+        // The output reads a little ahead before it starts, so the first 0.3 s is still "before it plays".
+        _firstMoments = (long)(0.3f * samplesPerSecond);
+    }
+
+    public WaveFormat WaveFormat => _source.WaveFormat;
+
+    public float Target
+    {
+        get => _target;
+        set
+        {
+            _target = float.IsFinite(value) && value > 0 ? value : 1f;
+            if (Interlocked.Read(ref _read) < _firstMoments)
+            {
+                _applied = _target;
+            }
+        }
+    }
+
+    public float Applied => _applied;
+
+    public int Read(float[] buffer, int offset, int count)
+    {
+        var read = _source.Read(buffer, offset, count);
+        Interlocked.Add(ref _read, read);
+        var target = _target;
+        var applied = _applied;
+        if (applied == target)
+        {
+            if (applied != 1f)
+            {
+                for (var i = 0; i < read; i++)
+                {
+                    buffer[offset + i] *= applied;
+                }
+            }
+
+            return read;
+        }
+
+        for (var i = 0; i < read; i++)
+        {
+            applied += (target - applied) * _step;
+            buffer[offset + i] *= applied;
+        }
+
+        // Settled: from here it's the gain itself, so the quicker loop above takes over.
+        _applied = Math.Abs(target - applied) < 0.0005f * target ? target : applied;
+        return read;
     }
 }

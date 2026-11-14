@@ -1,0 +1,210 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Styling;
+using Lucent.Mac.Audio;
+using Lucent.Settings;
+
+namespace Lucent.Mac;
+
+/// <summary>
+/// Global shortcuts (Options > Sound "Shortcuts in every app"): keys people choose for play or pause, next, volume and
+/// so on, which work while another app is in front. None are set until people set them. Kept in its own file.
+/// </summary>
+public partial class MainWindow
+{
+    private GlobalHotkeys? _globalHotkeys;
+
+    // The action whose shortcut is being typed in the options, if one is.
+    private HotkeyAction? _typingHotkey;
+    private readonly Dictionary<HotkeyAction, Button> _hotkeyButtons = new();
+
+    private void StartGlobalHotkeys()
+    {
+        _globalHotkeys = new GlobalHotkeys();
+        _globalHotkeys.Pressed += RunHotkey;
+        Closed += (_, _) => _globalHotkeys.Dispose();
+        ApplyHotkeys();
+    }
+
+    /// <summary>Registers the shortcuts in the settings, and says if another app has any of their keys.</summary>
+    private void ApplyHotkeys()
+    {
+        if (_globalHotkeys is null)
+        {
+            return;
+        }
+
+        var taken = _globalHotkeys.Set(Hotkey.Read(_settings.GlobalHotkeys));
+        ShowHotkeyProblem(taken.Count == 0
+            ? null
+            : $"Another app already uses the keys for {string.Join(", ", taken.Select(action => Hotkey.ActionLabel(action).ToLowerInvariant()))}. Pick other keys.");
+    }
+
+    private void ShowHotkeyProblem(string? problem)
+    {
+        HotkeyProblem.Text = problem ?? "";
+        HotkeyProblem.IsVisible = problem is not null;
+    }
+
+    private void RunHotkey(HotkeyAction action)
+    {
+        switch (action)
+        {
+            case HotkeyAction.PlayPause:
+                TogglePlayPause();
+                break;
+            case HotkeyAction.Stop:
+                StopPlayback();
+                break;
+            case HotkeyAction.Next:
+                PlayNext(wrap: true);
+                break;
+            case HotkeyAction.Previous:
+                PlayPrevious();
+                break;
+            case HotkeyAction.VolumeUp:
+                VolumeSlider.Value = Math.Min(VolumeSlider.Maximum, VolumeSlider.Value + 0.05);
+                break;
+            case HotkeyAction.VolumeDown:
+                VolumeSlider.Value = Math.Max(VolumeSlider.Minimum, VolumeSlider.Value - 0.05);
+                break;
+            case HotkeyAction.Favorite:
+                ToggleTrackFavorite();
+                break;
+            case HotkeyAction.ShowLucent:
+                if (WindowState == WindowState.Minimized)
+                {
+                    WindowState = WindowState.Normal;
+                }
+
+                Show();
+                Activate();
+                break;
+        }
+
+        UpdateMediaControls();
+    }
+
+    /// <summary>Lists each action with its shortcut in Options > Sound.</summary>
+    private void ShowHotkeys()
+    {
+        HotkeyRows.Children.Clear();
+        _hotkeyButtons.Clear();
+        var shortcuts = Hotkey.Read(_settings.GlobalHotkeys);
+        foreach (var action in Enum.GetValues<HotkeyAction>())
+        {
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 6), ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+            var label = new TextBlock { Text = Hotkey.ActionLabel(action), VerticalAlignment = VerticalAlignment.Center, FontSize = 13 };
+            label.Bind(TextBlock.ForegroundProperty, label.GetResourceObservable("TextBrush"));
+            row.Children.Add(label);
+
+            var button = new Button
+            {
+                Content = shortcuts.TryGetValue(action, out var hotkey) ? hotkey.Label(mac: true) : "Not set",
+                MinWidth = 120,
+                Theme = (ControlTheme)this.FindResource("PillButton")!,
+            };
+            ToolTip.SetTip(button, "Click, then press the keys. Delete clears it, Esc leaves it as it was.");
+            button.Click += (_, _) => StartTypingHotkey(action);
+            // Straight to the button too: Options is a pop-up, whose keys may not pass through the player's window.
+            button.AddHandler(KeyDownEvent, (_, e) => TypeHotkey(e), RoutingStrategies.Tunnel);
+            button.LostFocus += (_, _) =>
+            {
+                if (_typingHotkey == action)
+                {
+                    StopTypingHotkey();
+                }
+            };
+            Grid.SetColumn(button, 1);
+            row.Children.Add(button);
+            HotkeyRows.Children.Add(row);
+            _hotkeyButtons[action] = button;
+        }
+    }
+
+    private void StartTypingHotkey(HotkeyAction action)
+    {
+        _typingHotkey = action;
+        // Let go of them all meanwhile, so pressing one that's set already comes here rather than doing what it does.
+        _globalHotkeys?.Clear();
+        ShowHotkeyProblem(null);
+        if (_hotkeyButtons.TryGetValue(action, out var button))
+        {
+            button.Content = "Press keys…";
+            button.Focus();
+        }
+    }
+
+    private void StopTypingHotkey()
+    {
+        _typingHotkey = null;
+        ApplyHotkeys();
+        ShowHotkeys();
+    }
+
+    /// <summary>
+    /// While a shortcut is being typed in the options, takes the keys pressed (before the usual shortcuts see them).
+    /// Returns true when it took the key.
+    /// </summary>
+    private bool TypeHotkey(KeyEventArgs e)
+    {
+        if (_typingHotkey is not { } action || e.Handled)
+        {
+            return _typingHotkey is not null;
+        }
+
+        e.Handled = true;
+        if (e.Key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+        {
+            // Still to come: the key they're held with.
+            return true;
+        }
+
+        var modifiers = e.KeyModifiers;
+        if (e.Key == Key.Escape && modifiers == KeyModifiers.None)
+        {
+            StopTypingHotkey();
+            return true;
+        }
+
+        if (e.Key is Key.Back or Key.Delete && modifiers == KeyModifiers.None)
+        {
+            _settings.GlobalHotkeys.Remove(action.ToString());
+            _settings.Save();
+            StopTypingHotkey();
+            return true;
+        }
+
+        var name = Hotkey.KeyForPhysical(e.PhysicalKey.ToString());
+        var hotkey = new Hotkey(
+            (modifiers.HasFlag(KeyModifiers.Control) ? HotkeyModifiers.Control : 0)
+            | (modifiers.HasFlag(KeyModifiers.Alt) ? HotkeyModifiers.Alt : 0)
+            | (modifiers.HasFlag(KeyModifiers.Shift) ? HotkeyModifiers.Shift : 0)
+            | (modifiers.HasFlag(KeyModifiers.Meta) ? HotkeyModifiers.Command : 0),
+            name ?? "");
+        if (name is null || !hotkey.IsUsable)
+        {
+            ShowHotkeyProblem(name is null
+                ? "That key can't be a shortcut. Try a letter, a number, or an F key."
+                : "Hold ⌃, ⌥, or ⌘ with it, so it doesn't get in the way of typing.");
+            return true;
+        }
+
+        // One shortcut does one thing: an action that had these keys loses them.
+        foreach (var (other, text) in _settings.GlobalHotkeys.ToList())
+        {
+            if (Hotkey.Parse(text) == hotkey)
+            {
+                _settings.GlobalHotkeys.Remove(other);
+            }
+        }
+
+        _settings.GlobalHotkeys[action.ToString()] = hotkey.ToString();
+        _settings.Save();
+        StopTypingHotkey();
+        return true;
+    }
+}

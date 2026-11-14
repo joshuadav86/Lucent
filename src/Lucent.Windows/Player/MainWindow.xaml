@@ -470,6 +470,35 @@
                               Margin="0,18,0,0" Click="OnSoundSwitched" />
                     <TextBlock Style="{StaticResource OptionHint}"
                                Text="While Lucent controls Spotify, Apple Music, or a browser, the equalizer shapes their sound through Equalizer APO, a free add-on for Windows. It shapes everything playing on your speakers while an app is in control." />
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Volume leveling" />
+                    <w:RoundedBorder Style="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Leveling" Tag="Off" Content="Off" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Leveling" Tag="Track" Content="Each song" Click="OnOptionChosen" />
+                            <RadioButton Style="{StaticResource SegmentButton}" GroupName="Leveling" Tag="Album" Content="Each album" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </w:RoundedBorder>
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Plays your music at about the same loudness, so the volume stays put from song to song. It uses ReplayGain tags, or Lucent measures a song the first time it plays. Each album keeps an album's quiet songs quieter than its loud ones. Never in exclusive mode." />
+
+                    <CheckBox x:Name="ResumeLongFilesSwitch" Style="{StaticResource SwitchToggle}" Content="Pick up long files where you left off"
+                              Margin="0,18,0,0" Click="OnSoundSwitched" />
+                    <TextBlock Style="{StaticResource OptionHint}"
+                               Text="Files of 20 minutes or more, like DJ mixes, live sets, and audiobooks, start again where you stopped them." />
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="MIDI instruments" />
+                    <Button x:Name="SoundFontButton" Style="{StaticResource PillButton}" HorizontalAlignment="Left"
+                            ToolTip="The SoundFont that MIDI files play with" Click="OnChooseSoundFont">
+                        <TextBlock x:Name="SoundFontName" MaxWidth="290" TextTrimming="CharacterEllipsis" />
+                    </Button>
+                    <TextBlock x:Name="SoundFontHint" Style="{StaticResource OptionHint}" />
+
+                    <TextBlock Style="{StaticResource OptionLabel}" Text="Shortcuts in every app" />
+                    <TextBlock Style="{StaticResource OptionHint}" Margin="2,0,0,0"
+                               Text="These work while another app is in front. Click one, then press the keys, with Ctrl, Alt, or the Windows key. Backspace clears it." />
+                    <StackPanel x:Name="HotkeyRows" Margin="0,8,0,0" />
+                    <TextBlock x:Name="HotkeyProblem" Style="{StaticResource OptionHint}" Margin="2,8,0,0"
+                               Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" />
                 </StackPanel>
 
                 <StackPanel x:Name="ThemeTab" Visibility="Collapsed">

@@ -105,6 +105,7 @@ public static class SelfTest
         failures += TestOtherApps();
         failures += Lucent.Audio.EditorFeedSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.LoudnessSelfTest.Run(Console.WriteLine);
+        failures += Lucent.Audio.PlaybackExtrasSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.EqualizerSelfTest.Run(Console.WriteLine);
         failures += Lucent.Audio.ListeningWatchdogSelfTest.Run(Console.WriteLine);
         failures += TestEqualizerApo();

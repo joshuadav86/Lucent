@@ -74,6 +74,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
         <string>public.enhanced-ac3-audio</string>
         <string>com.wavpack.audio</string>
         <string>com.monkeysaudio.ape</string>
+        <string>public.midi-audio</string>
       </array>
     </dict>
     <dict>
