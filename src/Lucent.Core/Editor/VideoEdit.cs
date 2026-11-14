@@ -204,22 +204,34 @@ public sealed class VideoEdit
     /// <summary>
     /// The part of <paramref name="selection"/> (in the editor's frames) that Delete really takes out: it starts
     /// where a picture can end, and ends on a keyframe, both the nearest to the selection's edges. Empty when there's
-    /// no keyframe close enough to take anything out.
+    /// no keyframe close enough to take anything out. <paramref name="soundFrames"/> is how long the editor's sound
+    /// is now, which the cut never goes past.
     /// </summary>
-    public FrameRange SnapDelete(FrameRange selection)
-    {
-        var start = Snap(Seconds(selection.Start), keyframe: false);
-        var end = Snap(Seconds(selection.End), keyframe: true);
-        return end > start ? new FrameRange(Frame(start), Frame(end) - Frame(start)) : default;
-    }
+    public VideoCut SnapDelete(FrameRange selection, int soundFrames) =>
+        Fit(Snap(Seconds(selection.Start), keyframe: false), Snap(Seconds(selection.End), keyframe: true), soundFrames);
 
     /// <summary>The part of <paramref name="selection"/> Trim really keeps: from a keyframe, to where a picture can end.</summary>
-    public FrameRange SnapTrim(FrameRange selection)
+    public VideoCut SnapTrim(FrameRange selection, int soundFrames) =>
+        Fit(Snap(Seconds(selection.Start), keyframe: true), Snap(Seconds(selection.End), keyframe: false), soundFrames);
+
+    // A video's pictures and sound rarely end together: a screen recording's pictures can run a few hundredths of a
+    // second past its sound, so a cut snapped to the pictures' end would reach past the sound's last frame. The
+    // sound's frames stop at its end, and the pictures' end stands for the sound's end (whichever is longer), so
+    // cutting to the end of the video takes the rest of both.
+    private VideoCut Fit(double from, double to, int soundFrames)
     {
-        var start = Snap(Seconds(selection.Start), keyframe: true);
-        var end = Snap(Seconds(selection.End), keyframe: false);
-        return end > start ? new FrameRange(Frame(start), Frame(end) - Frame(start)) : default;
+        if (to <= from)
+        {
+            return default;
+        }
+
+        var start = Math.Clamp(Frame(from), 0, soundFrames);
+        var end = to >= Length - EndSlack ? soundFrames : Math.Clamp(Frame(to), 0, soundFrames);
+        return end > start ? new VideoCut(new FrameRange(start, end - start), from, to) : default;
     }
+
+    // How close to the video's end counts as its end, in seconds (well under a picture).
+    private const double EndSlack = 0.0005;
 
     // The nearest place to `time` (in the cut video) where what follows can start (a keyframe), or where what came
     // before can end. The ends of each stretch work for both.
@@ -259,18 +271,17 @@ public sealed class VideoEdit
 
     // ---- Cutting ----
 
-    /// <summary>Takes <paramref name="range"/> (snapped with <see cref="SnapDelete"/>) out, for the history state <paramref name="state"/>.</summary>
-    public void Delete(FrameRange range, long state)
+    /// <summary>Takes <paramref name="cut"/> (from <see cref="SnapDelete"/>) out, for the history state <paramref name="state"/>.</summary>
+    public void Delete(VideoCut cut, long state)
     {
-        var (from, to) = (Seconds(range.Start), Seconds(range.End));
-        _kept = Keep(0, from).Concat(Keep(to, double.MaxValue)).ToList();
+        _kept = Keep(0, cut.From).Concat(Keep(cut.To, double.MaxValue)).ToList();
         _states[state] = _kept;
     }
 
-    /// <summary>Keeps only <paramref name="range"/> (snapped with <see cref="SnapTrim"/>), for the history state <paramref name="state"/>.</summary>
-    public void Trim(FrameRange range, long state)
+    /// <summary>Keeps only <paramref name="cut"/> (from <see cref="SnapTrim"/>), for the history state <paramref name="state"/>.</summary>
+    public void Trim(VideoCut cut, long state)
     {
-        _kept = Keep(Seconds(range.Start), Seconds(range.End)).ToList();
+        _kept = Keep(cut.From, cut.To).ToList();
         _states[state] = _kept;
     }
 
@@ -294,7 +305,7 @@ public sealed class VideoEdit
         {
             var start = Math.Max(from, at);
             var end = Math.Min(to, at + range.Length);
-            if (end - start > 0.0005)
+            if (end - start > EndSlack)
             {
                 yield return new VideoRange(range.Start + (start - at), range.Start + (end - at));
             }
@@ -316,4 +327,14 @@ public sealed class VideoEdit
         SafeFile.Hide(temporary);
         return temporary;
     }
+}
+
+/// <summary>
+/// A Delete or Trim snapped to where a video can be cut: <see cref="Sound"/> is the editor's frames it covers (never
+/// past the sound's end), and <see cref="From"/> and <see cref="To"/> are the same places in the cut video's pictures,
+/// in seconds, exactly where they snapped to.
+/// </summary>
+public readonly record struct VideoCut(FrameRange Sound, double From, double To)
+{
+    public bool IsEmpty => Sound.IsEmpty;
 }

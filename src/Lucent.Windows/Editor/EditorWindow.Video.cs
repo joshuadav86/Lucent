@@ -129,7 +129,8 @@ public partial class EditorWindow
             return;
         }
 
-        var cut = trim ? video.SnapTrim(selection) : video.SnapDelete(selection);
+        var frames = _session.Audio.Frames;
+        var cut = trim ? video.SnapTrim(selection, frames) : video.SnapDelete(selection, frames);
         if (cut.IsEmpty)
         {
             ShowStatus(trim
@@ -143,20 +144,20 @@ public partial class EditorWindow
         {
             if (trim)
             {
-                session.TrimTo(cut);
+                session.TrimTo(cut.Sound);
                 video.Trim(cut, session.StateId);
             }
             else
             {
-                session.Delete(cut);
+                session.Delete(cut.Sound);
                 video.Delete(cut, session.StateId);
             }
-        }, () => new FrameRange(trim ? 0 : cut.Start, 0), video: true);
+        }, () => new FrameRange(trim ? 0 : cut.Sound.Start, 0), video: true);
 
-        var moved = Math.Abs(cut.Start - selection.Start) + Math.Abs(cut.End - selection.End);
+        var moved = Math.Abs(cut.Sound.Start - selection.Start) + Math.Abs(cut.Sound.End - selection.End);
         if (moved > _session.Audio.SampleRate / 100)
         {
-            ShowStatus($"{description}: done, from {Format(cut.Start)} to {Format(cut.End)}. The edges moved to the nearest places a video can be cut without re-encoding (a keyframe starts what's left). Ctrl+Z undoes it.");
+            ShowStatus($"{description}: done, from {Format(cut.Sound.Start)} to {Format(cut.Sound.End)}. The edges moved to the nearest places a video can be cut without re-encoding (a keyframe starts what's left). Ctrl+Z undoes it.");
         }
     }
 
