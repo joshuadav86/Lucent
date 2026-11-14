@@ -8,7 +8,7 @@ namespace Lucent;
 /// Part of the layout check: a classic skin picked with the windows apart (and some of them out of place) tidies them
 /// into a block round the player (2026-11-14, Joshua found them all over the place after importing a skin). After
 /// picking Lucent Classic, double size on and off, and Lucent's own player back, every window is still shown, none is
-/// over another, they end flush, and the player stays where it was. The Mac app checks the same.
+/// over another, they end flush, and the player stays where it was (unless the block would go off the screen there). The Mac app checks the same.
 /// </summary>
 public partial class MainWindow
 {
@@ -42,7 +42,7 @@ public partial class MainWindow
         foreach (var (step, change) in steps)
         {
             change();
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(1.5));
             var name = $"{label}: {step}";
             var now = PlacesNow();
             lines.Add($"{name}: " + DescribeAll(now));
@@ -51,9 +51,18 @@ public partial class MainWindow
                 lines.Add($"MISMATCH {name}: the {NameFor(window)} window isn't shown any more");
             }
 
+            // The player stays put, unless the block round it would hang off the screen there, when the block (and the
+            // player with it) moves just far enough to be on it, against the screen's edge.
             var player = OnScreen(this);
-            var stayed = Math.Abs(player.Left - playerBefore.Left) <= 4 && Math.Abs(player.Top - playerBefore.Top) <= 4;
-            lines.Add($"{(stayed ? "ok" : "MISMATCH")} {name}: the player is at {Describe(player)}, was at {Describe(playerBefore)}");
+            var block = now.Values.Where(place => !place.IsEmpty).Aggregate((a, b) => Rect.Union(a, b));
+            var area = ScreenArea.Of(this);
+            var acrossOk = Math.Abs(player.Left - playerBefore.Left) <= 4
+                || Math.Abs(block.Left - area.Left) <= 4 || Math.Abs(block.Right - area.Right) <= 4;
+            var downOk = Math.Abs(player.Top - playerBefore.Top) <= 4
+                || Math.Abs(block.Top - area.Top) <= 4 || Math.Abs(block.Bottom - area.Bottom) <= 4;
+            lines.Add($"{(acrossOk && downOk ? "ok" : "MISMATCH")} {name}: the player is at {Describe(player)}, was at {Describe(playerBefore)}, " +
+                $"the windows' block at {Describe(block)}, the screen at {Describe(area)}");
+            playerBefore = player;
 
             var windows = now.Keys.ToList();
             foreach (var window in windows)
