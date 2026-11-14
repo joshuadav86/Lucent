@@ -363,18 +363,27 @@ internal static class LayoutCheck
         await Task.Delay(TimeSpan.FromSeconds(2));
         lines.AddRange(ClassicPanelLines(main, $"{label}, switched on with it", count));
 
-        // Just the player, equalizer and playlist: a column as wide as the player, nothing empty beside it.
+        // Just the player, equalizer and playlist: a column as wide as the player, nothing empty beside it, narrowed from
+        // the right (the player stays where it is).
+        var wide = Placement.BoundsOf(main);
         var putBack = main.OpenOnlyQueue(equalizer: true);
         await Task.Delay(TimeSpan.FromSeconds(3));
         var (player, _, body) = main.PanelWidths();
-        var column = Math.Abs(body - main.PlayerPanelWidth) <= 2 && Math.Abs(player - body) <= 1;
-        lines.Add($"{(column ? "ok" : "MISMATCH")} {label}, just the equalizer and playlist: the single window's body is {body:0} wide, " +
-            $"the panels across the player's rows fill {player:0}, the player is {main.PlayerPanelWidth:0}");
+        var now = Placement.BoundsOf(main);
+        var column = Math.Abs(body - main.PlayerPanelWidth) <= 2 && Math.Abs(player - body) <= 1 && Math.Abs(now.X - wide.X) <= 4;
+        lines.Add($"{(column ? "ok" : "MISMATCH")} {label}, just the equalizer and playlist: the single window is at {Describe(now)}, " +
+            $"was at {Describe(wide)}; its body is {body:0} wide, the panels across the player's rows fill {player:0}, the player is {main.PlayerPanelWidth:0}; " +
+            "panels: " + string.Join(", ", main.PlacesForWindows().Select(entry => $"{(entry.Key == main ? "player" : entry.Key.Title)} {Describe(entry.Value)}")));
+
+        // The other windows back (the artwork opened anew, framed in the skin as it opens): the window where it was, as wide.
         putBack();
         await Task.Delay(TimeSpan.FromSeconds(3));
         (_, _, body) = main.PanelWidths();
-        lines.Add($"{(body > main.PlayerPanelWidth + 50 ? "ok" : "MISMATCH")} {label}, the other windows open again: the single window's body is {body:0} wide, " +
-            $"the player {main.PlayerPanelWidth:0}");
+        now = Placement.BoundsOf(main);
+        var again = body > main.PlayerPanelWidth + 50 && Math.Abs(now.X - wide.X) <= 4 && now.Width >= wide.Width - 4;
+        lines.Add($"{(again ? "ok" : "MISMATCH")} {label}, the other windows open again: the single window is at {Describe(now)}, " +
+            $"was at {Describe(wide)}; its body is {body:0} wide, the player {main.PlayerPanelWidth:0}");
+        lines.AddRange(ClassicPanelLines(main, $"{label}, the other windows open again", count));
 
         // Lucent's own player again, still a single window, with its title bar back and every panel.
         main.UseClassicSkin(null);

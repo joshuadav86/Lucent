@@ -843,8 +843,13 @@ public partial class MainWindow
         var tiles = panels.Select(panel => panel.Tile).ToList();
         var style = _settings.SingleWindowStyle;
         var header = HeaderHeight;
-        // A classic skin's column of just the player, equalizer and playlist is as wide as the player; anything else gets the room back.
-        WidenFromClassicColumn(grow);
+        // A classic skin's column of just the player, equalizer and playlist is as wide as the player; anything else gets the
+        // room back, and the panels are laid out once the window has it.
+        if (WidenFromClassicColumn(grow))
+        {
+            return;
+        }
+
         var (smallestWidth, smallestHeight) = SingleWindowLayout.Smallest(tiles, style);
         if (ClassicColumnHeight(tiles) is { } column)
         {

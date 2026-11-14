@@ -98,15 +98,15 @@ public partial class MainWindow
     /// <summary>
     /// Before the panels are laid out: no limit on the window's size, which <see cref="NarrowToClassicColumn"/> puts back
     /// for the classic column; and once there's more than the column, or Lucent's own player, the width it had before it
-    /// was narrowed to the column.
+    /// was narrowed to the column. True if it got that width back, so the panels are laid out again at it.
     /// </summary>
-    private void WidenFromClassicColumn(bool grow)
+    private bool WidenFromClassicColumn(bool grow)
     {
         MaxWidth = double.PositiveInfinity;
         MaxHeight = double.PositiveInfinity;
         if (_classicWideWidth is not { } wide || InClassicColumn)
         {
-            return;
+            return false;
         }
 
         _classicWideWidth = null;
@@ -118,7 +118,10 @@ public partial class MainWindow
             Left = place.Left;
             Width = place.Width;
             RetileSoon(grow);
+            return true;
         }
+
+        return false;
     }
 
     /// <summary>
