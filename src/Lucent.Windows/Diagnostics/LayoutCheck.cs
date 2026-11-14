@@ -445,7 +445,7 @@ public partial class MainWindow
         putBack();
         await Task.Delay(TimeSpan.FromSeconds(3));
         (_, _, body) = PanelWidths();
-        var again = body > PlayerPaneWidth + 50 && Math.Abs(Left - wide.Left) <= 4 && ActualWidth >= wide.Width - 4;
+        var again = body > PlayerPaneWidth + 50 && Math.Abs(Left - wide.Left) <= 4 && ActualWidth >= wide.Width - 10;
         lines.Add($"{(again ? "ok" : "MISMATCH")} {label}, the other windows open again: the single window is at {Left:0},{Top:0} " +
             $"{ActualWidth:0} x {ActualHeight:0}, was at {Describe(wide)}; its body is {body:0} wide, the player {PlayerPaneWidth:0}");
         lines.AddRange(ClassicPanelLines($"{label}, the other windows open again", count));

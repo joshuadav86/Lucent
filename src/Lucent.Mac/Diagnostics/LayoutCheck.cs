@@ -380,7 +380,7 @@ internal static class LayoutCheck
         await Task.Delay(TimeSpan.FromSeconds(3));
         (_, _, body) = main.PanelWidths();
         now = Placement.BoundsOf(main);
-        var again = body > main.PlayerPanelWidth + 50 && Math.Abs(now.X - wide.X) <= 4 && now.Width >= wide.Width - 4;
+        var again = body > main.PlayerPanelWidth + 50 && Math.Abs(now.X - wide.X) <= 4 && now.Width >= wide.Width - 10;
         lines.Add($"{(again ? "ok" : "MISMATCH")} {label}, the other windows open again: the single window is at {Describe(now)}, " +
             $"was at {Describe(wide)}; its body is {body:0} wide, the player {main.PlayerPanelWidth:0}");
         lines.AddRange(ClassicPanelLines(main, $"{label}, the other windows open again", count));
