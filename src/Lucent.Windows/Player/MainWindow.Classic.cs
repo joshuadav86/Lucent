@@ -411,7 +411,7 @@ public partial class MainWindow
         }
 
         menu.Items.Add(skins);
-        menu.Items.Add(MenuItemFor("Lucent's own player", () => ChooseClassicSkin(null)));
+        menu.Items.Add(MenuItemFor("Turn off classic skin", () => ChooseClassicSkin(null)));
         menu.Items.Add(new Separator());
         var doubleSize = MenuItemFor("Double size", ToggleClassicDoubleSize);
         doubleSize.IsCheckable = true;
