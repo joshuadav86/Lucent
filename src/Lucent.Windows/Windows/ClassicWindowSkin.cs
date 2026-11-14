@@ -70,6 +70,8 @@ public static class ClassicWindowSkin
             LucentFullScreen.AddTo(_view.ContextMenu, window);
             _root = new Grid { Children = { _view, _contentHost } };
             window.SizeChanged += (_, _) => Fit();
+            // As a panel in the single window, it's the panel's size that the frame follows.
+            _root.SizeChanged += (_, _) => Fit();
             window.StateChanged += (_, _) => Fit();
             window.Activated += (_, _) => Redraw();
             window.Deactivated += (_, _) => Redraw();
@@ -149,8 +151,9 @@ public static class ClassicWindowSkin
             }
 
             var scale = _view.Scale;
-            var width = _window.ActualWidth > 0 ? _window.ActualWidth : _window.Width;
-            var height = _window.ActualHeight > 0 ? _window.ActualHeight : _window.Height;
+            var held = SingleWindow.Holds(_window);
+            var width = held ? _root.ActualWidth : _window.ActualWidth > 0 ? _window.ActualWidth : _window.Width;
+            var height = held ? _root.ActualHeight : _window.ActualHeight > 0 ? _window.ActualHeight : _window.Height;
             if (double.IsNaN(width) || double.IsNaN(height) || width <= 0 || height <= 0)
             {
                 return;

@@ -31,12 +31,6 @@ public partial class MainWindow
     /// <summary>Shows the player in the classic skin the settings name, or as Lucent's own player when there's none.</summary>
     private void ApplyClassicSkin()
     {
-        // A classic skin's windows are fixed-size pictures, which don't go in a single window.
-        if (_settings.ClassicSkin is not null)
-        {
-            LeaveSingleWindow();
-        }
-
         if (_settings.ClassicSkin is not { } name)
         {
             if (_classicPanel is not null)
@@ -49,6 +43,7 @@ public partial class MainWindow
             ApplyPlayerSize();
             Topmost = false;
             SkinOtherWindows(null);
+            ShowClassicInSingleWindow();
             return;
         }
 
@@ -81,7 +76,16 @@ public partial class MainWindow
         MoveLucentButtons(toClassic: true);
         LucentPlayer.IsVisible = false;
         ApplyPlayerSize();
-        SizeToContent = SizeToContent.WidthAndHeight;
+        if (InSingleWindow)
+        {
+            // A panel in the single window, which keeps its own size.
+            ShowClassicInSingleWindow();
+        }
+        else
+        {
+            SizeToContent = SizeToContent.WidthAndHeight;
+        }
+
         SyncClassicPlayer();
     }
 
@@ -289,6 +293,13 @@ public partial class MainWindow
                 _classicView!.Player.IsShaded = !_classicView.Player.IsShaded;
                 // Rolled up, the player is just its title strip.
                 _classicToolbar!.IsVisible = !_classicView.Player.IsShaded;
+                if (InSingleWindow)
+                {
+                    // Its panel's shorter or taller now, and the panels under it move to meet it.
+                    _classicView.InvalidateMeasure();
+                    RetileSoon();
+                }
+
                 break;
             case ClassicCommand.Close:
                 Close();
@@ -339,10 +350,17 @@ public partial class MainWindow
     /// <summary>
     /// Makes a change that resizes the player and the equalizer (a skin on or off, double size), then stacks the
     /// windows that were under the player against its new bottom again, so none ends up over Lucent's button strip
-    /// or leaves a gap. In Lucent's full screen every window is laid out again instead.
+    /// or leaves a gap. In Lucent's full screen every window is laid out again instead, and in the single window
+    /// every panel is.
     /// </summary>
     private void KeepWindowsDocked(Action change)
     {
+        if (InSingleWindow)
+        {
+            ChangeSkinInSingleWindow(change);
+            return;
+        }
+
         if (_settings.LucentFullScreen || WindowState != WindowState.Normal)
         {
             change();

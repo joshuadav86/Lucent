@@ -1642,9 +1642,19 @@ public partial class MainWindow : Window
     /// </summary>
     internal void ChooseSkin(string name)
     {
+        var wasClassic = IsClassic;
         _settings.Skin = name;
         _settings.ClassicSkin = null;
-        ApplyClassicSkin();
+        if (wasClassic && InSingleWindow)
+        {
+            // The panels give their windows their insides back for the classic skin to come off them, then have them again.
+            ChangeSkinInSingleWindow(ApplyClassicSkin);
+        }
+        else
+        {
+            ApplyClassicSkin();
+        }
+
         BuildClassicSkinSwatches();
         _settings.Theme = SkinManager.Find(name).Theme;
         ApplyLook();

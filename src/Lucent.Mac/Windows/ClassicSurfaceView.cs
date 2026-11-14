@@ -90,8 +90,9 @@ public sealed class ClassicSurfaceView : Control
         e.Handled = true;
         if (Surface.PointerDown(x, y, e.ClickCount))
         {
-            // Not on a control: the whole window is a handle, as in Winamp.
-            if (e.ClickCount == 1 && TopLevel.GetTopLevel(this) is Window window)
+            // Not on a control: the whole window is a handle, as in Winamp. As a panel in the single window, it drags the
+            // panel to swap it with another (the equalizer, which can't swap, moves the single window).
+            if (e.ClickCount == 1 && TopLevel.GetTopLevel(this) is Window window && !SingleWindow.DragPanel(this, e))
             {
                 window.BeginMoveDrag(e);
             }

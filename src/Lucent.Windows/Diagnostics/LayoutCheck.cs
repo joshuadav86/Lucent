@@ -20,7 +20,8 @@ namespace Lucent;
 /// after. Then, with the queue closed, it drags the line under the equalizer up as far as it goes (the equalizer folds
 /// and the library under it grows; its insides fit its panel, through a skin change too) and switches single window off
 /// from there, the equalizer its own height again. Last, it lays the panels out "Player on the left, queue beside it"
-/// filling the screen and switches single window off from there. The Mac app checks the same in its own LayoutCheck.
+/// filling the screen and switches single window off from there. Then it picks a classic skin with every window out in a
+/// single window, which stays one with each panel in the skin (CheckClassicAsync). The Mac app checks the same in its own LayoutCheck.
 /// </summary>
 public partial class MainWindow
 {
@@ -154,6 +155,9 @@ public partial class MainWindow
             // equalizer stretch across the single window, and as windows again they all end flush at the player's width.
             lines.AddRange(await CheckStretchedAsync(equalizer: true));
             lines.AddRange(await CheckStretchedAsync(equalizer: false));
+
+            // A classic skin picked in the single window, which stays one (2026-11-14), and Lucent's own player back.
+            lines.AddRange(await CheckClassicAsync());
         }
         catch (Exception ex)
         {
@@ -303,7 +307,7 @@ public partial class MainWindow
         lines.AddRange(CheckFlush(label, places.Keys.ToDictionary(window => window, OnScreen)));
 
         var player = OnScreen(this);
-        var playerWidth = PlayerWidth * PlayerScale;
+        var playerWidth = PlayerPaneWidth;
         lines.Add($"{(Math.Abs(player.Width - playerWidth) <= 2 ? "ok" : "MISMATCH")} {label}: the player is {player.Width:0} wide, its size makes it {playerWidth:0}");
         foreach (var window in windows)
         {
@@ -375,6 +379,125 @@ public partial class MainWindow
         return lines;
     }
 
+    /// <summary>
+    /// A classic skin in the single window (2026-11-14, Joshua asked for single window with classic skins): with every window
+    /// out, Lucent Classic picked keeps it a single window, with no Lucent title bar and every panel still shown, inside it,
+    /// none over another, the player's panel the classic player's width and the equalizer's the same; then full screen and
+    /// back, double size and back, single window off (each window where its panel was, ending flush) and on again with the
+    /// skin on. With just the equalizer and playlist, the window's a column as wide as the player, and it gets its width back
+    /// as the other windows open again. Last, Lucent's own player back, still a single window with its title bar, and off.
+    /// </summary>
+    private async Task<List<string>> CheckClassicAsync()
+    {
+        const string label = "classic skin";
+        var lines = new List<string>();
+        if (InSingleWindow)
+        {
+            LeaveSingleWindow();
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
+        foreach (var window in new ToolWindow[] { _queue, _libraryWindow, _visuals }.Where(window => !window.IsVisible))
+        {
+            ToggleWindow(window);
+        }
+
+        if (!ArtworkWindow.IsOpen)
+        {
+            ToggleArtwork();
+        }
+
+        if (EqualizerWindow.Current is not { IsVisible: true })
+        {
+            OpenEqualizer();
+        }
+
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        EnterSingleWindow();
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        var count = PanelPlaces().Count;
+        ChooseClassicSkin(Lucent.ClassicSkins.ClassicSkinLibrary.DefaultName);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        lines.AddRange(ClassicPanelLines(label, count));
+        lines.AddRange(await CheckFillAsync(label));
+        RunClassicCommand(Lucent.ClassicSkins.ClassicCommand.DoubleSize);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        lines.AddRange(ClassicPanelLines($"{label}, double size", count));
+        RunClassicCommand(Lucent.ClassicSkins.ClassicCommand.DoubleSize);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        lines.AddRange(await CheckLeavingSingleWindowAsync(label));
+        EnterSingleWindow();
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        lines.AddRange(ClassicPanelLines($"{label}, switched on with it", count));
+
+        // Just the player, equalizer and playlist: a column as wide as the player, nothing empty beside it.
+        var putBack = OpenOnlyQueue(equalizer: true);
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        var (player, _, body) = PanelWidths();
+        var column = Math.Abs(body - PlayerPaneWidth) <= 2 && Math.Abs(player - body) <= 1;
+        lines.Add($"{(column ? "ok" : "MISMATCH")} {label}, just the equalizer and playlist: the single window's body is {body:0} wide, " +
+            $"the panels across the player's rows fill {player:0}, the player is {PlayerPaneWidth:0}");
+        putBack();
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        (_, _, body) = PanelWidths();
+        lines.Add($"{(body > PlayerPaneWidth + 50 ? "ok" : "MISMATCH")} {label}, the other windows open again: the single window's body is {body:0} wide, " +
+            $"the player {PlayerPaneWidth:0}");
+
+        // Lucent's own player again, still a single window, with its title bar back and every panel.
+        ChooseClassicSkin(null);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var shown = PanelPlaces().Count;
+        var back = InSingleWindow && _header is { Visibility: Visibility.Visible } && shown >= count;
+        lines.Add($"{(back ? "ok" : "MISMATCH")} {label} off: {(InSingleWindow ? "still" : "not")} a single window, " +
+            $"its title bar {(_header is { Visibility: Visibility.Visible } ? "shown" : "hidden")}, {shown} panels, {count} before");
+        lines.AddRange(await CheckLeavingSingleWindowAsync($"{label} off"));
+        return lines;
+    }
+
+    /// <summary>
+    /// With a classic skin in the single window: still one, with no Lucent title bar, at least as many panels shown as before
+    /// the skin (it's no bigger), each inside it and none over another, the player's panel the classic player's width and the
+    /// equalizer's as wide, its skin's own size, and the panels across the player's rows filling the window.
+    /// </summary>
+    private List<string> ClassicPanelLines(string label, int count)
+    {
+        var lines = new List<string>();
+        var places = PanelPlaces();
+        var frame = OnScreen(this);
+        lines.Add($"{(InSingleWindow && _header is { Visibility: not Visibility.Visible } ? "ok" : "MISMATCH")} {label}: " +
+            $"{(InSingleWindow ? "a single window" : "not a single window")} at {Describe(frame)}, panels: {DescribeAll(places)}");
+        lines.Add($"{(places.Count >= count ? "ok" : "MISMATCH")} {label}: {places.Count} panels shown, {count} before");
+        var player = places.TryGetValue(this, out var p) ? p.Width : 0;
+        lines.Add($"{(Math.Abs(player - PlayerPaneWidth) <= 2 ? "ok" : "MISMATCH")} {label}: the player's panel is {player:0} wide, the classic player {PlayerPaneWidth:0}");
+        if (EqualizerWindow.Current is { } equalizer && places.TryGetValue(equalizer, out var eq))
+        {
+            var fits = Math.Abs(eq.Width - player) <= 2 && Math.Abs(eq.Width - equalizer.Width) <= 2 && Math.Abs(eq.Height - equalizer.Height) <= 2;
+            lines.Add($"{(fits ? "ok" : "MISMATCH")} {label}: the equalizer's panel is {eq.Width:0} x {eq.Height:0}, its skin {equalizer.Width:0} x {equalizer.Height:0}");
+        }
+
+        var windows = places.Keys.ToList();
+        foreach (var window in windows)
+        {
+            if (!Near(Rect.Intersect(places[window], frame), places[window], 4, 4))
+            {
+                lines.Add($"MISMATCH {label}: the {NameFor(window)} at {Describe(places[window])} is outside the single window");
+            }
+
+            foreach (var other in windows.Skip(windows.IndexOf(window) + 1))
+            {
+                var overlap = Rect.Intersect(places[window], places[other]);
+                if (!overlap.IsEmpty && overlap.Width > 4 && overlap.Height > 4)
+                {
+                    lines.Add($"MISMATCH {label}: the {NameFor(window)} and the {NameFor(other)} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                }
+            }
+        }
+
+        var (across, _, body) = PanelWidths();
+        lines.Add($"{(Math.Abs(across - body) <= 1 ? "ok" : "MISMATCH")} {label}: the panels across the player's rows fill {across:0} of the single window's {body:0}");
+        return lines;
+    }
+
     /// <summary>Each of Lucent's own skins, ending on Lucent's, which a fresh start has.</summary>
     private static readonly string[] SkinsToCheck = { "Linework", "Verdes", "Glass", "Neon", "Studio", "Lucent" };
 
@@ -420,7 +543,7 @@ public partial class MainWindow
                 }
             }
 
-            var playerWidth = PlayerWidth * PlayerScale;
+            var playerWidth = PlayerPaneWidth;
             var player = now.TryGetValue(this, out var p) ? p.Width : 0;
             lines.Add($"{(Math.Abs(player - playerWidth) <= 2 ? "ok" : "MISMATCH")} {name}: the player is {player:0} wide, its size makes it {playerWidth:0}");
             var windows = now.Keys.ToList();

@@ -82,23 +82,23 @@ public partial class MainWindow
     /// <summary>Lets Lucent's own player be resized, at the size the settings say. The classic player can't be.</summary>
     private void ApplyPlayerSize()
     {
+        if (InSingleWindow)
+        {
+            // The player's a panel in the single window: its scale sets the panel's width (a classic skin's, its skin's),
+            // and the window keeps its own size. (A skin picked as a single window once put the player's limits on the
+            // whole window, squeezing it, hiding panels, and keeping it from filling the screen.)
+            ScalePlayer(IsClassic ? 1 : PlayerScale);
+            PlayerRoot.Width = PlayerPaneWidth;
+            RetileSoon();
+            return;
+        }
+
         if (IsClassic)
         {
             CaptionRepaint.SetResizeMode(this, ResizeMode.CanMinimize);
             MinWidth = 0;
             MaxWidth = double.PositiveInfinity;
             ScalePlayer(1);
-            return;
-        }
-
-        if (InSingleWindow)
-        {
-            // The player's a panel in the single window: its scale sets the panel's width, and the window keeps its own
-            // size. (A skin picked as a single window once put the player's limits on the whole window, squeezing it,
-            // hiding panels, and keeping it from filling the screen.)
-            ScalePlayer(PlayerScale);
-            PlayerRoot.Width = PlayerPaneWidth;
-            RetileSoon();
             return;
         }
 

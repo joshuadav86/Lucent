@@ -207,7 +207,6 @@ public partial class MainWindow
             link.IsChecked = _settings.LinkWindows;
             fullScreen.IsChecked = _settings.LucentFullScreen;
             single.IsChecked = InSingleWindow;
-            single.IsEnabled = InSingleWindow || !IsClassic;
             normalSize.IsEnabled = PlayerIsEnlarged;
             FillLayoutsMenu(layouts);
         };

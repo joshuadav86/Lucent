@@ -71,6 +71,12 @@ public partial class QueueWindow
             _frame.ScrollRequested += ScrollTo;
             _frame.ResizeRequested += (width, height) =>
             {
+                // As a panel in the single window, the lines between the panels size it.
+                if (SingleWindow.Holds(this))
+                {
+                    return;
+                }
+
                 _frame.SetSize(width, height);
                 FitClassic();
             };
@@ -97,6 +103,8 @@ public partial class QueueWindow
             Deactivated += (_, _) => ShowClassicState(force: true);
             // A layout, Lucent full screen or a swap can size the window; the frame follows it.
             SizeChanged += (_, _) => FollowWindowSize();
+            // As a panel in the single window, it's the panel's size the frame follows.
+            _classicRoot.SizeChanged += (_, _) => FollowWindowSize();
         }
 
         if (!_classicOn)
@@ -164,7 +172,7 @@ public partial class QueueWindow
         }
 
         var scale = _classicView!.Scale;
-        var (windowWidth, windowHeight) = (Bounds.Width, Bounds.Height);
+        var (windowWidth, windowHeight) = SingleWindow.Holds(this) ? (_classicRoot!.Bounds.Width, _classicRoot.Bounds.Height) : (Bounds.Width, Bounds.Height);
         var width = (int)Math.Round(windowWidth / scale);
         var height = (int)Math.Round(windowHeight / scale);
         if (windowWidth <= 0 || windowHeight <= 0 || (width == _frame!.Width && height == _frame.Height))
