@@ -68,6 +68,17 @@ public static class ClassicSkinLibrary
         }
     }
 
+    /// <summary>
+    /// What to tell the user when some skins in an import couldn't be used: each file and why, or null when they all came in.
+    /// </summary>
+    public static string? FailureMessage(IReadOnlyList<(string File, string Reason)> failed) => failed.Count switch
+    {
+        0 => null,
+        1 => $"Lucent couldn't use {failed[0].File} as a skin.\n\n{failed[0].Reason}",
+        _ => $"Lucent couldn't use these {failed.Count} files as skins:\n\n"
+            + string.Join("\n", failed.Select(f => $"• {f.File}: {f.Reason}")),
+    };
+
     /// <summary>Copies a .wsz into the Skins folder, replacing one of the same name, and returns its name.</summary>
     /// <exception cref="InvalidDataException">It isn't a classic Winamp skin.</exception>
     public static string Import(string path)

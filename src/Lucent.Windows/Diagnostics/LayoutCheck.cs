@@ -84,6 +84,8 @@ public partial class MainWindow
             // Every skin picked with the windows apart, then in a single window (where picking Linework once squeezed
             // the window, hiding panels and keeping it from filling the screen), then single window off after them.
             lines.AddRange(await CheckSkinsAsync("as separate windows"));
+            // A classic skin picked with the windows apart tidies them round the player (CheckClassicTidyAsync).
+            lines.AddRange(await CheckClassicTidyAsync());
             EnterSingleWindow();
             await Task.Delay(TimeSpan.FromSeconds(3));
             lines.AddRange(await CheckFillAsync("before changing skins"));

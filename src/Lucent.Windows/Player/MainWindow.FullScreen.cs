@@ -185,6 +185,20 @@ public partial class MainWindow
     }
 
     /// <summary>
+    /// After a classic skin goes on or off (or double size), the player and equalizer change size and the windows round
+    /// them would end up anywhere, so they're tidied into a block round the player, in the tidy layout last picked (the
+    /// first one if none has been). Unlike Shift+D it doesn't move on to the next layout or show a note.
+    /// </summary>
+    private void TidyAroundPlayer()
+    {
+        var style = FullScreenLayout.TidyStyles.Contains(_settings.FullScreenStyle) ? _settings.FullScreenStyle : FullScreenLayout.TidyStyles[0];
+        _settings.FullScreenStyle = style;
+        _settings.FullScreenSwaps.Clear();
+        KeepPlayerWidth();
+        ArrangeAroundPlayer(style);
+    }
+
+    /// <summary>
     /// Lays the windows out in a tight block round the player in <paramref name="style"/>, docked together, the
     /// player staying where it is (FullScreenLayout.ArrangeAround). Locked windows stay put.
     /// </summary>

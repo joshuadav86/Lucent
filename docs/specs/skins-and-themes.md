@@ -7,6 +7,8 @@
 - **Classic skins:** `.wsz` skins (the Winamp 2 format) draw the player, equalizer, and queue in skin pixels, optionally at double size. "Lucent Classic" is built in. Leave classic with right-click on the player > "Turn off classic skin".
 - While classic, the EQ uses the format's 10 bands, Lucent's own buttons sit in a strip under the player, and song rows have no covers.
 - Every other window (visuals, library, artwork, analyzer, radio, video, editor) gets the skin's frame for other windows (`gen.bmp`, as Winamp put round its media library) with its name in the skin's letters, and its content takes the skin's playlist colours and font (`pledit.txt`). The window's own controls stay inside the frame. The frame steps aside while a window is maximized or full screen. A skin without `gen.bmp` borrows Lucent Classic's.
+- Options › Classic skins › Import skins… (and Skins › Import skins… on the classic player's right-click menu) takes one skin or several at once. Dropping .wsz files on any Lucent window does the same. Lucent switches to the last one that came in, and lists any that couldn't be used in one message, each with its reason.
+- Picking a classic skin, leaving it, or switching double size tidies the windows into a block round the player, in the tidy layout last picked (the first one if none has been), the way Shift+D does, without moving on to the next layout. Full screen relays the windows as before, and locked windows stay put.
 
 ## Rules
 
