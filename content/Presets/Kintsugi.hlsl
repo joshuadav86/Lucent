@@ -1,4 +1,4 @@
-// Name: Fable Kintsugi
+// Name: Kintsugi
 // Broken pottery mended with gold: shards of dark glazed ceramic, each tilted a little differently under a moving lamp,
 // joined by raised seams of gold that swell with the bass. Each seam listens to its own band of the spectrum, and
 // every beat sends a glint running out along the gold from the middle.

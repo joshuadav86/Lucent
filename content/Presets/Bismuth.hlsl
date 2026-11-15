@@ -1,4 +1,4 @@
-// Name: Fable Bismuth
+// Name: Bismuth
 // Bismuth crystals seen from above: square staircases spiralling down into themselves, crowded together at every size,
 // their metal tarnished into bands of gold, magenta, blue and green. The stairs creep round as the crystals grow, each
 // crystal shines with its own band of the spectrum, and a step of light walks down every staircase on the beat.

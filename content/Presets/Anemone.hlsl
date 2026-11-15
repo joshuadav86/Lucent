@@ -1,4 +1,4 @@
-// Name: Fable Anemone
+// Name: Anemone
 // A sea anemone in deep water, turning slowly in the current: hundreds of soft coral tentacles with glowing tips, each
 // ring of them reaching out as far as its own band of the spectrum is loud, bass at the crown. Its body swells with
 // the bass and a pulse of light runs out to the tips on every beat.

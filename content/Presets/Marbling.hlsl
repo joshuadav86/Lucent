@@ -1,4 +1,4 @@
-// Name: Fable Marbling
+// Name: Marbling
 // Paper marbling the way it's done on water: every beat lets a drop of ink fall and spread, pushing everything
 // already floating outward into rings, and now and then a comb is drawn through the lot, pulling the rings into
 // feathers. Jewel-coloured inks on indigo, each shimmering with its own band of the spectrum.

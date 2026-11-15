@@ -1,4 +1,4 @@
-// Name: Fable Phase Portrait
+// Name: Phase Portrait
 // The portrait of a complex function: every colour of the wheel spins once round each of its zeros and the other way
 // round each pole, ringed by contours like a map. Four zeros and two poles wander the plane, pushed apart by the
 // bass, and the whole wheel of colour turns with the beat.

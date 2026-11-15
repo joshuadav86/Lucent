@@ -1,4 +1,4 @@
-// Name: Fable Zellige
+// Name: Zellige
 // A wall of glazed tilework in cobalt, turquoise, ivory and saffron, cut the way the old geometers laid it out: stars
 // set in octagons and squares. The stars open and close as the music moves, each tile glows as if lit from behind by
 // its own band of the spectrum, and a soft light slides across the glaze.

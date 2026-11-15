@@ -1,4 +1,4 @@
-// Name: Fable Soap Film
+// Name: Soap Film
 // A soap film stretched across the window, slowly draining: its real colours, the ones light makes when it reflects off
 // both faces of a film a few hundred millionths of a millimetre thick. It runs black where it is thinnest, the bass
 // thickens it, every beat sends a ripple through it and the music stirs its swirls.

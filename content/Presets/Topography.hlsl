@@ -1,4 +1,4 @@
-// Name: Fable Topography
+// Name: Topography
 // A chart of an archipelago, drawn as a mapmaker would: blue depths, green lowlands, brown hills and white summits,
 // ringed with contour lines and shaded by a low sun. Every island is one band of the spectrum and rises out of the
 // sea as that band gets loud, so the coastlines and contours are forever redrawing themselves to the music.

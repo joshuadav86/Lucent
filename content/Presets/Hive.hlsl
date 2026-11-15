@@ -1,4 +1,4 @@
-// Name: Fable Hive
+// Name: Hive
 // A wall of honeycomb, lit from behind. Honey rises in the cells with the music: each column of cells is one band of the
 // spectrum, bass on the left and treble on the right, filling with glowing amber as its band gets loud and draining
 // again as it falls quiet, with a warm light climbing the comb on every beat.

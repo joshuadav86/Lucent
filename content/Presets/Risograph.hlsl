@@ -1,4 +1,4 @@
-// Name: Fable Risograph
+// Name: Risograph
 // A three-colour print fresh off the drum: a pink sun, teal hills and yellow rays, each laid down as its own screen of
 // halftone dots a little out of register, making oranges, greens and purples where the inks cross. The sun swells
 // with the bass, the hills take the shape of the spectrum, and the rays turn with the beat.
