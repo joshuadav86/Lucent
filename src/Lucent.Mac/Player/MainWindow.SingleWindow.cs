@@ -26,8 +26,8 @@ namespace Lucent.Mac;
 // opening or closing one (its button, its key, its own close button) adds or takes away its panel. Its keys
 // and dropped files are handed on to it. A panel going full screen on its own (the visuals' F11, say) is
 // taken out to be a window for as long as it's full screen. Switching single window off gives every window
-// its insides back where it was before. Editors, Record and dialogs stay windows of their own. Not with a
-// classic skin, whose windows are fixed-size pictures; docking (D), fill (G), shrink (K), Lucent full screen,
+// its insides back where it was before. Editors, Record and dialogs stay windows of their own. With a classic
+// skin on, each panel keeps its skin (MainWindow.ClassicSingleWindow.cs); docking (D), fill (G), shrink (K), Lucent full screen,
 // saved layouts and Reset to default layout switch it off. Lucent opens as a single window again if it was
 // closed as one.
 public partial class MainWindow
@@ -94,12 +94,11 @@ public partial class MainWindow
     /// <summary>The player's width, for the equalizer under it: in the single window the window's much wider than the player.</summary>
     internal double PlayerColumnWidth => InSingleWindow ? PlayerPaneWidth : Bounds.Width;
 
-    private double PlayerPaneWidth => PlayerWidth * PlayerScale;
+    private double PlayerPaneWidth => IsClassic ? ClassicPlayerWidth : PlayerWidth * PlayerScale;
 
     private void SetUpSingleWindow()
     {
         SingleWindow.IsOn = () => InSingleWindow;
-        SingleWindow.IsAvailable = () => !IsClassic;
         SingleWindow.Toggle = ToggleSingleWindow;
         SingleWindow.PaneOf = window => _panes.TryGetValue(window, out var pane) ? pane.Box : null;
         SingleWindow.TakeOut = TakeOutOfSingleWindow;
@@ -130,12 +129,6 @@ public partial class MainWindow
     {
         if (InSingleWindow || IsShuttingDown)
         {
-            return;
-        }
-
-        if (IsClassic)
-        {
-            Toast.Show(this, "Single window works with Lucent's own look, not a classic skin");
             return;
         }
 
@@ -175,6 +168,8 @@ public partial class MainWindow
         MinWidth = 0;
         CanResize = true;
         FreeShape();
+        // A classic skin's player draws its own title bar: no Lucent title bar over it.
+        ShowClassicInSingleWindow();
         _settings.SingleWindow = true;
         _settings.LucentFullScreen = false;
 
@@ -233,7 +228,11 @@ public partial class MainWindow
         }
 
         MinHeight = 0;
+        MaxHeight = double.PositiveInfinity;
+        _classicWideWidth = null;
         ApplyPlayerSize();
+        // The classic player sizes the window to itself again.
+        ShowClassicOnItsOwn();
         if (places.TryGetValue(this, out var playerPlace))
         {
             this.MoveTo(playerPlace.X, playerPlace.Y);
@@ -487,7 +486,7 @@ public partial class MainWindow
     /// <summary>Lucent opens as a single window if it was closed as one.</summary>
     private void ReopenSingleWindow()
     {
-        if (_settings.SingleWindow && !IsClassic)
+        if (_settings.SingleWindow)
         {
             _settings.SingleWindow = false;
             EnterSingleWindow();
@@ -810,8 +809,9 @@ public partial class MainWindow
                     _unstretched.ContainsKey(name) ? PlayerPaneWidth : double.IsNaN(pane.Window.Width) ? pane.Wanted.Width : pane.Window.Width,
                     double.IsNaN(pane.Window.Height) ? pane.Wanted.Height : pane.Window.Height);
                 // In the single window it can be folded shorter, by the line under it dragged up, to give the panel under it room.
+                // A classic skin's equalizer is a picture, which doesn't fold.
                 panels.Add((pane.Box, new TileWindow(name, kind, size.Width, size.Height, size.Width, size.Height, FixedSize: true,
-                    FoldsTo: Math.Max(1, size.Height - EqualizerWindow.MostFold))));
+                    FoldsTo: IsClassic ? 0 : Math.Max(1, size.Height - EqualizerWindow.MostFold))));
             }
             else
             {
@@ -823,8 +823,9 @@ public partial class MainWindow
         return panels;
     }
 
-    /// <summary>The title bar's height, which the panels go under.</summary>
-    private double HeaderHeight => _header is { Bounds.Height: > 0 } header ? header.Bounds.Height : TitleBar.Height;
+    /// <summary>The title bar's height, which the panels go under (none with a classic skin, whose player has its own).</summary>
+    private double HeaderHeight => _header is { IsVisible: false } ? 0
+        : _header is { Bounds.Height: > 0 } header ? header.Bounds.Height : TitleBar.Height;
 
     /// <summary>
     /// Lays the panels out in the window as it is now. With <paramref name="grow"/>, the window first grows
@@ -842,7 +843,20 @@ public partial class MainWindow
         var tiles = panels.Select(panel => panel.Tile).ToList();
         var style = _settings.SingleWindowStyle;
         var header = HeaderHeight;
+        // A classic skin's column of just the player, equalizer and playlist is as wide as the player; anything else gets the
+        // room back, and the panels are laid out once the window has it.
+        if (WidenFromClassicColumn(grow))
+        {
+            return;
+        }
+
         var (smallestWidth, smallestHeight) = SingleWindowLayout.Smallest(tiles, style);
+        if (ClassicColumnHeight(tiles) is { } column)
+        {
+            // Just the classic player and equalizer: no taller than them, however short that is.
+            smallestHeight = Math.Min(smallestHeight, column);
+        }
+
         MinWidth = smallestWidth;
         MinHeight = smallestHeight + header;
         var body = new Size(Math.Max(_paneArea.Bounds.Width, Bounds.Width), Math.Max(_paneArea.Bounds.Height, Bounds.Height - header));
@@ -865,8 +879,14 @@ public partial class MainWindow
 
         var laidOut = SingleWindowLayout.Arrange(body.Width, body.Height, tiles, style, _settings.SingleWindowSwaps);
         // With nothing beside the player, it (and the equalizer under it) runs the whole width, so there's no empty block beside it.
+        // A classic skin's are pictures that don't stretch: the window's as wide as they are instead (NarrowToClassicColumn).
         var arranged = WithDividers(laidOut, tiles);
-        var layout = SingleWindowLayout.Stretched(arranged, body.Width, tiles);
+        var layout = IsClassic ? arranged : SingleWindowLayout.Stretched(arranged, body.Width, tiles);
+        if (NarrowToClassicColumn(arranged, body))
+        {
+            return;
+        }
+
         _unstretched.Clear();
         foreach (var (box, tile) in panels)
         {
@@ -973,6 +993,9 @@ public partial class MainWindow
         }
 
         _singleBeforeFill = Placement.BoundsOf(this);
+        // Filling the screen, even narrowed to a classic skin's column.
+        MaxWidth = double.PositiveInfinity;
+        MaxHeight = double.PositiveInfinity;
         var screen = Placement.WorkArea(this);
         this.MoveTo(screen.X, screen.Y);
         Width = screen.Width;
@@ -988,6 +1011,12 @@ public partial class MainWindow
         }
 
         var bounds = _singleBeforeFill ?? Placement.BoundsOf(this);
+        if (_singleBeforeFill is null && _classicWideWidth is { } wide)
+        {
+            // Narrowed to a classic skin's column: the width it had before, for the room it gets back.
+            bounds = bounds.WithWidth(wide);
+        }
+
         if (bounds.Width > 0 && bounds.Height > 0)
         {
             _settings.SingleWindowPlace = new WindowBounds { Left = bounds.X, Top = bounds.Y, Width = bounds.Width, Height = bounds.Height };

@@ -30,11 +30,12 @@ for run in first reopened; do
   cp "$work/layout-check-first.txt.visuals" "$LUCENT_LAYOUT_CHECK.visuals" 2> /dev/null || true
   "$exe" > "$work/layout-$run.log" 2>&1 &
   app=$!
-  for _ in $(seq 1 150); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
+  # A run takes two to three minutes (the check waits for each layout to settle), so five is a hang.
+  for _ in $(seq 1 300); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
   if kill -0 "$app" 2> /dev/null; then
     kill "$app"
     echo "::error::Lucent didn't quit when its player was closed ($run run)."
-    cat "$LUCENT_LAYOUT_CHECK" 2> /dev/null
+    cat "$LUCENT_LAYOUT_CHECK" 2> /dev/null || cat "$work/layout-$run.log"
     exit 1
   fi
   cat "$LUCENT_LAYOUT_CHECK" 2> /dev/null || { echo "::error::The layout check wrote nothing ($run run)."; cat "$work/layout-$run.log"; exit 1; }

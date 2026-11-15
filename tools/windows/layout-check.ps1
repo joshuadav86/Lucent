@@ -52,9 +52,10 @@ foreach ($percent in 100, 150) {
   $env:LUCENT_DATA_FOLDER = $data
   $env:LUCENT_LAYOUT_CHECK = $result
   $lucent = Start-Process -FilePath (Resolve-Path $Exe) -PassThru
-  if (-not $lucent.WaitForExit(240000)) {
+  # A run takes two to three minutes (the check waits for each layout to settle), so five is a hang.
+  if (-not $lucent.WaitForExit(300000)) {
     Stop-Process -Id $lucent.Id -Force -ErrorAction SilentlyContinue
-    Write-Host "::error::Lucent was still running after 240 seconds (${percent}% scaling)."
+    Write-Host "::error::Lucent was still running after 300 seconds (${percent}% scaling)."
   }
 
   Write-Host "---- ${percent}% scaling ----"

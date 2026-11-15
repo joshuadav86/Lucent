@@ -29,6 +29,9 @@ public sealed class ClassicPlayerView : FrameworkElement
 
     public ClassicPlayer Player { get; }
 
+    /// <summary>How wide it's drawn, in screen units.</summary>
+    public double PixelWidth => SkinWidth * Scale;
+
     /// <summary>How many times its size the player is drawn: 1, or 2 for double size.</summary>
     public double Zoom
     {

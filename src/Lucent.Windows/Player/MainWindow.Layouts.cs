@@ -260,7 +260,7 @@ public partial class MainWindow
             _settings.FullScreenSwaps = layout.FullScreenSwaps.Select(swap => swap.ToList()).ToList();
             TileWindows();
         }
-        else if (layout.SingleWindow && !IsClassic)
+        else if (layout.SingleWindow)
         {
             // Moved along with the player if the layout was moved onto the player's screen.
             _settings.SingleWindowPlace = SavedLayouts.MovedLike(layout.SingleWindowPlace, layout.Windows, places);

@@ -36,7 +36,7 @@ public static class SingleWindow
     /// <summary>Switches it on or off.</summary>
     public static Action? Toggle { get; set; }
 
-    /// <summary>Whether it can be switched on now (not with a classic skin, which draws its own fixed-size windows).</summary>
+    /// <summary>Whether it can be switched on now (it always can, classic skins too; kept for a look that one day can't).</summary>
     public static Func<bool> IsAvailable { get; set; } = () => true;
 
     /// <summary>The panel showing a window's insides while it's in the single window, or null.</summary>

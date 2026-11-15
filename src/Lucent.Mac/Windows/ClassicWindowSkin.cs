@@ -43,6 +43,9 @@ public static class ClassicWindowSkin
         framed.Show(title, skin, zoom);
     }
 
+    /// <summary>Whether the window is in a classic frame now (its own content inside the frame's).</summary>
+    public static bool IsFramed(Window window) => States.TryGetValue(window, out var framed) && framed.On;
+
     private sealed class Framed
     {
         private readonly Window _window;
@@ -53,6 +56,8 @@ public static class ClassicWindowSkin
         private readonly Dictionary<string, object?> _savedResources = new();
         private object? _lucentContent;
         private bool _on;
+
+        public bool On => _on;
 
         public Framed(Window window)
         {
@@ -69,6 +74,8 @@ public static class ClassicWindowSkin
             LucentFullScreen.AddTo(_view.ContextMenu, window);
             _root = new Panel { Children = { _view, _contentHost } };
             window.SizeChanged += (_, _) => Fit();
+            // As a panel in the single window, it's the panel's size that the frame follows.
+            _root.SizeChanged += (_, _) => Fit();
             window.PropertyChanged += (_, e) =>
             {
                 if (e.Property == Window.WindowStateProperty)
@@ -144,8 +151,9 @@ public static class ClassicWindowSkin
             }
 
             var scale = _view.Scale;
-            var width = _window.ClientSize.Width;
-            var height = _window.ClientSize.Height;
+            var held = SingleWindow.Holds(_window);
+            var width = held ? _root.Bounds.Width : _window.ClientSize.Width;
+            var height = held ? _root.Bounds.Height : _window.ClientSize.Height;
             if (width <= 0 || height <= 0)
             {
                 return;

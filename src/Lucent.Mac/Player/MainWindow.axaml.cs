@@ -768,6 +768,12 @@ public partial class MainWindow : Window
     /// </summary>
     private void LiftDocked(double distance)
     {
+        // In the single window, a window that opens becomes a panel in it: nothing moves to make room for it.
+        if (InSingleWindow)
+        {
+            return;
+        }
+
         var area = Placement.WorkArea(this);
         var (group, others) = MovableGroup();
         var lift = group.Count == 0 ? 0 : Math.Min(distance, group.Min(window => window.Top()) - area.Top);
@@ -783,6 +789,12 @@ public partial class MainWindow : Window
     /// </summary>
     private void SlideDocked(double distance)
     {
+        // In the single window, a window that opens becomes a panel in it: nothing moves to make room for it.
+        if (InSingleWindow)
+        {
+            return;
+        }
+
         var area = Placement.WorkArea(this);
         var (group, others) = MovableGroup();
         var slide = group.Count == 0 ? 0 : Math.Min(distance, area.Right - group.Max(window => window.Left() + window.ActualWidth()));
@@ -1809,9 +1821,19 @@ public partial class MainWindow : Window
     /// </summary>
     internal void ChooseSkin(string name)
     {
+        var wasClassic = IsClassic;
         _settings.Skin = name;
         _settings.ClassicSkin = null;
-        ApplyClassicSkin();
+        if (wasClassic && InSingleWindow)
+        {
+            // The panels give their windows their insides back for the classic skin to come off them, then have them again.
+            ChangeSkinInSingleWindow(ApplyClassicSkin);
+        }
+        else
+        {
+            ApplyClassicSkin();
+        }
+
         BuildClassicSkinSwatches();
         _settings.Theme = SkinManager.Find(name).Theme;
         ApplyLook();
