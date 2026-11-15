@@ -20,10 +20,27 @@ public sealed class CapturingSampleProvider : ISampleProvider
 
     public WaveFormat WaveFormat => _source.WaveFormat;
 
+    /// <summary>
+    /// The volume leveling gain on the music now, if any (<see cref="TrackChain.Gain"/>). It's taken back off what's
+    /// captured, so the visuals and the analyzer's loudness see each song at its own level, as they do with leveling off.
+    /// </summary>
+    public Func<float>? Leveling { get; init; }
+
     public int Read(float[] buffer, int offset, int count)
     {
         var read = _source.Read(buffer, offset, count);
         var frames = Split(buffer, offset, read, WaveFormat.Channels, ref _mono, ref _left, ref _right);
+        if (Leveling?.Invoke() is { } gain && gain != 1f && gain > 0f)
+        {
+            var undo = 1f / gain;
+            for (var i = 0; i < frames; i++)
+            {
+                _mono[i] *= undo;
+                _left[i] *= undo;
+                _right[i] *= undo;
+            }
+        }
+
         _capture.Write(_mono.AsSpan(0, frames), _left.AsSpan(0, frames), _right.AsSpan(0, frames));
         return read;
     }

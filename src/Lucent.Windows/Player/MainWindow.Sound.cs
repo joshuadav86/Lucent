@@ -151,6 +151,7 @@ public partial class MainWindow
         _player.CrossfadeSeconds = CrossfadeSeconds;
         _player.OutputDeviceId = _settings.OutputDevice;
         _player.Exclusive = _settings.ExclusiveOutput;
+        ApplyPlaybackExtras();
         ApplyOwnVolume();
     }
 
@@ -160,6 +161,9 @@ public partial class MainWindow
         ExclusiveSwitch.IsChecked = _settings.ExclusiveOutput;
         GaplessSwitch.IsChecked = _settings.Gapless;
         CrossfadeSwitch.IsChecked = _settings.Crossfade;
+        ResumeLongFilesSwitch.IsChecked = _settings.ResumeLongFiles;
+        ShowSoundFont();
+        ShowHotkeys();
         EqualizeStreamingSwitch.IsChecked = _settings.EqualizeStreamingApps;
         CrossfadeLengthName.Text = $"{Math.Clamp(_settings.CrossfadeSeconds, 1, 12)} seconds  ▾";
         OutputDeviceName.Text = _settings.OutputDevice is null
@@ -239,6 +243,11 @@ public partial class MainWindow
         {
             _settings.Crossfade = on;
             ChangeCrossfade();
+        }
+        else if (sender == ResumeLongFilesSwitch)
+        {
+            _settings.ResumeLongFiles = on;
+            _settings.Save();
         }
         else if (sender == EqualizeStreamingSwitch)
         {
