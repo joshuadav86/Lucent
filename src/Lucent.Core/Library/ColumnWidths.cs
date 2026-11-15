@@ -24,6 +24,10 @@ public static class ColumnWidths
     // Each column's width that its cells follow, by name.
     private static readonly Dictionary<string, ColumnSize> Sizes = new();
 
+    // The columns shown narrower than their widths for now, by name, because the list is too narrow for them all beside
+    // the title (see FitInto).
+    private static Dictionary<string, double> _narrowed = new();
+
     /// <summary>
     /// The widths set by dragging, by column name (the settings' <see cref="Settings.AppSettings.ColumnWidths"/>).
     /// The library window sets it; columns not in it keep their standard widths. After changing it, call
@@ -36,6 +40,69 @@ public static class ColumnWidths
         Custom.TryGetValue(name, out var width) && double.IsFinite(width) ? Math.Clamp(width, Min, Max) : standard;
 
     /// <summary>
+    /// The column's width on screen now: <see cref="Of"/>, or narrower while the list is too narrow for every column at
+    /// its width beside the title (<see cref="FitInto"/>).
+    /// </summary>
+    public static double Shown(string name, double standard) =>
+        _narrowed.TryGetValue(name, out var width) ? width : Of(name, standard);
+
+    /// <summary>
+    /// Fits the shown columns (by name, with their standard widths) into <paramref name="room"/>, the space for the
+    /// title and the columns together: when they don't all fit at their widths with the title keeping its room, they're
+    /// shown narrower (<see cref="Squeeze"/>) until there's room again, and their own widths are kept. A list too narrow
+    /// otherwise pushes the columns past its right edge, with the title squeezed to nothing. A room of 0 or less (not laid
+    /// out yet) shows them at their widths. True when a width on screen changed; the rows then follow, as after
+    /// <see cref="Refresh"/>.
+    /// </summary>
+    public static bool FitInto(IReadOnlyList<(string Name, double Standard)> columns, double room)
+    {
+        var widths = columns.Select(column => Of(column.Name, column.Standard)).ToList();
+        var shown = room > 0 ? Squeeze(widths, room) : widths.ToArray();
+        var narrowed = new Dictionary<string, double>();
+        for (var index = 0; index < columns.Count; index++)
+        {
+            if (shown[index] < widths[index])
+            {
+                narrowed[columns[index].Name] = shown[index];
+            }
+        }
+
+        if (narrowed.Count == _narrowed.Count && narrowed.All(pair => _narrowed.TryGetValue(pair.Key, out var width) && width == pair.Value))
+        {
+            return false;
+        }
+
+        _narrowed = narrowed;
+        Refresh();
+        return true;
+    }
+
+    /// <summary>
+    /// The columns' widths narrowed to fit beside the title in <paramref name="room"/>, with the title keeping its room:
+    /// each gives up a share of what it has above its narrowest, so wide columns give most and every column stays in
+    /// view. They're never narrower than <see cref="Min"/>, so a list narrower even than that still runs over.
+    /// </summary>
+    public static double[] Squeeze(IReadOnlyList<double> widths, double room)
+    {
+        var shown = widths.ToArray();
+        var over = widths.Sum() - Math.Max(0, room - TitleRoom);
+        var spare = Spare(widths, Enumerable.Range(0, widths.Count));
+        if (over <= 0 || spare <= 0)
+        {
+            return shown;
+        }
+
+        var share = Math.Min(1, over / spare);
+        for (var index = 0; index < shown.Length; index++)
+        {
+            // Whole pixels, rounded down, so the lines stay sharp and the columns fit.
+            shown[index] = Math.Max(Min, Math.Floor(widths[index] - Math.Max(0, widths[index] - Min) * share));
+        }
+
+        return shown;
+    }
+
+    /// <summary>
     /// The column's width as one object that every row's cell in it binds to, so a column dragged wider widens all its
     /// cells at once, with nothing rebuilt. One per name; used on the UI thread.
     /// </summary>
@@ -43,7 +110,7 @@ public static class ColumnWidths
     {
         if (!Sizes.TryGetValue(name, out var size))
         {
-            Sizes[name] = size = new ColumnSize(standard, Of(name, standard));
+            Sizes[name] = size = new ColumnSize(standard, Shown(name, standard));
         }
 
         return size;
@@ -54,7 +121,7 @@ public static class ColumnWidths
     {
         foreach (var (name, size) in Sizes)
         {
-            size.Width = Of(name, size.Standard);
+            size.Width = Shown(name, size.Standard);
         }
     }
 

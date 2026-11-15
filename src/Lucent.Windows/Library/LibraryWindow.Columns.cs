@@ -24,8 +24,31 @@ public partial class LibraryWindow
     // The lines between the headings, which resize the columns either side of them.
     private ColumnGrips? _columnGrips;
 
-    private ColumnGrips ColumnGrips => _columnGrips ??= new ColumnGrips(ColumnHeader,
-        () => LibraryColumns.Shown.Select(LibraryColumns.Width).ToList(), ResizeColumns, FitColumn, () => _settings.Save());
+    private ColumnGrips ColumnGrips => _columnGrips ??= WhenSpaceChanges(new ColumnGrips(ColumnHeader,
+        () => LibraryColumns.Shown.Select(LibraryColumns.Width).ToList(), ResizeColumns, FitColumn, () => _settings.Save()), FitColumnsToSpace);
+
+    private static ColumnGrips WhenSpaceChanges(ColumnGrips grips, Action changed)
+    {
+        grips.SpaceChanged += changed;
+        return grips;
+    }
+
+    // Whether the library's columns are on screen and so fit to it. An open streaming playlist fits its own, and as columns
+    // of the same name share their widths, only one of them does at a time.
+    private bool FitsLibraryColumns => ColumnHeader.Visibility == Visibility.Visible && !ShowingRemotePlaylist;
+
+    /// <summary>
+    /// The window or the panel beside it changed size: the columns narrow to stay in view beside the title, or widen
+    /// again when there's room. Without it, a library too narrow for its columns pushed the last ones (and the length) off
+    /// its right edge and squeezed the title to nothing.
+    /// </summary>
+    private void FitColumnsToSpace()
+    {
+        if (FitsLibraryColumns && LibraryColumns.FitInto(ColumnGrips.Space))
+        {
+            ShowColumnWidths();
+        }
+    }
 
     /// <summary>
     /// Shows the settings' columns: their headings, and the cells in every row. The saved playlists' songs under
@@ -55,6 +78,12 @@ public partial class LibraryWindow
         var shows = !ShowingRemotePlaylist
             && (!ShowingPlaylists || _savedPlaylistItems.Any(item => !item.IsPlaceholder));
         ColumnHeader.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;
+        if (FitsLibraryColumns)
+        {
+            // As wide as they are, or narrower when the window is too narrow for them all beside the title.
+            LibraryColumns.FitInto(ColumnGrips.Space);
+        }
+
         ColumnHeadings.Children.Clear();
         foreach (var column in LibraryColumns.Shown)
         {
@@ -115,6 +144,11 @@ public partial class LibraryWindow
     /// <summary>Shows the library's columns at their widths: their headings, and the cells in every row.</summary>
     private void ShowColumnWidths()
     {
+        if (FitsLibraryColumns)
+        {
+            LibraryColumns.FitInto(ColumnGrips.Space);
+        }
+
         foreach (var heading in ColumnHeadings.Children.OfType<Border>())
         {
             if (heading.Tag is LibraryColumn column)
@@ -230,7 +264,7 @@ public partial class LibraryWindow
         if (!_settings.LibraryColumnsShown.Remove(column))
         {
             _settings.LibraryColumnsShown.Add(column);
-            WidenToFit(LibraryColumns.ShownWidth + LibraryColumns.Width(column) + TitleRoom);
+            WidenToFit(LibraryColumns.ShownWidth + LibraryColumns.FullWidth(column) + TitleRoom);
         }
 
         _settings.Save();

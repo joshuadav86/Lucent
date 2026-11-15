@@ -56,8 +56,8 @@ public static class LibraryColumns
     /// </summary>
     public static IReadOnlyList<LibraryColumn> Shown { get; set; } = Array.Empty<LibraryColumn>();
 
-    /// <summary>The space after the title for the shown columns.</summary>
-    public static double ShownWidth => Shown.Sum(Width);
+    /// <summary>The space after the title for the shown columns, each at its own width.</summary>
+    public static double ShownWidth => Shown.Sum(FullWidth);
 
     public static string Label(LibraryColumn column) => column switch
     {
@@ -85,9 +85,17 @@ public static class LibraryColumns
 
     /// <summary>
     /// The column's width in device-independent pixels (WPF's and Avalonia's units), with its divider line and the
-    /// space either side of the text: the one it was dragged to (<see cref="ColumnWidths"/>), or its standard width.
+    /// space either side of the text, as it's shown now: the one it was dragged to (<see cref="ColumnWidths"/>), or its
+    /// standard width, narrowed while the list is too narrow for it (<see cref="FitInto"/>).
     /// </summary>
-    public static double Width(LibraryColumn column) => ColumnWidths.Of(column.ToString(), StandardWidth(column));
+    public static double Width(LibraryColumn column) => ColumnWidths.Shown(column.ToString(), StandardWidth(column));
+
+    /// <summary>The column's own width, when there's room for it: the one it was dragged to, or its standard width.</summary>
+    public static double FullWidth(LibraryColumn column) => ColumnWidths.Of(column.ToString(), StandardWidth(column));
+
+    /// <summary>Fits the shown columns into <paramref name="room"/> beside the title (<see cref="ColumnWidths.FitInto"/>).</summary>
+    public static bool FitInto(double room) =>
+        ColumnWidths.FitInto(Shown.Select(column => (column.ToString(), StandardWidth(column))).ToList(), room);
 
     /// <summary>The column's width that its cells follow (see <see cref="ColumnWidths.Size"/>).</summary>
     public static ColumnSize Size(LibraryColumn column) => ColumnWidths.Size(column.ToString(), StandardWidth(column));
