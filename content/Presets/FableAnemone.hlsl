@@ -21,8 +21,8 @@ float3 fnSea(float2 p)
     float shafts = noise(float2(p.x * 2.6 + p.y * 0.9 + Time * 0.03, 3.0)) * noise(float2(p.x * 6.1 + p.y * 2.1 - Time * 0.05, 9.0));
     sea += float3(0.03, 0.2, 0.22) * shafts * saturate(0.75 - p.y * 0.5) * (0.5 + Mid * 0.6);
     float2 drift = p * 9.0 + float2(Time * 0.11, -Time * 0.07);
-    float2 speck = frac(drift) - 0.5;
     float seed = hash(floor(drift) * 0.37 + 2.2);
+    float2 speck = frac(drift) - 0.5 - (float2(hash(floor(drift) * 0.71 + 5.5), hash(floor(drift) * 0.53 + 8.1)) - 0.5) * 0.7;
     sea += float3(0.35, 0.6, 0.6) * step(0.86, seed) * exp(-dot(speck, speck) * 260.0) * (0.25 + 0.25 * sin(Time * 1.3 + seed * 40.0));
     return sea;
 }
@@ -55,9 +55,12 @@ float3 Render(float2 uv, float2 p)
         t1 = -b - sqrt(struck);
     }
 
-    int steps = qualitySteps(72);
+    // Steps are short enough not to skip a tentacle's tip, so a longer stretch takes more of them.
+    int steps = min((int)((t1 - t0) / (0.016 * surfacePrecision())) + 1, qualitySteps(120));
     float stride = (t1 - t0) / (float)steps;
-    float t = t0 + stride * hash(uv * Resolution.xy + 0.37);
+    // Each pixel starts its steps a different fraction of a step in, in a fine even pattern, so the steps
+    // never line up into bands.
+    float t = t0 + stride * frac(52.9829189 * frac(dot(floor(uv * Resolution.xy), float2(0.06711056, 0.00583715))));
     float3 colour = 0.0;
     float clear = 1.0;                                    // how much of what's behind still shows
     [loop]
