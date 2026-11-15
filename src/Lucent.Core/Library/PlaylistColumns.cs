@@ -51,9 +51,24 @@ public static class PlaylistColumns
     public static string Heading(PlaylistColumn column) =>
         column == PlaylistColumn.Order ? "#" : LibraryColumns.Heading(Same(column));
 
-    /// <summary>The column's width, with its divider line and the space either side of the text.</summary>
+    /// <summary>
+    /// The column's width as it's shown now, with its divider line and the space either side of the text: narrowed while
+    /// the list is too narrow for it (<see cref="FitInto"/>).
+    /// </summary>
     public static double Width(PlaylistColumn column) =>
-        column == PlaylistColumn.Order ? ColumnWidths.Of(column.ToString(), OrderWidth) : LibraryColumns.Width(Same(column));
+        column == PlaylistColumn.Order ? ColumnWidths.Shown(column.ToString(), OrderWidth) : LibraryColumns.Width(Same(column));
+
+    /// <summary>The column's own width, when there's room for it.</summary>
+    public static double FullWidth(PlaylistColumn column) =>
+        column == PlaylistColumn.Order ? ColumnWidths.Of(column.ToString(), OrderWidth) : LibraryColumns.FullWidth(Same(column));
+
+    /// <summary>Fits <paramref name="shown"/> into <paramref name="room"/> beside the title (<see cref="ColumnWidths.FitInto"/>).</summary>
+    public static bool FitInto(IReadOnlyList<PlaylistColumn> shown, double room) =>
+        ColumnWidths.FitInto(shown.Select(column => (column.ToString(), Standard(column))).ToList(), room);
+
+    // The column's width until it's dragged.
+    private static double Standard(PlaylistColumn column) =>
+        column == PlaylistColumn.Order ? OrderWidth : LibraryColumns.StandardWidth(Same(column));
 
     /// <summary>The column's width that its cells follow (see <see cref="ColumnWidths.Size"/>).</summary>
     public static ColumnSize Size(PlaylistColumn column) =>

@@ -39,6 +39,14 @@ public static class ColumnWidthsSelfTest
         Expect("a double-click on the title's line fits the first column", ColumnWidths.FittedBy(0).Select(index => (double)index), 0);
         Expect("a double-click on a line fits the columns either side", ColumnWidths.FittedBy(1).Select(index => (double)index), 0, 1);
 
+        // Five columns too wide for a narrow list: they're shown narrower, all in view, with the title keeping its room.
+        var wide = new double[] { 136, 102, 480, 60, 66 };
+        var squeezed = ColumnWidths.Squeeze(wide, 600);
+        Expect("columns too wide for the list are narrowed to fit beside the title", new[] { squeezed.Sum() <= 600 - ColumnWidths.TitleRoom ? 1.0 : 0 }, 1);
+        Expect("the widest column gives up the most", new[] { wide[2] - squeezed[2] > wide[0] - squeezed[0] ? 1.0 : 0 }, 1);
+        Expect("columns that fit keep their widths", ColumnWidths.Squeeze(start, 600), 102, 60);
+        Expect("narrowed no narrower than the least", ColumnWidths.Squeeze(start, 100), ColumnWidths.Min, ColumnWidths.Min);
+
         var before = ColumnWidths.Custom;
         try
         {
@@ -49,9 +57,17 @@ public static class ColumnWidthsSelfTest
             ColumnWidths.Refresh();
             Expect("every row's cells follow the column's new width",
                 new[] { genre.Width, LibraryColumns.Size(LibraryColumn.Genre).Width, PlaylistColumns.Size(PlaylistColumn.Genre).Width }, 150, 150, 150);
+            var columns = new[] { PlaylistColumn.Genre, PlaylistColumn.Year };
+            Expect("a narrow list narrows the columns on screen", new[] { PlaylistColumns.FitInto(columns, 300) ? 1.0 : 0 }, 1);
+            Expect("narrowed on screen and in every row, their own widths kept",
+                new[] { genre.Width < 150 ? 1.0 : 0, PlaylistColumns.Width(PlaylistColumn.Genre) == genre.Width ? 1 : 0,
+                    PlaylistColumns.FullWidth(PlaylistColumn.Genre), PlaylistColumns.Width(PlaylistColumn.Genre) + PlaylistColumns.Width(PlaylistColumn.Year) <= 300 - ColumnWidths.TitleRoom ? 1 : 0 },
+                1, 1, 150, 1);
+            Expect("room again, the columns are back at their widths", new[] { PlaylistColumns.FitInto(columns, 2000) ? 1.0 : 0, genre.Width }, 1, 150);
         }
         finally
         {
+            ColumnWidths.FitInto(Array.Empty<(string, double)>(), 0);
             ColumnWidths.Custom = before;
             ColumnWidths.Refresh();
         }

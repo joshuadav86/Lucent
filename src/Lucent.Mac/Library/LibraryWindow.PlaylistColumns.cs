@@ -25,8 +25,22 @@ public partial class LibraryWindow
     // The lines between the open playlist's headings, which resize its columns.
     private ColumnGrips? _playlistColumnGrips;
 
-    private ColumnGrips PlaylistColumnGrips => _playlistColumnGrips ??= new ColumnGrips(PlaylistColumnHeader,
-        () => _playlistShown.Select(PlaylistColumns.Width).ToList(), ResizePlaylistColumns, FitPlaylistColumn, PlaylistColumnsResized);
+    private ColumnGrips PlaylistColumnGrips => _playlistColumnGrips ??= WhenSpaceChanges(new ColumnGrips(PlaylistColumnHeader,
+        () => _playlistShown.Select(PlaylistColumns.Width).ToList(), ResizePlaylistColumns, FitPlaylistColumn, PlaylistColumnsResized),
+        FitPlaylistColumnsToSpace);
+
+    /// <summary>
+    /// The window or the panel beside it changed size: the open playlist's columns narrow to stay in view beside the
+    /// title, or widen again when there's room. Without it, a list too narrow for them pushed the last ones (and the
+    /// length) off its right edge and squeezed the songs' titles to nothing, so a ticked column seemed to show nowhere.
+    /// </summary>
+    private void FitPlaylistColumnsToSpace()
+    {
+        if (ShowingRemotePlaylist && PlaylistColumns.FitInto(_playlistShown, PlaylistColumnGrips.Space))
+        {
+            ShowPlaylistColumnWidths();
+        }
+    }
 
     /// <summary>What the open playlist is sorted by: the settings' choice, or its own order when its app can't fill it.</summary>
     private PlaylistColumn ShownPlaylistSort =>
@@ -43,6 +57,7 @@ public partial class LibraryWindow
             .First(row => row.RemotePlaylist is not null);
         RemotePlaylistName.Text = playlist.Name;
         SearchRow.IsVisible = FilterRow.IsVisible = LibraryView.IsVisible = EmptyLibraryHint.IsVisible = false;
+        ColumnHeader.IsVisible = false;
         RemotePlaylistPanel.IsVisible = true;
         ShowRemoteSongs(list, list.Note);
     }
@@ -69,6 +84,8 @@ public partial class LibraryWindow
         var songs = _openRemoteList?.Tracks.Count ?? 0;
         RemoteSortButton.IsVisible = PlaylistColumnHeader.IsVisible = songs > 1;
         RemoteSortLabel.Text = PlaylistColumns.SortLabel(ShownPlaylistSort, ShownPlaylistDescending);
+        // As wide as they are, or narrower when the list is too narrow for them all beside the title.
+        PlaylistColumns.FitInto(_playlistShown, PlaylistColumnGrips.Space);
         PlaylistColumnHeadings.Children.Clear();
         foreach (var column in _playlistShown)
         {
@@ -120,6 +137,11 @@ public partial class LibraryWindow
     /// <summary>Shows the open playlist's columns at their widths: their headings, and the cells in every row.</summary>
     private void ShowPlaylistColumnWidths()
     {
+        if (ShowingRemotePlaylist)
+        {
+            PlaylistColumns.FitInto(_playlistShown, PlaylistColumnGrips.Space);
+        }
+
         foreach (var heading in PlaylistColumnHeadings.Children.OfType<Border>())
         {
             if (heading.Tag is PlaylistColumn column)
@@ -216,7 +238,7 @@ public partial class LibraryWindow
         if (!_settings.PlaylistColumnsShown.Remove(column))
         {
             _settings.PlaylistColumnsShown.Add(column);
-            WidenToFit(_playlistShown.Sum(PlaylistColumns.Width) + PlaylistColumns.Width(column) + TitleRoom);
+            WidenToFit(_playlistShown.Sum(PlaylistColumns.FullWidth) + PlaylistColumns.FullWidth(column) + TitleRoom);
         }
 
         _settings.Save();
@@ -233,7 +255,7 @@ public partial class LibraryWindow
         {
             _settings.PlaylistColumnsFitted = true;
             _settings.Save();
-            WidenToFit(_playlistShown.Sum(PlaylistColumns.Width) + TitleRoom);
+            WidenToFit(_playlistShown.Sum(PlaylistColumns.FullWidth) + TitleRoom);
         }
     }
 

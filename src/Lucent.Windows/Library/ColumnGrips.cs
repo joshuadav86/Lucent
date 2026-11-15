@@ -45,7 +45,28 @@ internal sealed class ColumnGrips
         Grid.SetColumnSpan(_grips, 3);
         header.Children.Add(_grips);
         header.SizeChanged += (_, _) => Place();
+        if (header.Parent is FrameworkElement place)
+        {
+            place.SizeChanged += (_, _) => SpaceChanged?.Invoke();
+        }
     }
+
+    /// <summary>The headings' place changed width, so the columns may need narrowing to fit beside the title, or have room again.</summary>
+    public event Action? SpaceChanged;
+
+    /// <summary>
+    /// The room the list has for the title and the tag columns: the headings' place, less their margins and the length's
+    /// column. Unlike <see cref="Room"/> it's what the list holds even when the columns are too wide for it, and 0 before
+    /// it's laid out.
+    /// </summary>
+    public double Space => _header.Parent is FrameworkElement place && PlaceWidth(place) > 0
+        ? Math.Max(0, PlaceWidth(place) - _header.Margin.Left - _header.Margin.Right - LengthWidth)
+        : 0;
+
+    private static double PlaceWidth(FrameworkElement place) => place.ActualWidth;
+
+    // The length's column: a fixed width, so known even before the headings are laid out.
+    private double LengthWidth => _header.ColumnDefinitions[2].Width is { IsAbsolute: true } width ? width.Value : _header.ColumnDefinitions[2].ActualWidth;
 
     /// <summary>The room for the title and the tag columns: the headings less the length's column.</summary>
     public double Room => _header.ActualWidth - _header.ColumnDefinitions[2].ActualWidth;
