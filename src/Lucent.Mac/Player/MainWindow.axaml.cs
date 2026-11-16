@@ -2717,7 +2717,10 @@ public partial class MainWindow : Window
     {
         // Scrolling anywhere over the player changes the volume, like Winamp's mouse wheel. Over a panel of the single
         // window, the wheel is the panel's: it scrolls the library or queue, as it does in the window on its own.
-        if (OptionsPopup.IsOpen || PaneAt(e.Source) is not null)
+        // Over a list that drops down or pops up (the visuals picker, say), scrolling scrolls it too: a popup's insides
+        // are their own window, though the scroll still passes through here on its way to them.
+        if (OptionsPopup.IsOpen || PaneAt(e.Source) is not null
+            || (e.Source is Visual visual && TopLevel.GetTopLevel(visual) is { } top && top != this))
         {
             return;
         }

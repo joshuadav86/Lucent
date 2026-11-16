@@ -2565,7 +2565,9 @@ public partial class MainWindow : Window
     {
         // The mouse wheel anywhere over the player changes the volume, like Winamp. Over a panel of the single window,
         // the wheel is the panel's: it scrolls the library or queue, as it does in the window on its own.
-        if (OptionsPopup.IsOpen || PaneAt(e.OriginalSource) is not null)
+        // Over a list that drops down or pops up (the visuals picker, say), the wheel scrolls it too: a popup's insides
+        // aren't in this window, though the wheel still passes through here on its way to them.
+        if (OptionsPopup.IsOpen || PaneAt(e.OriginalSource) is not null || InPopup(e.OriginalSource))
         {
             return;
         }
@@ -2573,6 +2575,9 @@ public partial class MainWindow : Window
         VolumeSlider.Value = Math.Clamp(VolumeSlider.Value + Math.Sign(e.Delta) * 0.05, 0, 1);
         e.Handled = true;
     }
+
+    // Whether the wheel's over a popup (its own window), not this window's own insides.
+    private bool InPopup(object? source) => SingleWindow.VisualOf(source) is Visual visual && visual != this && !IsAncestorOf(visual);
 
     private void OnVolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
