@@ -42,42 +42,57 @@ public partial class MainWindow
         foreach (var (step, change) in steps)
         {
             change();
-            await Task.Delay(TimeSpan.FromSeconds(1.5));
-            var name = $"{label}: {step}";
-            var now = PlacesNow();
-            lines.Add($"{name}: " + DescribeAll(now));
-            foreach (var window in before.Keys.Where(window => !now.ContainsKey(window) || now[window].IsEmpty))
-            {
-                lines.Add($"MISMATCH {name}: the {NameFor(window)} window isn't shown any more");
-            }
 
-            // The player stays put, unless the block round it would hang off the screen there, when the block (and the
-            // player with it) moves just far enough to be on it, against the screen's edge.
-            var player = OnScreen(this);
-            var block = now.Values.Where(place => !place.IsEmpty).Aggregate((a, b) => Rect.Union(a, b));
-            var area = ScreenArea.Of(this);
-            var acrossOk = Math.Abs(player.Left - playerBefore.Left) <= 4
-                || Math.Abs(block.Left - area.Left) <= 4 || Math.Abs(block.Right - area.Right) <= 4;
-            var downOk = Math.Abs(player.Top - playerBefore.Top) <= 4
-                || Math.Abs(block.Top - area.Top) <= 4 || Math.Abs(block.Bottom - area.Bottom) <= 4;
-            lines.Add($"{(acrossOk && downOk ? "ok" : "MISMATCH")} {name}: the player is at {Describe(player)}, was at {Describe(playerBefore)}, " +
-                $"the windows' block at {Describe(block)}, the screen at {Describe(area)}");
-            playerBefore = player;
-
-            var windows = now.Keys.ToList();
-            foreach (var window in windows)
+            // The tidy takes a moment, longer on a busy computer, so a look that finds the windows only partway there
+            // waits and looks again; what's still wrong after a few looks is a real mismatch.
+            var found = new List<string>();
+            var player = playerBefore;
+            for (var look = 0; look < 4; look++)
             {
-                foreach (var other in windows.Skip(windows.IndexOf(window) + 1))
+                await Task.Delay(TimeSpan.FromSeconds(1.5));
+                found.Clear();
+                var name = $"{label}: {step}";
+                var now = PlacesNow();
+                found.Add($"{name}: " + DescribeAll(now));
+                foreach (var window in before.Keys.Where(window => !now.ContainsKey(window) || now[window].IsEmpty))
                 {
-                    var overlap = Rect.Intersect(now[window], now[other]);
-                    if (!overlap.IsEmpty && overlap.Width > 4 && overlap.Height > 4)
+                    found.Add($"MISMATCH {name}: the {NameFor(window)} window isn't shown any more");
+                }
+
+                // The player stays put, unless the block round it would hang off the screen there, when the block (and the
+                // player with it) moves just far enough to be on it, against the screen's edge.
+                player = OnScreen(this);
+                var block = now.Values.Where(place => !place.IsEmpty).Aggregate((a, b) => Rect.Union(a, b));
+                var area = ScreenArea.Of(this);
+                var acrossOk = Math.Abs(player.Left - playerBefore.Left) <= 4
+                    || Math.Abs(block.Left - area.Left) <= 4 || Math.Abs(block.Right - area.Right) <= 4;
+                var downOk = Math.Abs(player.Top - playerBefore.Top) <= 4
+                    || Math.Abs(block.Top - area.Top) <= 4 || Math.Abs(block.Bottom - area.Bottom) <= 4;
+                found.Add($"{(acrossOk && downOk ? "ok" : "MISMATCH")} {name}: the player is at {Describe(player)}, was at {Describe(playerBefore)}, " +
+                    $"the windows' block at {Describe(block)}, the screen at {Describe(area)}");
+
+                var windows = now.Keys.ToList();
+                foreach (var window in windows)
+                {
+                    foreach (var other in windows.Skip(windows.IndexOf(window) + 1))
                     {
-                        lines.Add($"MISMATCH {name}: the {NameFor(window)} and the {NameFor(other)} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                        var overlap = Rect.Intersect(now[window], now[other]);
+                        if (!overlap.IsEmpty && overlap.Width > 4 && overlap.Height > 4)
+                        {
+                            found.Add($"MISMATCH {name}: the {NameFor(window)} and the {NameFor(other)} overlap by {overlap.Width:0} x {overlap.Height:0}");
+                        }
                     }
+                }
+
+                found.AddRange(CheckFlush(name, now));
+                if (!found.Any(line => line.StartsWith("MISMATCH", StringComparison.Ordinal)))
+                {
+                    break;
                 }
             }
 
-            lines.AddRange(CheckFlush(name, now));
+            lines.AddRange(found);
+            playerBefore = player;
         }
 
         return lines;
