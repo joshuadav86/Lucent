@@ -1,10 +1,10 @@
 // Name: Spiral Lantern
 // A globe of bronze ribs and coloured glass stands on a dark stone floor with one bulb at its crown. The ribs are
 // rhumb lines, spirals that cross every meridian at the same slant, wound both ways from foot to crown, and the
-// bulb throws their shadow across the floor as a web of perfect spirals, every pane a patch of ruby, amber,
-// emerald, aqua, sapphire, or violet light with a white heart. The globe turns slowly, so the spirals sweep round
-// the room. The music plays in the glass: each ring of panes glows with its own part of the music, bass at the
-// foot and treble at the crown, and each beat sends a wave of light up the globe and out across the floor.
+// bulb throws their shadow across the floor as a web of perfect spirals, every pane a patch of ruby, amber, or
+// sapphire light with a white heart. The globe turns slowly, so the spirals sweep round the room. The music plays
+// in the glass: each ring of panes glows with its own part of the music, bass at the foot and treble at the crown,
+// and each beat sends a wave of light up the globe and out across the floor.
 // Family: Ray traced
 // Tags: 3D, Geometric, Colourful
 // Added: 2026-11-16 08:46
