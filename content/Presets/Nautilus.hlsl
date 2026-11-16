@@ -1,9 +1,12 @@
 // Name: Nautilus
-// A nautilus shell cut in half and laid under a lamp, with no end to it either way: polished white walls of
+// A nautilus shell cut in half and laid under a circling lamp, with no end to it either way: polished walls of
 // mother-of-pearl wind out from a great pearl at the middle, and curved partitions divide the spiral into deep
-// chambers with a pearl resting in every one. The shell grows slowly as you watch. The music plays in the pearls:
-// each one lights its chamber with its own part of the music, treble in the tiny chambers at the middle and bass
-// in the great ones at the rim, and each beat sends light running out along the spiral.
+// chambers with a pearl in every one. Nothing in it keeps still. The shell grows and turns without end, its walls
+// ripple, its partitions lean one way and back with every four beats, and the pearls rise and fall in a wave that
+// runs along the spiral in time with the beat. The music plays in the pearls: each one floods its chamber with its
+// own part of the music, treble in the tiny chambers at the middle and bass in the great ones at the rim, in
+// colours that step outward along the spiral on every beat, and each beat sends a rush of light out after them.
+// The louder the music, the more the white shell runs to rainbows.
 // Family: Ray traced
 // Tags: 3D, Colourful, Calm
 // Added: 2026-11-16 08:40
@@ -11,12 +14,23 @@
 static const float NlGrow = 0.833;      // how much wider the shell is after each turn (2.3 times), as a logarithm
 static const float NlRooms = 15.0;      // how many chambers lie in one turn
 static const float NlDeep = 0.15;       // how deep a chamber is, against how far out it lies
-static const float NlBend = 0.55;       // how far the partitions curve
 static const float NlPearl = 0.055;     // how big a chamber's pearl is, against how far out it lies
 
+static float NlBend;                    // how far the partitions curve just now
+static float NlSound;                   // how loud the music is just now, taken across all its parts
+static float NlWave;                    // how far the waves have run along the spiral, as an angle
+
+// One part of the music, with the high notes made up to stand level with the low ones.
+float nlPart(float x)
+{
+    return spectrum(x) * (1.0 + 0.9 * x);
+}
+
+// How loud one part of the music is, judged against the music as a whole, so that a quiet song shows as plainly
+// as a loud one.
 float nlLoud(float x)
 {
-    return saturate((spectrum(x) - 0.42 + 0.5 * x) / 0.7);
+    return saturate((nlPart(x) - 0.62 * NlSound) / (0.6 * NlSound + 0.1));
 }
 
 // How loud the music is for a chamber this far out, treble at the middle and bass at the rim, read at ten fixed
@@ -35,7 +49,7 @@ float3 nlShell(float2 s, float grown, float turned)
 {
     float far = max(length(s), 1e-4);
     float bearing = atan2(s.y, s.x + 1e-7) - turned;
-    float wound = (log(far) - grown) / NlGrow - bearing / 6.2832;
+    float wound = (log(far) - grown) / NlGrow - bearing / 6.2832 + 0.03 * sin(3.0 * bearing + 5.0 * log(far) - NlWave);
     float whorl = floor(wound);
     float within = wound - whorl;                       // 0 at the inner wall of this turn, 1 at the outer
     float swing = 3.1416 * within;
@@ -61,11 +75,11 @@ float nlDepth(float2 s, float grown, float turned)
     return length(s) * NlDeep * sqrt(saturate(1.0 - u * u));
 }
 
-float3 nlGlow(float out01)
+// The pearls' light, a wheel of colours that comes round again: amber, rose, violet, blue, and sea green.
+float3 nlGlow(float h)
 {
-    float3 c = lerp(float3(0.15, 1.05, 1.25), float3(0.65, 0.4, 1.4), smoothstep(0.0, 0.35, out01));
-    c = lerp(c, float3(1.5, 0.32, 0.5), smoothstep(0.3, 0.65, out01));
-    return lerp(c, float3(1.65, 0.75, 0.15), smoothstep(0.6, 0.95, out01));
+    float3 c = 0.5 + 0.5 * cos(6.2832 * (h + float3(0.0, 0.33, 0.67)));
+    return (0.1 + c * c) * float3(1.6, 1.25, 1.55);
 }
 
 // What the polished shell mirrors: a broad soft lamp overhead and a dim room.
@@ -77,17 +91,37 @@ float3 nlLamps(float3 dir)
 
 float3 Render(float2 uv, float2 p)
 {
-    float since = frac(BeatGlide);
+    float beats = wrap(BeatGlide, 4096.0);
+    // How far through the beat: with a steady beat to follow it keeps pace with it, without one it follows how
+    // far the last beat has faded. (The glide of the beat count rests between beats, so it can't serve here.)
+    float since = SongMapped > 0.25 ? BeatPhase : saturate(-log(max(Beat, 0.004)) / 2.75);
     float flash = smoothstep(0.0, 0.22, since) * (1.0 - since) * (1.0 - since);
-    float grown = wrap(Time * 0.04, NlGrow);
-    float turned = -Time * 0.012;
+    float swell = BeatSwell;
+    float beatTurn = 6.2832 * BeatPhase;
+    float barTurn = 6.2832 * BarPhase;
 
-    float3 eye = float3(0.16 * sin(Time * 0.05), 3.6, -1.8 + 0.13 * sin(Time * 0.037));
-    float3 ray = cameraRay(eye, float3(0.1, 0.0, 0.08), float2(p.x, -p.y), 2.6, 0.03 * sin(Time * 0.04));
-    // The lamp circles slowly overhead, so the shadows in the chambers and the sheen on the shell keep shifting.
-    float lampTurn = Time * 0.1;
+    NlSound = 0.0;
+    [unroll]
+    for (int part = 0; part < 6; part++)
+        NlSound += nlPart(0.08 + 0.12 * part) / 6.0;
+
+    // The shell grows and turns, breathing in and out with the bar; its partitions lean over and back with it,
+    // and a ripple runs through its walls.
+    float grown = wrap(Time * 0.085 + 0.05 * sin(barTurn), NlGrow);
+    float turned = -Time * 0.06;
+    NlBend = 0.55 + 0.3 * sin(barTurn + 1.5708);
+    NlWave = beatTurn + wrap(Time * 0.7, 6.2832);
+
+    // How far the colours have stepped out along the spiral, and how far the shell has run to rainbows.
+    float stepped = wrap(beats * 0.07 + Time * 0.02, 64.0);
+    float iris = saturate(0.3 + 0.4 * Intensity + 0.4 * swell);
+
+    float3 eye = float3(0.55 * sin(Time * 0.09 + 1.0), 3.6, -1.8 + 0.65 * sin(Time * 0.11));
+    float3 ray = cameraRay(eye, float3(0.1, 0.0, 0.08), float2(p.x, -p.y), 2.6, 0.06 * sin(Time * 0.07));
+    // The lamp circles overhead, so the shadows in the chambers and the sheen on the shell keep shifting.
+    float lampTurn = Time * 0.3;
     float3 lamp = normalize(float3(-0.61 * cos(lampTurn), 0.75, -0.61 * sin(lampTurn)));
-    float drift = frac(Time * 0.02);
+    float drift = frac(Time * 0.05 + beats * 0.125);
 
     // Where the ray meets the cut face, and, in a chamber, where it meets the hollow below.
     float reach = -eye.y / min(ray.y, -0.05);
@@ -127,21 +161,22 @@ float3 Render(float2 uv, float2 p)
     float middle = grown + NlGrow * (0.5 + along01);
     float pearlFar = exp(middle);
     float angle = 6.2832 * frac(along01) + turned;
-    float3 pearlAt = float3(pearlFar * cos(angle), -(NlDeep - NlPearl) * pearlFar, pearlFar * sin(angle));
+    float lifted = 0.5 + 0.5 * sin(NlWave - 9.0 * middle);
+    float3 pearlAt = float3(pearlFar * cos(angle), -(NlDeep - NlPearl - 0.034 * lifted) * pearlFar, pearlFar * sin(angle));
     float pearlSize = NlPearl * pearlFar;
 
     // Its own part of the music, and the light each beat sends out along the spiral.
     float out01 = saturate((middle + 2.5) / 3.6);
     float loud = nlLoudAt(out01);
     float run = flash * exp(-(out01 - since * 1.3) * (out01 - since * 1.3) * 22.0);
-    float3 glow = nlGlow(out01);
-    float alight = 0.15 + 0.4 * loud + 0.2 * run;
+    float3 glow = nlGlow(out01 * 1.4 - stepped);
+    float alight = 0.13 + 0.62 * loud + 0.55 * run + 0.1 * swell;
 
     // The cut face: polished mother-of-pearl, near white, with a sheen of rose, green, and blue that shifts along
     // the spiral, and the pearls' light seeping through the thin shell at its edges.
     float3 up = float3(0.0, 1.0, 0.0);
     float3 faceSheen = 0.5 + 0.5 * cos(6.2832 * (-ray.y * 1.2 + first.y + first.z / NlRooms + drift + float3(0.0, 0.33, 0.67)));
-    float3 facePearl = lerp(float3(0.88, 0.85, 0.8), faceSheen, 0.17);
+    float3 facePearl = lerp(float3(0.88, 0.85, 0.8), faceSheen, 0.14 + 0.3 * iris);
     float3 faceBounce = reflect(ray, up);
     float faceMirror = 0.05 + 0.95 * pow(1.0 - saturate(-ray.y), 5.0);
     float3 fromPearlTop = (top - pearlAt) / pearlFar;
@@ -165,7 +200,7 @@ float3 Render(float2 uv, float2 p)
         float3 n = normalize(float3(slope.x, 1.0, slope.y));
 
         float3 sheen = 0.5 + 0.5 * cos(6.2832 * (dot(n, -ray) * 1.2 + shell.y + shell.z / NlRooms + 0.35 * sunk + drift + float3(0.0, 0.33, 0.67)));
-        float3 pearl = lerp(float3(0.8, 0.77, 0.73), sheen, 0.26);
+        float3 pearl = lerp(float3(0.8, 0.77, 0.73), sheen, 0.2 + 0.4 * iris);
         float3 bounce = reflect(ray, n);
         float mirror = 0.05 + 0.95 * pow(1.0 - saturate(dot(n, -ray)), 5.0);
 
@@ -214,7 +249,7 @@ float3 Render(float2 uv, float2 p)
         float3 tint = 0.5 + 0.5 * cos(6.2832 * (dot(onGreat, -ray) * 0.9 + float3(0.0, 0.33, 0.67)));
         colour = lerp(float3(0.84, 0.81, 0.78), tint, 0.16) * (0.16 + 0.6 * saturate(dot(onGreat, lamp)))
                + nlLamps(offGreat) * (0.08 + 0.6 * rim) + pow(saturate(dot(offGreat, lamp)), 50.0) * 0.9
-               + nlGlow(0.0) * (0.05 + 0.3 * nlLoud(0.62)) * (0.3 + 0.7 * rim);
+               + nlGlow(-stepped) * (0.15 + 0.5 * nlLoud(0.62) + 0.5 * swell) * (0.3 + 0.7 * rim);
     }
 
     return colour * (1.0 - 0.2 * dot(p, p) / (1.0 + Aspect * Aspect));

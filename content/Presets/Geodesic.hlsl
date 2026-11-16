@@ -1,7 +1,9 @@
 // Name: Geodesic
-// A white ball tiled all over with hexagons that lift off like keys being played in reverse. The spectrum is wrapped
-// round the ball from bass at a wandering pole to treble at the far side, so each ring of tiles rises with its own
-// band, and every beat sends one ripple all the way round. The tiles' sides are painted in cyan, magenta and yellow.
+// A white ball tiled all over with hexagons that lift off and float above it, their sides painted in cyan, magenta,
+// and yellow. The tiles dance in time: a wave of lifting tiles runs round the ball from a wandering pole once a
+// beat, and each tile bobs with the bar in its own step. The music is wrapped round the ball from bass at the
+// pole to treble at the far side: each ring of tiles takes on its colour and the ball under it glows as its part
+// sounds. Every eight beats the tiles fly out together and settle back as a new tiling, coarse or fine.
 // Family: Ray traced
 // Tags: Geometric, 3D, Colourful
 // Added: 2026-11-15 19:40
@@ -12,22 +14,39 @@
 // of its three nearest tile middles is closest, so only three tiles ever need looking at.
 static const float Golden = 1.6180339887;
 static const float Ball = 0.92;                // radius of the ball when every tile is down
-static const float Splits = 4.0;               // tiles along each edge of the icosahedron
+static float Splits = 4.0;                     // tiles along each edge of the icosahedron: it changes every eight beats
+static float GeSound;                          // how loud the music is just now, taken across all its parts
+static float GeBurst;                          // 1 as the tiles fly out between one tiling and the next
+static float GeSince;                          // how far through the beat, 0 on the beat
 static const float Gap = 0.014;                // half the slit between two tiles
 static const float Thick = 0.075;              // how thick a tile is
 static const float Highest = 0.5;              // how far a tile can lift
 
-// How far the tile whose middle points along c has lifted.
+// One part of the music, with the high notes made up to stand level with the low ones.
+float gePart(float x)
+{
+    return spectrum(x) * (1.0 + 0.9 * x);
+}
+
+// How loud one part of the music is, judged against the music as a whole, so that a quiet song shows as plainly
+// as a loud one.
+float geLoud(float x)
+{
+    float heard = (gePart(x - 0.03) + gePart(x) + gePart(x + 0.03)) / 3.0;
+    return smoothstep(0.0, 1.0, saturate((heard - 0.55 * GeSound) / (0.8 * GeSound + 0.12)));
+}
+
+// How far the tile whose middle points along c has lifted. A wave of lifting runs round the ball from the pole
+// once a beat, each tile bobs with the bar in its own step, and all of them fly out between tilings.
 float geLift(float3 c, float3 pole)
 {
     float round0 = acos(clamp(dot(c, pole), -1.0, 1.0)) / PI;
-    float band = spectrum(0.02 + round0 * 0.62);
-    float wave = 0.5 + 0.5 * sin(round0 * 13.0 - Time * 0.8 - BeatGlide * 1.4);
-    float ripple = round0 - BeatPhase * 1.05;
-    float beatLight = SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat;
     float own = hash(c.xy * 37.0 + c.z * 91.0);
-    float lift = wave * wave * (0.015 + Level * 0.12) + band * (0.22 + 0.2 * own);
-    lift += exp(-ripple * ripple * 70.0) * 0.1 * beatLight + DropPulse * 0.08 * (0.4 + own);
+    float wave = 0.5 + 0.5 * cos(6.2832 * (round0 * 1.6 - BeatPhase) - wrap(Time * 0.45, 6.2832));
+    float bob = 0.5 + 0.5 * sin(6.2832 * (BarPhase + own) + Time * 0.3);
+    float lively = 0.45 + 0.75 * Intensity;
+    float lift = 0.012 + wave * wave * wave * (0.1 + 0.16 * own) * lively + bob * 0.07 * lively;
+    lift += BeatSwell * 0.035 + DropPulse * 0.1 * (0.4 + own) + GeBurst * (0.3 + 0.2 * own);
     return min(lift, Highest);
 }
 
@@ -122,9 +141,22 @@ float3 geInk(float t)
 
 float3 Render(float2 uv, float2 p)
 {
-    float turn = Time * 0.09 + BeatGlide * 0.03;
+    GeSound = 0.0;
+    [unroll]
+    for (int part = 0; part < 6; part++)
+        GeSound += gePart(0.08 + 0.12 * part) / 6.0;
+    GeSince = SongMapped > 0.25 ? BeatPhase : saturate(-log(max(Beat, 0.004)) / 2.75);
+
+    // Every eight beats the tiles fly out together and come back as a new tiling: four, two, six, or three
+    // tiles along each edge.
+    float phrase = wrap(BeatGlide, 4096.0) / 8.0;
+    float tiling = wrap(floor(phrase), 4.0);
+    Splits = tiling < 0.5 ? 4.0 : (tiling < 1.5 ? 2.0 : (tiling < 2.5 ? 6.0 : 3.0));
+    GeBurst = smoothstep(0.93, 1.0, frac(phrase)) + 1.0 - smoothstep(0.0, 0.07, frac(phrase));
+
+    float turn = wrap(Time * 0.09, 6.2832) + 0.14 * sin(6.2832 * BarPhase);
     float tilt = 0.45 * sin(Time * 0.061);
-    float3 eye = float3(sin(turn) * cos(tilt), sin(tilt), cos(turn) * cos(tilt)) * 4.2;
+    float3 eye = float3(sin(turn) * cos(tilt), sin(tilt), cos(turn) * cos(tilt)) * 3.8;
     float3 ray = cameraRay(eye, 0.0, float2(p.x, -p.y), 2.45 - DropPulse * 0.12, 0.0);
     float3 pole = normalize(float3(sin(Time * 0.11), 0.75 * sin(Time * 0.077 + 1.0), cos(Time * 0.11)));
     float gain = 0.9 + Intensity * 0.2;
@@ -173,7 +205,7 @@ float3 Render(float2 uv, float2 p)
     float3 side = normalize(float3(forward.z, 0.0, -forward.x));
     float3 up = cross(forward, side);
     float3 light = normalize(-forward * 0.6 + side * 0.45 + up * 0.65);
-    float beatLight = SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat;
+    float beatLight = BeatSwell;
     float r = length(x);
 
     float3 ca, cb, cc, lift;
@@ -216,14 +248,18 @@ float3 Render(float2 uv, float2 p)
     }
 
     float round0 = acos(clamp(dot(tile, pole), -1.0, 1.0)) / PI;
-    float3 paint = geInk(dot(tile, float3(0.41, 0.63, 0.29)) * 1.3 + round0 * 0.5 + Time * 0.03);
+    float3 paint = geInk(dot(tile, float3(0.41, 0.63, 0.29)) * 1.3 + round0 * 0.5 + Time * 0.03 + 0.27 * floor(phrase));
+    float loud = geLoud(0.06 + round0 * 0.56);
+    // The light each beat sends round the ball from the pole.
+    float passing = round0 - GeSince * 1.05;
+    float beam = exp(-passing * passing * 60.0) * smoothstep(0.0, 0.08, GeSince) * (1.0 - GeSince);
 
     if (r < Ball - Thick - 0.03 + touch * 3.0)
     {
         // The ball inside, seen between lifted tiles: lit by the colour of the tile above it.
         float under = saturate(1.0 + dot(normalize(x), ray));
         float3 inner = lerp(float3(0.05, 0.06, 0.12), paint, 0.35) * (0.35 + 0.5 * saturate(dot(normalize(x), light)));
-        inner += paint * (0.15 + Bass * 0.5 + beatLight * 0.25) * exp(-lifted * 9.0) * 0.5;
+        inner += paint * (0.2 + 1.3 * loud + 0.3 * beatLight + 0.8 * beam) * (0.35 + 0.65 * exp(-lifted * 9.0)) * 0.7;
         return (inner + under * 0.02) * gain;
     }
 
@@ -245,6 +281,8 @@ float3 Render(float2 uv, float2 p)
         float rim = smoothstep(0.0, 0.016, min(inside.x, inside.y) - Gap);
         shown = float3(0.93, 0.95, 1.0) * (0.46 + 0.2 * sky + 0.56 * lit) * shade;
         shown = lerp(shown * 0.8 + paint * 0.25, shown, rim);
+        // A ring of tiles takes on its colour as its part of the music sounds and as the beat's light passes.
+        shown = lerp(shown, paint * (0.75 + 0.5 * lit), saturate(0.36 * loud + 0.45 * beam));
     }
     else if (bottom)
     {
@@ -254,7 +292,7 @@ float3 Render(float2 uv, float2 p)
     {
         // Painted sides, brightest on the tiles that have lifted furthest.
         float out0 = saturate(lifted / 0.2);
-        shown = paint * (0.5 + 0.45 * lit + 0.25 * sky) * (0.75 + 0.5 * out0);
+        shown = paint * (0.5 + 0.45 * lit + 0.25 * sky) * (0.75 + 0.5 * out0 + 0.6 * loud + 0.5 * beam);
         shown = lerp(shown, float3(1.0, 1.0, 1.0), 0.12);
     }
 
