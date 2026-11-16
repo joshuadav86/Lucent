@@ -629,6 +629,7 @@ public sealed class AppSettings
         ["Epicycle Rosette"] = "Bubble Rings",
         ["Grand Spiral"] = "Plexus",
         ["Ember Terraces"] = "Phosphor Terraces",
+        ["Sakura Storm"] = "Flourish",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
