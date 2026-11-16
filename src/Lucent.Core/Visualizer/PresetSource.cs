@@ -117,7 +117,13 @@ public sealed record PresetSource(string Name, string FilePath, string Code)
         // "Phat_shifter" is two people, as MilkDrop's forums wrote collaborations.
         var author = name[..split].Trim().Replace("_", " + ", StringComparison.Ordinal);
         var title = name[(split + 3)..].Trim();
-        return title.Length == 0 || author.Length == 0 ? (name, null) : (title, author);
+        if (title.Length == 0 || author.Length == 0)
+        {
+            return (name, null);
+        }
+
+        // Lucent's own presets ("Lucent - Bass Bloom") go by their title alone: the app doesn't credit itself.
+        return (title, string.Equals(author, "Lucent", StringComparison.OrdinalIgnoreCase) ? null : author);
     }
 
     /// <summary>

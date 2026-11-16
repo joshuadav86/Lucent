@@ -107,7 +107,9 @@ public static class LibraryColumns
         LibraryColumn.Album => 136,
         LibraryColumn.Genre => 102,
         LibraryColumn.Year or LibraryColumn.Bpm => 60,
-        LibraryColumn.Track or LibraryColumn.Disc => 52,
+        // Track's room for "Track ▲", its heading in playlists.
+        LibraryColumn.Track => 68,
+        LibraryColumn.Disc => 52,
         LibraryColumn.Key => 56,
         LibraryColumn.Bitrate => 80,
         LibraryColumn.SampleRate => 76,
