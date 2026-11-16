@@ -14,9 +14,6 @@ static const float EnFoot = -1.3;       // the height the jets start from, just 
 static const float EnWall = 1.0;        // how far behind the jets the wall stands
 static const float EnShed = 0.5;        // how long between one drop parting from a jet and the next
 
-static float2 EnFrom[EnJets];           // where each jet starts: how far across, and how deep into the room
-static float2 EnThrow[EnJets];          // how fast it leaves, across and up
-
 float enLoud(float x)
 {
     return saturate((spectrum(x) - 0.42 + 0.5 * x) / 0.7);
@@ -28,11 +25,25 @@ float enSmoothMin(float a, float b, float k)
     return min(a, b) - h * h * k * 0.25;
 }
 
+// Where one jet starts (how far across, and how deep into the room) and how fast it leaves (across and up) just
+// now; the throws wander slowly, so the arcs lean and sway. Worked out where it's needed, one jet at a time, which
+// keeps the shader small: with all five jets written out in full, an Intel Mac took nine seconds to draw a frame.
+void enThrown(int n, out float2 from, out float2 thrown)
+{
+    float h1 = hash(float2(n, 2.3));
+    float h2 = hash(float2(n, 8.6));
+    float side = (n % 2 == 0) ? 1.0 : -1.0;
+    float across = ((n + 0.5) / EnJets * 2.0 - 1.0) * 0.62 * Aspect - side * 0.42;
+    from = float2(across, (h2 - 0.5) * 0.9);
+    thrown = float2(side * (0.42 + 0.2 * h1 + 0.1 * sin(Time * 0.19 + n * 2.1)), 1.9 + 0.3 * h2 + 0.1 * sin(Time * 0.23 + n * 1.3));
+}
+
 // How far a spot is outside one jet; also how long the paint nearest it has been in the air.
 float enJet(float3 p, int n, out float aloft)
 {
-    float2 from = EnFrom[n];
-    float2 thrown = EnThrow[n];
+    float2 from;
+    float2 thrown;
+    enThrown(n, from, thrown);
     aloft = (p.x - from.x) / thrown.x;
 
     // The unbroken stream, from the foot to a little past the top of its arc. Paint thickens where it slows.
@@ -70,7 +81,8 @@ float enPaint(float3 p, out int which, out float aloft)
     float d = 1e3;
     which = 0;
     aloft = 0.0;
-    [unroll]
+    // One jet at a time, rather than all five written out (see enThrown).
+    [loop]
     for (int n = 0; n < EnJets; n++)
     {
         float air;
@@ -86,19 +98,19 @@ float enPaint(float3 p, out int which, out float aloft)
     return d * 0.7;
 }
 
-float enPaintOnly(float3 p)
+// The jets never run into one another, so the surface at a spot is the nearest jet's alone.
+float enJetOnly(float3 p, int n)
 {
-    int which;
     float aloft;
-    return enPaint(p, which, aloft);
+    return enJet(p, n, aloft);
 }
 
-float3 enNormal(float3 p)
+float3 enNormal(float3 p, int n)
 {
     float2 h = float2(0.003, 0.0);
-    return normalize(float3(enPaintOnly(p + h.xyy) - enPaintOnly(p - h.xyy),
-                            enPaintOnly(p + h.yxy) - enPaintOnly(p - h.yxy),
-                            enPaintOnly(p + h.yyx) - enPaintOnly(p - h.yyx)));
+    return normalize(float3(enJetOnly(p + h.xyy, n) - enJetOnly(p - h.xyy, n),
+                            enJetOnly(p + h.yxy, n) - enJetOnly(p - h.yxy, n),
+                            enJetOnly(p + h.yyx, n) - enJetOnly(p - h.yyx, n)));
 }
 
 // The white studio the wet paint mirrors: a bright lamp box up and to the left, a paler one to the right, and a
@@ -129,18 +141,6 @@ float3 Render(float2 uv, float2 p)
     float since = frac(BeatGlide);
     float flash = smoothstep(0.0, 0.1, since) * (1.0 - since) * (1.0 - since);
 
-    // Where each jet starts and how it is thrown just now; the throws wander slowly, so the arcs lean and sway.
-    [unroll]
-    for (int n = 0; n < EnJets; n++)
-    {
-        float h1 = hash(float2(n, 2.3));
-        float h2 = hash(float2(n, 8.6));
-        float side = (n % 2 == 0) ? 1.0 : -1.0;
-        float across = ((n + 0.5) / EnJets * 2.0 - 1.0) * 0.62 * Aspect - side * 0.42;
-        EnFrom[n] = float2(across, (h2 - 0.5) * 0.9);
-        EnThrow[n] = float2(side * (0.42 + 0.2 * h1 + 0.1 * sin(Time * 0.19 + n * 2.1)), 1.9 + 0.3 * h2 + 0.1 * sin(Time * 0.23 + n * 1.3));
-    }
-
     float3 eye = float3(0.0, 0.0, -5.0);
     float3 ray = normalize(float3(p.x, -p.y, 5.0));
     float3 lamp = normalize(float3(-0.45, 0.62, -0.64));
@@ -169,7 +169,7 @@ float3 Render(float2 uv, float2 p)
     if (struck > 0.5)
     {
         float3 at = eye + ray * t;
-        float3 n = enNormal(at);
+        float3 n = enNormal(at, which);
 
         // Each jet's paint runs pale when its part of the music is quiet and rich when it is loud.
         float loud = enLoud(0.08 + 0.6 * (which + 0.5) / EnJets);

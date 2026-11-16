@@ -51,10 +51,12 @@ internal static partial class LayoutCheck
     {
         var lines = new List<string>();
         var failed = false;
+        StartDiary(main, visuals, file);
         try
         {
             if (Environment.GetEnvironmentVariable("LUCENT_LAYOUT_CHECK_REOPENED") == "1")
             {
+                Doing("the windows as they reopened");
                 await Task.Delay(TimeSpan.FromSeconds(2));
                 lines.AddRange(CheckReopened(main, visuals, File.Exists(file + ".visuals") ? File.ReadAllText(file + ".visuals") : null));
             }
@@ -84,6 +86,7 @@ internal static partial class LayoutCheck
             visuals.SetTop(visuals.Top() + 40);
             await Task.Delay(TimeSpan.FromMilliseconds(500));
 
+            Doing("the app menu, and minimizing");
             lines.AddRange(CheckAppMenu());
             lines.AddRange(await CheckMinimizeAsync(main));
 
@@ -98,8 +101,10 @@ internal static partial class LayoutCheck
             lines.Add($"MISMATCH the check failed: {ex}");
         }
 
+        lines.Add(DiarySummary());
         lines.Add(failed ? "FAILED" : "PASSED");
         await File.WriteAllLinesAsync(file, lines);
+        EndDiary();
         Dispatcher.UIThread.Post(main.Close);
     }
 
@@ -196,6 +201,7 @@ internal static partial class LayoutCheck
 
         var before = Describe(visuals);
         var playerWidth = main.ActualWidth();
+        Doing("single window on");
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var inMain = main.GetVisualDescendants().OfType<MetalView>().Any();
@@ -236,6 +242,7 @@ internal static partial class LayoutCheck
         var blockBottom = new[] { panel, equalizerPanel }.Max(r => r?.Bottom ?? frame.Y);
         var dx = OntoScreen(blockLeft, blockRight, screen.X, screen.Right);
         var dyMost = OntoScreen(frame.Y, blockBottom, screen.Y, screen.Bottom);
+        Doing("single window off");
         SingleWindow.Toggle?.Invoke();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var back = !SingleWindow.IsOn() && visuals.GetVisualDescendants().OfType<MetalView>().Any() && IsOnScreen(visuals);
@@ -338,6 +345,7 @@ internal static partial class LayoutCheck
     private static async Task<List<string>> CheckClassicAsync(MainWindow main)
     {
         const string label = "classic skin";
+        Doing(label);
         var lines = new List<string>();
         if (SingleWindow.IsOn())
         {
@@ -514,6 +522,7 @@ internal static partial class LayoutCheck
     {
         var label = "single window off while full screen" + (style == TileStyle.QueueBeside ? ", player on the left, queue beside it" : string.Empty)
             + (fold ? ", the equalizer folded" : string.Empty);
+        Doing(label);
         var lines = new List<string>();
         var closeAgain = fold ? main.OpenLibraryUnderEqualizer() : main.OpenEveryWindow();
         await Task.Delay(TimeSpan.FromSeconds(2));
@@ -616,6 +625,7 @@ internal static partial class LayoutCheck
     /// </summary>
     private static async Task<List<string>> CheckFoldAsync(MainWindow main, string label)
     {
+        Doing($"{label}: folding the equalizer");
         var lines = new List<string>();
         var before = main.LaidOutPanels.ToDictionary(entry => entry.Key, entry => entry.Value);
         if (EqualizerWindow.Current is not { IsVisible: true } equalizer || !before.TryGetValue("Equalizer", out var was))
@@ -704,6 +714,7 @@ internal static partial class LayoutCheck
     private static async Task<List<string>> CheckStretchedAsync(MainWindow main, bool equalizer)
     {
         var label = equalizer ? "with just the equalizer and queue" : "with just the queue";
+        Doing(label);
         var lines = new List<string>();
         if (SingleWindow.IsOn())
         {
@@ -762,6 +773,7 @@ internal static partial class LayoutCheck
         lines.Add($"skins {label}: before, " + DescribeAll(before));
         foreach (var skin in SkinsToCheck)
         {
+            Doing($"skins {label}: {skin}");
             main.ChooseSkin(skin);
             await Task.Delay(TimeSpan.FromSeconds(1.5));
             var now = PlacesNow(main, visuals);
@@ -959,6 +971,7 @@ internal static partial class LayoutCheck
     /// </summary>
     private static async Task<List<string>> CheckFillAsync(MainWindow main, string label)
     {
+        Doing($"full screen and back, {label}");
         var before = Placement.BoundsOf(main);
         var screen = Placement.WorkArea(main);
         main.ToggleLucentFullScreen();
@@ -1033,6 +1046,7 @@ internal static partial class LayoutCheck
     /// <summary>Gives the layout and AppKit a few seconds to catch up, then reports how it ended up.</summary>
     private static async Task<(bool Matched, string Line)> SettleAsync(Window visuals, string label)
     {
+        Doing(label);
         var result = (Matched: false, Line: string.Empty);
         for (var attempt = 0; attempt < 24; attempt++)
         {

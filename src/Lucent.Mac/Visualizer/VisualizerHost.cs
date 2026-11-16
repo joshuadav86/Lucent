@@ -264,6 +264,13 @@ public sealed class VisualizerHost : Border, IDisposable
         }
     }
 
+    /// <summary>
+    /// How the engine is getting on, for the launch check's diary (LayoutCheck.Diary.cs), read from any thread; null
+    /// when there's no engine.
+    /// </summary>
+    internal (string Showing, long Frames, int Compiled, int Visuals, string Compiling, int Compilers)? EngineProgress() =>
+        _engine?.Progress();
+
     /// <summary>What the screen under the visuals can do, as last checked.</summary>
     public DisplayInfo Display => _display;
 
