@@ -55,6 +55,13 @@ float mdRaised(float kind, float2 q, float3 v, float pads)
     return 1.0;
 }
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float mdLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 float3 Render(float2 uv, float2 p)
 {
     float beatLight = SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat;
@@ -76,8 +83,8 @@ float3 Render(float2 uv, float2 p)
 
     // Each panel listens to three bands of its own, and idles a little when the music is quiet.
     float3 bands = float3(hash(cell + 5.1), hash(cell + 9.4), hash(cell + 2.8));
-    float3 v = float3(spectrum(0.03 + bands.x * 0.7), spectrum(0.03 + bands.y * 0.7), spectrum(0.03 + bands.z * 0.7));
-    v = saturate(0.14 + v * 1.05 + 0.1 * sin(Time * (0.3 + bands * 0.5) + bands * 40.0));
+    float3 v = float3(mdLoud(0.07 + bands.x * 0.62), mdLoud(0.07 + bands.y * 0.62), mdLoud(0.07 + bands.z * 0.62));
+    v = saturate(0.08 + v * 0.9 + 0.08 * sin(Time * (0.3 + bands * 0.5) + bands * 40.0));
 
     // The panel: white enamel, a dark seam round it, and a screw in each corner.
     float3 colour = float3(0.98, 0.98, 1.0) * (0.9 + 0.1 * hash(cell + 21.0)) * (1.0 + 0.04 * dot(q, Lamp));
@@ -122,11 +129,11 @@ float3 Render(float2 uv, float2 p)
     {
         // Speaker grille: a sunk disc of holes that swell and glow with the bass.
         float disc = length(q) - 0.8;
-        float thump = Bass * 0.6 + BeatSwell * 0.4;
+        float thump = 0.3 * (mdLoud(0.08) + mdLoud(0.14)) + BeatSwell * 0.4;
         float ripple = 0.5 + 0.5 * sin(length(q) * 9.0 - BeatPhase * 2.0 * PI);
         float2 h = rotate(q, 0.7854) * 7.0;
         float hole = length(frac(h) - 0.5) - (0.26 + 0.07 * thump * ripple);
-        float3 mesh = lerp(float3(0.56, 0.57, 0.61), lerp(float3(0.07, 0.07, 0.09), Amber * 0.6, thump * ripple * 0.7), smoothstep(px * 7.0, -px * 7.0, hole));
+        float3 mesh = lerp(float3(0.56, 0.57, 0.61), lerp(float3(0.07, 0.07, 0.09), Amber * 0.85, saturate(thump * ripple)), smoothstep(px * 7.0, -px * 7.0, hole));
         mesh *= 1.0 - 0.45 * smoothstep(-0.07, 0.03, length(q - Lamp * 0.07) - 0.8);
         colour = lerp(colour, mesh, smoothstep(px, -px, disc));
         colour = lerp(colour, float3(0.7, 0.71, 0.75), smoothstep(px, -px, abs(disc) - 0.02));
@@ -187,7 +194,7 @@ float3 Render(float2 uv, float2 p)
         float before = wrap(now - 1.0 + count, count);
         float through = frac(BeatGlide);
         float glow = (abs(k - now) < 0.5 ? 1.0 - 0.6 * through : 0.0) + (abs(k - before) < 0.5 ? 0.4 * (1.0 - through) : 0.0);
-        glow += spectrum(0.03 + k / count * 0.7) * 0.35;
+        glow += mdLoud(0.07 + k / count * 0.62) * 0.8;
         paint = lerp(paint, Yellow, saturate(glow));
     }
 

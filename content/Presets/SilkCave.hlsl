@@ -26,6 +26,13 @@ float scMap(float3 p)
     return abs(broad - fine * 0.42 + 0.12) * 0.7;
 }
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float scLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 float3 Render(float2 uv, float2 p)
 {
     float travelled = Time * 0.26 + BeatGlide * 0.11;
@@ -35,7 +42,7 @@ float3 Render(float2 uv, float2 p)
 
     // The wisp leads the way, bobbing as it goes.
     float3 wisp = eye + float3(0.22 * sin(Time * 0.31), 0.06 + 0.1 * sin(Time * 0.43), 2.3);
-    float flare = 0.85 + BeatSwell * 0.5 + Bass * 0.06 + DropPulse * 0.5;
+    float flare = 0.76 + BeatSwell * 0.25 + 0.1 * (scLoud(0.08) + scLoud(0.14)) + DropPulse * 0.5;
     float hueDrift = Time * 0.03 + BeatGlide * 0.05;
 
     float3 gathered = 0.0;
@@ -52,7 +59,7 @@ float3 Render(float2 uv, float2 p)
         if (below > 0.5)
         {
             at.y = 2.0 * WaterLine - at.y;
-            at.x += 0.02 * sin(at.z * 9.0 + Time * 1.1) * (1.0 + Treble);
+            at.x += 0.02 * sin(at.z * 9.0 + Time * 1.1) * (0.8 + 1.4 * scLoud(0.66));
         }
 
         float d = scMap(at);
@@ -64,8 +71,8 @@ float3 Render(float2 uv, float2 p)
         float3 silk = lerp(float3(0.36, 0.14, 0.78), float3(0.96, 0.3, 0.3), smoothstep(0.0, 0.4, warmth));
         silk = lerp(silk, float3(1.0, 0.56, 0.14), smoothstep(0.3, 0.75, warmth));
         silk = lerp(silk, float3(1.0, 0.84, 0.6), smoothstep(0.7, 1.0, warmth));
-        float band = spectrum(0.03 + frac(at.z * 0.09) * 0.6);
-        float lit = (0.12 + nearWisp * flare * 0.4) * (0.86 + band * 0.3 + Bass * 0.06);
+        float band = scLoud(0.07 + frac(at.z * 0.09) * 0.6);
+        float lit = (0.12 + nearWisp * flare * 0.4) * (0.68 + band * 0.62);
         float soft = smoothstep(0.15, 0.9, t) * exp(-t * 0.22);
         float stride = max(d, 0.012) * 0.8 + 0.01;
         gathered += silk * lit * soft * (below > 0.5 ? 0.3 : 1.0) * stride * 0.0042 / (d * d + 0.0009);
@@ -85,7 +92,7 @@ float3 Render(float2 uv, float2 p)
     float2 off = float2(p.x, -p.y) - on;
     float core = exp(-dot(off, off) * 900.0) + 0.16 * exp(-dot(off, off) * 60.0);
     float twinkle = exp(-abs(off.x) * 55.0) * exp(-abs(off.y) * 7.0) + exp(-abs(off.y) * 55.0) * exp(-abs(off.x) * 7.0);
-    colour += float3(1.0, 0.8, 0.45) * (core + twinkle * 0.22 * (0.4 + Treble + beatLight * 0.6)) * flare;
+    colour += float3(1.0, 0.8, 0.45) * (core + twinkle * 0.22 * (0.4 + 1.2 * scLoud(0.66) + beatLight * 0.6)) * flare;
     float2 glint = float2(off.x, -p.y - (2.0 * (WaterLine / toward.z * 1.35) - on.y));
     colour += float3(1.0, 0.7, 0.35) * exp(-glint.x * glint.x * 260.0 - glint.y * glint.y * 40.0) * 0.22 * flare;
 

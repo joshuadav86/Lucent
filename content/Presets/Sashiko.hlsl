@@ -55,6 +55,13 @@ float2 skCorner(float2 g)
     return best;
 }
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float skLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 float3 Render(float2 uv, float2 p)
 {
     // Slow folds in the cloth: they shift the pattern a little and catch the light on one side.
@@ -67,7 +74,7 @@ float3 Render(float2 uv, float2 p)
     g += float2(fold, fold * 0.6) + float2(Time * 0.012, Time * 0.007);
 
     float thread = min(skLines(g), min(skLines(rotate(g, PI / 3.0)), skLines(rotate(g, -PI / 3.0))));
-    float width = 0.0062 + 0.0012 * Bass + 0.001 * BeatSwell;
+    float width = 0.0052 + 0.0015 * (skLoud(0.08) + skLoud(0.14)) + 0.001 * BeatSwell;
     float edge = pixelSize();
 
     // The cloth: indigo, with its weave, uneven dye, and the shade of the folds.
@@ -79,8 +86,8 @@ float3 Render(float2 uv, float2 p)
     // The thread: cream, or a colour while the star it belongs to is loud.
     float2 corner = skCorner(g);
     float pick = hash(corner * 7.3 + 1.9);
-    float heard = spectrum(0.04 + 0.6 * hash(corner * 3.1 + 5.7));
-    float dyed = smoothstep(0.3, 0.75, heard + Intensity * 0.12);
+    float heard = skLoud(0.07 + 0.6 * hash(corner * 3.1 + 5.7));
+    float dyed = smoothstep(0.25, 0.8, heard + Intensity * 0.12);
     float3 accent = pick < 0.34 ? float3(1.6, 0.42, 0.28) : (pick < 0.67 ? float3(1.6, 1.08, 0.22) : float3(0.3, 1.3, 0.85));
     float3 yarn = lerp(float3(1.02, 0.98, 0.88), accent, dyed);
 

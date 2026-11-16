@@ -18,6 +18,13 @@ float2 fkSite(float2 cell)
     return 0.5 + 0.36 * sin(Time * 0.045 + random * 2.0 * PI);
 }
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float kgLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 float3 Render(float2 uv, float2 p)
 {
     float2 flat = rotate(p, 0.2 + Time * 0.006) * Shards * 0.5 + float2(Time * 0.01, 3.7);
@@ -90,11 +97,11 @@ float3 Render(float2 uv, float2 p)
     float2 lamp = float2(sin(Time * 0.11) * Aspect * 0.55, cos(Time * 0.083) * 0.5);
     float2 seen = p - lamp + tilt;
     float gloss = exp(-dot(seen, seen) * 2.4);
-    float band = spectrum(0.02 + own * 0.72);
-    float3 colour = glaze * (0.7 + band * 0.9) + float3(0.5, 0.68, 0.9) * gloss * (0.1 + 0.16 * mottle);
+    float band = kgLoud(0.07 + own * 0.62);
+    float3 colour = glaze * (0.6 + band * 0.85) + float3(0.5, 0.68, 0.9) * gloss * (0.1 + 0.16 * mottle);
 
     // The gold: a raised bead, wider in some places than others, swelling with the bass.
-    float width = Seam * (0.8 + 0.8 * noise(flat * 2.7 + 7.0)) * (1.0 + Bass * 0.35 + DropPulse * 0.5);
+    float width = Seam * (0.8 + 0.8 * noise(flat * 2.7 + 7.0)) * (0.8 + 0.4 * (kgLoud(0.08) + kgLoud(0.14)) + DropPulse * 0.5);
     float pixel = pixelSize() * Shards * 0.5;
     float gold = smoothstep(width + pixel, width - pixel, toSeam);
     // The shard's edge is chipped a shade darker just before the gold.
@@ -109,19 +116,19 @@ float3 Render(float2 uv, float2 p)
     float grain = fbm(flat * 30.0);
 
     // A seam belongs to the two shards it joins, and listens to a band of its own.
-    float seamBand = spectrum(0.02 + hash((shard + other) * 0.237 + shard * other * 0.011 + 2.3) * 0.72);
+    float seamBand = kgLoud(0.07 + hash((shard + other) * 0.237 + shard * other * 0.011 + 2.3) * 0.62);
     float out0 = length(p);
     float run = out0 - BeatPhase * 2.0;
     float glint = exp(-run * run * 9.0) * (SongMapped > 0.0 ? 0.35 + Beat * 0.65 : Beat);
     float lampOnGold = exp(-dot(p - lamp, p - lamp) * 1.1);
-    float bright = 0.5 + Bass * 0.45 + seamBand * 0.9 + glint * 1.0 + lampOnGold * 0.45 + DropPulse * 0.5;
+    float bright = 0.45 + 0.22 * (kgLoud(0.08) + kgLoud(0.14)) + seamBand * 1.2 + glint * 1.0 + lampOnGold * 0.45 + DropPulse * 0.5;
     float3 metal = float3(0.95, 0.56, 0.1) * (0.12 + 0.7 * lit) * (0.7 + 0.5 * grain);
     metal += float3(1.0, 0.9, 0.58) * spark * (0.5 + 0.7 * grain);
     colour = lerp(colour, metal * bright, gold);
 
     // Flecks of gold dust caught in the glaze beside the seams.
     float fleck = step(0.988, hash(floor(flat * 85.0) * 0.37 + 4.4)) * smoothstep(width * 4.5, width * 1.2, toSeam);
-    colour += float3(1.0, 0.75, 0.3) * fleck * (0.2 + Treble * 0.9) * (1.0 - gold);
+    colour += float3(1.0, 0.75, 0.3) * fleck * (0.2 + 1.2 * kgLoud(0.66)) * (1.0 - gold);
 
     return colour * (0.9 + Intensity * 0.25) * (1.0 - dot(uv - 0.5, uv - 0.5) * 0.9);
 }
