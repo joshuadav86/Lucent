@@ -36,6 +36,7 @@ public sealed class VisualizerHost : Border, IDisposable
     private bool _morphTransitionsOnly;
     private bool _hdr;
     private IReadOnlyCollection<string>? _autoCycleNames;
+    private IReadOnlyList<string>? _autoCycleRecent;
     private IReadOnlyList<PresetSource> _presets = Array.Empty<PresetSource>();
     private DisplayInfo _display = DisplayInfo.Standard;
 
@@ -94,6 +95,37 @@ public sealed class VisualizerHost : Border, IDisposable
                 _engine.AutoCycleChoices = IndicesOf(_engine.PresetNames, value);
             }
         }
+    }
+
+    /// <summary>The visuals shown most recently (by name, newest first), which Auto leaves alone; null for none.</summary>
+    public IReadOnlyList<string>? AutoCycleRecent
+    {
+        get => _autoCycleRecent;
+        set
+        {
+            _autoCycleRecent = value;
+            if (_engine is not null)
+            {
+                _engine.AutoCycleRecent = RecentOf(_engine.PresetNames, value);
+            }
+        }
+    }
+
+    /// <summary>The recent visuals as indexes, newest first still; ones that are gone since are left out.</summary>
+    private static IReadOnlyCollection<int>? RecentOf(IReadOnlyList<string> names, IReadOnlyList<string>? recent)
+    {
+        if (recent is null || recent.Count == 0)
+        {
+            return null;
+        }
+
+        var places = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < names.Count; index++)
+        {
+            places.TryAdd(names[index], index);
+        }
+
+        return recent.Where(places.ContainsKey).Select(name => places[name]).ToList();
     }
 
     private static IReadOnlyCollection<int>? IndicesOf(IReadOnlyList<string> names, IReadOnlyCollection<string>? chosen)
@@ -360,6 +392,7 @@ public sealed class VisualizerHost : Border, IDisposable
         engine.AutoCycleSeconds = _autoCycleSeconds;
         engine.MorphTransitionsOnly = _morphTransitionsOnly;
         engine.AutoCycleChoices = IndicesOf(engine.PresetNames, _autoCycleNames);
+        engine.AutoCycleRecent = RecentOf(engine.PresetNames, _autoCycleRecent);
         engine.Pointer = Pointer;
         engine.PresetChanged += index => Dispatcher.UIThread.Post(() =>
         {

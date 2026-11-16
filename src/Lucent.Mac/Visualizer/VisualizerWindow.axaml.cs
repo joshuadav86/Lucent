@@ -212,6 +212,8 @@ public partial class VisualizerWindow : ToolWindow
         PresetList.SelectedItem = _shown.Contains(current) && _rows.Contains(current) ? current : null;
         _settings.LastVisual = current.Name;
         _history.Shown(current.Name);
+        _settings.RecentlyShownVisuals = RecentVisuals.Add(_settings.RecentlyShownVisuals, current.Name);
+        _host.AutoCycleRecent = RecentVisuals.Newest(_settings.RecentlyShownVisuals, _settings.SkipRecentVisuals);
         UpdateFavoriteButton();
     }
 

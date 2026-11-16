@@ -314,6 +314,12 @@ public sealed class AppSettings
 
     public int AutoCycleSeconds { get; set; } = 25;
 
+    /// <summary>How many of the visuals shown most recently Auto leaves alone, so one doesn't come back soon after it played; 0 for none.</summary>
+    public int SkipRecentVisuals { get; set; } = 50;
+
+    /// <summary>The visuals shown most recently, oldest first, kept between runs for <see cref="SkipRecentVisuals"/>.</summary>
+    public string[] RecentlyShownVisuals { get; set; } = Array.Empty<string>();
+
     public TransitionSpeed TransitionSpeed { get; set; } = TransitionSpeed.Smooth;
 
     public bool MorphTransitionsOnly { get; set; }

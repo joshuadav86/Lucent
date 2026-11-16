@@ -85,6 +85,21 @@ public partial class VisualizerWindow
         }
 
         menu.Items.Add(often);
+        var skip = new MenuItem { Header = "Don't repeat the last", ToolTip = MenuTips.SkipRecent };
+        foreach (var count in RecentVisuals.Choices.Prepend(0))
+        {
+            var choice = new MenuItem { Header = RecentVisuals.Text(count), IsChecked = count == _settings.SkipRecentVisuals };
+            choice.Click += (_, _) =>
+            {
+                _settings.SkipRecentVisuals = count;
+                Player?.ApplyVisualizerSettings();
+                Player?.ShowOptionsState();
+                _settings.Save();
+            };
+            skip.Items.Add(choice);
+        }
+
+        menu.Items.Add(skip);
         if (Player is { } player)
         {
             menu.Items.Add(new Separator());
