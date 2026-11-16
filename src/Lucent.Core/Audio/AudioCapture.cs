@@ -37,6 +37,13 @@ public sealed class AudioCapture
     private int _editorLatencyMs;
     private int _playerRate = 44100;
     private int _externalRate = 44100;
+    private float _externalLift = 1f;
+    private float[] _lifted = [];
+    private float[] _liftedLeft = [];
+    private float[] _liftedRight = [];
+
+    /// <summary>At most this much (30 dB) is put back for a volume turned down, so near-silence isn't blown up.</summary>
+    public const double MaxLiftDecibels = 30;
 
     /// <summary>How far ahead of the speakers the audio is decoded, in milliseconds.</summary>
     public const int OutputLatencyMs = 150;
@@ -182,15 +189,52 @@ public sealed class AudioCapture
         }
     }
 
+    /// <summary>
+    /// The volume already applied to other apps' sound before it's heard here, as a straight multiplier: the controlled
+    /// app's own volume (Spotify's, say), or Lucent's own volume while its music is part of every app's sound. Other apps'
+    /// sound is turned back up by as much (at most <see cref="MaxLiftDecibels"/>), so the visuals and analyzer see each
+    /// song at its true loudness whatever the volume bar says, and the bar never has to touch the computer's volume.
+    /// </summary>
+    public void SetExternalVolume(double volume)
+    {
+        var floor = Math.Pow(10, -MaxLiftDecibels / 20);
+        // Muted: nothing arrives to turn up, so it's left as heard.
+        var lift = volume <= 0 || volume >= 0.999 ? 1f : (float)(1 / Math.Max(volume, floor));
+        Volatile.Write(ref _externalLift, lift);
+    }
+
     /// <summary>Adds other apps' sound, as <see cref="Write(ReadOnlySpan{float}, ReadOnlySpan{float}, ReadOnlySpan{float})"/> does the player's.</summary>
     public void WriteExternal(ReadOnlySpan<float> samples, ReadOnlySpan<float> left, ReadOnlySpan<float> right)
     {
         lock (_lock)
         {
-            if (_external && !_live && _editors == 0)
+            if (!_external || _live || _editors > 0)
+            {
+                return;
+            }
+
+            var lift = Volatile.Read(ref _externalLift);
+            if (lift == 1f)
             {
                 Append(samples, left, right);
+                return;
             }
+
+            if (_lifted.Length < samples.Length)
+            {
+                _lifted = new float[samples.Length];
+                _liftedLeft = new float[samples.Length];
+                _liftedRight = new float[samples.Length];
+            }
+
+            for (var i = 0; i < samples.Length; i++)
+            {
+                _lifted[i] = samples[i] * lift;
+                _liftedLeft[i] = left[i] * lift;
+                _liftedRight[i] = right[i] * lift;
+            }
+
+            Append(_lifted.AsSpan(0, samples.Length), _liftedLeft.AsSpan(0, samples.Length), _liftedRight.AsSpan(0, samples.Length));
         }
     }
 
