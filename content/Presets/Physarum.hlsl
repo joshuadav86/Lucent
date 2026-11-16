@@ -1,5 +1,5 @@
 // Name: Physarum
-// Three colonies of glowing slime mould spread across the dark, each following its own scent until they knit together into living, branching networks of rose, cyan and gold. The bass scatters food for them to race towards, and every beat shakes them loose to find new paths.
+// Three colonies of glowing slime mould spread across the dark, each following its own scent until they knit together into living, branching networks of rose, cyan and gold. Each colony glows with its own part of the music, rose for the bass, cyan for the middle and gold for the treble, and all of them run faster the louder it gets. On every beat the whole network veers together, one way and then the other, so its strands snake in time, and ripples of brightness run out along the strands, each in its own colour, from three places that wander. The bass scatters food there for them to race towards.
 // Family: Particles
 // Tags: Colourful
 // Added: 2026-10-17 22:02
@@ -32,17 +32,49 @@ float3 scentWeights(float colony)
     return float3(-0.019, 1.659, -1.76);
 }
 
-// Food: soft pools of light that wander slowly and swell with the bass. Every colony loves them.
+// One part of the music, with the high notes made up to stand level with the low ones.
+float phPart(float x)
+{
+    return spectrum(x) * (1.0 + 0.9 * x);
+}
+
+// How loud one part of the music is, judged against the music as a whole, so that a quiet song shows as
+// plainly as a loud one.
+float phLoud(float x)
+{
+    float sound = (phPart(0.08) + phPart(0.26) + phPart(0.44) + phPart(0.62)) * 0.25;
+    return saturate((phPart(x) - 0.62 * sound) / (0.6 * sound + 0.1));
+}
+
+// Where one of the three feeding places is. They wander slowly.
+float2 foodPlace(float i)
+{
+    return float2(sin(Time * 0.071 + i * 2.1) * Aspect * 0.7, sin(Time * 0.053 + i * 1.7 + 0.6) * 0.7);
+}
+
+// Food: soft pools of scent, unseen, that swell with the bass. Every colony loves them.
 float foodAt(float2 p)
 {
     float total = 0.0;
     [unroll]
     for (int i = 0; i < 3; i++)
-    {
-        float2 centre = float2(sin(Time * 0.071 + i * 2.1) * Aspect * 0.7, sin(Time * 0.053 + i * 1.7 + 0.6) * 0.7);
-        total += glow(length(p - centre), 14.0);
-    }
+        total += glow(length(p - foodPlace(i)), 14.0);
     return total * (Bass * Bass + Beat * 0.15);
+}
+
+// The ripple each beat sends out from the feeding places: 1 on its crest, which widens as the beat goes by and
+// fades before the next. With a steady beat to follow the ripple keeps pace with it; without one it follows how
+// far the last beat has faded.
+float rippleAt(float2 p)
+{
+    float since = SongMapped > 0.25 ? BeatPhase : saturate(-log(max(Beat, 0.004)) / 2.75);
+    float fade = smoothstep(0.0, 0.1, since) * (1.0 - since);
+    float nearest = 100.0;
+    [unroll]
+    for (int i = 0; i < 3; i++)
+        nearest = min(nearest, length(p - foodPlace(i)));
+    float crest = nearest - since * 1.1;
+    return fade * exp(-crest * crest * 22.0);
 }
 
 float smell(float2 at, float3 weights)
@@ -97,13 +129,12 @@ void Simulate(inout Particle particle, uint id)
     }
     heading += wander * 0.2;
 
-    // On a beat the colony is startled: agents swing off in new directions, then re-form.
-    if (Beat > 0.7)
-    {
-        heading += (random(id, 6.0) - 0.5) * 2.4 * Beat * (0.5 + Bass * 0.6);
-    }
+    // On each beat the whole colony veers together, one way on one beat and the other way on the next, so
+    // the networks snake in time with the music.
+    float way = wrap(BeatCount, 2.0) < 0.5 ? 1.0 : -1.0;
+    heading += way * BeatSwell * 2.6 * dt * (0.6 + 0.8 * fixedRandom(id, 8.0));
 
-    float pace = Speed * (0.8 + Level * 0.6 + Beat * 0.4) * (0.85 + fixedRandom(id, 7.0) * 0.3);
+    float pace = Speed * (0.7 + Level * 1.1 + BeatSwell * 0.3) * (0.85 + fixedRandom(id, 7.0) * 0.3);
     float2 stride = float2(cos(heading), sin(heading)) * pace * dt;
     particle.position.xy = wrapScreen(at + stride);
     particle.velocity.xy = stride / max(dt, 1e-4);
@@ -115,9 +146,11 @@ Sprite Show(Particle particle, uint id)
     Sprite sprite = (Sprite)0;
     sprite.position = particle.position.xy;
     sprite.size = 1.0;
-    // Each colony's scent is a little stronger when its band of the spectrum is loud.
-    float level = spectrum(0.05 + particle.data.y * 0.3);
-    sprite.colour = colonyColour(particle.data.y) * 0.022 * (0.8 + level * 0.6);
+    // Each colony glows with its own part of the music: rose for the bass, cyan for the middle, gold for the
+    // treble. Where a beat's ripple is passing, the strand shines brighter in its own colour.
+    float level = phLoud(0.08 + particle.data.y * 0.27);
+    float ripple = rippleAt(particle.position.xy);
+    sprite.colour = colonyColour(particle.data.y) * 0.022 * (0.4 + level * 1.7 + BeatSwell * 0.4 + ripple * 1.2);
     sprite.colour *= saturate(particle.age * 2.0);
     return sprite;
 }
@@ -133,5 +166,5 @@ float3 Render(float2 uv, float2 p)
 
     // A very faint floor so the empty space reads as deep, not dead.
     float3 floorTone = float3(0.0006, 0.0004, 0.0012);
-    return trail + particles(uv) + float3(0.9, 0.85, 0.75) * foodAt(p) * 0.012 + floorTone;
+    return trail + particles(uv) + floorTone;
 }

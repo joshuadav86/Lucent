@@ -34,8 +34,9 @@ float3x3 rotationFrom(float3 angles)
     return mul(z, mul(y, x));
 }
 
-// Where each piece of glass floats and how it's turned. They drift on slow loops and tip over a
-// little on every beat, each in its own direction.
+// Where each piece of glass floats and how it's turned. The ball hangs in the middle and the other
+// four circle it together, a quarter turn apart give or take a little, so no piece ever runs into
+// another; each bobs in its own time and tips over a little on every beat, in its own direction.
 static float3 Centres[ObjectCount];
 static float3x3 Frames[ObjectCount];
 
@@ -44,10 +45,11 @@ void placeObjects()
     [unroll]
     for (int i = 0; i < ObjectCount; i++)
     {
-        float k = i * 1.2566 + 0.4;
         float t = Time * (0.06 + i * 0.008);
+        float place = i < 2 ? i : i - 1;
+        float bearing = place * 1.5708 + 0.4 + Time * 0.075 + 0.12 * sin(t * 1.7 + i * 2.3);
         float radius = i == 2 ? 0.0 : 1.75 + 0.25 * sin(t * 1.3 + i);
-        Centres[i] = float3(cos(k + t) * radius, 1.15 + 0.3 * sin(t * 2.0 + i * 2.0) + (i == 2 ? 0.2 : 0.0), sin(k + t) * radius);
+        Centres[i] = float3(cos(bearing) * radius, 1.2 + 0.3 * sin(t * 2.0 + i * 2.0) + (i == 2 ? 0.15 : 0.0), sin(bearing) * radius);
         float tip = BeatSwell * 0.35 * (i % 2 == 0 ? 1.0 : -1.0) + Bass * 0.15;
         float3 angles = float3(sin(Time * 0.21 + i) * 0.5 + tip + (kindOf(i) == Lens ? 0.45 : PI * 0.5), Time * 0.13 * (i % 2 == 0 ? 1.0 : -1.0) + i, cos(Time * 0.17 + i * 2.0) * 0.4 + tip * 0.6);
         Frames[i] = rotationFrom(angles);
