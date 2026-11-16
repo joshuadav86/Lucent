@@ -251,13 +251,13 @@ public static partial class Screenshots
         return prompt;
     }
 
-    private static VisualizerWindow PreviewVisuals(string lastVisual = "Lava Lamp")
+    private static VisualizerWindow PreviewVisuals(string lastVisual = "Sonic Dandelion")
     {
         var settings = new AppSettings
         {
             LastVisual = lastVisual,
-            FavoriteVisuals = { "Lava Lamp", "Aurora", "Neural Bloom" },
-            VisualLists = { ["Late night"] = new List<string> { "Lava Lamp", "Neural Bloom" } },
+            FavoriteVisuals = { "Sonic Dandelion", "Aurora", "Neural Bloom" },
+            VisualLists = { ["Late night"] = new List<string> { "Sonic Dandelion", "Neural Bloom" } },
             ShowFrameRate = true,
         };
         var host = new Lucent.Mac.Visualizer.VisualizerHost(new Lucent.Audio.AudioCapture())
