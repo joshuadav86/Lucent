@@ -556,10 +556,9 @@ public partial class MainWindow
     private bool _showingVolume;
 
     /// <summary>
-    /// Shows the controlled app's volume on the volume bar, on the device it's playing on, or hides the bar when Lucent
-    /// can't change the volume there. While the app plays on this Mac, the bar is the Mac's volume instead, so the
-    /// analyzer still hears the app at full level. Lucent's own volume comes back when it stops controlling the app, or
-    /// the Mac's volume while the visuals listen to every app (see MainWindow.ComputerVolume.cs).
+    /// Shows the controlled app's own volume on the volume bar, wherever it's playing, or hides the bar when Lucent can't
+    /// change the volume there; Lucent's own volume otherwise. The computer's volume is never the bar's (see
+    /// MainWindow.HeardVolume.cs).
     /// </summary>
     private void ShowVolume()
     {
@@ -567,24 +566,8 @@ public partial class MainWindow
         try
         {
             var visible = true;
-            // The Mac's volume while the controlled app plays on this Mac, or with every app's sound heard (see
-            // MainWindow.ComputerVolume.cs), when the output has a volume to show.
-            _barShowsComputerVolume = BarIsComputerVolume && ShowComputerVolume();
-            if (!AppHeardHere)
-            {
-                _appVolumeHanded = null;
-            }
-
-            if (_barShowsComputerVolume)
-            {
-                if (_remote is { } here)
-                {
-                    // The Open button takes the bar's place while the app isn't open.
-                    visible = !here.NeedsOpening;
-                    HandAppVolumeToComputer(here);
-                }
-            }
-            else if (_remote is { } remote)
+            FollowHeardVolume();
+            if (_remote is { } remote)
             {
                 var volume = remote.HasVolume ? remote.State?.Volume : null;
                 // The Open button takes the bar's place while the app isn't open.
@@ -596,11 +579,6 @@ public partial class MainWindow
                     VolumeText.Text = $"{level * 100:0}%";
                     ToolTip.SetTip(VolumeSlider, $"{where}'s volume (scrolling over the player changes it too)");
                 }
-            }
-            else if (BarIsComputerVolume)
-            {
-                // The output has no volume to show.
-                visible = false;
             }
             else
             {

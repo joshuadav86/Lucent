@@ -123,7 +123,7 @@ public partial class MainWindow : Window
             FollowStreamedSong();
             UpdateStationStatus();
             ObserveForScrobbling();
-            FollowComputerVolume();
+            FollowHeardVolume();
             WatchListening();
             NoteResumePoint();
         };
@@ -2581,22 +2581,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        // With every app's sound heard, or while the controlled app plays on this PC, the bar is Windows' volume, applied
-        // after the analyzer hears the music (see MainWindow.ComputerVolume.cs).
-        if (_barShowsComputerVolume || (_remote is null && BarIsComputerVolume))
-        {
-            SetComputerVolume(e.NewValue);
-            VolumeText.Text = $"{e.NewValue * 100:0}%";
-            return;
-        }
-
-        // While Lucent controls an app playing elsewhere, the bar is that app's volume (or does nothing, when it can't be changed).
+        // While Lucent controls an app, the bar is that app's own volume (or does nothing, when it can't be changed). It's
+        // never the computer's volume (see MainWindow.HeardVolume.cs).
         if (_remote is { } remote)
         {
             if (remote.HasVolume)
             {
                 remote.SetVolume(e.NewValue);
                 VolumeText.Text = $"{e.NewValue * 100:0}%";
+                FollowHeardVolume();
             }
             else
             {
@@ -2608,6 +2601,7 @@ public partial class MainWindow : Window
 
         _player.Volume = (float)e.NewValue;
         _settings.Volume = e.NewValue;
+        FollowHeardVolume();
         if (VolumeText is not null)
         {
             VolumeText.Text = $"{e.NewValue * 100:0}%";

@@ -151,6 +151,24 @@ public static partial class SelfTest
             Console.WriteLine($"::error::Listening to other apps mixed in the player's sound ({string.Join(", ", heard)} at {capture.SampleRate} Hz).");
         }
 
+        // An app turned down to half is turned back up for the visuals and analyzer, and never by more than 30 dB.
+        capture.SetExternalVolume(0.5);
+        capture.WriteExternal(new float[] { 0.25f, 0.25f, 0.25f, 0.25f }, new float[] { 0.25f, 0.25f, 0.25f, 0.25f }, new float[] { 0.25f, 0.25f, 0.25f, 0.25f });
+        Thread.Sleep(50);
+        capture.ReadLatest(heard, capture.DelaySamples);
+        var lifted = heard.All(sample => Math.Abs(sample - 0.5f) < 1e-5f);
+        capture.SetExternalVolume(1e-6);
+        capture.WriteExternal(new float[] { 0.001f, 0.001f, 0.001f, 0.001f }, new float[] { 0.001f, 0.001f, 0.001f, 0.001f }, new float[] { 0.001f, 0.001f, 0.001f, 0.001f });
+        Thread.Sleep(50);
+        capture.ReadLatest(heard, capture.DelaySamples);
+        var capped = heard.All(sample => Math.Abs(sample - 0.001f * Math.Pow(10, 1.5)) < 1e-4);
+        capture.SetExternalVolume(1);
+        if (!lifted || !capped)
+        {
+            problems++;
+            Console.WriteLine($"::error::Other apps' sound wasn't turned back up by the volume they were turned down by ({string.Join(", ", heard)}).");
+        }
+
         capture.EndExternal();
         if (capture.SampleRate != 96000 || capture.IsExternal)
         {
