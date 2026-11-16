@@ -16,6 +16,7 @@ internal static partial class LayoutCheck
     private static async Task<List<string>> CheckClassicTidyAsync(MainWindow main, Window visuals)
     {
         const string label = "classic skin tidies the windows";
+        Doing(label);
         var lines = new List<string>();
         if (SingleWindow.IsOn())
         {

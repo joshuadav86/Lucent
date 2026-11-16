@@ -6,6 +6,13 @@
 // Tags: Colourful, Geometric
 // Added: 2026-11-15 20:49
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float dnLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 // Distance from z to the Julia set of z * z + c, by following z and the stretch of the plane around it.
 float dnDistance(float2 z, float2 c)
 {
@@ -28,10 +35,11 @@ float dnDistance(float2 z, float2 c)
 float3 Render(float2 uv, float2 p)
 {
     // The tree is finest when c sits at i. It circles close by, pushed a little further out by the bass.
+    float bass = 0.5 * (dnLoud(0.08) + dnLoud(0.14));
     float around = Time * 0.19;
-    float2 c = float2(0.0, 1.0) + (0.004 + 0.006 * Bass) * float2(cos(around), sin(around * 1.3));
+    float2 c = float2(0.0, 1.0) + (0.004 + 0.02 * bass) * float2(cos(around), sin(around * 1.3));
 
-    float zoom = 0.98 - 0.16 * sin(Time * 0.07) - 0.05 * DropPulse;
+    float zoom = 0.98 - 0.16 * sin(Time * 0.07) - 0.05 * DropPulse - 0.05 * bass;
     float2 z = rotate(p, 1.2 + Time * 0.05 + 0.2 * sin(BeatGlide * 0.25)) * zoom;
     float d = dnDistance(z, c) / zoom;
 
@@ -41,11 +49,11 @@ float3 Render(float2 uv, float2 p)
     field = lerp(field, float3(0.02, 0.35, 0.95), 0.5 * smoothstep(0.5, 1.8, d));
 
     // The tree: magenta limbs with a white-hot heart.
-    float limb = 0.013 + 0.008 * Bass + 0.006 * BeatSwell;
+    float limb = 0.007 + 0.024 * bass + 0.006 * BeatSwell;
     float edge = pixelSize();
     // A blush of pink around the limbs, then the limbs themselves.
     field = lerp(field, float3(1.3, 0.5, 1.0), 0.55 * smoothstep(limb * 3.5, limb, d));
     float3 colour = lerp(field, float3(1.5, 0.1, 0.72), smoothstep(limb + edge, limb - edge, d));
-    colour = lerp(colour, float3(1.5, 1.2, 1.4), smoothstep(limb * 0.45, 0.0, d) * (0.55 + 0.3 * Treble));
+    colour = lerp(colour, float3(1.5, 1.2, 1.4), smoothstep(limb * 0.45, 0.0, d) * (0.4 + 0.6 * dnLoud(0.62)));
     return colour * (0.92 + 0.1 * Intensity) * (1.0 - dot(uv - 0.5, uv - 0.5) * 0.55);
 }

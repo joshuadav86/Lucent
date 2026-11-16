@@ -32,6 +32,10 @@ for run in first reopened; do
   app=$!
   # A run takes two to three minutes (the check waits for each layout to settle), so five is a hang.
   for _ in $(seq 1 300); do kill -0 "$app" 2> /dev/null || break; sleep 1; done
+  # What the check was doing every five seconds (src/Lucent.Mac/Diagnostics/LayoutCheck.Diary.cs), so a slow or stuck
+  # run shows where its time went.
+  echo "The layout check's diary ($run run):"
+  cat "$LUCENT_LAYOUT_CHECK.diary" 2> /dev/null || echo "(none)"
   if kill -0 "$app" 2> /dev/null; then
     kill "$app"
     echo "::error::Lucent didn't quit when its player was closed ($run run)."

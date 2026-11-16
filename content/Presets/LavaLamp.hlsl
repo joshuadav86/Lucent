@@ -1,193 +1,182 @@
 // Name: Lava Lamp
-// Glowing blobs of wax swell, stretch and drift up and down through warm liquid, melting into each other as the bass heats them, while bubbles fizz up with the treble.
-// Family: Particles
-// Tags: Calm, Colourful, Retro
+// Inside a lava lamp: glossy blobs of glowing wax pull free of the mound at the foot of the lamp, stretch as they
+// rise through violet liquid, hang near the top, and sink again, melting into each other where they meet. The lamp
+// shines through the wax, red at its thin edges and gold in its thick hearts. Each blob glows with its own part of
+// the music, bass at the left and treble at the right, and each beat sends a band of lamplight climbing the liquid.
+// Family: Organic
+// Tags: Calm, Colourful, Retro, 3D
 // Added: 2026-10-17 01:51
-// Particles: 131072
 
-// The wax is a cloud of particles drawn into a hidden density layer (the red channel); Render
-// smooths that density and turns it into solid-looking blobs, so neighbours melt together like wax.
-static const int Blobs = 9;
-// The last few particles are bubbles, drawn into the green channel instead.
-static const float BubbleShare = 0.0015;
+static const int LlBlobs = 8;
 
-float shareOf(uint id)
+static float4 LlAt[LlBlobs];            // where each blob is, and how large
+static float LlTall[LlBlobs];           // how far each blob is stretched upward
+static float LlLoud[LlBlobs];           // how loud each blob's part of the music is
+
+float llLoud(float x)
 {
-    return (id + 0.5) / ParticleCount;
+    return saturate((spectrum(x) - 0.42 + 0.5 * x) / 0.7);
 }
 
-// Where a floating blob is now, and how wide and tall it is.
-void blobShape(int index, out float2 centre, out float2 radius)
+float llSmoothMin(float a, float b, float k)
 {
-    float salt = index * 1.618 + 0.3;
-    float period = 34.0 + frac(salt * 7.31) * 22.0;
-    float phase = Time * 2.0 * PI / period + frac(salt * 3.17) * 2.0 * PI;
-
-    // Blobs linger by the heater and at the cool top, and move fastest in between.
-    float c = cos(phase);
-    float moving = abs(sin(phase));
-    centre.x = ((index + 0.5) / Blobs * 2.0 - 1.0) * Aspect * 0.78 + sin(Time * 0.06 + salt * 5.0) * 0.2;
-    centre.y = sign(c) * pow(abs(c), 0.65) * 0.74 + 0.1;
-
-    float size = 0.1 + frac(salt * 11.7) * 0.07;
-    // Hot wax at the bottom is fatter; the bass swells every blob.
-    size *= (0.85 + 0.25 * saturate(centre.y + 0.4)) * (1.0 + Bass * 0.16 + BeatSwell * 0.05);
-    // Moving blobs stretch out into teardrops.
-    radius = size * float2(1.0 / (1.0 + moving * 0.22), 1.0 + moving * 0.5);
+    float h = max(k - abs(a - b), 0.0) / k;
+    return min(a, b) - h * h * k * 0.25;
 }
 
-// The kth of n points in a soft round cloud: dense in the middle, thinning out towards the edge.
-// The points spiral out like the seeds of a sunflower rather than falling at random, so the wax
-// looks smooth, not grainy.
-float2 cloudOffset(uint k, uint n, uint id)
+// The mound of wax resting at the foot of the lamp, its top slowly heaving.
+float llMound(float3 p)
 {
-    float spread = min((k + fixedRandom(id, 1.0)) / max((float)n, 1.0), 1.0) * 0.997;
-    float angle = (k * 1640531527u) / 4294967296.0 * 2.0 * PI;
-    return float2(cos(angle), sin(angle)) * sqrt(-2.0 * log(1.0 - spread));
+    float3 radii = float3(1.7 * Aspect, 0.72, 1.5);
+    float3 q = p - float3(0.0, -1.5 + 0.07 * sin(p.x * 1.9 + Time * 0.23) + 0.05 * sin(p.x * 3.3 - Time * 0.17), 0.3);
+    return (length(q / radii) - 1.0) * radii.y;
 }
 
-void Spawn(inout Particle particle, uint id)
+float llBlob(float3 p, int n)
 {
-    particle.life = 1e6;
-    particle.velocity = 0.0;
-    particle.data = 0.0;
-    particle.position = 0.0;
-    if (shareOf(id) >= 1.0 - BubbleShare)
+    float3 q = p - LlAt[n].xyz;
+    float tall = LlTall[n];
+    float narrow = 1.0 / sqrt(tall);
+    float3 radii = LlAt[n].w * float3(narrow, tall, narrow);
+    return (length(q / radii) - 1.0) * radii.x;
+}
+
+// How far a spot is outside the wax (less than nothing inside it).
+float llWax(float3 p)
+{
+    float d = llMound(p);
+    [unroll]
+    for (int n = 0; n < LlBlobs; n++)
     {
-        // A bubble starts by the heater and wobbles upward until it fades.
-        particle.position = float3((random(id, 3.0) * 2.0 - 1.0) * Aspect, 0.98, 0.0);
-        particle.velocity = float3(0.0, -(0.08 + random(id, 4.0) * 0.12), 0.0);
-        particle.life = 1.4 / -particle.velocity.y;
-        if (ParticleReset > 0.5)
-        {
-            particle.life *= random(id, 5.0);
-            particle.position.y -= random(id, 6.0) * 1.2;
-        }
-    }
-}
-
-void Simulate(inout Particle particle, uint id)
-{
-    if (shareOf(id) >= 1.0 - BubbleShare)
-    {
-        // Bubbles rise faster in loud passages, swaying from side to side.
-        float dt = min(DeltaTime, 0.05);
-        particle.position.y += particle.velocity.y * dt * (0.7 + Level * 0.8 + Beat * 0.6);
-        particle.position.x += sin(particle.age * 3.0 + fixedRandom(id, 7.0) * 6.0) * 0.04 * dt;
-    }
-}
-
-Sprite Show(Particle particle, uint id)
-{
-    float share = shareOf(id);
-    Sprite sprite = (Sprite)0;
-    if (share >= 1.0 - BubbleShare)
-    {
-        float fade = saturate(particle.age * 2.0) * saturate(particle.position.y + 0.2);
-        sprite.position = particle.position.xy;
-        sprite.size = 2.0 + fixedRandom(id, 8.0) * 2.5;
-        sprite.colour = float3(0.0, (0.15 + Treble * 0.6) * fade, 0.0);
-        return sprite;
+        d = llSmoothMin(d, llBlob(p, n), 0.3);
     }
 
-    // Which blob this particle belongs to, and which of its points it is.
-    float blobShare = (1.0 - BubbleShare) / Blobs;
-    int index = min((int)(share / blobShare), Blobs - 1);
-    uint first = (uint)ceil(index * blobShare * ParticleCount - 0.5);
-    uint count = (uint)(blobShare * ParticleCount);
-    float2 offset = cloudOffset(id - min(first, id), count, id);
-
-    float2 centre;
-    float2 radius;
-    blobShape(index, centre, radius);
-
-    // Wobble the outline, more with the mids, so the blobs look soft and alive. The swirl is
-    // gentle enough that the cloud never folds over itself (which would show as hard creases).
-    float3 swirl = float3(offset * 0.4, Time * 0.2 + index * 2.0);
-    offset += float2(noise3(swirl), noise3(swirl + float3(5.2, 1.3, 7.7))) * (0.35 + Mid * 0.15);
-
-    sprite.position = centre + offset * radius;
-    sprite.size = 7.0;
-    // The same peak density for every blob, however big it is.
-    sprite.colour = float3(radius.x * radius.y / blobShare * 0.36, 0.0, 0.0);
-    return sprite;
+    return d;
 }
 
-// The pool of wax lying over the heater, heaving slowly: its density at p.
-float poolDensity(float2 p)
+float3 llNormal(float3 p)
 {
-    float surface = 0.9 - 0.05 * sin(p.x * 2.3 + Time * 0.2) - 0.04 * sin(p.x * 5.1 - Time * 0.13) - Bass * 0.04;
-    return 1.3 * exp(-pow(max(surface - p.y, 0.0) / 0.1, 2.0) * 0.5);
+    float2 h = float2(0.004, 0.0);
+    return normalize(float3(llWax(p + h.xyy) - llWax(p - h.xyy),
+                            llWax(p + h.yxy) - llWax(p - h.yxy),
+                            llWax(p + h.yyx) - llWax(p - h.yyx)));
 }
 
-// The colours of the wax and the liquid drift slowly between three classic lamps.
-void lampColours(out float3 waxDeep, out float3 waxBright, out float3 liquidTop, out float3 liquidBottom)
+// How loud the music is for the wax at one spot: each blob's own part, blended where blobs have melted together,
+// the mound taking the deepest bass.
+float llLoudAt(float3 p)
 {
-    float scheme = Time / 70.0;
-    float which = wrap(floor(scheme), 3.0);
-    float blend = smoothstep(0.8, 1.0, frac(scheme));
-    float3 deep[3] = { float3(0.75, 0.06, 0.02), float3(0.75, 0.03, 0.35), float3(0.1, 0.45, 0.05) };
-    float3 bright[3] = { float3(1.5, 0.6, 0.1), float3(1.5, 0.5, 0.9), float3(0.9, 1.4, 0.2) };
-    float3 top[3] = { float3(0.05, 0.01, 0.08), float3(0.0, 0.04, 0.08), float3(0.03, 0.0, 0.08) };
-    float3 bottom[3] = { float3(0.5, 0.08, 0.3), float3(0.05, 0.35, 0.5), float3(0.35, 0.05, 0.55) };
-    int a = (int)which;
-    int b = (int)wrap(which + 1.0, 3.0);
-    waxDeep = lerp(deep[a], deep[b], blend);
-    waxBright = lerp(bright[a], bright[b], blend);
-    liquidTop = lerp(top[a], top[b], blend);
-    liquidBottom = lerp(bottom[a], bottom[b], blend);
+    float wFoot = exp(-7.0 * max(llMound(p), 0.0));
+    float sum = wFoot * llLoud(0.08);
+    float weight = wFoot + 1e-4;
+    [unroll]
+    for (int n = 0; n < LlBlobs; n++)
+    {
+        float w = exp(-7.0 * max(llBlob(p, n), 0.0));
+        sum += w * LlLoud[n];
+        weight += w;
+    }
+
+    return sum / weight;
+}
+
+// The lamp's glass as the wet wax mirrors it: two soft windows of light, one high on the left and one to the right.
+float3 llRoom(float3 dir)
+{
+    float left = saturate(dot(dir, normalize(float3(-0.6, 0.55, -0.58))));
+    float right = saturate(dot(dir, normalize(float3(0.75, 0.2, -0.63))));
+    return float3(2.2, 2.0, 2.1) * (smoothstep(0.95, 0.975, left) + 0.2 * pow(left, 8.0))
+         + float3(1.3, 0.8, 1.6) * (0.6 * smoothstep(0.96, 0.98, right) + 0.2 * pow(right, 6.0));
 }
 
 float3 Render(float2 uv, float2 p)
 {
-    // Blur the wax density over two rings of taps, so the blobs are smooth; the taps' imbalance
-    // gives the slope of the surface, for lighting.
-    float2 toUvScale = spritePixel() / (2.0 * float2(Aspect, 1.0));
-    float density = particles(uv).r * 2.0;
-    float2 slope = 0.0;
-    float total = 2.0;
+    float since = frac(BeatGlide);
+    float flash = smoothstep(0.0, 0.1, since) * (1.0 - since) * (1.0 - since);
+
+    // Where the blobs are now. Each rises and sinks at its own pace, dwelling at the top and the foot, and is
+    // drawn out longest while it moves fastest.
     [unroll]
-    for (int i = 0; i < 12; i++)
+    for (int n = 0; n < LlBlobs; n++)
     {
-        float angle = i * (2.0 * PI / 12.0) + (i & 1) * 0.3;
-        float reach = (i & 1) == 0 ? 7.0 : 14.0;
-        float2 direction = float2(cos(angle), sin(angle));
-        float tap = particles(uv + direction * reach * toUvScale).r;
-        float weight = (i & 1) == 0 ? 1.0 : 0.6;
-        density += tap * weight;
-        slope += direction * tap * weight;
-        total += weight;
+        float h1 = hash(float2(n, 3.7));
+        float h2 = hash(float2(n, 9.1));
+        float h3 = hash(float2(n, 15.3));
+        float phase = Time * (0.085 + 0.1 * h3) + 6.2832 * h1;
+        float across = ((n + 0.5) / LlBlobs * 2.0 - 1.0 + 0.16 * (h1 - 0.5)) * Aspect * 0.9;
+        LlAt[n] = float4(across + 0.07 * sin(Time * 0.07 + n * 2.0), 0.05 + 0.92 * sin(phase), (h2 - 0.5) * 1.3, 0.21 + 0.13 * h2 + 0.02 * sin(Time * 0.3 + n));
+        LlTall[n] = 1.0 + 0.45 * abs(cos(phase));
+        LlLoud[n] = llLoud(0.08 + 0.6 * (n + 0.5) / LlBlobs);
     }
-    density = density / total + poolDensity(p);
-    slope = slope / total + float2(0.0, -0.4) * smoothstep(0.65, 1.0, p.y) * saturate(poolDensity(p));
 
-    float3 waxDeep;
-    float3 waxBright;
-    float3 liquidTop;
-    float3 liquidBottom;
-    lampColours(waxDeep, waxBright, liquidTop, liquidBottom);
+    float3 eye = float3(0.0, 0.0, -4.0);
+    float3 ray = normalize(float3(p.x, -p.y, 4.0));
+    float height = -p.y;
 
-    // The liquid glows from the heater below, which flares on the beat.
-    float height = saturate(p.y * 0.5 + 0.5);
-    float heater = exp(-(1.0 - height) * 5.0) * (0.5 + Beat * 0.6 + Bass * 0.3);
-    float3 liquid = lerp(liquidTop, liquidBottom, height * height) + liquidBottom * heater;
+    // The liquid: violet above, rose near the lamp at the foot, with a band of lamplight climbing it on each beat.
+    float3 liquid = lerp(float3(0.62, 0.04, 0.4), float3(0.035, 0.0, 0.075), smoothstep(-1.0, 0.75, height));
+    float front = -1.0 + since * 2.3;
+    liquid += float3(0.3, 0.05, 0.22) * flash * exp(-(height - front) * (height - front) * 9.0);
 
-    // Thick wax glows brightly; thin edges are deep and rich. Lower wax is lit more by the heater.
-    float wax = smoothstep(0.47, 0.56, density);
-    float thickness = saturate((density - 0.5) * 0.9);
-    float3 body = lerp(waxDeep, waxBright, thickness * thickness) * (0.6 + 0.7 * height + heater * 0.4);
-    // Edges facing down catch the heater's light; a soft sheen from above lights the tops.
-    float2 outward = -slope / max(length(slope), 1e-4);
-    float edge = saturate(length(slope) * 4.0) * (1.0 - thickness);
-    body += waxBright * edge * saturate(outward.y) * (0.3 + heater) * 0.6;
-    body += float3(1.0, 0.95, 0.9) * edge * saturate(-outward.y - 0.2) * 0.2;
+    // Motes drift up through the liquid and glint with the treble.
+    float2 grid = float2(p.x * 9.0, (height - Time * 0.03) * 9.0);
+    float2 box = floor(grid);
+    float2 mote = frac(grid) - 0.5 - 0.3 * (float2(hash(wrap(box, 256.0) + 1.3), hash(wrap(box, 256.0) + 7.9)) - 0.5);
+    float glint = exp(-dot(mote, mote) * 900.0) * step(0.55, hash(wrap(box, 256.0) + 4.4));
+    liquid += float3(0.9, 0.5, 0.8) * glint * (0.25 + 0.75 * llLoud(0.62)) * smoothstep(1.0, -0.4, height);
 
-    // The wax also glows a little into the liquid around it.
-    float3 colour = lerp(liquid + waxDeep * saturate(density) * 0.3, body, wax);
+    float t = 2.6;
+    float nearest = 1e3;
+    float struck = 0.0;
+    int steps = qualitySteps(64);
+    [loop]
+    for (int i = 0; i < steps; i++)
+    {
+        float d = llWax(eye + ray * t);
+        nearest = min(nearest, d);
+        if (d < 0.003)
+        {
+            struck = 1.0;
+            break;
+        }
 
-    // Bubbles, and the reflections of the glass running up each side.
-    colour += float3(1.0, 0.95, 0.85) * particles(uv).g;
-    float glass = exp(-pow((p.x / Aspect + 0.72) * 9.0, 2.0)) + 0.6 * exp(-pow((p.x / Aspect - 0.8) * 14.0, 2.0));
-    colour += float3(1.0, 0.9, 0.95) * glass * 0.05 * (0.7 + height);
+        t += d * 0.9;
+        if (t > 6.5)
+            break;
+    }
+
+    // The wax glows through the liquid round it.
+    float3 colour = liquid + float3(1.1, 0.12, 0.06) * exp(-max(nearest, 0.0) * 9.0) * 0.55;
+    if (struck > 0.5)
+    {
+        float3 at = eye + ray * t;
+        float3 n = llNormal(at);
+
+        // How much wax the lamp's light has to cross to reach the eye here.
+        float thick = 0.02;
+        [loop]
+        for (int k = 0; k < 10; k++)
+        {
+            float inside = -llWax(at + ray * thick);
+            if (inside < 0.002)
+                break;
+            thick += max(inside, 0.02);
+        }
+
+        float loud = llLoudAt(at);
+        float rising = flash * exp(-(at.y - front) * (at.y - front) * 7.0);
+        float heat = (1.0 - exp(-thick * 3.2)) * (0.66 + 0.5 * loud + 0.25 * rising) * (0.85 + 0.2 * saturate(-n.y)) * lerp(1.12, 0.8, saturate(0.5 + 0.5 * at.y));
+        float3 wax = lerp(float3(0.42, 0.01, 0.02), float3(1.45, 0.12, 0.03), smoothstep(0.0, 0.3, heat));
+        wax = lerp(wax, float3(1.75, 0.6, 0.04), smoothstep(0.25, 0.6, heat));
+        wax = lerp(wax, float3(1.9, 1.4, 0.3), smoothstep(0.55, 1.0, heat));
+
+        float facing = saturate(-dot(ray, n));
+        float mirror = 0.1 + 0.55 * pow(1.0 - facing, 4.0);
+        wax = wax * (1.0 - 0.5 * mirror) + mirror * (llRoom(reflect(ray, n)) + liquid * 0.7);
+
+        // Wax deeper in the lamp is seen through more of the liquid.
+        colour = lerp(wax, liquid, saturate((t - 3.2) * 0.17)) + liquid * 0.12;
+    }
+
     return colour;
 }

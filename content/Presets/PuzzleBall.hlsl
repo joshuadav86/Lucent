@@ -96,6 +96,13 @@ float3 pbPaint(float3 n, float inner)
     return inner > 0.5 ? paint.gbr * 0.85 + 0.15 : paint;
 }
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float pbLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 float3 Render(float2 uv, float2 p)
 {
     float count = floor(BeatGlide);
@@ -109,7 +116,7 @@ float3 Render(float2 uv, float2 p)
     follow = follow * follow * (3.0 - 2.0 * follow);
     float outerAngle = move.z * lead * PI * 0.5;
     float innerAngle = move.z * follow * PI * 0.5;
-    float open = 0.05 + Bass * 0.14 + DropPulse * 0.16 + sin(through * PI) * 0.035;
+    float open = 0.03 + 0.09 * (pbLoud(0.08) + pbLoud(0.14)) + DropPulse * 0.16 + sin(through * PI) * 0.035;
 
     float turn = Time * 0.11;
     float tilt = 0.5 + 0.2 * sin(Time * 0.07);

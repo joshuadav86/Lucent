@@ -85,6 +85,7 @@ public sealed partial class VisualEngine : IDisposable
     private volatile int[]? _autoCycleChoices;
     private DisplayInfo _display = DisplayInfo.Standard;
     private int _compilersRunning;
+    private long _framesPresented;
     private int _frame;
     private int _frameSlot;
     private double _frameTime;
@@ -170,6 +171,35 @@ public sealed partial class VisualEngine : IDisposable
 
     /// <summary>The visual on screen now, or -1 before the first one has compiled.</summary>
     public int ActivePreset => _activePreset;
+
+    /// <summary>
+    /// How the engine is getting on, for the launch check's diary (LayoutCheck.Diary.cs), read from any thread: the
+    /// visual on screen, how many frames have gone to the screen, how many visuals have finished compiling, which are
+    /// compiling now, and how many compilers are at work.
+    /// </summary>
+    internal (string Showing, long Frames, int Compiled, int Visuals, string Compiling, int Compilers) Progress()
+    {
+        var showing = _activePreset;
+        var compiled = 0;
+        var compiling = new List<string>();
+        for (var index = 0; index < _slots.Length; index++)
+        {
+            switch (Volatile.Read(ref _slots[index].State))
+            {
+                case PresetSlot.Ready:
+                case PresetSlot.Failed:
+                    compiled++;
+                    break;
+                case PresetSlot.Compiling:
+                    compiling.Add(_slots[index].Source.Name);
+                    break;
+            }
+        }
+
+        var compilers = Volatile.Read(ref _compilersRunning);
+        return (showing >= 0 && showing < _slots.Length ? _slots[showing].Source.Name : "nothing yet",
+            Interlocked.Read(ref _framesPresented), compiled, _slots.Length, string.Join(", ", compiling), compilers);
+    }
 
     public bool AutoCycle
     {
@@ -1086,6 +1116,7 @@ public sealed partial class VisualEngine : IDisposable
     /// <summary>Call on the render thread once each frame is shown, so the Automatic resolution can watch the frame rate.</summary>
     public void FramePresented(double now)
     {
+        Interlocked.Increment(ref _framesPresented);
         if (_autoResolutionOn && _targetPixels <= 0 && _activePreset >= 0)
         {
             _autoResolution.Frame(now, VisualsPower.FrameRate(Display.RefreshRate), _activePreset);

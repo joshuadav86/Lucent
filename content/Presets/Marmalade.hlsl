@@ -6,6 +6,13 @@
 // Tags: 3D, Colourful, Calm
 // Added: 2026-11-15 21:02
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float mmLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 float mmBlend(float a, float b, float k)
 {
     float h = saturate(0.5 + 0.5 * (b - a) / k);
@@ -27,8 +34,8 @@ float mmMap(float3 x, float3 low, float3 high, float wobble)
         float loud = heard[k];
         float3 way = normalize(float3(sin(f * 2.4 + 0.5), cos(f * 1.7 + 1.0) * 0.8, cos(f * 2.4 + 0.5)));
         way.xy = rotate(way.xy, 0.4 * sin(Time * 0.31 + f));
-        float out1 = 0.42 + 0.62 * loud + 0.1 * sin(Time * 0.5 + f * 1.9);
-        d = mmBlend(d, length(x - way * out1) - (0.3 + 0.1 * loud), 0.34);
+        float out1 = 0.3 + 0.85 * loud + 0.1 * sin(Time * 0.5 + f * 1.9);
+        d = mmBlend(d, length(x - way * out1) - (0.25 + 0.17 * loud), 0.34);
     }
 
     return d;
@@ -38,8 +45,8 @@ float3 Render(float2 uv, float2 p)
 {
     float3 wall = float3(0.5, 0.8, 1.12) * (1.02 - 0.3 * uv.y) * (1.0 - dot(uv - 0.5, uv - 0.5) * 0.6);
 
-    float3 low = float3(spectrum(0.02), spectrum(0.06), spectrum(0.12));
-    float3 high = float3(spectrum(0.22), spectrum(0.38), spectrum(0.6));
+    float3 low = float3(mmLoud(0.08), mmLoud(0.14), mmLoud(0.2));
+    float3 high = float3(mmLoud(0.34), mmLoud(0.5), mmLoud(0.66));
     float wobble = BeatGlide * PI;
     float turn = Time * 0.17 + BeatGlide * 0.1;
 

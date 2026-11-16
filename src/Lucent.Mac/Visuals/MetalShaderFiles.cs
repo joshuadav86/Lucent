@@ -7,7 +7,7 @@ namespace Lucent.Mac.Visuals;
 /// <summary>
 /// Finds the visuals and their Metal shaders, like the Windows app's PresetLibrary. The built-in visuals'
 /// shaders are translated from the Windows app's HLSL when the Mac app is built (tools/MetalShaders), one
-/// file per entry point: Shaders/Metal/Engine.VSMain.metal, ... and Shaders/Metal/Presets/LavaLamp.hlsl.PSMain.metal.
+/// file per entry point: Shaders/Metal/Engine.VSMain.metal, ... and Shaders/Metal/Presets/LotusBloom.hlsl.PSMain.metal.
 /// The user's own visuals, in ~/Library/Application Support/Lucent/Presets, load alongside them (one with the
 /// same file name replaces a built-in one) and are translated as the app runs, as are built-in visuals whose
 /// HLSL was edited after the app was built (see <see cref="ShaderCache"/>).

@@ -6,6 +6,13 @@
 // Tags: 3D, Geometric, Calm
 // Added: 2026-11-15 21:12
 
+// How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
+// the way between 0 and 1 instead of sitting near the top.
+float pcLoud(float x)
+{
+    return saturate((spectrum(x) - 0.56 + 0.5 * x) / 0.4);
+}
+
 // Distance to the ball: fold space four times, the same way in every direction, then place one pyramid.
 float pcMap(float3 x, float twist, float spread)
 {
@@ -33,7 +40,7 @@ float3 Render(float2 uv, float2 p)
     float3 purple = float3(0.42, 0.1, 0.95);
     float3 colour = purple * (0.5 + 0.5 * exp(-dot(p, p) * 0.8)) * (1.0 - dot(uv - 0.5, uv - 0.5) * 0.6);
 
-    float twist = 0.16 + 0.12 * sin(Time * 0.11) + 0.12 * Bass + 0.04 * BeatSwell;
+    float twist = 0.2 + 0.05 * sin(Time * 0.11) + 0.075 * (pcLoud(0.08) + pcLoud(0.14)) + 0.03 * BeatSwell;
     float spread = 1.0 + 0.08 * sin(Time * 0.07);
     float turn = Time * 0.14 + BeatGlide * 0.1;
 
@@ -85,7 +92,7 @@ float3 Render(float2 uv, float2 p)
     float deep = saturate((1.05 - length(at)) / 0.6);
     float lit = 0.25 + 0.75 * saturate(dot(n, lamp) * 0.7 + 0.3);
     float3 china = lerp(float3(0.2, 0.11, 0.55), float3(1.05, 1.02, 1.04), open * lit);
-    china += float3(1.5, 0.3, 0.55) * deep * deep * deep * (1.0 - open) * (0.3 + 1.0 * Mid + 0.4 * BeatSwell);
+    china += float3(1.5, 0.3, 0.55) * deep * deep * deep * (1.0 - open) * (0.15 + 1.5 * pcLoud(0.4) + 0.4 * BeatSwell);
     china += float3(1.0, 1.0, 1.0) * 0.3 * pow(saturate(dot(reflect(ray, n), lamp)), 30.0) * open;
     return china * (0.94 + 0.08 * Level);
 }
