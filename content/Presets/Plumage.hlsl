@@ -40,7 +40,7 @@ float3 Render(float2 uv, float2 p)
         float fk = (float)k;
         float i = fmod(fk, 2.0) < 0.5 ? fk * 0.5 : 14.0 - (fk - 1.0) * 0.5;        // outer feathers first, the middle one last
         float off = (i - 7.0) / 7.0;                                              // -1 to 1 across the fan
-        float heard = plLoud(0.04 + 0.55 * abs(off));
+        float heard = plLoud(0.08 + 0.56 * abs(off));
         float lean = off * (1.16 + 0.05 * sin(Time * 0.4)) + 0.025 * sin(Time * 0.9 + i * 1.7) + 0.03 * sin(BeatGlide * PI + i) * Treble;
         float len = 1.12 + 0.95 * heard + 0.15 * DropPulse - 0.16 * abs(off);
         float2 v = rotate(fromRoot, lean);

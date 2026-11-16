@@ -7,7 +7,7 @@
 // Added: 2026-11-16 00:01
 
 // Which part of the music each tongue listens to, left to right: bass in the middle.
-static const float CfHears[7] = { 0.56, 0.34, 0.15, 0.03, 0.08, 0.24, 0.44 };
+static const float CfHears[7] = { 0.6, 0.34, 0.2, 0.08, 0.14, 0.46, 0.72 };
 
 // How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
 // the way between 0 and 1 instead of sitting near the top.

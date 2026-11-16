@@ -45,10 +45,10 @@ float3 Render(float2 uv, float2 p)
     float3 colour = float3(1.2, 1.17, 1.1) * (1.02 - 0.1 * uv.y);
     colour = lerp(colour, float3(1.0, 0.96, 0.9), smoothstep(-0.03, 0.03, q.y - 0.76));
 
-    float warm = saturate(0.14 + 0.45 * pjLoud(0.05) + 0.45 * pjLoud(0.14) + 0.25 * DropPulse);
+    float warm = saturate(0.14 + 0.45 * pjLoud(0.08) + 0.45 * pjLoud(0.14) + 0.25 * DropPulse);
     float cool = saturate(0.14 + 0.45 * pjLoud(0.5) + 0.45 * pjLoud(0.72) + 0.25 * DropPulse);
     float both = 0.5 * (warm + cool);
-    float2 meet = float2(0.9 * (warm - cool), 0.36 - 1.0 * both);
+    float2 meet = float2(clamp(1.4 * (warm - cool), -0.9, 0.9), 0.36 - 1.0 * both);
     float2 nozzle = float2(-1.42, 0.5);
 
     // The harder a jet is driven the flatter and faster it flies.

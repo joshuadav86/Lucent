@@ -36,7 +36,7 @@ float3 Render(float2 uv, float2 p)
         float fx = (along - id - 0.5) * cell;
         float pick = hash(float2(wrap(id, 512.0), f * 7.0 + 1.0));
         float tall = size * (0.7 + 0.6 * pick);
-        float hearAt = 0.02 + 0.55 * hash(float2(wrap(id, 512.0), f * 7.0 + 4.0));
+        float hearAt = 0.07 + 0.6 * hash(float2(wrap(id, 512.0), f * 7.0 + 4.0));
         float heard = rmLoud(hearAt);
 
         float up = ground - p.y;
@@ -67,7 +67,11 @@ float3 Render(float2 uv, float2 p)
         float lampSize = size * 0.011;
         float dl = length(toLamp);
         colour = lerp(colour, lerp(float3(0.22, 0.02, 0.02), lampRed, on), smoothstep(lampSize + e, lampSize - e, dl));
-        colour += lampRed * on * exp(-dl * dl / (seg * seg * 0.1)) * 0.45;
+        colour += lampRed * on * exp(-dl * dl / (seg * seg * 0.15)) * 0.5;
+        // The lit part of the mast reddens the fog beside it.
+        float litTo = heard * (rungs + 1.0) * seg;
+        float haze = exp(-fx * fx / (size * size * 0.005)) * smoothstep(litTo + seg, litTo - seg, up) * smoothstep(-0.02, 0.04, up);
+        colour += lampRed * haze * 0.09;
 
         // The beacon on top, and the signal leaving it: two rings to a beat, fading as they spread.
         float2 toTip = float2(fx, up - tall - size * 0.07);

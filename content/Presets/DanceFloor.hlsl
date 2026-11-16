@@ -1,8 +1,8 @@
 // Name: Dance Floor
-// A light-up disco floor stretching away into the haze of a dark club: rounded glass tiles lit from below, with
-// the ceiling lights glinting in them. Each column of tiles lights up away from you as its part of the music gets
-// louder, bass down the middle and treble at the sides. Every beat sends a ring of light out across the floor
-// and slides the colours one step along.
+// A light-up disco floor stretching away into the haze of a dark club: rounded glass tiles glowing deep blue from
+// below, with the ceiling lights glinting in them. Each column of tiles lights up in colour away from you as its
+// part of the music gets louder, bass down the middle and treble at the sides. Every beat sends a ring of light
+// out across the floor and slides the colours one step along.
 // Family: Music-shaped
 // Tags: 3D, Colourful, Retro
 // Added: 2026-11-16 00:06
@@ -41,9 +41,9 @@ float3 Render(float2 uv, float2 p)
 
         // This tile's column listens to one part of the music; the louder it is, the further away the column lights.
         float column = abs(id.x + 0.5);
-        float heard = dfLoud(0.03 + 0.05 * column);
+        float heard = dfLoud(0.07 + 0.05 * column);
         float row = id.y + 4.0;
-        float bar = saturate((0.6 + heard * 12.5 - row) * 0.55) * (1.0 - 0.035 * clamp(row, 0.0, 14.0));
+        float bar = saturate((0.8 + heard * heard * 11.0 - row) * 0.55) * (1.0 - 0.035 * clamp(row, 0.0, 14.0));
 
         // A ring of light spreading from the middle of the floor on every beat.
         float sinceBeat = frac(BeatGlide);
@@ -54,10 +54,13 @@ float3 Render(float2 uv, float2 p)
         float hue = frac((id.x + id.y) * 0.11 + BeatGlide * 0.125);
         float3 glass = hsv2rgb(hue, 0.95, 1.0);
         glass *= glass;                                                             // deeper, purer colours
-        float lightUp = 0.05 + 1.25 * bar + 0.5 * ring + 0.4 * DropPulse;
-        float3 tile = glass * lightUp * (0.62 + 0.38 * smoothstep(0.0, -0.3, d));
-        tile += glass * lightUp * 0.3 * smoothstep(-0.07, -0.02, d);                 // light caught in the tile's rim
-        tile += float3(0.3, 0.3, 0.3) * smoothstep(1.3, 2.0, lightUp);            // the brightest tiles run towards white
+        // Tiles the music hasn't reached idle in deep blue, so the floor never goes dark between beats.
+        float3 idle = float3(0.1, 0.04, 0.85) * (0.88 + 0.2 * sin(Time * 0.7 + hash(id + 31.0) * 2.0 * PI));
+        float lightUp = 1.1 * bar + 0.5 * ring + 0.4 * DropPulse;
+        float3 lit = lerp(idle, glass * 1.1, bar) + glass * (0.5 * ring + 0.4 * DropPulse);
+        float3 tile = lit * (0.62 + 0.38 * smoothstep(0.0, -0.3, d));
+        tile += lit * 0.3 * smoothstep(-0.07, -0.02, d);                             // light caught in the tile's rim
+        tile += float3(0.3, 0.3, 0.3) * smoothstep(1.1, 1.8, lightUp);            // the brightest tiles run towards white
         float3 floorColour = lerp(float3(0.008, 0.006, 0.016), tile, inside);
 
         // Ceiling lights mirrored in the glass.

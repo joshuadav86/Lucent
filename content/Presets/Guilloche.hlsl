@@ -7,7 +7,7 @@
 // Added: 2026-11-16 00:03
 
 static const float GuLobes[5] = { 5.0, 8.0, 12.0, 16.0, 22.0 };
-static const float GuHears[5] = { 0.03, 0.1, 0.2, 0.34, 0.52 };
+static const float GuHears[5] = { 0.08, 0.14, 0.24, 0.4, 0.6 };
 
 // How loud the music is at x (0 deep bass, 1 high treble), stretched so that ordinary music swings it most of
 // the way between 0 and 1 instead of sitting near the top.

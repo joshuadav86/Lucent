@@ -38,7 +38,7 @@ float3 Render(float2 uv, float2 p)
     {
         float f = (float)k;
         float way = fmod(f, 2.0) < 0.5 ? 1.0 : -1.0;
-        float heard = hpLoud(0.06 + 0.17 * f);
+        float heard = hpLoud(0.08 + 0.17 * f);
         float cell = 1.3 * pow(0.58, f);
         float2 g = rotate(x, f * 0.5236 + Time * 0.02 * way) / cell;
         float2 id = floor(g + 0.5);

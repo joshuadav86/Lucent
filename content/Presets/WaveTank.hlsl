@@ -21,8 +21,8 @@ float wtLift(float x)
     float i = floor(t);
     float f = t - i;
     f = f * f * (3.0 - 2.0 * f);
-    float a = wtLoud(0.02 + 0.065 * i);
-    float b = wtLoud(0.02 + 0.065 * (i + 1.0));
+    float a = wtLoud(0.06 + 0.07 * i);
+    float b = wtLoud(0.06 + 0.07 * (i + 1.0));
     return saturate(lerp(a, b, f));
 }
 
