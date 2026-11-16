@@ -48,8 +48,13 @@ public static class PlaylistColumns
         column == PlaylistColumn.Order ? "Playlist order" : LibraryColumns.Label(Same(column));
 
     /// <summary>The heading's text: short, to fit over a narrow column.</summary>
-    public static string Heading(PlaylistColumn column) =>
-        column == PlaylistColumn.Order ? "#" : LibraryColumns.Heading(Same(column));
+    public static string Heading(PlaylistColumn column) => column switch
+    {
+        PlaylistColumn.Order => "#",
+        // Spelled out, as "#" is the playlist's own order here.
+        PlaylistColumn.Track => "Track",
+        _ => LibraryColumns.Heading(Same(column)),
+    };
 
     /// <summary>
     /// The column's width as it's shown now, with its divider line and the space either side of the text: narrowed while
