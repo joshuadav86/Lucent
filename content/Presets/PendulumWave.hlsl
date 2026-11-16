@@ -12,6 +12,14 @@ static const float Spacing = 0.48;
 static const float Cycle = 54.0;
 static const float Swings = 24.0;
 
+// Where the first ball is in its swing just now (the cosine and sine of it), and how much further round each
+// next ball is. Both are worked out once for the pixel. Every loop over the balls starts from the first and steps
+// round from ball to ball, so no ball needs a cosine of its own and no list of the balls has to be kept. Keeping
+// a list, with every loop over it written out sixteen times, made this shader so large that an Intel Mac took
+// more than two seconds to draw a frame.
+static float2 FirstSwing;
+static float2 SwingStep;
+
 struct Hit
 {
     float distance;
@@ -32,16 +40,22 @@ float stringLength(int i)
     return 2.7 * ratio * ratio;
 }
 
-float swingAngle(int i)
+// Steps one ball's place in its swing round to the next ball's.
+float2 nextSwing(float2 swing)
 {
-    float amplitude = 0.42 + Bass * 0.08;
-    return amplitude * cos(2.0 * PI * (Swings + i) * Time / Cycle);
+    return float2(swing.x * SwingStep.x - swing.y * SwingStep.y, swing.y * SwingStep.x + swing.x * SwingStep.y);
 }
 
-float3 ballCentre(int i)
+// Where ball i's centre is, given the cosine of its place in its swing.
+float3 ballCentre(int i, float swing)
 {
-    float angle = swingAngle(i);
-    return float3(0.0, BarHeight, rowZ(i)) + stringLength(i) * float3(sin(angle), -cos(angle), 0.0);
+    // The swing is never wide, so the sine and cosine of its angle come from the first few terms of their series,
+    // which at these angles are right to the last digit a float holds.
+    float angle = (0.42 + Bass * 0.08) * swing;
+    float a2 = angle * angle;
+    float sine = angle * (1.0 - a2 / 6.0 * (1.0 - a2 / 20.0 * (1.0 - a2 / 42.0)));
+    float cosine = 1.0 - a2 / 2.0 * (1.0 - a2 / 12.0 * (1.0 - a2 / 30.0 * (1.0 - a2 / 56.0)));
+    return float3(0.0, BarHeight, rowZ(i)) + stringLength(i) * float3(sine, -cosine, 0.0);
 }
 
 // The light strip under the bar: one segment above each ball, coloured round the rainbow along the row,
@@ -103,7 +117,7 @@ float rodHit(float3 origin, float3 direction, float y, float x, float radius, fl
     return t;
 }
 
-Hit traceScene(float3 origin, float3 direction, float4 spheres[Balls])
+Hit traceScene(float3 origin, float3 direction)
 {
     Hit hit;
     hit.distance = 1e4;
@@ -119,14 +133,17 @@ Hit traceScene(float3 origin, float3 direction, float4 spheres[Balls])
             hit.material = 1;
         }
     }
-    [unroll]
+    float2 swing = FirstSwing;
+    [loop]
     for (int i = 0; i < Balls; i++)
     {
-        float t = sphereHit(origin, direction, spheres[i]);
+        float3 centre = ballCentre(i, swing.x);
+        swing = nextSwing(swing);
+        float t = sphereHit(origin, direction, float4(centre, BallRadius));
         if (t > 0.0 && t < hit.distance)
         {
             hit.distance = t;
-            hit.normal = (origin + direction * t - spheres[i].xyz) / BallRadius;
+            hit.normal = (origin + direction * t - centre) / BallRadius;
             hit.material = 2;
             hit.index = i;
         }
@@ -163,37 +180,41 @@ static const float3 KeyLight = float3(1.5, 7.0, -2.0);
 
 // Light on a diffuse point: the overhead key with soft ball shadows, plus a pool of coloured light
 // from each strip segment above (no shadows needed: they're right overhead).
-float3 directLight(float3 position, float3 normal, float4 spheres[Balls])
+float3 directLight(float3 position, float3 normal)
 {
     float3 toKey = KeyLight - position;
     float distance = length(toKey);
     float3 direction = toKey / distance;
     float shadow = 1.0;
-    [unroll]
+    float3 pools = float3(0.0, 0.0, 0.0);
+    float2 swing = FirstSwing;
+    [loop]
     for (int i = 0; i < Balls; i++)
     {
-        shadow *= sphereShadow(position, direction, spheres[i], 5.0);
-    }
-    float3 colour = float3(1.0, 0.97, 0.92) * 1.6 * saturate(dot(normal, direction)) * shadow * 50.0 / (distance * distance);
-    [unroll]
-    for (int j = 0; j < Balls; j++)
-    {
-        float3 strip = float3(0.0, BarHeight, rowZ(j)) - position;
+        shadow *= sphereShadow(position, direction, float4(ballCentre(i, swing.x), BallRadius), 5.0);
+        swing = nextSwing(swing);
+        float3 strip = float3(0.0, BarHeight, rowZ(i)) - position;
         float d2 = dot(strip, strip);
-        colour += stripColour(j) * saturate(dot(normal, strip) * rsqrt(d2)) * 2.4 / d2;
+        pools += stripColour(i) * saturate(dot(normal, strip) * rsqrt(d2)) * 2.4 / d2;
     }
-    return colour;
+    return float3(1.0, 0.97, 0.92) * 1.6 * saturate(dot(normal, direction)) * shadow * 50.0 / (distance * distance) + pools;
 }
 
-float3 trace(float3 origin, float3 direction, float4 spheres[Balls])
+// Also gives how far away the first thing the ray meets is, for the strings to hide behind.
+float3 trace(float3 origin, float3 direction, out float firstDistance)
 {
     float3 colour = 0.0;
     float3 throughput = 1.0;
+    firstDistance = 1e4;
     int bounces = qualitySteps(3);
     [loop]
     for (int depth = 0; depth < bounces; depth++)
     {
-        Hit hit = traceScene(origin, direction, spheres);
+        Hit hit = traceScene(origin, direction);
+        if (depth == 0)
+        {
+            firstDistance = hit.distance;
+        }
         float3 position = origin + direction * hit.distance;
         float facing = saturate(dot(hit.normal, -direction));
         if (hit.material == 0)
@@ -210,6 +231,13 @@ float3 trace(float3 origin, float3 direction, float4 spheres[Balls])
             break;
         }
         float3 normal = hit.normal;
+
+        // The bar and the floor are both lit from above, which is worked out here, in one place.
+        float3 lit = float3(0.0, 0.0, 0.0);
+        if (hit.material == 1 || hit.material == 3)
+        {
+            lit = directLight(position, normal);
+        }
         if (hit.material == 2)
         {
             // Polished chrome, tinted ever so slightly warm.
@@ -218,7 +246,7 @@ float3 trace(float3 origin, float3 direction, float4 spheres[Balls])
         else if (hit.material == 3)
         {
             // Brushed black steel bar.
-            colour += throughput * float3(0.03, 0.03, 0.035) * directLight(position, normal, spheres) * 0.3;
+            colour += throughput * float3(0.03, 0.03, 0.035) * lit * 0.3;
             throughput *= 0.15 + 0.85 * pow(1.0 - facing, 5.0);
         }
         else
@@ -226,7 +254,7 @@ float3 trace(float3 origin, float3 direction, float4 spheres[Balls])
             // The floor: dark glossy lacquer that fades into the studio in the distance.
             float fog = smoothstep(6.0, 18.0, length(position.xz));
             float fresnel = 0.05 + 0.95 * pow(1.0 - facing, 5.0);
-            float3 surface = float3(0.09, 0.09, 0.1) * (directLight(position, normal, spheres) + 0.02) * (1.0 - fresnel);
+            float3 surface = float3(0.09, 0.09, 0.1) * (lit + 0.02) * (1.0 - fresnel);
             colour += throughput * lerp(surface, backdrop(direction), fog);
             throughput *= (fresnel * 0.9 + 0.08) * (1.0 - fog);
         }
@@ -255,12 +283,10 @@ float2 raySegment(float3 origin, float3 direction, float3 a, float3 b)
 
 float3 Render(float2 uv, float2 p)
 {
-    float4 spheres[Balls];
-    [unroll]
-    for (int b = 0; b < Balls; b++)
-    {
-        spheres[b] = float4(ballCentre(b), BallRadius);
-    }
+    // The wave repeats every Cycle seconds, so only the part of a cycle gone by matters.
+    float turn = 2.0 * PI * frac(Time / Cycle);
+    sincos(Swings * turn, FirstSwing.y, FirstSwing.x);
+    sincos(turn, SwingStep.y, SwingStep.x);
 
     float orbit = 0.95 + sin(Time * 0.04) * 0.4;
     float3 eye = float3(sin(orbit) * 6.0, 2.3 + sin(Time * 0.06) * 0.4, -cos(orbit) * 6.0);
@@ -268,21 +294,27 @@ float3 Render(float2 uv, float2 p)
     const float zoom = 1.6;
     float3 direction = cameraRay(eye, target, float2(p.x, -p.y), zoom, 0.0);
 
-    float3 colour = trace(eye, direction, spheres);
+    float firstDistance;
+    float3 colour = trace(eye, direction, firstDistance);
 
     // The fine strings: each ball hangs in a V from two points on the bar, so it can only swing one way.
-    Hit first = traceScene(eye, direction, spheres);
     float pixelAngle = pixelSize() / zoom;
+    float2 swing = FirstSwing;
     [loop]
-    for (int w = 0; w < Balls * 2; w++)
+    for (int ball = 0; ball < Balls; ball++)
     {
-        int ball = w / 2;
-        float3 top = float3(0.0, BarHeight, rowZ(ball) + ((w & 1) == 0 ? -0.16 : 0.16));
-        float3 bottom = spheres[ball].xyz;
-        float2 closest = raySegment(eye, direction, top, bottom);
-        float width = max(0.003, pixelAngle * closest.y * 0.6);
-        float coverage = saturate(0.003 / width) * smoothstep(width, 0.0, closest.x) * step(closest.y, first.distance);
-        colour = lerp(colour, float3(0.35, 0.36, 0.4) + stripColour(ball) * 0.1, coverage * 0.8);
+        float3 bottom = ballCentre(ball, swing.x);
+        swing = nextSwing(swing);
+        float3 cord = float3(0.35, 0.36, 0.4) + stripColour(ball) * 0.1;
+        [unroll]
+        for (int side = 0; side < 2; side++)
+        {
+            float3 top = float3(0.0, BarHeight, rowZ(ball) + (side == 0 ? -0.16 : 0.16));
+            float2 closest = raySegment(eye, direction, top, bottom);
+            float width = max(0.003, pixelAngle * closest.y * 0.6);
+            float coverage = saturate(0.003 / width) * smoothstep(width, 0.0, closest.x) * step(closest.y, firstDistance);
+            colour = lerp(colour, cord, coverage * 0.8);
+        }
     }
     return colour;
 }
