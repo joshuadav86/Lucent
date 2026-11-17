@@ -44,7 +44,7 @@ public partial class VideoWindow : Window
         _settings = settings;
         Width = Math.Max(MinWidth, settings.VideoWindowWidth);
         Height = Math.Max(MinHeight, settings.VideoWindowHeight);
-        _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon);
+        _fullScreen = new FullScreen(this, FullScreenButton, FullScreenIcon, titleBarStays: false);
         _fullScreen.Changed += (_, _) => OnFullScreenChanged();
 
         // A click waits to be sure it isn't the start of a double-click.

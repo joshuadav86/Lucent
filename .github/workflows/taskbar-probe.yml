@@ -12,12 +12,6 @@ jobs:
           dotnet-version: 10.0.x
       - name: Build
         run: dotnet publish src/Lucent.Windows/Lucent.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
-      - name: Probe
+      - name: Layout check
         shell: pwsh
-        run: |
-          $out = Join-Path $env:RUNNER_TEMP "probe.txt"
-          $env:LUCENT_DATA_FOLDER = Join-Path $env:RUNNER_TEMP "probe-data"
-          $env:LUCENT_TASKBAR_PROBE = $out
-          $p = Start-Process -FilePath (Resolve-Path publish/Lucent.exe) -PassThru
-          if (-not $p.WaitForExit(120000)) { Stop-Process -Id $p.Id -Force }
-          Get-Content $out | Write-Host
+        run: tools/windows/layout-check.ps1 publish/Lucent.exe

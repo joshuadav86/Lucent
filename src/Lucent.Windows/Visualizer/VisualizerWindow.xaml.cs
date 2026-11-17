@@ -1057,11 +1057,14 @@ public partial class VisualizerWindow : ToolWindow
             WindowState = WindowState.Normal;
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.NoResize;
+            // Without its chrome, which would clip it to the screen less the taskbar, leaving the taskbar showing.
+            Windows.FullScreenChrome.TakeOff(this);
             WindowState = WindowState.Maximized;
             Activate();
         }
         else
         {
+            Windows.FullScreenChrome.PutBack(this);
             WindowStyle = WindowStyle.SingleBorderWindow;
             ResizeMode = ResizeMode.CanResize;
             WindowState = _stateBeforeFullscreen;

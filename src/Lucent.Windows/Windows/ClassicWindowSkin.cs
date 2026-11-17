@@ -94,12 +94,12 @@ public static class ClassicWindowSkin
                 _window.Content = null;
                 _contentHost.Child = _lucentContent as UIElement;
                 _window.Content = _root;
-                _lucentChrome = WindowChrome.GetWindowChrome(_window);
+                _lucentChrome = FullScreenChrome.Get(_window);
             }
 
             UseSkinColours(skin);
             // The skin's title bar moves the window now; the edges still resize it.
-            CaptionRepaint.Change(_window, () => WindowChrome.SetWindowChrome(_window, new WindowChrome
+            CaptionRepaint.Change(_window, () => FullScreenChrome.Set(_window, new WindowChrome
             {
                 CaptionHeight = 0,
                 ResizeBorderThickness = _lucentChrome?.ResizeBorderThickness ?? new Thickness(6),
@@ -136,7 +136,7 @@ public static class ClassicWindowSkin
 
             _savedResources.Clear();
             var chrome = _lucentChrome;
-            CaptionRepaint.Change(_window, () => WindowChrome.SetWindowChrome(_window, chrome));
+            CaptionRepaint.Change(_window, () => FullScreenChrome.Set(_window, chrome));
         }
 
         /// <summary>Sizes the frame to the window and lays the window's own content over its middle; or no frame while it fills the screen.</summary>
