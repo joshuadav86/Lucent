@@ -21,8 +21,8 @@ A free, open-source music and video player for Windows and Mac, with 500 live GP
 
 ## What's inside
 
-- **500 visuals**, drawn live on your graphics card: 252 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio.
-- **Windows that work together.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, or press Shift+F11 to tile them all full screen.
+- **500 visuals**, drawn live on your graphics card: 252 Lucent originals (ray-traced scenes, particle storms, fractals, and more), 214 MilkDrop presets, and 34 classic AVS presets. They know the song's build-ups and drops, even on radio. Hide the ones you don't like, and Auto won't bring back one you just saw.
+- **Windows that work together.** Player, library, queue, equalizer, analyzer, artwork, and visuals snap together and move as one. Drag one onto another to swap them, press U to put them all in one window (classic skins too), or press Shift+F11 to tile them all full screen.
 - **Video player.** MP4, MOV, MKV, WebM, and more play in a window of their own, with the sound through the EQ and visuals.
 - **Video and audio editor.** Cut, repair, master, split stems with AI, find loops, and run VST3 effects. Trim MP4 and MOV without re-encoding.
 - **Analyzer.** Spectrogram, waveform, spectrum, stereo scope, and LUFS loudness (momentary, short-term, integrated, range, and true peak) for everything you play.
@@ -35,14 +35,14 @@ A free, open-source music and video player for Windows and Mac, with 500 live GP
 
 <table>
 <tr>
-<td width="33%"><img src="site/img/black-hole.jpg" alt="Black Hole"><br><sub><b>Black Hole</b></sub></td>
-<td width="33%"><img src="site/img/riemann-sphere.jpg" alt="Riemann Sphere"><br><sub><b>Riemann Sphere</b></sub></td>
-<td width="33%"><img src="site/img/galaxy-collision.jpg" alt="Galaxy Collision"><br><sub><b>Galaxy Collision</b></sub></td>
+<td width="33%"><img src="site/img/sunward.jpg" alt="Sunward"><br><sub><b>Sunward</b></sub></td>
+<td width="33%"><img src="site/img/lampwork.jpg" alt="Lampwork"><br><sub><b>Lampwork</b></sub></td>
+<td width="33%"><img src="site/img/hex-fault.jpg" alt="Hex Fault"><br><sub><b>Hex Fault</b></sub></td>
 </tr>
 <tr>
-<td><img src="site/img/kaleido-cathedral.jpg" alt="Kaleido Cathedral"><br><sub><b>Kaleido Cathedral</b></sub></td>
-<td><img src="site/img/mandelbulb-bloom.jpg" alt="Mandelbulb Bloom"><br><sub><b>Mandelbulb Bloom</b></sub></td>
-<td><img src="site/img/neon-downpour.jpg" alt="Neon Downpour"><br><sub><b>Neon Downpour</b></sub></td>
+<td><img src="site/img/gossamer.jpg" alt="Gossamer"><br><sub><b>Gossamer</b></sub></td>
+<td><img src="site/img/nautilus.jpg" alt="Nautilus"><br><sub><b>Nautilus</b></sub></td>
+<td><img src="site/img/lidar-street.jpg" alt="Lidar Street"><br><sub><b>Lidar Street</b></sub></td>
 </tr>
 </table>
 
@@ -59,13 +59,13 @@ See everything at **[lucentaudio.net](https://lucentaudio.net)**.
 
 | | |
 |---|---|
-| **Windows 10 or 11** | [`Lucent-Setup.exe`](../../releases/download/latest/Lucent-Setup.exe), or the portable [`Lucent-win-x64.zip`](../../releases/download/latest/Lucent-win-x64.zip) |
-| **Mac, Apple silicon** | [`Lucent-Setup-mac-arm64.pkg`](../../releases/download/latest/Lucent-Setup-mac-arm64.pkg) |
-| **Mac, Intel** | [`Lucent-Setup-mac-x64.pkg`](../../releases/download/latest/Lucent-Setup-mac-x64.pkg) |
+| **Windows 10 or 11** | [`Lucent-Setup.exe`](../../releases/latest/download/Lucent-Setup.exe), or the portable [`Lucent-win-x64.zip`](../../releases/latest/download/Lucent-win-x64.zip) |
+| **Mac, Apple silicon** | [`Lucent-Setup-mac-arm64.pkg`](../../releases/latest/download/Lucent-Setup-mac-arm64.pkg) |
+| **Mac, Intel** | [`Lucent-Setup-mac-x64.pkg`](../../releases/latest/download/Lucent-Setup-mac-x64.pkg) |
 
 Windows installs for your account, with no admin rights. If SmartScreen warns, click **More info**, then **Run anyway**. The Mac app needs macOS 12 or later and is signed and notarized by Apple. Any Direct3D 11 or Metal GPU works; a recent one gets you Ultra detail and 4K.
 
-Lucent updates itself when you close it. Choose **Every build** or switch off automatic installs under **Options → Updates**. All files are on the [Latest build](../../releases/tag/latest) release.
+Lucent updates itself when you close it. Choose **Every build** or switch off automatic installs under **Options → Updates**. These links get the newest stable release. To try every build of main, download from the [Latest build](../../releases/tag/latest) release instead.
 
 ## How it's built
 
@@ -83,7 +83,7 @@ Lucent updates itself when you close it. Choose **Every build** or switch off au
 | `S` / `R` | Shuffle, repeat | `D` `G` `K` | Dock, fill, shrink | `A` | Auto mode |
 | `H` | Favorite | `J` / `Shift+D` | Link windows, tidy layout | `F` | Star the visual |
 | `Ctrl+I` | Edit sound info | `O` / `M` | Options, Sources | `F11` / `Shift+F11` | Fullscreen visuals, full-screen layout |
-| | | `1`–`9` | Saved layouts | | |
+| | | `U` / `1`–`9` | One window, saved layouts | | |
 
 Media keys work in the background, the Dock and taskbar have play controls, and the playing song shows in Windows' media controls and the Mac's Now Playing.
 
