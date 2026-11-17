@@ -333,6 +333,12 @@ public sealed class AppSettings
     /// <summary>Visuals starred as favourites, by name.</summary>
     public List<string> FavoriteVisuals { get; set; } = new();
 
+    /// <summary>
+    /// Visuals the user hid, by name. They're left out of the picker, Auto, N and B, and every list but
+    /// <see cref="HiddenListName"/>, where they can be shown again.
+    /// </summary>
+    public List<string> HiddenVisuals { get; set; } = new();
+
     /// <summary>The user's own lists of visuals: list name to visual names.</summary>
     public Dictionary<string, List<string>> VisualLists { get; set; } = new();
 
@@ -368,6 +374,9 @@ public sealed class AppSettings
 
     /// <summary>The name the favourites go by in lists of visuals; no list of the user's can take it.</summary>
     public const string FavoritesListName = "Favorites";
+
+    /// <summary>The name the hidden visuals go by in lists of visuals; no list of the user's can take it.</summary>
+    public const string HiddenListName = "Hidden";
 
     // ---- Sound ----
 
@@ -662,7 +671,17 @@ public sealed class AppSettings
         LastVisual = LastVisual is null || RemovedVisuals.Contains(LastVisual) ? null : Replace(LastVisual);
         FavoriteVisuals = ReplaceAll(FavoriteVisuals);
         RecentVisuals = ReplaceAll(RecentVisuals);
+        // A replacement is a new visual, so it isn't hidden just because the one it replaced was.
+        HiddenVisuals = (HiddenVisuals ?? new()).Where(name => !RemovedVisuals.Contains(name) && !ReplacedVisuals.ContainsKey(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         VisualLists ??= new();
+        // "Hidden" is the hidden visuals' list now, so a list of the user's by that name keeps its visuals under another.
+        if (VisualLists.Keys.FirstOrDefault(key => string.Equals(key, HiddenListName, StringComparison.OrdinalIgnoreCase)) is { } taken)
+        {
+            VisualLists.TryAdd($"{taken} (my list)", VisualLists[taken]);
+            VisualLists.Remove(taken);
+        }
+
         foreach (var list in VisualLists.Keys.ToList())
         {
             VisualLists[list] = ReplaceAll(VisualLists[list]);
