@@ -41,19 +41,29 @@ public partial class MainWindow
             var owner = Probe.GetWindow(hwnd, 4);
             lines.Add($"visuals {hwnd} owner {owner} ({Probe.ClassOf(owner)}) exstyle 0x{Probe.GetWindowLongPtr(hwnd, -20):x}");
 
-            foreach (var variant in new[] { "as is", "MarkFullscreenWindow", "Topmost", "as is again" })
+            foreach (var variant in new[] { "as is", "unowned", "unowned+mark", "topmost after", "unowned+topmost", "as is again" })
             {
-                if (variant == "MarkFullscreenWindow")
+                if (variant.StartsWith("unowned"))
+                {
+                    Probe.SetWindowLongPtr(hwnd, -8, IntPtr.Zero);
+                }
+
+                if (variant.EndsWith("mark"))
                 {
                     Probe.Mark(hwnd, true);
                 }
 
-                if (variant == "Topmost")
+                _visuals.ToggleFullscreen();
+                if (variant.EndsWith("topmost") || variant == "topmost after")
                 {
                     _visuals.Topmost = true;
+                    _visuals.Activate();
                 }
 
-                _visuals.ToggleFullscreen();
+                await Task.Delay(TimeSpan.FromSeconds(0.3));
+                Probe.GetWindowRect(tray, out var early);
+                var earlyHit = Probe.GetAncestor(Probe.WindowFromPoint(new Probe.POINT { X = (early.Left + early.Right) / 2, Y = (early.Top + early.Bottom) / 2 }), 2);
+                lines.Add($"{variant} after 0.3 s: {(earlyHit == hwnd ? "covered" : Probe.ClassOf(earlyHit))}, owner now {Probe.GetWindow(hwnd, 4)}");
                 await Task.Delay(TimeSpan.FromSeconds(2));
                 Probe.GetWindowRect(hwnd, out var rect);
                 var monitor = Probe.MonitorFromWindow(hwnd, 2);
@@ -69,12 +79,18 @@ public partial class MainWindow
                     $"{(hit == hwnd ? "THE VISUALS (covered)" : $"{hit} {Probe.ClassOf(hit)} (TASKBAR SHOWS)")}");
                 _visuals.ToggleFullscreen();
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                if (variant == "MarkFullscreenWindow")
+                if (variant.EndsWith("mark"))
                 {
                     Probe.Mark(hwnd, false);
                 }
 
                 _visuals.Topmost = false;
+                if (variant.StartsWith("unowned"))
+                {
+                    Probe.SetWindowLongPtr(hwnd, -8, owner);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(0.5));
             }
         }
         catch (Exception ex)
@@ -98,6 +114,7 @@ public partial class MainWindow
         [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
         [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, int cmd);
         [DllImport("user32.dll")] public static extern IntPtr GetWindowLongPtr(IntPtr h, int i);
+        [DllImport("user32.dll")] public static extern IntPtr SetWindowLongPtr(IntPtr h, int i, IntPtr v);
         [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr h, int f);
         [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO i);
         [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT p);
