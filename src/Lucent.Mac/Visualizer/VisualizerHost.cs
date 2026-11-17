@@ -145,6 +145,9 @@ public sealed class VisualizerHost : Border, IDisposable
     /// <summary>Every visual (with its family and tags), in the order <see cref="PresetIndex"/> counts them; empty until they load.</summary>
     public IReadOnlyList<PresetSource> Presets => _presets;
 
+    /// <summary>Whether the visual asked for is still compiling, so the one before it is still showing.</summary>
+    public bool WaitingForPreset => _engine?.WaitingForPreset ?? false;
+
     /// <summary>Whether the visual of this name didn't compile (or a MilkDrop preset went wrong drawing), so it's being skipped.</summary>
     public bool HasFailed(string name)
     {
