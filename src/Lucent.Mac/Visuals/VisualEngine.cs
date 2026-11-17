@@ -32,7 +32,8 @@ public sealed partial class VisualEngine : IDisposable
 {
     /// <summary>The visuals' own pictures: half-float, so glow and HDR have room above white.</summary>
     internal const MTLPixelFormat FeedbackFormat = MTLPixelFormat.RGBA16Float;
-    private const int ConstantCount = 48;
+    // 49 used (CaptionAge is the last, see Common.hlsli), rounded up to whole 16-byte registers, as on Windows.
+    private const int ConstantCount = 52;
     private const int ParticleStride = 64;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const int ParticleGroupSize = 256;
@@ -59,6 +60,13 @@ public sealed partial class VisualEngine : IDisposable
     private readonly float[] _constants = new float[ConstantCount];
     private readonly Random _random = new();
     private readonly MTLTexture[] _audioTextures = new MTLTexture[FramesInFlight];
+    // The names of what's playing, a letter to a texel (Caption in Common.hlsli): one copy for each frame in flight,
+    // each rewritten only when the names have changed since it was last written.
+    private readonly MTLTexture[] _captionTextures = new MTLTexture[FramesInFlight];
+    private readonly int[] _captionWritten = new int[FramesInFlight];
+    private readonly float[] _captionLetters = new float[SongCaption.MaxLetters * SongCaption.Lines];
+    private int _captionVersion = -1;
+    private int _captionChanges;
     private readonly IntPtr[] _inFlight = new IntPtr[FramesInFlight];
     private readonly RenderTarget?[] _feedback = new RenderTarget?[2];
     private readonly RenderTarget?[] _transitionTargets = new RenderTarget?[2];
@@ -301,6 +309,9 @@ public sealed partial class VisualEngine : IDisposable
     /// <summary>The song that's playing and its bars, so Auto can change visual on a downbeat.</summary>
     public SongClock? SongClock { get; set; }
 
+    /// <summary>The names of what's playing, for visuals that show them; null shows none (recording, say).</summary>
+    public SongCaption? Caption { get; set; }
+
     /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them; null when there's no mouse (recording, say).</summary>
     public PointerStir? Pointer { get; set; }
 
@@ -321,6 +332,12 @@ public sealed partial class VisualEngine : IDisposable
             description.Usage = MTLTextureUsage.ShaderRead;
             description.StorageMode = MTLStorageMode.Shared;
             _audioTextures[i] = _device.NewTexture(description);
+
+            var caption = MTLTextureDescriptor.Texture2DDescriptor(MTLPixelFormat.R32Float, SongCaption.MaxLetters, SongCaption.Lines, false);
+            caption.Usage = MTLTextureUsage.ShaderRead;
+            caption.StorageMode = MTLStorageMode.Shared;
+            _captionTextures[i] = _device.NewTexture(caption);
+            _captionWritten[i] = -1;
         }
 
         var sampler = new MTLSamplerDescriptor
@@ -577,6 +594,7 @@ public sealed partial class VisualEngine : IDisposable
             handle.Free();
         }
 
+        UpdateCaption(slot);
         var supersampling = _renderWidth > _windowWidth;
         _constants[0] = _renderWidth;
         _constants[1] = _renderHeight;
@@ -865,6 +883,43 @@ public sealed partial class VisualEngine : IDisposable
         return (int)Math.Clamp(count, ParticleGroupSize, MaxParticleCount);
     }
 
+    /// <summary>
+    /// Writes the names of what's playing into this frame's copy of the caption texture when they've changed since it
+    /// was last written, and how long they are and how long they've been showing into the constants, for visuals that
+    /// draw them (captionLetter in Common.hlsli).
+    /// </summary>
+    private void UpdateCaption(int slot)
+    {
+        var titleLength = 0;
+        var artistLength = 0;
+        var age = 0f;
+        if (Caption is { } caption && caption.Take(ref _captionVersion, _captionLetters, out titleLength, out artistLength, out age))
+        {
+            _captionChanges++;
+        }
+
+        if (_captionWritten[slot] != _captionChanges)
+        {
+            var handle = GCHandle.Alloc(_captionLetters, GCHandleType.Pinned);
+            try
+            {
+                _captionTextures[slot].ReplaceRegion(
+                    new MTLRegion { origin = new MTLOrigin(), size = new MTLSize { width = SongCaption.MaxLetters, height = SongCaption.Lines, depth = 1 } },
+                    0, handle.AddrOfPinnedObject(), SongCaption.MaxLetters * sizeof(float));
+            }
+            finally
+            {
+                handle.Free();
+            }
+
+            _captionWritten[slot] = _captionChanges;
+        }
+
+        _constants[46] = titleLength;
+        _constants[47] = artistLength;
+        _constants[48] = age;
+    }
+
     /// <summary>A full-screen pass: one triangle that covers the destination, drawn by <paramref name="pipeline"/>.</summary>
     private void DrawPass(
         MTLCommandBuffer commands, MTLTexture audio, MTLTexture destination, int width, int height, MTLRenderPipelineState pipeline,
@@ -876,6 +931,7 @@ public sealed partial class VisualEngine : IDisposable
         SetFragmentConstants(encoder);
         encoder.SetFragmentTexture(source, 0);
         encoder.SetFragmentTexture(audio, 1);
+        encoder.SetFragmentTexture(_captionTextures[_frameSlot], 5);
         if (extra is { } next)
         {
             encoder.SetFragmentTexture(next, 2);
@@ -1222,6 +1278,7 @@ public sealed partial class VisualEngine : IDisposable
             }
 
             _audioTextures[i].Dispose();
+            _captionTextures[i].Dispose();
         }
 
         ReleaseRenderTargets();

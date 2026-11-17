@@ -2731,6 +2731,7 @@ public partial class MainWindow : Window
         }
 
         ArtworkWindow.ShowTrack(track is { IsStreamed: true } ? null : track);
+        _visualizer.Caption.Set(track?.Title, track?.Artist);
         UpdateMediaControls();
         UpdateTrackFavoriteButton();
         if (track is null)

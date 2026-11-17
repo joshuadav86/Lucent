@@ -473,6 +473,8 @@ public partial class MainWindow
         // station, the show that's on.
         var streamSong = _radioStream?.NowPlaying ?? (_liveShow is { IsSong: true } listed ? listed.Title : null);
         var song = streamSong ?? _liveShow?.Title;
+        var (songArtist, songTitle) = SplitSong(song);
+        _visualizer.Caption.Set(songTitle ?? station.Name, songArtist);
         var marquee = _tuning is not null ? $"Tuning in to {station.Name}…" : song ?? station.Name;
         // Set only when it changes, so a long title keeps scrolling smoothly.
         if (NowPlayingText.Text != marquee)
