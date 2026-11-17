@@ -671,7 +671,9 @@ public sealed partial class Renderer : IDisposable
             Present();
             if (_autoResolutionOn && _targetPixels <= 0)
             {
-                _autoResolution.Frame(now, VisualsPower.FrameRate(_display.RefreshRate), _activePreset);
+                // One read of the mode, so a change lands as one change of goal and pixels together.
+                var power = VisualsPower.Effective;
+                _autoResolution.Frame(now, VisualsPower.FrameRate(_display.RefreshRate, power), _activePreset, VisualsPower.PixelShareIn(power));
             }
 
             frames++;

@@ -1184,7 +1184,9 @@ public sealed partial class VisualEngine : IDisposable
         Interlocked.Increment(ref _framesPresented);
         if (_autoResolutionOn && _targetPixels <= 0 && _activePreset >= 0)
         {
-            _autoResolution.Frame(now, VisualsPower.FrameRate(Display.RefreshRate), _activePreset);
+            // One read of the mode, so a change lands as one change of goal and pixels together.
+            var power = VisualsPower.Effective;
+            _autoResolution.Frame(now, VisualsPower.FrameRate(Display.RefreshRate, power), _activePreset, VisualsPower.PixelShareIn(power));
         }
     }
 

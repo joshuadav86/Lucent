@@ -67,10 +67,16 @@ public static class VisualsPower
     public static bool FullRateInBackground => Effective != PowerMode.PowerSaver;
 
     /// <summary>The share of pixels to draw: half in Power saver, all of them otherwise.</summary>
-    public static double PixelShare => Effective == PowerMode.PowerSaver ? 0.5 : 1.0;
+    public static double PixelShare => PixelShareIn(Effective);
+
+    /// <summary>The share of pixels <paramref name="mode"/> draws (an effective mode, not Auto).</summary>
+    public static double PixelShareIn(PowerMode mode) => mode == PowerMode.PowerSaver ? 0.5 : 1.0;
 
     /// <summary>The most frames a second the mode draws, or 0 for the screen's own rate.</summary>
-    public static int MaxFrameRate => Effective switch
+    public static int MaxFrameRate => MaxFrameRateIn(Effective);
+
+    /// <summary>The most frames a second <paramref name="mode"/> draws (an effective mode, not Auto), or 0 for the screen's own rate.</summary>
+    public static int MaxFrameRateIn(PowerMode mode) => mode switch
     {
         PowerMode.Balanced => 60,
         PowerMode.PowerSaver => 30,
@@ -81,9 +87,12 @@ public static class VisualsPower
     /// How many screen refreshes each frame stays up for: 1 for the screen's own rate, and 1 too when
     /// the screen is already about as slow as the mode's limit (a 75 Hz screen in Balanced).
     /// </summary>
-    public static int RefreshesPerFrame(int refreshRate)
+    public static int RefreshesPerFrame(int refreshRate) => RefreshesPerFrame(refreshRate, Effective);
+
+    /// <summary>How many screen refreshes each frame stays up for in <paramref name="mode"/> (an effective mode, not Auto).</summary>
+    public static int RefreshesPerFrame(int refreshRate, PowerMode mode)
     {
-        var limit = MaxFrameRate;
+        var limit = MaxFrameRateIn(mode);
         if (limit <= 0 || refreshRate < limit * 1.5)
         {
             return 1;
@@ -93,7 +102,10 @@ public static class VisualsPower
     }
 
     /// <summary>The frame rate the visuals can reach on a screen at <paramref name="refreshRate"/>.</summary>
-    public static int FrameRate(int refreshRate) => Math.Max(1, refreshRate / RefreshesPerFrame(refreshRate));
+    public static int FrameRate(int refreshRate) => FrameRate(refreshRate, Effective);
+
+    /// <summary>The frame rate the visuals can reach in <paramref name="mode"/> (an effective mode, not Auto).</summary>
+    public static int FrameRate(int refreshRate, PowerMode mode) => Math.Max(1, refreshRate / RefreshesPerFrame(refreshRate, mode));
 
     /// <summary>
     /// The least time each frame should stay on screen, in seconds, or 0 for no limit. A little under the
