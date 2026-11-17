@@ -22,6 +22,7 @@ namespace Lucent;
 /// from there, the equalizer its own height again. Last, it lays the panels out "Player on the left, queue beside it"
 /// filling the screen and switches single window off from there. Then it picks a classic skin with every window out in a
 /// single window, which stays one with each panel in the skin (CheckClassicAsync). The Mac app checks the same in its own LayoutCheck.
+/// Last of all, the visuals and the analyzer go full screen and must cover the taskbar (CheckFullScreenCoversTaskbarAsync).
 /// </summary>
 public partial class MainWindow
 {
@@ -160,6 +161,9 @@ public partial class MainWindow
 
             // A classic skin picked in the single window, which stays one (2026-11-14), and Lucent's own player back.
             lines.AddRange(await CheckClassicAsync());
+
+            // The visuals and the analyzer full screen cover the taskbar too, and come back with their title bars.
+            lines.AddRange(await CheckFullScreenCoversTaskbarAsync());
         }
         catch (Exception ex)
         {
@@ -765,4 +769,109 @@ public partial class MainWindow
     [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "IsWindowVisible")]
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static extern bool IsWindowVisible(IntPtr hwnd);
+
+    /// <summary>
+    /// The visuals' full screen (a double-click on them) and the analyzer's (F11) cover the whole screen, the taskbar
+    /// too: the window found at the middle of the taskbar is the full screen one (2026-11-17, a Reddit report from the
+    /// portable build: Lucent's window chrome clipped a maximized window to the screen less the taskbar, so the taskbar
+    /// stayed on show). Each comes back with its title bar's chrome, and a panel of the single window goes back in, the
+    /// single window keeping every panel it had. A machine without a taskbar has nothing to check.
+    /// </summary>
+    private async Task<List<string>> CheckFullScreenCoversTaskbarAsync()
+    {
+        var lines = new List<string>();
+        var taskbar = Taskbar.Find();
+        if (taskbar == IntPtr.Zero)
+        {
+            lines.Add("ok full screen covers the taskbar: there's no taskbar on this machine to cover");
+            return lines;
+        }
+
+        if (!InSingleWindow && !_visuals.IsVisible)
+        {
+            ToggleWindow(_visuals);
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
+        lines.Add(await CoversTaskbarAsync("the visuals", _visuals, _visuals.ToggleFullscreen, () => _visuals.IsFullscreen, taskbar));
+        if (!AnalyzerWindow.IsOpen)
+        {
+            ToggleAnalyzer();
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
+        if (AnalyzerWindow.Current is AnalyzerWindow analyzer)
+        {
+            lines.Add(await CoversTaskbarAsync("the analyzer", analyzer, analyzer.ToggleFullScreen, () => analyzer.IsFullScreen, taskbar));
+        }
+
+        return lines;
+    }
+
+    private async Task<string> CoversTaskbarAsync(string name, Window window, Action toggle, Func<bool> isOn, IntPtr taskbar)
+    {
+        var chrome = System.Windows.Shell.WindowChrome.GetWindowChrome(window);
+        var panels = InSingleWindow ? PanelPlaces().Count : 0;
+        toggle();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var (covered, there) = Taskbar.CoveredBy(window, taskbar);
+        toggle();
+        await Task.Delay(TimeSpan.FromSeconds(1.5));
+        var back = !isOn() && System.Windows.Shell.WindowChrome.GetWindowChrome(window) == chrome && chrome is not null;
+        var panelsBack = !InSingleWindow || PanelPlaces().Count == panels;
+        return $"{(covered && back && panelsBack ? "ok" : "MISMATCH")} full screen covers the taskbar: {name} " +
+            $"{(covered ? "covered it" : $"left it showing ({there} at its middle)")}, came back {(back ? "with" : "WITHOUT")} its title bar" +
+            (InSingleWindow ? $", and the single window has {PanelPlaces().Count} panels (it had {panels})" : string.Empty);
+    }
+
+    /// <summary>The taskbar, and what's on top at the middle of it.</summary>
+    private static class Taskbar
+    {
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct Rect
+        {
+            public int Left, Top, Right, Bottom;
+        }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct Point
+        {
+            public int X, Y;
+        }
+
+        /// <summary>The taskbar on the main screen, or zero if there's none showing.</summary>
+        public static IntPtr Find()
+        {
+            var taskbar = FindWindow("Shell_TrayWnd", null);
+            return taskbar != IntPtr.Zero && IsWindowVisible(taskbar) ? taskbar : IntPtr.Zero;
+        }
+
+        /// <summary>True if <paramref name="window"/> is what's at the middle of the taskbar, and what is if not.</summary>
+        public static (bool Covered, string There) CoveredBy(Window window, IntPtr taskbar)
+        {
+            var handle = new WindowInteropHelper(window).Handle;
+            GetWindowRect(taskbar, out var bar);
+            var middle = new Point { X = (bar.Left + bar.Right) / 2, Y = (bar.Top + bar.Bottom) / 2 };
+            var top = GetAncestor(WindowFromPoint(middle), 2);
+            var name = new System.Text.StringBuilder(256);
+            GetClassName(top, name, name.Capacity);
+            return (top == handle, name.Length > 0 ? name.ToString() : "nothing");
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern IntPtr FindWindow(string className, string? title);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr WindowFromPoint(Point point);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int size);
+    }
 }

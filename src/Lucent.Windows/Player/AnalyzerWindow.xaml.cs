@@ -81,6 +81,11 @@ public partial class AnalyzerWindow : Window
     /// <summary>The open analyzer, if there is one.</summary>
     public static Window? Current => _instance;
 
+    /// <summary>Full screen on or off, as F11 does (for the layout check).</summary>
+    internal void ToggleFullScreen() => _fullScreen.Toggle();
+
+    internal bool IsFullScreen => _fullScreen.IsOn;
+
     /// <summary>Opens the analyzer docked beside the player's windows, or closes it if it's open. Returns whether it's now open.</summary>
     public static bool Toggle(Window owner, AudioPlayer player, AppSettings settings)
     {
