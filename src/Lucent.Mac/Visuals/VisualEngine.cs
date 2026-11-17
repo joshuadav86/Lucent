@@ -1259,15 +1259,60 @@ public sealed partial class VisualEngine : IDisposable
         _particleLayer = null;
     }
 
+    // How long closing waits for the compile threads. A thread can't be stopped partway through a visual,
+    // and Metal's compiler can spend a minute or more on a large one.
+    private static readonly TimeSpan CompilersStopWithin = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Stops compiling and lets go of everything on the GPU. The compile threads use those things, so they
+    /// stop first, but each only stops between visuals. If one is still inside Metal's compiler after a
+    /// short wait, the rest happens on a background thread once it's done, so that closing the window, or
+    /// Lucent (to install an update, say), never waits on a slow shader.
+    /// </summary>
     public void Dispose()
     {
         _stopCompiling = true;
-        foreach (var thread in _compileThreads)
+        var threads = _compileThreads.ToArray();
+        _compileThreads.Clear();
+        var wait = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var thread in threads)
         {
-            thread.Join();
+            var left = CompilersStopWithin - wait.Elapsed;
+            thread.Join(left > TimeSpan.Zero ? left : TimeSpan.Zero);
         }
 
-        _compileThreads.Clear();
+        if (!threads.Any(thread => thread.IsAlive))
+        {
+            ReleaseAll();
+            return;
+        }
+
+        new Thread(() =>
+        {
+            foreach (var thread in threads)
+            {
+                thread.Join();
+            }
+
+            try
+            {
+                using var pool = AutoreleasePool.Begin();
+                ReleaseAll();
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Write("Letting go of the visuals after a slow compile", ex);
+            }
+        })
+        {
+            // A background thread: if Lucent is closing, it ends with Lucent and macOS takes everything back.
+            IsBackground = true,
+            Name = "Visual cleanup",
+        }.Start();
+    }
+
+    private void ReleaseAll()
+    {
         for (var i = 0; i < FramesInFlight; i++)
         {
             if (_inFlight[i] != IntPtr.Zero)
