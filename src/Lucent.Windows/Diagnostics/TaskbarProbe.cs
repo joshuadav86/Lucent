@@ -82,7 +82,7 @@ public partial class MainWindow
             lines.Add($"probe failed: {ex}");
         }
 
-        await File.WriteAllLinesAsync(file, lines);
+        await System.IO.File.WriteAllLinesAsync(file, lines);
         Close();
     }
 
