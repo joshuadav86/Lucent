@@ -83,6 +83,7 @@ public sealed partial class VisualEngine : IDisposable
     private volatile float _autoCycleSeconds = 25f;
     private volatile bool _morphsOnly;
     private volatile int[]? _autoCycleChoices;
+    private volatile int[]? _autoCycleRecent;
     private DisplayInfo _display = DisplayInfo.Standard;
     private int _compilersRunning;
     private long _framesPresented;
@@ -260,6 +261,13 @@ public sealed partial class VisualEngine : IDisposable
     {
         get => _autoCycleChoices;
         set => _autoCycleChoices = value?.ToArray();
+    }
+
+    /// <summary>The visuals shown most recently (by index, newest first), which Auto leaves alone; null for none.</summary>
+    public IReadOnlyCollection<int>? AutoCycleRecent
+    {
+        get => _autoCycleRecent;
+        set => _autoCycleRecent = value?.ToArray();
     }
 
     /// <summary>
@@ -1078,6 +1086,7 @@ public sealed partial class VisualEngine : IDisposable
             }
         }
 
+        ready = RecentVisuals.Fresh(ready, _autoCycleRecent);
         return ready.Count == 0 ? -1 : ready[_random.Next(ready.Count)];
     }
 

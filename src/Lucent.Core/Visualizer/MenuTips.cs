@@ -40,6 +40,8 @@ public static class MenuTips
 
     public const string ChangeEvery = "How long Auto stays on each visual. Picking a time turns Auto on.";
 
+    public const string SkipRecent = "Auto leaves the visuals shown most recently alone, so one doesn't come back soon after it played.";
+
     public const string Resolution = "How many pixels visuals are drawn at. Automatic matches the window and draws fewer while a visual can't keep up, so it stays smooth. Higher is sharper but more work for the graphics card.";
 
     public const string Detail = "Finer detail in the 3D and fractal visuals. Higher is more work for the graphics card.";

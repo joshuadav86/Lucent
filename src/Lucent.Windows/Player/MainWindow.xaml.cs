@@ -1408,6 +1408,7 @@ public partial class MainWindow : Window
         _visualizer.Hdr = _settings.Hdr;
         _visualizer.AutoCycle = _settings.AutoCycle;
         _visualizer.AutoCycleSeconds = _settings.AutoCycleSeconds;
+        _visualizer.AutoCycleRecent = RecentVisuals.Newest(_settings.RecentlyShownVisuals, _settings.SkipRecentVisuals);
         _visualizer.TransitionSeconds = GraphicsOptions.Seconds(_settings.TransitionSpeed);
         _visualizer.MorphTransitionsOnly = _settings.MorphTransitionsOnly;
         _visuals.ShowFrameRate(_settings.ShowFrameRate);
@@ -1502,6 +1503,9 @@ public partial class MainWindow : Window
                 break;
             case "AutoCycleSeconds" when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds):
                 _settings.AutoCycleSeconds = seconds;
+                break;
+            case "SkipRecentVisuals" when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var skipped):
+                _settings.SkipRecentVisuals = skipped;
                 break;
             case "TransitionSpeed" when Enum.TryParse<TransitionSpeed>(value, out var speed):
                 _settings.TransitionSpeed = speed;
@@ -1627,6 +1631,7 @@ public partial class MainWindow : Window
                 "Glow" => _settings.Glow.ToString(),
                 "Power" => _settings.Power.ToString(),
                 "AutoCycleSeconds" => _settings.AutoCycleSeconds.ToString(CultureInfo.InvariantCulture),
+                "SkipRecentVisuals" => _settings.SkipRecentVisuals.ToString(CultureInfo.InvariantCulture),
                 "TransitionSpeed" => _settings.TransitionSpeed.ToString(),
                 "PreviousVisual" => _settings.PreviousVisual.ToString(),
                 "Leveling" => _settings.Leveling.ToString(),

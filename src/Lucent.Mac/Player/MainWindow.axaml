@@ -353,6 +353,19 @@
                     <TextBlock Theme="{StaticResource OptionHint}"
                                Text="Also in the player bar: click the arrow next to AUTO." />
 
+                    <TextBlock Theme="{StaticResource OptionLabel}" Text="Don't repeat the last" />
+                    <Border Theme="{StaticResource SegmentBar}">
+                        <UniformGrid Rows="1">
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SkipRecentVisuals" Tag="0" Content="Off" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SkipRecentVisuals" Tag="25" Content="25" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SkipRecentVisuals" Tag="50" Content="50" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SkipRecentVisuals" Tag="75" Content="75" Click="OnOptionChosen" />
+                            <RadioButton Theme="{StaticResource SegmentButton}" GroupName="SkipRecentVisuals" Tag="100" Content="100" Click="OnOptionChosen" />
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock Theme="{StaticResource OptionHint}"
+                               Text="Auto leaves that many of the most recently shown visuals alone." />
+
                     <TextBlock Theme="{StaticResource OptionLabel}" Text="Transition length" />
                     <Border Theme="{StaticResource SegmentBar}">
                         <UniformGrid Rows="1">
