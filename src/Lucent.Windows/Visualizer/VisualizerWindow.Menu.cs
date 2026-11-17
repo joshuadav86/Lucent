@@ -46,6 +46,7 @@ public partial class VisualizerWindow
             var favourite = Item("Favorite", "F", ToggleFavorite);
             favourite.IsChecked = current.IsFavorite;
             menu.Items.Add(favourite);
+            menu.Items.Add(HideItem(current));
         }
 
         var originals = Item("Lucent originals", null, () =>

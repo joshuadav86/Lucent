@@ -115,7 +115,7 @@ public partial class VisualizerWindow : ToolWindow
         }
 
         // With nothing further back to go to, it steps up the list instead.
-        if (mode == PreviousVisualMode.LastShown && _history.Back(name => FindChoice(name) is not null) is { } name)
+        if (mode == PreviousVisualMode.LastShown && _history.Back(name => FindChoice(name) is { } earlier && !IsLeftOut(earlier)) is { } name)
         {
             _host.PresetIndex = FindChoice(name)!.Index;
             ShowPreset();
@@ -322,6 +322,7 @@ public partial class VisualizerWindow : ToolWindow
     private List<string>? NamesInList(string? list) =>
         list is null ? null
         : list == AppSettings.FavoritesListName ? _settings.FavoriteVisuals
+        : list == AppSettings.HiddenListName ? _settings.HiddenVisuals
         : _settings.VisualLists.TryGetValue(list, out var names) ? names
         : null;
 
@@ -332,7 +333,8 @@ public partial class VisualizerWindow : ToolWindow
     private void ShowActiveList()
     {
         var list = _settings.ActiveVisualList;
-        if (list is not null && list != AppSettings.FavoritesListName && !_settings.VisualLists.ContainsKey(list))
+        if (list is not null && list != AppSettings.FavoritesListName && list != AppSettings.HiddenListName
+            && !_settings.VisualLists.ContainsKey(list))
         {
             // The list was deleted (or the settings were edited by hand).
             list = _settings.ActiveVisualList = null;
@@ -340,6 +342,7 @@ public partial class VisualizerWindow : ToolWindow
 
         var names = NamesInList(list);
         // With Lucent's originals, MilkDrop or AVS presets switched off, they're left out of every list, and so out of Auto.
+        // So are the visuals the user hid, except in the Hidden list.
         var choices = _choices.Where(IsSwitchedOn).ToList();
         var presetsHidden = choices.Count < _choices.Count;
         List<VisualChoice> inList;
@@ -425,14 +428,18 @@ public partial class VisualizerWindow : ToolWindow
         ListHint.Text = list is not null && inListCount == 0
             ? list == AppSettings.FavoritesListName
                 ? "No favorites yet. Click a visual's star to add it here."
-                : "This list is empty. Right-click any visual in All Visuals to add it."
+                : list == AppSettings.HiddenListName
+                    ? "Nothing is hidden. Right-click a visual and choose Hide to leave it out of the picker and Auto."
+                    : "This list is empty. Right-click any visual in All Visuals to add it."
             : _shown.Count == 0
                 ? searching
                     ? $"No visuals {(tagNames.Count > 0 ? $"tagged {tagText} " : string.Empty)}match \u201C{search}\u201D. Try other words, or press Esc to clear the search."
                     : $"None of these visuals are tagged {tagText}. Tick other tags, or click Clear."
                 : filters.Count > 0
                     ? $"Showing {_shown.Count} of {inListCount}, {filterText}. Auto plays from these, and N and B step through them."
-                    : "Auto plays from this list, and N and B step through it.";
+                    : list == AppSettings.HiddenListName
+                        ? "Hidden visuals play only while this list is chosen. Right-click one and choose Unhide to bring it back."
+                        : "Auto plays from this list, and N and B step through it.";
         ListHint.Visibility = narrowed ? Visibility.Visible : Visibility.Collapsed;
 
         ClearTagsButton.Visibility = tagNames.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -546,6 +553,12 @@ public partial class VisualizerWindow : ToolWindow
 
         menu.Items.Add(ListMenuItem("All Visuals", null, _choices.Count));
         menu.Items.Add(ListMenuItem(AppSettings.FavoritesListName, AppSettings.FavoritesListName, _settings.FavoriteVisuals.Count));
+        // Only once something is hidden, so the menu stays short.
+        if (_settings.HiddenVisuals.Count > 0 || active == AppSettings.HiddenListName)
+        {
+            menu.Items.Add(ListMenuItem(AppSettings.HiddenListName, AppSettings.HiddenListName, _settings.HiddenVisuals.Count));
+        }
+
         foreach (var (name, names) in _settings.VisualLists.OrderBy(pair => pair.Key, StringComparer.CurrentCultureIgnoreCase))
         {
             menu.Items.Add(ListMenuItem(name, name, names.Count));
@@ -563,7 +576,13 @@ public partial class VisualizerWindow : ToolWindow
         };
         menu.Items.Add(create);
 
-        if (active is not null && active != AppSettings.FavoritesListName)
+        if (active == AppSettings.HiddenListName && _settings.HiddenVisuals.Count > 0)
+        {
+            var unhide = new MenuItem { Header = "Unhide all" };
+            unhide.Click += (_, _) => UnhideAll();
+            menu.Items.Add(unhide);
+        }
+        else if (active is not null && active != AppSettings.FavoritesListName)
         {
             var rename = new MenuItem { Header = $"Rename {active}…" };
             rename.Click += (_, _) =>
@@ -613,6 +632,7 @@ public partial class VisualizerWindow : ToolWindow
             return PromptWindow.Ask(this, heading, hint, action, initial, name =>
                 string.Equals(name, initial, StringComparison.OrdinalIgnoreCase) ? null
                 : string.Equals(name, AppSettings.FavoritesListName, StringComparison.OrdinalIgnoreCase)
+                  || string.Equals(name, AppSettings.HiddenListName, StringComparison.OrdinalIgnoreCase)
                   || _settings.VisualLists.Keys.Any(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
                     ? "There's already a list with that name."
                     : null);
@@ -643,6 +663,7 @@ public partial class VisualizerWindow : ToolWindow
         var favorite = new MenuItem { Header = choice.IsFavorite ? "Remove from favorites" : "Add to favorites" };
         favorite.Click += (_, _) => SetFavorite(choice, !choice.IsFavorite);
         menu.Items.Add(favorite);
+        menu.Items.Add(HideItem(choice));
 
         var addTo = new MenuItem { Header = "Add to list" };
         foreach (var (name, names) in _settings.VisualLists.OrderBy(pair => pair.Key, StringComparer.CurrentCultureIgnoreCase))

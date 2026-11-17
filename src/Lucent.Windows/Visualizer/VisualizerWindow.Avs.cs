@@ -64,11 +64,12 @@ public partial class VisualizerWindow
 
     /// <summary>
     /// Whether a visual is in the picker and Auto: Lucent's originals, MilkDrop and AVS presets only while they're
-    /// switched on.
+    /// switched on, and visuals the user hid only in the Hidden list.
     /// </summary>
     private bool IsSwitchedOn(VisualChoice choice) =>
         (_settings.LucentVisuals || !choice.IsLucentOriginal)
-        && (_settings.MilkDropVisuals || !choice.IsMilkDrop) && (_settings.AvsVisuals || !choice.IsAvs);
+        && (_settings.MilkDropVisuals || !choice.IsMilkDrop) && (_settings.AvsVisuals || !choice.IsAvs)
+        && !IsLeftOut(choice);
 
     /// <summary>
     /// Lists Lucent's original shaders in the picker and lets Auto play them, or leaves them out of both, so only

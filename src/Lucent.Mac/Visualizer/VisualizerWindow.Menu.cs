@@ -47,6 +47,7 @@ public partial class VisualizerWindow
             favourite.ToggleType = MenuItemToggleType.CheckBox;
             favourite.IsChecked = current.IsFavorite;
             menu.Items.Add(favourite);
+            menu.Items.Add(HideItem(current));
         }
 
         var originals = Item("Lucent originals", null, () =>
