@@ -28,7 +28,8 @@ public sealed partial class Renderer : IDisposable
     private const Format FeedbackFormat = Format.R16G16B16A16_Float;
     private const Format SdrBackBufferFormat = Format.B8G8R8A8_UNorm;
     private const Format HdrBackBufferFormat = Format.R16G16B16A16_Float;
-    private const int ConstantCount = 48;
+    // 49 used (CaptionAge is the last, see Common.hlsli), rounded up to whole 16-byte registers.
+    private const int ConstantCount = 52;
     private const int ParticleStride = 64;
     private const int MaxParticleCount = 4 * 1024 * 1024;
     private const double MaxRenderScale = 4.0;
@@ -50,6 +51,7 @@ public sealed partial class Renderer : IDisposable
     private readonly Thread _thread;
     private readonly List<Thread> _compileThreads = new();
     private readonly float[] _constants = new float[ConstantCount];
+    private readonly float[] _captionLetters = new float[SongCaption.MaxLetters * SongCaption.Lines];
     private readonly Random _random = new();
     private volatile bool _running;
     private volatile bool _stopCompiling;
@@ -92,6 +94,12 @@ public sealed partial class Renderer : IDisposable
     private readonly RenderTarget?[] _transitionTargets = new RenderTarget?[2];
     private ID3D11Texture2D? _audioTexture;
     private ID3D11ShaderResourceView? _audioView;
+    private ID3D11Texture2D? _captionTexture;
+    private ID3D11ShaderResourceView? _captionView;
+    // Which of the names the GPU has (SongCaption's count of changes), or one of these.
+    private const int CaptionNotSent = -1;
+    private const int CaptionEmpty = -2;
+    private int _captionVersion = CaptionNotSent;
     private ID3D11Buffer? _constantBuffer;
     private ID3D11SamplerState? _sampler;
     private ID3D11VertexShader? _vertexShader;
@@ -229,6 +237,9 @@ public sealed partial class Renderer : IDisposable
     /// each change so the new visual arrives right on a downbeat.
     /// </summary>
     public SongClock? SongClock { get; set; }
+
+    /// <summary>The names of what's playing, for visuals that show them; null shows none (recording, say).</summary>
+    public SongCaption? Caption { get; set; }
 
     /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them; null when there's no mouse (recording, say).</summary>
     public PointerStir? Pointer { get; set; }
@@ -381,6 +392,13 @@ public sealed partial class Renderer : IDisposable
             Format.R32_Float, AudioAnalyzer.TextureWidth, 2, 1, 1, null,
             BindFlags.ShaderResource, ResourceOptionFlags.None, ResourceUsage.Default, CpuAccessFlags.None);
         _audioView = device.CreateShaderResourceView(_audioTexture, null);
+
+        // The names of what's playing, a letter to a texel (Caption in Common.hlsli).
+        _captionTexture = device.CreateTexture2D(
+            Format.R32_Float, SongCaption.MaxLetters, SongCaption.Lines, 1, 1, null,
+            BindFlags.ShaderResource, ResourceOptionFlags.None, ResourceUsage.Default, CpuAccessFlags.None);
+        _captionView = device.CreateShaderResourceView(_captionTexture, null);
+        _captionVersion = CaptionNotSent;
 
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
 
@@ -715,6 +733,7 @@ public sealed partial class Renderer : IDisposable
             _constants[42] = pointer.BallHeld;
             _constants[43] = pointer.BallAge;
         }
+        UpdateCaption(context);
         context.UpdateSubresource(_constants, _constantBuffer!, 0, 0, 0, null);
         context.UpdateSubresource(_analyzer.TextureData, _audioTexture!, 0, AudioAnalyzer.TextureWidth * sizeof(float), 0, null);
         _frameTime = now;
@@ -790,6 +809,40 @@ public sealed partial class Renderer : IDisposable
         return from + (to - from) * progress;
     }
 
+    /// <summary>
+    /// Sends the names of what's playing to the GPU when they've changed, and how long they are and how long they've
+    /// been showing to the constants, for visuals that draw them (captionLetter in Common.hlsli).
+    /// </summary>
+    private void UpdateCaption(ID3D11DeviceContext context)
+    {
+        var titleLength = 0;
+        var artistLength = 0;
+        var age = 0f;
+        bool changed;
+        if (Caption is { } caption)
+        {
+            changed = caption.Take(ref _captionVersion, _captionLetters, out titleLength, out artistLength, out age);
+        }
+        else
+        {
+            changed = _captionVersion != CaptionEmpty;
+            if (changed)
+            {
+                Array.Clear(_captionLetters);
+                _captionVersion = CaptionEmpty;
+            }
+        }
+
+        if (changed)
+        {
+            context.UpdateSubresource(_captionLetters, _captionTexture!, 0, SongCaption.MaxLetters * sizeof(float), 0, null);
+        }
+
+        _constants[46] = titleLength;
+        _constants[47] = artistLength;
+        _constants[48] = age;
+    }
+
     /// <summary>The pipeline state every full-screen pass expects; MilkDrop presets change it, so it's set again after them.</summary>
     private void UseFrameState()
     {
@@ -799,6 +852,7 @@ public sealed partial class Renderer : IDisposable
         context.PSSetConstantBuffer(0, _constantBuffer);
         context.PSSetSampler(0, _sampler);
         context.PSSetShaderResource(1, _audioView!);
+        context.PSSetShaderResource(5, _captionView!);
         context.RSSetViewport(0, 0, _renderWidth, _renderHeight, 0, 1);
     }
 
@@ -1457,6 +1511,10 @@ public sealed partial class Renderer : IDisposable
         _audioView = null;
         _audioTexture?.Dispose();
         _audioTexture = null;
+        _captionView?.Dispose();
+        _captionView = null;
+        _captionTexture?.Dispose();
+        _captionTexture = null;
         _swapChain?.Dispose();
         _swapChain = null;
         _context?.Dispose();

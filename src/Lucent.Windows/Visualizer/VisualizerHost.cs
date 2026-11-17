@@ -52,6 +52,9 @@ public sealed class VisualizerHost : HwndHost
     /// <summary>The song that's playing and its bars, which Auto uses to change visual on a downbeat.</summary>
     public SongClock SongClock { get; } = new();
 
+    /// <summary>The names of what's playing, for visuals that show them in their own lettering.</summary>
+    public SongCaption Caption { get; } = new();
+
     /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them.</summary>
     public PointerStir Pointer { get; } = new();
 
@@ -318,6 +321,7 @@ public sealed class VisualizerHost : HwndHost
         _renderer.Hdr = _hdr;
         _renderer.AutoCycleChoices = IndicesOf(_renderer.PresetNames, _autoCycleNames);
         _renderer.SongClock = SongClock;
+        _renderer.Caption = Caption;
         _renderer.Pointer = Pointer;
         _renderer.PresetChanged += index => dispatcher.InvokeAsync(() =>
         {

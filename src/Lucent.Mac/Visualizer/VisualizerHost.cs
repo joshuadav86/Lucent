@@ -59,6 +59,9 @@ public sealed class VisualizerHost : Border, IDisposable
     /// <summary>The song that's playing and its bars, which Auto uses to change visual on a downbeat.</summary>
     public SongClock SongClock { get; } = new();
 
+    /// <summary>The names of what's playing, for visuals that show them in their own lettering.</summary>
+    public SongCaption Caption { get; } = new();
+
     /// <summary>The mouse over the visuals, which pushes a particle visual's dots aside and grabs and throws them.</summary>
     public PointerStir Pointer { get; } = new();
 
@@ -361,6 +364,7 @@ public sealed class VisualizerHost : Border, IDisposable
         engine.MorphTransitionsOnly = _morphTransitionsOnly;
         engine.AutoCycleChoices = IndicesOf(engine.PresetNames, _autoCycleNames);
         engine.Pointer = Pointer;
+        engine.Caption = Caption;
         engine.PresetChanged += index => Dispatcher.UIThread.Post(() =>
         {
             _presetIndex = index;

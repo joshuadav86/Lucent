@@ -61,10 +61,20 @@ cbuffer Params : register(b0)
     // The beat, eased, for movement that shouldn't jolt on the beat (fly-throughs use these for the camera).
     float BeatGlide;           // BeatCount, gliding forward by 1 over each beat: starts and finishes gently, never jumps
     float BeatSwell;           // about 0..1, swelling up over a fifth of a second after each beat and fading: Beat without the snap
+
+    // The names of what's playing, for visuals that show them in their own lettering (see captionLetter). The lengths
+    // are 0 while there's no name to show (nothing playing, say).
+    float CaptionTitleLength;  // how many letters the song's title has
+    float CaptionArtistLength; // how many letters the artist's name has
+    float CaptionAge;          // seconds since the names last changed, so new ones can be brought in
 };
 
 Texture2D PreviousFrame : register(t0);
 Texture2D AudioData : register(t1);
+Texture2D Caption : register(t5);   // the names of what's playing, one letter to a texel: read them with captionLetter
+// Set from the release that brought the names in, so a visual can show them where it can and still work in older ones:
+// #ifdef LUCENT_CAPTION ... #endif.
+#define LUCENT_CAPTION 1
 SamplerState LinearClamp : register(s0);
 
 static const float PI = 3.14159265;
@@ -85,6 +95,27 @@ float spectrum(float x)
 float waveform(float x)
 {
     return AudioData.SampleLevel(LinearClamp, float2(saturate(x), 0.75), 0).r;
+}
+
+// One letter of the names of what's playing, so a visual can draw them in its own lettering. which is 0 for the
+// song's title and 1 for the artist; i counts from 0 up to captionLength(which). The letter comes back as its Unicode
+// number (65 for A, 97 for a, 32 for a space), or 0 past the end. Accents come off and curly quotes and long dashes
+// come plain (an e with an accent arrives as a plain e), so a lettering of the basic Latin letters can draw nearly
+// every name; letters with no plain form (Japanese, say) arrive as they are.
+int captionLetter(int which, int i)
+{
+    if (i < 0 || i >= 128 || which < 0 || which > 1)
+    {
+        return 0;
+    }
+
+    return (int)(Caption.Load(int3(i, which, 0)).r + 0.5);
+}
+
+// How many letters the title (which 0) or the artist's name (which 1) has.
+int captionLength(int which)
+{
+    return (int)(which == 0 ? CaptionTitleLength : CaptionArtistLength);
 }
 
 // The colour of the last frame at uv.

@@ -75,6 +75,7 @@ public static unsafe class MetalTranslation
         (TextureShift + 2, 0, 2, 0),     // t2: NextFrame              -> texture(2)
         (TextureShift + 3, 0, 3, 0),     // t3: ParticleLayer          -> texture(3)
         (TextureShift + 4, 1, 4, 0),     // t4: ParticlesToDraw        -> buffer(1)
+        (TextureShift + 5, 0, 5, 0),     // t5: Caption                -> texture(5)
         (SamplerShift + 0, 0, 0, 0),     // s0: LinearClamp            -> sampler(0)
         (UavShift + 0, 2, 0, 0),         // u0: ParticleState          -> buffer(2)
     };

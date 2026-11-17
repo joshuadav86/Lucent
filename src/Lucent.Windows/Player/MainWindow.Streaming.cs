@@ -421,6 +421,7 @@ public partial class MainWindow
 
         var track = remote.State?.Track;
         ShowRemoteHeart(track);
+        _visualizer.Caption.Set(track?.Title, track?.Artist);
         var name = track is null ? null : string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Artist} – {track.Title}";
         var marquee = name ?? (remote.State is null && remote.Problem is null
             ? $"Connecting to {remote.Player.Name}…"
