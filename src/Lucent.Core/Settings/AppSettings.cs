@@ -595,7 +595,7 @@ public sealed class AppSettings
         ["Midnight Snowfall"] = "Julia Dust",
         ["Hourglass"] = "Calabi-Yau",
         ["Newton's Cradle"] = "Hyperbolic Tiling",
-        ["Sunset Highway"] = "Cardioid Loom",
+        ["Sunset Highway"] = "Lidar Street",
         ["Champagne Toast"] = "Polytope Bloom",
         ["Single Drop"] = "Superformula",
         ["Fireworks Night"] = "Filigree",
@@ -636,6 +636,7 @@ public sealed class AppSettings
         ["Grand Spiral"] = "Plexus",
         ["Ember Terraces"] = "Phosphor Terraces",
         ["Sakura Storm"] = "Flourish",
+        ["Cardioid Loom"] = "Lidar Street",
         ["Winamp Classic Spectrum"] = "Classic Spectrum",
         ["Winamp Classic Oscilloscope"] = "Classic Oscilloscope",
     };
