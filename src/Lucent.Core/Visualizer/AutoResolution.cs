@@ -25,8 +25,17 @@ public sealed class AutoResolution
     /// <summary>How long after a visual starts (and compiles) before measuring it.</summary>
     private const double SettleSeconds = 1.0;
 
-    /// <summary>The step each visual last settled on, so it starts there next time.</summary>
-    private readonly Dictionary<int, int> _settled = new();
+    /// <summary>How long after the Power mode changes before measuring: frames already queued still show at the old pace.</summary>
+    private const double PowerSettleSeconds = 0.3;
+
+    /// <summary>A measurement this far under the goal steps down at once, without waiting for a second one.</summary>
+    private const double FarTooSlow = 0.6;
+
+    /// <summary>
+    /// The step each visual last settled on in each power setting (frame rate goal and pixel share), so it
+    /// starts there next time. Power saver and Smoothest need different steps from the same visual.
+    /// </summary>
+    private readonly Dictionary<(int Preset, int Goal, int PowerPercent), int> _settled = new();
 
     private int _step;
     private int _tooSlowStep = -1;
@@ -35,6 +44,8 @@ public sealed class AutoResolution
     private double _tooSlowUntil;
     private double _forgetSeconds = 30.0;
     private int _preset = int.MinValue;
+    private double _goal;
+    private double _powerShare = 1.0;
     private double _measureStart = -1.0;
     private double _lastFrame = -1.0;
     private double _ignoreUntil;
@@ -46,18 +57,29 @@ public sealed class AutoResolution
     public double PixelShare => Shares[_step];
 
     /// <summary>
-    /// Call once each frame is shown, with the time in seconds, the screen's refresh rate and the visual
-    /// on screen. Returns true when <see cref="PixelShare"/> changed.
+    /// Call once each frame is shown, with the time in seconds, the frame rate the screen and Power mode
+    /// allow, the visual on screen, and the share of pixels the Power mode draws (half in Power saver; this
+    /// class's <see cref="PixelShare"/> is taken of what's left). Returns true when <see cref="PixelShare"/> changed.
     /// </summary>
-    public bool Frame(double now, int refreshRate, int preset)
+    public bool Frame(double now, int refreshRate, int preset, double powerShare = 1.0)
     {
+        // Aim for the screen's own rate, but no higher than 60: past that, sharpness matters more.
+        var goal = Math.Clamp(refreshRate, 24, 60) * 0.9;
+        powerShare = Math.Clamp(powerShare, 0.05, 1.0);
+        if (preset == _preset && (Math.Abs(goal - _goal) > 0.5 || Math.Abs(powerShare - _powerShare) > 0.01))
+        {
+            return PowerChanged(now, goal, powerShare);
+        }
+
+        _goal = goal;
+        _powerShare = powerShare;
         if (preset != _preset)
         {
             // A visual starts at the size it last settled on, or full size the first time, and stays
             // there a while before trying bigger.
             _preset = preset;
             _lastFrame = now;
-            var start = _settled.TryGetValue(preset, out var settled) ? settled : 0;
+            var start = _settled.TryGetValue(Key(), out var settled) ? settled : 0;
             _forgetSeconds = 30.0;
             _tooSlowStep = start - 1;
             _lastTooSlow = start - 1;
@@ -92,8 +114,6 @@ public sealed class AutoResolution
             return false;
         }
 
-        // Aim for the screen's own rate, but no higher than 60: past that, sharpness matters more.
-        var goal = Math.Clamp(refreshRate, 24, 60) * 0.9;
         var frameRate = _frames / elapsed;
         _measureStart = now;
         _frames = 0;
@@ -106,7 +126,7 @@ public sealed class AutoResolution
         if (frameRate < goal)
         {
             _goodSeconds = 0;
-            if (++_slowMeasurements < SlowMeasurementsToStepDown || _step == Shares.Length - 1)
+            if ((++_slowMeasurements < SlowMeasurementsToStepDown && frameRate >= goal * FarTooSlow) || _step == Shares.Length - 1)
             {
                 return false;
             }
@@ -139,7 +159,7 @@ public sealed class AutoResolution
             _tooSlowUntil = now + _forgetSeconds;
             _step = next;
             _cameUpFrom = -1;
-            _settled[_preset] = _step;
+            _settled[Key()] = _step;
             Restart();
             return true;
         }
@@ -154,10 +174,70 @@ public sealed class AutoResolution
         // The screen's refresh caps the frame rate, so there's no telling how much room there is: try one step up.
         _cameUpFrom = _step;
         _step--;
-        _settled[_preset] = _step;
+        _settled[Key()] = _step;
         Restart();
         return true;
     }
+
+    /// <summary>
+    /// The Power mode (or the screen) changed while a visual is on: the frame rate goal, the share of pixels
+    /// drawn, or both. Waiting to measure its way there took seconds of slow frames, a step at a time, so
+    /// jump straight to a size that should keep up: the one this visual settled on in this setting before,
+    /// or one worked out from the work it managed just now.
+    /// </summary>
+    private bool PowerChanged(double now, double goal, double powerShare)
+    {
+        // Frames a second times pixels each frame: how much more (or less) work the new setting asks for.
+        var demand = goal * powerShare / (_goal * _powerShare);
+        _settled[Key()] = _step;
+        _goal = goal;
+        _powerShare = powerShare;
+        var start = _step;
+        var known = _settled.TryGetValue(Key(), out var settled);
+        if (known)
+        {
+            start = settled;
+        }
+        else if (demand > 1.01)
+        {
+            // More work. The size it drew at kept up, but how close it came is hidden by the frame rate
+            // limit, so go only halfway (in steps) towards the size that matches the old work. If that is
+            // still too slow, the far-too-slow rule steps down after one measurement.
+            var needed = Shares[_step] / demand;
+            var full = _step;
+            while (full < Shares.Length - 1 && Shares[full] > needed * 1.01)
+            {
+                full++;
+            }
+
+            start = _step + (full - _step + 1) / 2;
+        }
+        else if (demand < 0.99)
+        {
+            // Less work: the size that asks for no more than it managed just now keeps up for sure.
+            var allowed = Shares[_step] / demand;
+            while (start > 0 && Shares[start - 1] <= allowed * 1.01)
+            {
+                start--;
+            }
+        }
+
+        // A size it settled on before waits a while before trying bigger, as when a visual starts; a worked
+        // out one may have room to spare, so it can try bigger as soon as it keeps up.
+        _tooSlowStep = known ? start - 1 : -1;
+        _lastTooSlow = start - 1;
+        _cameUpFrom = -1;
+        _forgetSeconds = 30.0;
+        _tooSlowUntil = now + _forgetSeconds;
+        _ignoreUntil = now + PowerSettleSeconds;
+        _lastFrame = now;
+        var changed = _step != start;
+        _step = start;
+        Restart();
+        return changed;
+    }
+
+    private (int, int, int) Key() => (_preset, (int)Math.Round(_goal), (int)Math.Round(_powerShare * 100));
 
     /// <summary>Starts measuring afresh: the frames just after a size change are slower than the rest.</summary>
     private void Restart()
