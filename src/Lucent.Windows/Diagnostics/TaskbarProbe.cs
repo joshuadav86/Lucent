@@ -41,7 +41,7 @@ public partial class MainWindow
             var owner = Probe.GetWindow(hwnd, 4);
             lines.Add($"visuals {hwnd} owner {owner} ({Probe.ClassOf(owner)}) exstyle 0x{Probe.GetWindowLongPtr(hwnd, -20):x}");
 
-            foreach (var variant in new[] { "as is", "unowned", "unowned+mark", "topmost after", "unowned+topmost", "as is again" })
+            foreach (var variant in new[] { "as is", "no chrome", "topmost after", "as is again" })
             {
                 if (variant.StartsWith("unowned"))
                 {
@@ -51,6 +51,13 @@ public partial class MainWindow
                 if (variant.EndsWith("mark"))
                 {
                     Probe.Mark(hwnd, true);
+                }
+
+                System.Windows.Shell.WindowChrome? chrome = null;
+                if (variant == "no chrome")
+                {
+                    chrome = System.Windows.Shell.WindowChrome.GetWindowChrome(_visuals);
+                    System.Windows.Shell.WindowChrome.SetWindowChrome(_visuals, null);
                 }
 
                 _visuals.ToggleFullscreen();
@@ -74,6 +81,7 @@ public partial class MainWindow
                 var y = (Math.Max(trayRect.Top, info.rcMonitor.Top) + Math.Min(trayRect.Bottom, info.rcMonitor.Bottom)) / 2;
                 var hit = Probe.GetAncestor(Probe.WindowFromPoint(new Probe.POINT { X = x, Y = y }), 2);
                 var fg = Probe.GetForegroundWindow();
+                lines.Add($"{variant}: style 0x{Probe.GetWindowLongPtr(hwnd, -16):x} ex 0x{Probe.GetWindowLongPtr(hwnd, -20):x}; " + Probe.Hit(tray, hwnd));
                 lines.Add($"{variant}: window {Describe(rect)}, monitor {Describe(info.rcMonitor)} work {Describe(info.rcWork)}, " +
                     $"foreground {(fg == hwnd ? "visuals" : $"{fg} {Probe.ClassOf(fg)}")}, at {x},{y} on the taskbar: " +
                     $"{(hit == hwnd ? "THE VISUALS (covered)" : $"{hit} {Probe.ClassOf(hit)} (TASKBAR SHOWS)")}");
@@ -85,6 +93,11 @@ public partial class MainWindow
                 }
 
                 _visuals.Topmost = false;
+                if (chrome is not null)
+                {
+                    System.Windows.Shell.WindowChrome.SetWindowChrome(_visuals, chrome);
+                }
+
                 if (variant.StartsWith("unowned"))
                 {
                     Probe.SetWindowLongPtr(hwnd, -8, owner);
@@ -100,6 +113,7 @@ public partial class MainWindow
             plain.WindowState = WindowState.Maximized;
             plain.Activate();
             await Task.Delay(TimeSpan.FromSeconds(2));
+            lines.Add($"plain style 0x{Probe.GetWindowLongPtr(new WindowInteropHelper(plain).Handle, -16):x}");
             lines.Add("plain WPF: " + Probe.Hit(tray, new WindowInteropHelper(plain).Handle));
             plain.Owner = this;
             plain.ShowInTaskbar = false;
