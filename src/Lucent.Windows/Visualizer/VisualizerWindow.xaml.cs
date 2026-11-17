@@ -168,6 +168,7 @@ public partial class VisualizerWindow : ToolWindow
         _settings.RecentlyShownVisuals = RecentVisuals.Add(_settings.RecentlyShownVisuals, current.Name);
         _host.AutoCycleRecent = RecentVisuals.Newest(_settings.RecentlyShownVisuals, _settings.SkipRecentVisuals);
         UpdateFavoriteButton();
+        WatchPresetReady(current.Label);
     }
 
     private void OnTogglePresetPicker(object sender, RoutedEventArgs e) => TogglePresetPicker();

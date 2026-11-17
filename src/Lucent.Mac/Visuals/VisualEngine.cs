@@ -82,6 +82,8 @@ public sealed partial class VisualEngine : IDisposable
     private RenderTarget? _windowTarget;
     private RenderTarget? _particleLayer;
     private volatile bool _stopCompiling;
+    // Set once the compile threads have started, so a visual that's picked can start compiling straight away.
+    private volatile bool _compilingStarted;
     private volatile int _requestedPreset;
     private volatile bool _autoCycle = true;
     private volatile int _targetPixels;
@@ -172,7 +174,31 @@ public sealed partial class VisualEngine : IDisposable
     public int PresetIndex
     {
         get => _requestedPreset;
-        set => _requestedPreset = value;
+        set
+        {
+            _requestedPreset = value;
+            CompileNow(value);
+        }
+    }
+
+    /// <summary>
+    /// Whether the visual asked for is still being compiled, so the one before it stays on screen meanwhile. Most
+    /// visuals take a moment, but after an update every visual compiles again, and a large imported one can take
+    /// a minute or more.
+    /// </summary>
+    public bool WaitingForPreset
+    {
+        get
+        {
+            var index = _requestedPreset;
+            if (index < 0 || index >= _slots.Length)
+            {
+                return false;
+            }
+
+            var state = Volatile.Read(ref _slots[index].State);
+            return state is PresetSlot.Pending or PresetSlot.Compiling;
+        }
     }
 
     /// <summary>True when the last frame was drawn in HDR: into a half-float output, in extended linear light.</summary>
@@ -394,13 +420,45 @@ public sealed partial class VisualEngine : IDisposable
         _stopCompiling = false;
         var count = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
         _compilersRunning = count;
-        for (var i = 0; i < count; i++)
+        lock (_compileThreads)
         {
-            var thread = new Thread(CompileLoop)
+            for (var i = 0; i < count; i++)
+            {
+                var thread = new Thread(CompileLoop)
+                {
+                    IsBackground = true,
+                    Name = "Visual compiler",
+                    Priority = ThreadPriority.BelowNormal,
+                };
+                _compileThreads.Add(thread);
+                thread.Start();
+            }
+
+            _compilingStarted = true;
+        }
+
+        // The visual that's showing may have been picked before compiling started.
+        CompileNow(_requestedPreset);
+    }
+
+    /// <summary>
+    /// Starts compiling a visual that's just been picked on a thread of its own, if no compiler has started on it
+    /// yet. Without this it waits for a compiler to finish what it's on, and while every visual compiles again
+    /// after an update, the compilers can each be minutes into a large imported visual (each Sakura one is).
+    /// </summary>
+    private void CompileNow(int index)
+    {
+        lock (_compileThreads)
+        {
+            if (!_compilingStarted || _stopCompiling || index < 0 || index >= _slots.Length || !TryClaim(index))
+            {
+                return;
+            }
+
+            var thread = new Thread(() => CompilePreset(_slots[index]))
             {
                 IsBackground = true,
-                Name = "Visual compiler",
-                Priority = ThreadPriority.BelowNormal,
+                Name = "Visual compiler (picked)",
             };
             _compileThreads.Add(thread);
             thread.Start();
@@ -1273,9 +1331,14 @@ public sealed partial class VisualEngine : IDisposable
     /// </summary>
     public void Dispose()
     {
-        _stopCompiling = true;
-        var threads = _compileThreads.ToArray();
-        _compileThreads.Clear();
+        Thread[] threads;
+        lock (_compileThreads)
+        {
+            _stopCompiling = true;
+            threads = _compileThreads.ToArray();
+            _compileThreads.Clear();
+        }
+
         var wait = System.Diagnostics.Stopwatch.StartNew();
         foreach (var thread in threads)
         {

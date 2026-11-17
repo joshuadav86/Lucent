@@ -56,6 +56,8 @@ public sealed partial class Renderer : IDisposable
     private volatile bool _running;
     private volatile bool _stopCompiling;
     private volatile bool _compileInterrupted;
+    // What the compile threads were started with, so a visual that's picked can start compiling straight away.
+    private volatile CompileTools? _compileTools;
     private volatile int _requestedPreset;
     private volatile bool _autoCycle = true;
     private volatile int _targetPixels;
@@ -170,7 +172,31 @@ public sealed partial class Renderer : IDisposable
     public int PresetIndex
     {
         get => _requestedPreset;
-        set => _requestedPreset = value;
+        set
+        {
+            _requestedPreset = value;
+            CompileNow(value);
+        }
+    }
+
+    /// <summary>
+    /// Whether the visual asked for is still being compiled, so the one before it stays on screen meanwhile. Most
+    /// visuals take a moment, but after an update every visual compiles again, and a large imported one can take
+    /// a minute or more.
+    /// </summary>
+    public bool WaitingForPreset
+    {
+        get
+        {
+            var index = _requestedPreset;
+            if (index < 0 || index >= _slots.Length)
+            {
+                return false;
+            }
+
+            var state = Volatile.Read(ref _slots[index].State);
+            return state is PresetSlot.Pending or PresetSlot.Compiling;
+        }
     }
 
     /// <summary>When on, moves to a random visual every so often, on a beat.</summary>
@@ -457,13 +483,45 @@ public sealed partial class Renderer : IDisposable
         var shaders = ReadEngineSources();
         var count = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
         _compilersRunning = count;
-        for (var i = 0; i < count; i++)
+        lock (_compileThreads)
         {
-            var thread = new Thread(() => CompileLoop(device, shaders))
+            for (var i = 0; i < count; i++)
+            {
+                var thread = new Thread(() => CompileLoop(device, shaders))
+                {
+                    IsBackground = true,
+                    Name = "Visual compiler",
+                    Priority = ThreadPriority.BelowNormal,
+                };
+                _compileThreads.Add(thread);
+                thread.Start();
+            }
+
+            _compileTools = new CompileTools(device, shaders);
+        }
+
+        // The visual that's showing may have been picked before the device was ready.
+        CompileNow(_requestedPreset);
+    }
+
+    /// <summary>
+    /// Starts compiling a visual that's just been picked on a thread of its own, if no compiler has started on it
+    /// yet. Without this it waits for a compiler to finish what it's on, and while every visual compiles again
+    /// after an update, the compilers can each be minutes into a large imported visual (each Sakura one is).
+    /// </summary>
+    private void CompileNow(int index)
+    {
+        lock (_compileThreads)
+        {
+            if (_compileTools is not { } tools || _stopCompiling || index < 0 || index >= _slots.Length || !TryClaim(index))
+            {
+                return;
+            }
+
+            var thread = new Thread(() => CompileOne(tools.Device, tools.Shaders, index))
             {
                 IsBackground = true,
-                Name = "Visual compiler",
-                Priority = ThreadPriority.BelowNormal,
+                Name = "Visual compiler (picked)",
             };
             _compileThreads.Add(thread);
             thread.Start();
@@ -475,34 +533,9 @@ public sealed partial class Renderer : IDisposable
         while (!_stopCompiling)
         {
             var index = ClaimNextPreset();
-            if (index < 0)
+            if (index < 0 || !CompileOne(device, shaders, index))
             {
                 break;
-            }
-
-            var slot = _slots[index];
-            try
-            {
-                BuildShaders(device, shaders, slot);
-                Volatile.Write(ref slot.State, PresetSlot.Ready);
-            }
-            catch (Exception ex) when (IsDeviceLost(ex))
-            {
-                // The graphics card reset: the render thread starts over, and this visual compiles again then.
-                Volatile.Write(ref slot.State, PresetSlot.Pending);
-                _compileInterrupted = true;
-                break;
-            }
-            catch (Exception ex)
-            {
-                Volatile.Write(ref slot.State, PresetSlot.Failed);
-                if (slot.Source.IsCommunityPreset)
-                {
-                    // A broken .milk or .avs file is skipped; the log says which and why.
-                    ErrorLog.Write($"{KindOf(slot.Source)} {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
-                }
-
-                PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
             }
         }
 
@@ -510,6 +543,37 @@ public sealed partial class Renderer : IDisposable
         if (Interlocked.Decrement(ref _compilersRunning) == 0 && !_stopCompiling && !_compileInterrupted)
         {
             _shaderCache.RemoveUnused();
+        }
+    }
+
+    /// <summary>Compiles a visual this thread has claimed, and marks it ready or failed. False if the graphics card reset.</summary>
+    private bool CompileOne(ID3D11Device device, EngineSources shaders, int index)
+    {
+        var slot = _slots[index];
+        try
+        {
+            BuildShaders(device, shaders, slot);
+            Volatile.Write(ref slot.State, PresetSlot.Ready);
+            return true;
+        }
+        catch (Exception ex) when (IsDeviceLost(ex))
+        {
+            // The graphics card reset: the render thread starts over, and this visual compiles again then.
+            Volatile.Write(ref slot.State, PresetSlot.Pending);
+            _compileInterrupted = true;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Volatile.Write(ref slot.State, PresetSlot.Failed);
+            if (slot.Source.IsCommunityPreset)
+            {
+                // A broken .milk or .avs file is skipped; the log says which and why.
+                ErrorLog.Write($"{KindOf(slot.Source)} {Path.GetFileName(slot.Source.FilePath)} was skipped", ex.Message);
+            }
+
+            PresetFailed?.Invoke($"{slot.Source.Name}: {ex.Message}");
+            return true;
         }
     }
 
@@ -593,13 +657,19 @@ public sealed partial class Renderer : IDisposable
     /// <summary>Stops the compile threads, once each has finished the visual it's compiling.</summary>
     private void StopCompiling()
     {
-        _stopCompiling = true;
-        foreach (var thread in _compileThreads)
+        Thread[] threads;
+        lock (_compileThreads)
+        {
+            _stopCompiling = true;
+            _compileTools = null;
+            threads = _compileThreads.ToArray();
+            _compileThreads.Clear();
+        }
+
+        foreach (var thread in threads)
         {
             thread.Join();
         }
-
-        _compileThreads.Clear();
     }
 
     // ---- Drawing ----
@@ -1592,6 +1662,9 @@ public sealed partial class Renderer : IDisposable
 
     /// <summary>The shared shader files a visual is assembled from.</summary>
     private sealed record EngineSources(string Common, string PresetMain, string Particles, string ParticleMain, string MilkDrop, string AvsDisplay);
+
+    /// <summary>The device and shared shader files the compile threads use.</summary>
+    private sealed record CompileTools(ID3D11Device Device, EngineSources Shaders);
 
     /// <summary>A particle visual's particles, on the graphics card: written by its compute shader, read to draw them.</summary>
     private sealed class ParticleBuffer : IDisposable
