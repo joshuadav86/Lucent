@@ -300,6 +300,7 @@ public partial class MainWindow : Window
         ReopenEditor();
         Activate();
         RunLayoutCheckIfAsked();
+        RunTaskbarProbeIfAsked();
 
         _updater.UpdateReady += version => Dispatcher.BeginInvoke(() =>
         {
