@@ -92,6 +92,32 @@ public partial class MainWindow
 
                 await Task.Delay(TimeSpan.FromSeconds(0.5));
             }
+
+            // Controls: a plain WPF window and a raw Win32 popup filling the screen.
+            lines.Add($"taskbar topmost now: {(Probe.GetWindowLongPtr(tray, -20).ToInt64() & 8) != 0}");
+            var plain = new Window { WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, Background = System.Windows.Media.Brushes.DarkBlue, Title = "plain" };
+            plain.Show();
+            plain.WindowState = WindowState.Maximized;
+            plain.Activate();
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            lines.Add("plain WPF: " + Probe.Hit(tray, new WindowInteropHelper(plain).Handle));
+            plain.Owner = this;
+            plain.ShowInTaskbar = false;
+            plain.WindowState = WindowState.Normal;
+            plain.WindowState = WindowState.Maximized;
+            plain.Activate();
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            lines.Add("plain WPF owned: " + Probe.Hit(tray, new WindowInteropHelper(plain).Handle));
+            plain.Close();
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            var info2 = new Probe.MONITORINFO { cbSize = Marshal.SizeOf<Probe.MONITORINFO>() };
+            Probe.GetMonitorInfo(Probe.MonitorFromWindow(tray, 2), ref info2);
+            var raw = Probe.CreateWindowEx(0, "Static", "raw", unchecked((int)0x90000000), info2.rcMonitor.Left, info2.rcMonitor.Top,
+                info2.rcMonitor.Right - info2.rcMonitor.Left, info2.rcMonitor.Bottom - info2.rcMonitor.Top, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+            Probe.SetForegroundWindow(raw);
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            lines.Add($"raw popup {raw} (foreground {Probe.GetForegroundWindow() == raw}): " + Probe.Hit(tray, raw));
+            Probe.DestroyWindow(raw);
         }
         catch (Exception ex)
         {
@@ -121,6 +147,19 @@ public partial class MainWindow
         [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h, int f);
         [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr CreateWindowEx(int ex, string cls, string title, int style, int x, int y, int w, int h, IntPtr parent, IntPtr menu, IntPtr inst, IntPtr param);
+        [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+        [DllImport("user32.dll")] public static extern bool DestroyWindow(IntPtr h);
+
+        public static string Hit(IntPtr tray, IntPtr mine)
+        {
+            GetWindowRect(tray, out var r);
+            var hit = GetAncestor(WindowFromPoint(new POINT { X = (r.Left + r.Right) / 2, Y = (r.Top + r.Bottom) / 2 }), 2);
+            GetWindowRect(mine, out var m);
+            return $"window {m.Left},{m.Top} to {m.Right},{m.Bottom}, taskbar topmost {(GetWindowLongPtr(tray, -20).ToInt64() & 8) != 0}, " +
+                $"on the taskbar: {(hit == mine ? "COVERED" : ClassOf(hit) + " SHOWS")}";
+        }
 
         public static string ClassOf(IntPtr h)
         {
