@@ -35,7 +35,7 @@ A free, open-source music and video player for Windows and Mac, with 500 live GP
 
 <table>
 <tr>
-<td width="33%"><img src="site/img/sunward.jpg" alt="Sunward"><br><sub><b>Sunward</b></sub></td>
+<td width="33%"><img src="site/img/chameleon.jpg" alt="Chameleon"><br><sub><b>Chameleon</b></sub></td>
 <td width="33%"><img src="site/img/lampwork.jpg" alt="Lampwork"><br><sub><b>Lampwork</b></sub></td>
 <td width="33%"><img src="site/img/hex-fault.jpg" alt="Hex Fault"><br><sub><b>Hex Fault</b></sub></td>
 </tr>
